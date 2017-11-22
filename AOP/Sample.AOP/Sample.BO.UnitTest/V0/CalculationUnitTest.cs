@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Security.Principal;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Sample.BO.V0;

@@ -1,4 +1,4 @@
-namespace Sample.BO.V1
+namespace Sample.BO.V2
 {
     public interface ICalculation
     {

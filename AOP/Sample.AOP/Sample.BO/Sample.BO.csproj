@@ -43,9 +43,22 @@
     <Compile Include="V0\Calculation.cs" />
     <Compile Include="V1\Calculation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="V1\CalculationFactory.cs" />
     <Compile Include="V1\CalculationProxy.cs" />
+    <Compile Include="V2\Calculation.cs" />
+    <Compile Include="V2\CalculationFactory.cs" />
     <Compile Include="V1\ICalculation.cs" />
+    <Compile Include="V2\AuthenticationProxy.cs" />
+    <Compile Include="V2\ExceptionHandlerProxy.cs" />
+    <Compile Include="V2\ICalculation.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Sample.AOP.Infrastructure\Sample.AOP.Infrastructure.csproj">
+      <Project>{10369385-595b-49f2-be52-ab30cef7ed79}</Project>
+      <Name>Sample.AOP.Infrastructure</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
