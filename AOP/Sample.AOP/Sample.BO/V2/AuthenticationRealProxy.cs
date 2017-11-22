@@ -1,16 +1,17 @@
-using System;
+﻿using System;
 using System.Reflection;
 using System.Runtime.Remoting.Messaging;
 using System.Runtime.Remoting.Proxies;
+using System.Threading;
 using Sample.AOP.Infrastructure;
 
 namespace Sample.BO.V2
 {
-    public class ExceptionHandlerProxy<T> : RealProxy
+    public class AuthenticationRealProxy<T> : RealProxy
     {
         private readonly T _decorated;
 
-        public ExceptionHandlerProxy(T decorated)
+        public AuthenticationRealProxy(T decorated)
             : base(typeof(T))
         {
             this._decorated = decorated;
@@ -21,30 +22,27 @@ namespace Sample.BO.V2
             var methodCall = msg as IMethodCallMessage;
             var methodInfo = methodCall.MethodBase as MethodInfo;
             var method = DynamicMethod.BuildMethod(methodInfo);
-            this.Log("In Dynamic Proxy - Before executing '{0}'", methodCall.MethodName);
+            var principal = Thread.CurrentPrincipal;
+            if (!principal.Identity.IsAuthenticated)
+            {
+                throw new Exception("沒有通過驗證");
+            }
+
+            if (!principal.IsInRole("Admin"))
+            {
+                throw new Exception("沒有在Admin群裡");
+            }
+
             try
             {
                 var result = method.Invoke(this._decorated, methodCall.InArgs);
-
-                this.Log("In Dynamic Proxy - After executing '{0}' ",
-                         methodCall.MethodName);
                 return new ReturnMessage(result, null, 0,
                                          methodCall.LogicalCallContext, methodCall);
             }
             catch (Exception e)
             {
-                this.Log(string.Format("In Dynamic Proxy- Exception {0} executing '{1}'", e,
-                                       methodCall.MethodName));
-
                 return new ReturnMessage(e, methodCall);
             }
-        }
-
-        private void Log(string msg, object arg = null)
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(msg, arg);
-            Console.ResetColor();
         }
     }
 }

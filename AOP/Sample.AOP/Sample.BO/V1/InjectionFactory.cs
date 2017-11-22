@@ -1,6 +1,6 @@
 ﻿namespace Sample.BO.V1
 {
-    public class CalculationFactory
+    public class InjectionFactory
     {
         public static ICalculation Create()
         {

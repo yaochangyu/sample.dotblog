@@ -66,6 +66,7 @@
     <Compile Include="V0\CalculationUnitTest.cs" />
     <Compile Include="V1\CalculationUnitTest.cs" />
     <Compile Include="V2\CalculationUnitTest.cs" />
+    <Compile Include="V3\CalculationUnitTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

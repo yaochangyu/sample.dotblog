@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 
 namespace Sample.BO.V0
 {
@@ -7,6 +8,16 @@ namespace Sample.BO.V0
         public int Execute(int first, int second)
         {
             var result = 0;
+            var principal = Thread.CurrentPrincipal;
+            if (!principal.Identity.IsAuthenticated)
+            {
+                throw new Exception("沒有通過驗證");
+            }
+
+            if (!principal.IsInRole("Admin"))
+            {
+                throw new Exception("沒有在Admin群裡");
+            }
 
             try
             {

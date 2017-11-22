@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Sample.AOP.Infrastructure
 {
@@ -30,7 +28,7 @@ namespace Sample.AOP.Infrastructure
 
         public static Func<object, object[], object> BuildMethod(Expression<Action> member)
         {
-            var body = (MethodCallExpression)member.Body;
+            var body = (MethodCallExpression) member.Body;
             var methodInfo = body.Method;
             return BuildMethod(methodInfo);
         }
@@ -81,10 +79,10 @@ namespace Sample.AOP.Infrastructure
                     var compile = lambda.Compile();
 
                     executer = (instance, parameters) =>
-                    {
-                        compile(instance, parameters);
-                        return null;
-                    };
+                               {
+                                   compile(instance, parameters);
+                                   return null;
+                               };
                     s_executeContainers.Add(key, executer);
                 }
                 else
@@ -113,14 +111,14 @@ namespace Sample.AOP.Infrastructure
 
             //sourceMember參數所拿到的instance不是我要的，所以另外再傳入instance
             var sourceType = sourceInstance.GetType();
-            var body = (MethodCallExpression)sourceMember.Body;
+            var body = (MethodCallExpression) sourceMember.Body;
 
             var callbackMethod = body.Method;
             var sourceMethod = sourceType.GetMethod(callbackMethod.Name);
 
             object filterAttribute = sourceMethod.GetCustomAttributes()
                                                  .FirstOrDefault(p => p.GetType() == targetType);
-            result = (TTarget)filterAttribute;
+            result = (TTarget) filterAttribute;
 
             return result;
         }
@@ -128,16 +126,16 @@ namespace Sample.AOP.Infrastructure
         public static object[] GetCallbackParameters(Expression<Action> member)
         {
             object[] result = null;
-            var body = (MethodCallExpression)member.Body;
+            var body = (MethodCallExpression) member.Body;
             var parameters = member.Parameters;
             result = body.Arguments
                          .Select(p =>
-                         {
-                             var lambda = Expression.Lambda(p, parameters);
-                             var compile = lambda.Compile();
-                             var value = compile.DynamicInvoke();
-                             return value;
-                         }).ToArray();
+                                 {
+                                     var lambda = Expression.Lambda(p, parameters);
+                                     var compile = lambda.Compile();
+                                     var value = compile.DynamicInvoke();
+                                     return value;
+                                 }).ToArray();
             return result;
         }
 
@@ -166,5 +164,4 @@ namespace Sample.AOP.Infrastructure
         //    }
         //}
     }
-
 }

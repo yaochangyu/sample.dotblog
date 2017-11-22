@@ -11,17 +11,22 @@ namespace Sample.BO.UnitTest.V2
     public class CalculationUnitTest
     {
         [TestMethod]
-        public void 調用Execute_預期得到例外2()
+        public void V2_通過驗證且不是Admin角色()
         {
-            //Thread.CurrentPrincipal =
-            //    new GenericPrincipal(new GenericIdentity("Administrator"),
-            //                         new[] { "ADMIN" });
-            ICalculation calculation = CalculationFactory.Create();
-            calculation.Execute(1, 1);
+            var calculation = InjectionFactory.Create();
             Action action = () => { calculation.Execute(1, 1); };
+            action.ShouldThrow<Exception>().WithMessage("*Admin*");
+        }
 
-            action.ShouldThrow<Exception>()
-                  .WithInnerException<Exception>().WithInnerMessage("喔喔*");
+        [TestMethod]
+        public void V2_通過驗證且是Admin角色_調用Execute_預期得到例外()
+        {
+            Thread.CurrentPrincipal =
+                new GenericPrincipal(new GenericIdentity("Administrator"),
+                                     new[] {"Admin"});
+            var calculation = InjectionFactory.Create();
+            Action action = () => { calculation.Execute(1, 1); };
+            action.ShouldThrow<Exception>().WithMessage("*喔喔*");
         }
     }
 }
