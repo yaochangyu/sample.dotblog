@@ -24,6 +24,8 @@
     <UpdatePeriodically>false</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
+    <ProductName>Simple.Winfrom.BuildClickOnce演練</ProductName>
+    <PublisherName>余小章</PublisherName>
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
     <WebPage>default.htm</WebPage>
     <ApplicationRevision>0</ApplicationRevision>
