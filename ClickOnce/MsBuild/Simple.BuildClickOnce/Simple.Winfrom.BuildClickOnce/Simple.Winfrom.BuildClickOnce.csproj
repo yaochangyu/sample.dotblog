@@ -12,6 +12,8 @@
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <IsWebBootstrapper>false</IsWebBootstrapper>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -28,8 +30,6 @@
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -107,6 +107,35 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
+  <ItemGroup>
+    <Tokens Include="PublisherName">
+      <ReplacementValue>$(PublisherName)</ReplacementValue>
+      <Visible>false</Visible>
+    </Tokens>
+    <Tokens Include="ProductName">
+      <ReplacementValue>$(ProductName)</ReplacementValue>
+      <Visible>false</Visible>
+    </Tokens>
+    <Tokens Include="ApplicationVersion">
+      <ReplacementValue>$(ApplicationVersion)</ReplacementValue>
+      <Visible>false</Visible>
+    </Tokens>
+    <Tokens Include="Prerequsites">
+      <ReplacementValue>@(BootstrapperPackage->'&lt;li&gt;%(ProductName)&lt;/li&gt;','%0D%0A')</ReplacementValue>
+      <Visible>false</Visible>
+    </Tokens>
+    <Tokens Include="Username">
+      <ReplacementValue>$(Username)</ReplacementValue>
+      <Visible>false</Visible>
+    </Tokens>
+    <Tokens Include="ApplicationManifestFilename">
+      <ReplacementValue>$(AssemblyName).application</ReplacementValue>
+      <Visible>false</Visible>
+    </Tokens>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="publish.template.html" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\MSBuildTasks.1.5.0.235\build\MSBuildTasks.targets" Condition="Exists('..\packages\MSBuildTasks.1.5.0.235\build\MSBuildTasks.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
@@ -114,5 +143,12 @@
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\MSBuildTasks.1.5.0.235\build\MSBuildTasks.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\MSBuildTasks.1.5.0.235\build\MSBuildTasks.targets'))" />
+  </Target>
+  <Target Name="AfterPublish">
+    <Time Format="dd/MM/yyyy HH:mm">
+      <Output TaskParameter="FormattedTime" PropertyName="PublishTime" />
+    </Time>
+    <TemplateFile Template="$(ProjectDir)\publish.template.html" Tokens="@(Tokens)" OutputFilename="$(PublishDir)default.htm" />
+    <FileUpdate Files="$(PublishDir)default.htm" Regex="\${PublishTime}" ReplacementText="$(PublishTime)" />
   </Target>
 </Project>
