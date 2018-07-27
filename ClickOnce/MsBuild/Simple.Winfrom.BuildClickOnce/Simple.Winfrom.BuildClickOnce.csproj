@@ -24,7 +24,7 @@
     <UpdatePeriodically>false</UpdatePeriodically>
     <UpdateRequired>false</UpdateRequired>
     <MapFileExtensions>true</MapFileExtensions>
-    <InstallUrl>http://127.0.0.1/</InstallUrl>
+    <InstallUrl>http://127.0.0.1/test/</InstallUrl>
     <ProductName>Simple.Winfrom.BuildClickOnce演練</ProductName>
     <PublisherName>余小章</PublisherName>
     <CreateWebPageOnPublish>true</CreateWebPageOnPublish>
