@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Web.Http;
@@ -10,6 +11,26 @@ namespace Tfs.WebHook.Controllers
     //[Authorize]
     public class MessagesController : ApiController
     {
+        private static readonly HttpClient s_httpClient;
+
+        static MessagesController()
+        {
+            if (s_httpClient == null)
+            {
+                s_httpClient = new HttpClient();
+                s_httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                var uri = AppSetting.Teams.IncomingUrl;
+
+                //暖機
+                s_httpClient.SendAsync(new HttpRequestMessage
+                            {
+                                Method = new HttpMethod("HEAD"),
+                                RequestUri = new Uri(uri + "/")
+                            })
+                            .Result.EnsureSuccessStatusCode();
+            }
+        }
+
         // GET api/messages
         public IEnumerable<string> Get()
         {
@@ -19,21 +40,26 @@ namespace Tfs.WebHook.Controllers
         // POST api/messages
         public HttpResponseMessage Post(RootObject root)
         {
-            Console.WriteLine(root.message.text);
-            using (var client = new HttpClient())
+            try
             {
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-                //Copy paste uri from Teams
-                var uri =
-                    "https://outlook.office.com/webhook/c4075e61-bb4a-44c8-be88-2c25d09b6984@1c710ac2-a31a-42aa-b24f-37290a05b49f/IncomingWebhook/04c9470ae4234fedaea0e9ff834e7eb1/c54b8ab1-bd7d-4994-9c5d-c3625d67e28b";
-                var msg = new TeamsHook {title = root.message.text, themeColor = "0072C6"};
+                var uri = AppSetting.Teams.IncomingUrl;
+                var msg = new TeamsHook
+                {
+                    title = root.message.text,
+                    themeColor = "0072C6"
+                };
                 msg.text = root.message.markdown;
+
                 var teamsMsg = new StringContent(JsonConvert.SerializeObject(msg));
-                var response = client.PostAsync(uri, teamsMsg).Result;
-                var responseString = response.Content.ReadAsStringAsync().Result;
-                Console.WriteLine(responseString);
+                var response = s_httpClient.PostAsync(uri, teamsMsg).Result;
                 return response;
+            }
+            catch (Exception e)
+            {
+                throw new HttpResponseException(new HttpResponseMessage(HttpStatusCode.InternalServerError)
+                {
+                    Content = new StringContent(e.Message)
+                });
             }
         }
     }

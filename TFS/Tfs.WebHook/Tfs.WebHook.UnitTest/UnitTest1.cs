@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Formatting;
 using System.Threading.Tasks;
 using System.Web.Http;
+using Microsoft.Owin.Hosting;
 using Microsoft.Owin.Testing;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -13,7 +14,7 @@ namespace Tfs.WebHook.UnitTest
     [TestClass]
     public class MessagesControllerTests
     {
-        private readonly string s_baseUri = "http://my-testing";
+        private readonly string s_baseUri = "http://localhost:999";
         private TestServer _server;
 
         [TestInitialize]
@@ -40,10 +41,7 @@ namespace Tfs.WebHook.UnitTest
         protected virtual async Task<HttpResponseMessage> PostAsync<TModel>(string uri, TModel model)
         {
             return await this._server.CreateRequest(uri)
-                             .And(
-                                  request =>
-                                      request.Content =
-                                          new ObjectContent(typeof(TModel), model, new JsonMediaTypeFormatter()))
+                             .And(r =>r.Content =new ObjectContent(typeof(TModel), model, new JsonMediaTypeFormatter()))
                              .PostAsync();
         }
 

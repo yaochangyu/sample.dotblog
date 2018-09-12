@@ -16,12 +16,8 @@ namespace Tfs.WebHook.UnitTest
         public void Configuration(IAppBuilder appBuilder)
         {
             var config = new HttpConfiguration();
-            config.MapHttpAttributeRoutes();
-            config.Routes.MapHttpRoute(
-                                       "DefaultApi",
-                                       "api/{controller}/{id}",
-                                       new { id = RouteParameter.Optional }
-                                      );
+            WebApiConfig.Register(config);
+
 
             //config.InitializeCustomWebHooks();
             //config.InitializeCustomWebHooksApis();
