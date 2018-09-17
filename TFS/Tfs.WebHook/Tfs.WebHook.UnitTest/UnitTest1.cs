@@ -137,7 +137,7 @@ namespace Tfs.WebHook.UnitTest
   },
   ""createdDate"": ""2018-09-11T09:40:39.0500672Z""
 }";
-            var root = JsonConvert.DeserializeObject<RootObject>(json);
+            var root = JsonConvert.DeserializeObject<TfsRootObject>(json);
             var response = await this.PostAsync(this.s_baseUri + "/api/messages", root);
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
         }

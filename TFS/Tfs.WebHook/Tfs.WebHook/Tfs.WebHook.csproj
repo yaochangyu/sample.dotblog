@@ -192,8 +192,8 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
-    <Compile Include="Models\TeamsHook.cs" />
-    <Compile Include="Models\RootObject.cs" />
+    <Compile Include="Models\TeamsRootObject.cs" />
+    <Compile Include="Models\TfsRootObject.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

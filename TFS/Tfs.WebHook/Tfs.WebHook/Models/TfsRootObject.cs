@@ -123,7 +123,7 @@ namespace Tfs.WebHook
         public Project project { get; set; }
     }
 
-    public class RootObject
+    public class TfsRootObject
     {
         public DateTime createdDate { get; set; }
         public DetailedMessage detailedMessage { get; set; }

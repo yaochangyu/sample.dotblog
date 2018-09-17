@@ -38,19 +38,19 @@ namespace Tfs.WebHook.Controllers
         }
 
         // POST api/messages
-        public HttpResponseMessage Post(RootObject root)
+        public HttpResponseMessage Post(TfsRootObject fromTfs)
         {
             try
             {
                 var uri = AppSetting.Teams.IncomingUrl;
-                var msg = new TeamsHook
+                var toTeams = new TeamsRootObject
                 {
-                    title = root.message.text,
+                    title = fromTfs.message.text,
                     themeColor = "0072C6"
                 };
-                msg.text = root.message.markdown;
+                toTeams.text = fromTfs.message.markdown;
 
-                var teamsMsg = new StringContent(JsonConvert.SerializeObject(msg));
+                var teamsMsg = new StringContent(JsonConvert.SerializeObject(toTeams));
                 var response = s_httpClient.PostAsync(uri, teamsMsg).Result;
                 return response;
             }
