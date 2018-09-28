@@ -260,3 +260,4 @@ paket-files/
 __pycache__/
 *.pyc
 /Model/WinForm.ModelValidation
+/MVVM/Winform/Lab.Winform/BindDataAndCommand
