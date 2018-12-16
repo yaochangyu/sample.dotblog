@@ -40,5 +40,23 @@ namespace UnitTestProject1
             Action action = () => Validator.ValidateObject(contact, context, true);
             action.Should().Throw<ValidationException>();
         }
+
+
+        [TestMethod]
+        public void GreaterThan_Test()
+        {
+            var contact = new Contact2
+            {
+                StartDate = DateTime.Parse("2000,1,1"),
+                EndDate = DateTime.Parse("1999,1,1"),
+            };
+            var context = new ValidationContext(contact, null, null);
+            var errors = new List<ValidationResult>();
+            if (!Validator.TryValidateObject(contact, context, errors, true))
+            {
+                Assert.AreEqual(1, errors.Count);
+            }
+        }
+
     }
 }
