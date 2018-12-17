@@ -6,45 +6,50 @@ namespace UnitTestProject1
     [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
     public class GreaterThanAttribute : ValidationAttribute
     {
-        private readonly string _comparisonPropertyName;
+        private readonly string _targetName;
 
-        public GreaterThanAttribute(string comparisonPropertyName)
+        public GreaterThanAttribute(string targetFieldName)
         {
-            this._comparisonPropertyName = comparisonPropertyName;
+            this._targetName = targetFieldName;
         }
 
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
             this.ErrorMessage = this.ErrorMessageString;
-            if (value.GetType() == typeof(IComparable))
+            var sourceType = value.GetType();
+            var sourceName = validationContext.MemberName;
+
+            if (sourceType == typeof(IComparable))
             {
                 throw new ArgumentException("value has not implemented IComparable interface");
             }
 
-            var currentValue = (IComparable) value;
-            var comparisonPropertyInfo= validationContext.ObjectType.GetProperty(this._comparisonPropertyName);
+            var sourceValue = (IComparable) value;
+            var comparisonPropertyInfo = validationContext.ObjectType.GetProperty(this._targetName);
             if (comparisonPropertyInfo == null)
             {
                 throw new ArgumentException("Comparison property with this name not found");
             }
 
-            var comparisonValue = comparisonPropertyInfo.GetValue(validationContext.ObjectInstance);
-            if (comparisonValue.GetType() == typeof(IComparable))
+            var targetValue = comparisonPropertyInfo.GetValue(validationContext.ObjectInstance);
+            var targetType = targetValue.GetType();
+            if (targetType == typeof(IComparable))
             {
                 throw new ArgumentException("Comparison property has not implemented IComparable interface");
             }
 
-            if (!ReferenceEquals(value.GetType(), comparisonValue.GetType()))
+            if (!ReferenceEquals(sourceType, targetType))
             {
                 throw new ArgumentException("The properties types must be the same");
             }
 
-            if (currentValue.CompareTo((IComparable) comparisonValue) < 0)
+            if (sourceValue.CompareTo((IComparable) targetValue) < 0)
             {
-                return new ValidationResult(this.ErrorMessage);
+                this.ErrorMessage = $"{this._targetName} property must be less than the {sourceName} property";
+                return new ValidationResult(this.ErrorMessage, new[] {this._targetName, sourceName});
             }
 
             return ValidationResult.Success;
         }
-    }
+    } 
 }
