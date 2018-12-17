@@ -35,7 +35,7 @@ namespace UnitTestProject1
             }
         }
         [TestMethod]
-        public void 新增Member時_若MemberLogs不存在則拋出例外()
+        public void 新增Member時_若MemberLogs不存在_調用DbContext_Save_應預期得到例外()
         {
             using (var dbContext = new ValidationDbContext())
             {
@@ -48,15 +48,6 @@ namespace UnitTestProject1
 
                 dbContext.Members
                          .Add(memberToDb);
-                try
-                {
-                    dbContext.SaveChanges();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
 
                 Action action = () => { dbContext.SaveChanges(); };
                 action.Should().Throw<DbEntityValidationException>();
@@ -73,21 +64,11 @@ namespace UnitTestProject1
                     Id = id
                 };
 
-                memberToDb.MemberLogs
+                memberToDb.Logs
                           .Add(new MemberLog {Id = Guid.NewGuid()});
 
                 dbContext.Members
                          .Add(memberToDb);
-                try
-                {
-                    dbContext.SaveChanges();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
-
                 Action action = () => { dbContext.SaveChanges(); };
                 action.Should().Throw<DbEntityValidationException>();
             }

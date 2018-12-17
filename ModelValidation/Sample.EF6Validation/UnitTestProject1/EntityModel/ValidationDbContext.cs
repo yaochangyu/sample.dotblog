@@ -25,6 +25,11 @@ namespace UnitTestProject1.EntityModel
             var result = base.ValidateEntity(entityEntry, items);
             if (result.IsValid)
             {
+                this.ValidateHasLogIfChangeMode(result);
+            }
+
+            if (result.IsValid)
+            {
                 this.ValidateMinDateTime(result);
             }
 
@@ -69,6 +74,28 @@ namespace UnitTestProject1.EntityModel
                 {
                     result.ValidationErrors.Add(new DbValidationError(name, $"Not support {value} data"));
                 }
+            }
+        }
+
+        private void ValidateHasLogIfChangeMode(DbEntityValidationResult result)
+        {
+            var propertyName = "Logs";
+            var entityEntry = result.Entry;
+            var entityType = entityEntry.Entity.GetType();
+            var logPropertyInfo = entityType.GetProperty(propertyName);
+            if (logPropertyInfo == null)
+            {
+                return;
+            }
+
+            var logs = (IEnumerable<object>) logPropertyInfo.GetValue(entityEntry.Entity, null);
+            var state = entityEntry.State;
+            if ((state == EntityState.Added ||
+                 state == EntityState.Modified ||
+                 state == EntityState.Deleted) & logs.Count() == 0)
+            {
+                result.ValidationErrors.Add(new DbValidationError(propertyName,
+                                                                  $"New {entityType.Name} must have a log."));
             }
         }
 

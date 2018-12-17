@@ -10,7 +10,7 @@ namespace UnitTestProject1.EntityModel
     {
         public Member()
         {
-            this.MemberLogs = new HashSet<MemberLog>();
+            this.Logs = new HashSet<MemberLog>();
         }
 
         [Key]
@@ -21,6 +21,6 @@ namespace UnitTestProject1.EntityModel
 
         public DateTime CreateAt { get; set; }
 
-        public virtual ICollection<MemberLog> MemberLogs { get; set; }
+        public virtual ICollection<MemberLog> Logs { get; set; }
     }
 }
