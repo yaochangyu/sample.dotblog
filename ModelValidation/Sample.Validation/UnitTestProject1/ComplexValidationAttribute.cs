@@ -6,7 +6,8 @@ using System.Linq;
 
 namespace UnitTestProject1
 {
-    public class NestValidationAttribute : ValidationAttribute
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
+    public class ComplexValidationAttribute : ValidationAttribute
     {
         protected override ValidationResult IsValid(object entity, ValidationContext validationContext)
         {
@@ -21,8 +22,7 @@ namespace UnitTestProject1
             }
 
             var displayName = validationContext.DisplayName;
-            var compositeResults =
-                new CompositeValidationResult(string.Format("{0} validate failed!", displayName));
+            var compositeResults = new CompositeValidationResult($"{displayName} validate failed!");
 
             var items = entity as IEnumerable;
 
@@ -34,37 +34,23 @@ namespace UnitTestProject1
                     var validationResults = new List<ValidationResult>();
 
                     var context = new ValidationContext(item, null, null);
-                    Validator.TryValidateObject(item, context,
-                                                validationResults, true);
+                    Validator.TryValidateObject(item, context, validationResults, true);
 
-                    if (validationResults.Count != 0)
-                    {
-                        validationResults.ForEach(x => compositeResults.Add(x, displayName, index));
-                    }
-
+                    validationResults.ForEach(x => compositeResults.Add(x, displayName, index));
                     index++;
                 }
-
-                var isAnythingInvalid = compositeResults.ValidationResults.Any();
-
-                return isAnythingInvalid ? compositeResults : ValidationResult.Success;
             }
-
+            else
             {
                 var validationResults = new List<ValidationResult>();
 
                 var context = new ValidationContext(entity, null, null);
-                Validator.TryValidateObject(entity, context,
-                                            validationResults, true);
+                Validator.TryValidateObject(entity, context, validationResults, true);
 
-                if (validationResults.Count != 0)
-                {
-                    validationResults.ForEach(p => compositeResults.Add(p, displayName));
-                    return compositeResults;
-                }
+                validationResults.ForEach(p => compositeResults.Add(p, displayName));
             }
 
-            return ValidationResult.Success;
+            return compositeResults.ValidationResults.Any() ? compositeResults : ValidationResult.Success;
         }
     }
 }
