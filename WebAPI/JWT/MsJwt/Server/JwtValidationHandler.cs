@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Server
 {
-    internal class TokenValidationHandler : DelegatingHandler
+    internal class JwtValidationHandler : DelegatingHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
                                                                CancellationToken cancellationToken)

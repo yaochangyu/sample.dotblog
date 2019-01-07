@@ -59,12 +59,15 @@ namespace Server
         public static bool TryValidateToken(string token, out ClaimsPrincipal principal)
         {
             principal = null;
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return false;
+            }
             var handler = new JwtSecurityTokenHandler();
 
             try
             {
                 var jwtToken = handler.ReadJwtToken(token);
-                //var jwtToken = handler.ReadToken(token) as JwtSecurityToken;
 
                 if (jwtToken == null)
                 {
