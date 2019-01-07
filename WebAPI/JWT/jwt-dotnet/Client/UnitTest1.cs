@@ -30,9 +30,17 @@ namespace Client
         {
             s_webApp.Dispose();
         }
+        [TestMethod]
+        public void Access_Resource_HttpStatus_Should_Be_Unauthorized()
+        {
+            var queryUrl = "api/value";
+
+            var queryResponse = s_client.GetAsync(queryUrl).Result;
+            Assert.AreEqual(HttpStatusCode.Unauthorized, queryResponse.StatusCode);
+        }
 
         [TestMethod]
-        public void AccessProtectResource()
+        public void Access_Resource_Should_Be_Value()
         {
             var loginUrl = "api/token";
             var queryUrl = "api/value";
