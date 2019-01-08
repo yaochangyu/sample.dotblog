@@ -33,8 +33,9 @@ namespace Server
 
         public static string GenerateToken(string userName, int expireMinutes = 20)
         {
-            var symmetricKey = Convert.FromBase64String(Secret);
-            var tokenHandler = new JwtSecurityTokenHandler();
+            var secretBytes = Convert.FromBase64String(Secret);
+            var securityKey = new SymmetricSecurityKey(secretBytes);
+            var handler = new JwtSecurityTokenHandler();
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
@@ -43,15 +44,14 @@ namespace Server
                     new Claim(ClaimTypes.Name, userName)
                 }),
                 NotBefore = Now.Value,
-                Expires = Now.Value.AddMinutes(Convert.ToInt32(expireMinutes)),
+                Expires = Now.Value.AddMinutes(expireMinutes),
 
-                SigningCredentials =
-                    new SigningCredentials(new SymmetricSecurityKey(symmetricKey),
-                                           SecurityAlgorithms.HmacSha256Signature)
+                SigningCredentials = new SigningCredentials(securityKey,
+                                                            SecurityAlgorithms.HmacSha256Signature)
             };
 
-            var securityToken = tokenHandler.CreateToken(tokenDescriptor);
-            var token = tokenHandler.WriteToken(securityToken);
+            var securityToken = handler.CreateToken(tokenDescriptor);
+            var token = handler.WriteToken(securityToken);
 
             return token;
         }
@@ -63,24 +63,26 @@ namespace Server
             {
                 return false;
             }
+
             var handler = new JwtSecurityTokenHandler();
 
             try
             {
-                var jwtToken = handler.ReadJwtToken(token);
+                var jwt = handler.ReadJwtToken(token);
 
-                if (jwtToken == null)
+                if (jwt == null)
                 {
                     return false;
                 }
-                var symmetricKey = Convert.FromBase64String(Secret);
+
+                var secretBytes = Convert.FromBase64String(Secret);
 
                 var validationParameters = new TokenValidationParameters
                 {
                     RequireExpirationTime = true,
                     ValidateIssuer = false,
                     ValidateAudience = false,
-                    IssuerSigningKey = new SymmetricSecurityKey(symmetricKey),
+                    IssuerSigningKey = new SymmetricSecurityKey(secretBytes),
 
                     //LifetimeValidator = LifetimeValidator
 
