@@ -13,10 +13,22 @@ namespace Server.Controllers
         {
             return this.Ok();
         }
+
         public IHttpActionResult Get(string userName, string department)
         {
             return this.Ok();
         }
-
+        public IHttpActionResult Get(string userName, string department, string leader)
+        {
+            return this.Ok();
+        }
+        public IHttpActionResult Post()
+        {
+            return this.Ok();
+        }
+        public IHttpActionResult Post(string userName)
+        {
+            return this.Ok();
+        }
     }
 }
