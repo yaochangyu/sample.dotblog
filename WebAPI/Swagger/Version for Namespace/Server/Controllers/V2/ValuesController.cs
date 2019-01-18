@@ -2,6 +2,10 @@
 
 namespace Server.Controllers.V2
 {
+    /// <summary>
+    ///     Values控制器
+    /// </summary>
+    [VersionedRoute("api/version", 2)]
     public class ValuesController : ApiController
     {
         public IHttpActionResult Get()
