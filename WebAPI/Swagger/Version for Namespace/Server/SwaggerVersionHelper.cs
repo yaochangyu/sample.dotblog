@@ -10,7 +10,7 @@ namespace Server
         {
             var attr = apiDesc.ActionDescriptor
                               .ControllerDescriptor
-                              .GetCustomAttributes<VersionedRoute>()
+                              .GetCustomAttributes<VersionRoute>()
                               .FirstOrDefault();
             return attr.Version == Convert.ToInt32(targetApiVersion.TrimStart('v'));
         }

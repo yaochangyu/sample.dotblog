@@ -3,9 +3,9 @@
 namespace Server
 {
     [AttributeUsage(AttributeTargets.All)]
-    public class VersionedRoute : Attribute
+    public class VersionRoute : Attribute
     {
-        public VersionedRoute(string name, int version)
+        public VersionRoute(string name, int version)
         {
             this.Name = name;
             this.Version = version;
