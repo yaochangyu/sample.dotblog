@@ -3,14 +3,19 @@
 namespace Server.Controllers.V1
 {
     /// <summary>
-    ///     Values控制器
+    ///     第一版
     /// </summary>
     [VersionRoute("api/version", 1)]
     public class ValuesController : ApiController
     {
+        /// <summary>
+        /// 查詢
+        /// </summary>
+        /// <response code="400"/>
+        /// <returns></returns>
         public IHttpActionResult Get()
         {
-            return this.Ok("我是地板");
+            return this.BadRequest("我是地板");
         }
     }
 }

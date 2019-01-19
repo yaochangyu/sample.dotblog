@@ -23,10 +23,15 @@ namespace Server
                                                   vc.Version("v1", "²Ä¤@ª©");
                                               });
                         c.CustomProvider((defaultProvider) => new CachingSwaggerProvider(defaultProvider));
+                        c.IncludeXmlComments(GetXmlCommentsPath());
                     })
                 .EnableSwaggerUi(c =>
                     {
                     });
+        }
+        private static string GetXmlCommentsPath()
+        {
+            return string.Format(@"{0}\App_Data\Server.xml", System.AppDomain.CurrentDomain.BaseDirectory);
         }
     }
 }
