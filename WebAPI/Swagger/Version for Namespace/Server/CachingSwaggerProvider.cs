@@ -37,7 +37,7 @@ namespace Server
                     {
                         urls[3] = urls[3].Substring(i);
                     }
-
+                    urls[2] = apiVersion;
                     paths.Add(string.Join("/", urls), item.Value);
                 }
 

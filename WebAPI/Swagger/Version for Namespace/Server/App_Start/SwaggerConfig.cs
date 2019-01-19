@@ -16,6 +16,7 @@ namespace Server
             GlobalConfiguration.Configuration
                 .EnableSwagger(c =>
                     {
+                        c.OperationFilter<RemoveNamespaceOperationFilter>();
                         c.MultipleApiVersions((apiDesc, targetApiVersion) => SwaggerVersionHelper.ResolveVersionSupportByRouteConstraint(apiDesc, targetApiVersion),
                                               (vc) =>
                                               {
