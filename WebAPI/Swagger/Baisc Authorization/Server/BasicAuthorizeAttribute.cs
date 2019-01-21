@@ -20,11 +20,12 @@ namespace Server
             var authorization = actionContext.Request.Headers.Authorization;
             if (authorization != null && authorization.Scheme.ToLower() == "basic")
             {
-                Tuple<string, string> userNameAndPasword = ExtractUserNameAndPassword(authorization.Parameter);
+                //base64 decode
+                Tuple<string, string> userNameAndPasword = DecodeBase64(authorization.Parameter);
                 string userName = userNameAndPasword.Item1;
                 string password = userNameAndPasword.Item2;
 
-                //Check User
+                //check user at database
                 IPrincipal principal = await this.AuthenticateAsync(userName, password, cancellationToken);
 
                 if (principal != null)
@@ -40,8 +41,6 @@ namespace Server
             }
 
             await base.OnAuthorizationAsync(actionContext, cancellationToken);
-
-            //return base.OnAuthorizationAsync(actionContext, cancellationToken);
         }
 
         private async Task<IPrincipal> AuthenticateAsync(string userName, string password,
@@ -66,7 +65,7 @@ namespace Server
             return new ClaimsPrincipal(identity);
         }
 
-        private static Tuple<string, string> ExtractUserNameAndPassword(string authorizationParameter)
+        private static Tuple<string, string> DecodeBase64(string authorizationParameter)
         {
             byte[] credentialBytes;
 
