@@ -36,14 +36,14 @@ namespace Server
 
                 operation.security.Add(auth);
 
-                //operation.parameters.Add(new Parameter
-                //{
-                //    name = "Authorization",
-                //    @in = "header", // specify that the value will be sent in the header
-                //    description = "Basic U3dhZ2dlcjpUZXN0", // Basic Swagger:Test
-                //    required = true, // parameter required
-                //    type = "string"
-                //});
+                operation.parameters.Add(new Parameter
+                {
+                    name = "Authorization",
+                    @in = "header", // specify that the value will be sent in the header
+                    description = "Basic U3dhZ2dlcjpUZXN0", // Basic Swagger:Test
+                    required = true, // parameter required
+                    type = "string"
+                });
             }
         }
     }

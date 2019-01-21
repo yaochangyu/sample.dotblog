@@ -31,8 +31,12 @@ namespace Server
                 {
                     {"basic", Enumerable.Empty<string>()}
                 };
-               
+
                 operation.security.Add(auth);
+                //if (operation.parameters == null)
+                //{
+                //    operation.parameters = new List<Parameter>();
+                //}
                 //operation.parameters.Add(new Parameter
                 //{
                 //    name = "Authorization",
