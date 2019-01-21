@@ -114,12 +114,9 @@
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\SwaggerConfig.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="BasicAuthorizeAttribute.cs" />
+    <Compile Include="SecurityManager.cs" />
     <Compile Include="Controllers\ValueController.cs" />
-    <Compile Include="Filters\AddChallengeOnUnauthorizedResult.cs" />
-    <Compile Include="Filters\AuthenticationFailureResult.cs" />
-    <Compile Include="Filters\BasicAuthenticationAttribute.cs" />
-    <Compile Include="Filters\HttpAuthenticationChallengeContextExtensions.cs" />
-    <Compile Include="Filters\IdentityBasicAuthenticationAttribute.cs" />
     <Compile Include="SwaggerAuthorizeOperationFilter.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>

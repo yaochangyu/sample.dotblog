@@ -1,5 +1,4 @@
 ﻿using System.Web.Http;
-using Server.Filters;
 
 namespace Server
 {
@@ -8,8 +7,8 @@ namespace Server
         public static void Register(HttpConfiguration config)
         {
             // Web API configuration and services
-            config.Filters.Add(new AuthorizeAttribute());
-            config.Filters.Add(new IdentityBasicAuthenticationAttribute());
+            //config.Filters.Add(new AuthorizeAttribute());
+            config.Filters.Add(new BasicAuthorizeAttribute());
 
             // Web API routes
             config.MapHttpAttributeRoutes();
