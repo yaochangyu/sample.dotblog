@@ -30,20 +30,24 @@ namespace Server
 
                 var auth = new Dictionary<string, IEnumerable<string>>
                 {
-                    {"jwt", Enumerable.Empty<string>()},
-                    {"basic", Enumerable.Empty<string>()}
+                    {"apiKey", Enumerable.Empty<string>()},
+                    //{"basic", Enumerable.Empty<string>()}
                 };
 
                 operation.security.Add(auth);
 
-                operation.parameters.Add(new Parameter
-                {
-                    name = "Authorization",
-                    @in = "header", // specify that the value will be sent in the header
-                    description = "Basic U3dhZ2dlcjpUZXN0", // Basic Swagger:Test
-                    required = true, // parameter required
-                    type = "string"
-                });
+                //if (operation.parameters == null)
+                //{
+                //    operation.parameters = new List<Parameter>();
+                //}
+                //operation.parameters.Add(new Parameter
+                //{
+                //    name = "Authorization",
+                //    @in = "header", // specify that the value will be sent in the header
+                //    description = "Basic U3dhZ2dlcjpUZXN0", // Basic Swagger:Test
+                //    required = true, // parameter required
+                //    type = "string"
+                //});
             }
         }
     }

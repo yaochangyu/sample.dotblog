@@ -16,7 +16,7 @@ namespace Server
             GlobalConfiguration.Configuration
                 .EnableSwagger(c =>
                     {
-                        //c.OperationFilter<SwaggerAuthorizeOperationFilter>();
+                        c.OperationFilter<SwaggerAuthorizeOperationFilter>();
                         //c.BasicAuth("basic").Description("Basic HTTP Authentication");
                         // By default, the service root url is inferred from the request used to access the docs.
                         // However, there may be situations (e.g. proxy and load-balanced environments) where this does not
@@ -60,14 +60,18 @@ namespace Server
                         // you'll need to implement a custom IDocumentFilter and/or IOperationFilter to set these properties
                         // according to your specific authorization implementation
                         //
-                        c.BasicAuth("basic")
-                            .Description("Basic HTTP Authentication");
+                        //c.BasicAuth("basic")
+                        //    .Description("Basic HTTP Authentication");
                         //
                         // NOTE: You must also configure 'EnableApiKeySupport' below in the SwaggerUI section
-                        c.ApiKey("jwt")
+                        c.ApiKey("apiKey")
                             .Description("JWT Authentication")
                             .Name("Authorization")
                             .In("header");
+                        //c.ApiKey("apiKey")
+                        // .Description("API Key Authentication")
+                        // .Name("apiKey")
+                        // .In("header");
 
                         //c.OAuth2("oauth2")
                         //    .Description("OAuth2 Implicit Grant")
@@ -251,6 +255,7 @@ namespace Server
                         // "apiKeyIn" can either be "query" or "header"
                         //
                         c.EnableApiKeySupport("Authorization", "header");
+                        //c.EnableApiKeySupport("apiKey", "header");
                     });
         }
     }

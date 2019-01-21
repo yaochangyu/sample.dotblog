@@ -7,6 +7,7 @@ using System.Net.Http.Headers;
 using System.Security.Principal;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web;
 using System.Web.Http;
 using System.Web.Http.Controllers;
@@ -16,7 +17,8 @@ namespace Server
 {
     public class JwtAuthorizeAttribute : AuthorizeAttribute
     {
-        protected override bool IsAuthorized(HttpActionContext actionContext)
+        public override async Task OnAuthorizationAsync(HttpActionContext actionContext,
+                                                        CancellationToken cancellationToken)
         {
             var authorization = actionContext.Request.Headers.Authorization;
             if (authorization != null && authorization.Scheme.ToLower() == "bearer")
@@ -34,7 +36,8 @@ namespace Server
                 }
 
             }
-            return base.IsAuthorized(actionContext);
+
+            await base.OnAuthorizationAsync(actionContext, cancellationToken);
         }
     }
 }
