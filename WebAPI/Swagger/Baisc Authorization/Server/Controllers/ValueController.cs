@@ -11,7 +11,15 @@ namespace Server.Controllers
         {
             return new ResponseMessageResult(new HttpResponseMessage(HttpStatusCode.OK)
             {
-                Content = new StringContent("value")
+                Content = new StringContent("Get")
+            });
+        }
+
+        public IHttpActionResult Post()
+        {
+            return new ResponseMessageResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("Post")
             });
         }
     }
