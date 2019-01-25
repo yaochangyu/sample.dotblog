@@ -9,7 +9,7 @@ using Swashbuckle.Swagger;
 
 namespace Server
 {
-    public class SwaggerAuthorizeOperationFilter : IOperationFilter
+    public class OAuth2OperationFilter : IOperationFilter
     {
         public void Apply(Operation operation, SchemaRegistry schemaRegistry, ApiDescription apiDescription)
         {
@@ -31,8 +31,7 @@ namespace Server
 
                 var auth = new Dictionary<string, IEnumerable<string>>
                 {
-                    {"oauth2", new List<string> {"self"}}
-
+                    {"oauth2", Enumerable.Empty<string>()}
                 };
 
                 operation.security.Add(auth);
