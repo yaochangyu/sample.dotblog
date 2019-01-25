@@ -2,6 +2,11 @@ using System.Web.Http;
 using WebActivatorEx;
 using Server;
 using Swashbuckle.Application;
+using Swashbuckle.Swagger;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web.Http.Description;
+using System.Web.Http.Filters;
 
 [assembly: PreApplicationStartMethod(typeof(SwaggerConfig), "Register")]
 
@@ -16,6 +21,7 @@ namespace Server
             GlobalConfiguration.Configuration
                 .EnableSwagger(c =>
                     {
+                        c.OperationFilter<SwaggerAuthorizeOperationFilter>();
                         // By default, the service root url is inferred from the request used to access the docs.
                         // However, there may be situations (e.g. proxy and load-balanced environments) where this does not
                         // resolve correctly. You can workaround this by providing your own code to determine the root URL.
@@ -61,22 +67,28 @@ namespace Server
                         //c.BasicAuth("basic")
                         //    .Description("Basic HTTP Authentication");
                         //
-						// NOTE: You must also configure 'EnableApiKeySupport' below in the SwaggerUI section
+                        // NOTE: You must also configure 'EnableApiKeySupport' below in the SwaggerUI section
                         //c.ApiKey("apiKey")
                         //    .Description("API Key Authentication")
                         //    .Name("apiKey")
                         //    .In("header");
                         //
-                        //c.OAuth2("oauth2")
-                        //    .Description("OAuth2 Implicit Grant")
-                        //    .Flow("implicit")
-                        //    .AuthorizationUrl("http://petstore.swagger.wordnik.com/api/oauth/dialog")
-                        //    //.TokenUrl("https://tempuri.org/token")
-                        //    .Scopes(scopes =>
-                        //    {
-                        //        scopes.Add("read", "Read access to protected resources");
-                        //        scopes.Add("write", "Write access to protected resources");
-                        //    });
+
+                        //https://swagger.io/docs/specification/authentication/oauth2/
+                        c.OAuth2("oauth2")
+                            .Description("OAuth2 password Grant")
+                            .Flow("password")
+                            //.Flow("Implicit")
+                            //.Flow("authorizationCode")
+                            //.Flow("clientCredentials ")
+                            .TokenUrl("http://localhost:58310/token")
+                            .AuthorizationUrl("http://localhost:58310/token")
+                            //.Scopes(scopes =>
+                            //{
+                            //    scopes.Add("read", "Read access to protected resources");
+                            //    scopes.Add("write", "Write access to protected resources");
+                            //})
+                            ;
 
                         // Set this flag to omit descriptions for any actions decorated with the Obsolete attribute
                         //c.IgnoreObsoleteActions();
@@ -237,14 +249,14 @@ namespace Server
                         // If your API supports the OAuth2 Implicit flow, and you've described it correctly, according to
                         // the Swagger 2.0 specification, you can enable UI support as shown below.
                         //
-                        //c.EnableOAuth2Support(
-                        //    clientId: "test-client-id",
-                        //    clientSecret: null,
-                        //    realm: "test-realm",
-                        //    appName: "Swagger UI"
-                        //    //additionalQueryStringParams: new Dictionary<string, string>() { { "foo", "bar" } }
-                        //);
-
+                        c.EnableOAuth2Support(
+                            clientId: "self",
+                            clientSecret: null,
+                            realm: "test-realm",
+                            appName: "Swagger UI"
+                        //additionalQueryStringParams: new Dictionary<string, string>() { { "foo", "bar" } }
+                        );
+                        
                         // If your API supports ApiKey, you can override the default values.
                         // "apiKeyIn" can either be "query" or "header"
                         //

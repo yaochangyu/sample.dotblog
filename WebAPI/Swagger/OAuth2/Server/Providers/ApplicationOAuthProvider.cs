@@ -62,18 +62,8 @@ namespace Server.Providers
 
         public override Task ValidateClientAuthentication(OAuthValidateClientAuthenticationContext context)
         {
-            var isPassword = context.Parameters.FirstOrDefault(p => p.Key == "grant_type").Value
-                                    .Any(p => p == "password");
 
-            if (isPassword)
-            {
-                context.Validated(this._publicClientId);
-            }
-            // Resource owner password credentials does not provide a client ID.
-            if (context.ClientId == null)
-            {
-                context.Validated();
-            }
+            context.Validated(this._publicClientId);
 
             return Task.FromResult<object>(null);
         }
