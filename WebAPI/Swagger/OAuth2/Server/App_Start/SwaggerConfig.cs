@@ -78,16 +78,16 @@ namespace Server
                         c.OAuth2("oauth2")
                             .Description("OAuth2 password Grant")
                             .Flow("password")
-                            //.Flow("Implicit")
+                            //.Flow("implicit")
                             //.Flow("authorizationCode")
                             //.Flow("clientCredentials ")
                             .TokenUrl("http://localhost:58310/token")
-                            .AuthorizationUrl("http://localhost:58310/token")
-                            //.Scopes(scopes =>
-                            //{
-                            //    scopes.Add("read", "Read access to protected resources");
-                            //    scopes.Add("write", "Write access to protected resources");
-                            //})
+                            .AuthorizationUrl("http://localhost:58310/authorize")
+                            .Scopes(scopes =>
+                            {
+                                scopes.Add("read", "Read access to protected resources");
+                                scopes.Add("write", "Write access to protected resources");
+                            })
                             ;
 
                         // Set this flag to omit descriptions for any actions decorated with the Obsolete attribute
