@@ -117,12 +117,6 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Simple.NugetDownloader\Simple.NugetV3.csproj">
-      <Project>{499417A5-1B3B-4165-8E7B-6078C2517A44}</Project>
-      <Name>Simple.NugetV3</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="nuget.config" />
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
