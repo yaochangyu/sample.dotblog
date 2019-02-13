@@ -33,9 +33,10 @@ namespace Simple.NugetDownloader
             {
                 var downloadContext = new PackageDownloadContext(cacheContext, downloadFolder, true);
 
-                foreach (var sourceRepository in sourceRepositoryProvider.GetRepositories())
+                var repositories = sourceRepositoryProvider.GetRepositories();
+                foreach (var repository in repositories)
                 {
-                    var downloadResult = await PackageDownloader.GetDownloadResourceResultAsync(sourceRepository,
+                    var downloadResult = await PackageDownloader.GetDownloadResourceResultAsync(repository,
                                                                                                 package,
                                                                                                 downloadContext,
                                                                                                 globalFolder,
@@ -52,7 +53,7 @@ namespace Simple.NugetDownloader
                             await downloadResult.PackageStream.CopyToAsync(fileStream);
                         }
 
-                        return;
+                        break;
                     }
                 }
             }
