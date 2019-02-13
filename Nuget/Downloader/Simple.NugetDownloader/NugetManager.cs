@@ -13,7 +13,7 @@ using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
 using NuGet.Versioning;
 
-namespace Simple.NugetDownloader
+namespace Simple.NugetV3
 {
     public class NugetManager
     {

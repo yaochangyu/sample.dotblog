@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.271
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simple.NugetDownloader", "Simple.NugetDownloader\Simple.NugetDownloader.csproj", "{499417A5-1B3B-4165-8E7B-6078C2517A44}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simple.NugetV3", "Simple.NugetDownloader\Simple.NugetV3.csproj", "{499417A5-1B3B-4165-8E7B-6078C2517A44}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTestProject1", "UnitTestProject1\UnitTestProject1.csproj", "{146A6288-D9CE-4B85-B016-E3ABC7179FB4}"
 EndProject
