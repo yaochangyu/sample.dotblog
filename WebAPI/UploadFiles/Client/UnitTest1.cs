@@ -48,8 +48,9 @@ namespace Client
                 }
 
                 var response = s_client.PostAsync(url, content).Result;
-                Assert.IsTrue(response.IsSuccessStatusCode);
+                response.EnsureSuccessStatusCode();
                 var result = response.Content.ReadAsAsync<UploadResponse>().Result;
+                Assert.IsNotNull(result);
             }
         }
 
@@ -70,8 +71,9 @@ namespace Client
                 content.Add(streamContent, "File", fileName);
                 s_client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("multipart/form-data"));
                 var response = s_client.PostAsync(url, content).Result;
-                Assert.IsTrue(response.IsSuccessStatusCode);
+                response.EnsureSuccessStatusCode();
                 var result = response.Content.ReadAsAsync<UploadResponse>().Result;
+                Assert.IsNotNull(result);
             }
         }
     }
