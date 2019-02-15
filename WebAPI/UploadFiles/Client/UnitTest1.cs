@@ -2,8 +2,10 @@
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Web;
 using Microsoft.Owin.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Server.Models;
 
 namespace Client
 {
@@ -21,7 +23,6 @@ namespace Client
             Console.WriteLine("Web API started!");
             s_client = new HttpClient();
             s_client.BaseAddress = new Uri(HOST_ADDRESS);
-            Console.WriteLine("HttpClient started!");
         }
 
         [AssemblyCleanup]
@@ -34,13 +35,21 @@ namespace Client
         public void TestMethod1()
         {
             var url = "/api/upload/upload";
-            var fileName = "例外.txt";
+            var fileNames = new[] {"例外1.txt", "例外2.txt"};
             using (var content = new MultipartFormDataContent())
             {
-                byte[] imageBytes = File.ReadAllBytes(fileName);
-                content.Add(new StreamContent(new MemoryStream(imageBytes)), "File", fileName);
-                s_client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("multipart/form-data"));
+                foreach (var fileName in fileNames)
+                {
+                    var fileMimeType = MimeMapping.GetMimeMapping(fileName);
+                    var fileBytes = File.ReadAllBytes(fileName);
+                    var fileContent = new ByteArrayContent(fileBytes);
+                    fileContent.Headers.ContentType = new MediaTypeHeaderValue(fileMimeType);
+                    content.Add(fileContent, fileName, fileName);
+                }
+
                 var response = s_client.PostAsync(url, content).Result;
+                Assert.IsTrue(response.IsSuccessStatusCode);
+                var result = response.Content.ReadAsAsync<UploadResponse>().Result;
             }
         }
 
@@ -48,13 +57,21 @@ namespace Client
         public void TestMethod2()
         {
             var url = "/api/upload/UploadFormData";
-            var fileName = "例外.txt";
+            var fileName = "例外1.txt";
+            var mimeType = MimeMapping.GetMimeMapping(fileName);
             using (var content = new MultipartFormDataContent())
             {
-                byte[] imageBytes = File.ReadAllBytes(fileName);
-                content.Add(new StreamContent(new MemoryStream(imageBytes)), "File", fileName);
+                FileStream fileStream = new FileStream(fileName, FileMode.Open);
+
+                var streamContent = new StreamContent(fileStream);
+                streamContent.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
+                streamContent.Headers.ContentDisposition = new ContentDispositionHeaderValue("attachment")
+                    {FileName = fileName};
+                content.Add(streamContent, "File", fileName);
                 s_client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("multipart/form-data"));
                 var response = s_client.PostAsync(url, content).Result;
+                Assert.IsTrue(response.IsSuccessStatusCode);
+                var result = response.Content.ReadAsAsync<UploadResponse>().Result;
             }
         }
     }

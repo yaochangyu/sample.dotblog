@@ -36,12 +36,12 @@ namespace Server.Controllers
                 foreach (var content in provider.Contents)
                 {
                     var fileName = content.Headers.ContentDisposition.FileName.Trim('\"');
-                    var fileArray = await content.ReadAsByteArrayAsync();
+                    var fileBytes = await content.ReadAsByteArrayAsync();
 
                     var outputPath = Path.Combine(root, fileName);
                     using (var output = new FileStream(outputPath, FileMode.Create, FileAccess.Write))
                     {
-                        await output.WriteAsync(fileArray, 0, fileArray.Length);
+                        await output.WriteAsync(fileBytes, 0, fileBytes.Length);
                     }
 
                     uploadResponse.Names.Add(fileName);
