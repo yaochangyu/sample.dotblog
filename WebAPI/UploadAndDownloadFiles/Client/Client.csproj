@@ -96,6 +96,8 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="bin\Debug\App_Data\例外1.txt" />
+    <Content Include="bin\Debug\App_Data\例外2.txt" />
     <Content Include="例外1.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

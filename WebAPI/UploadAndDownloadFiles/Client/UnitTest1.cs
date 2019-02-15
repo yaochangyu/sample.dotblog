@@ -83,8 +83,10 @@ namespace Client
             var fileName = "例外1.txt";
             var url = $"api/file/download?fileName={fileName}";
 
-            var responseMessage = s_client.GetAsync(url).Result;
-            var fileBytes = responseMessage.Content.ReadAsByteArrayAsync().Result;
+            var response = s_client.GetAsync(url).Result;
+            response.EnsureSuccessStatusCode();
+            var fileBytes = response.Content.ReadAsByteArrayAsync().Result;
+            Assert.IsTrue(fileBytes.Length > 0);
         }
     }
 }
