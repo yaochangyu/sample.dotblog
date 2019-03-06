@@ -9,18 +9,6 @@ namespace UnitTestProject1
     [TestClass]
     public class UnitTest1
     {
-        [TestInitialize]
-        public void TestInitialize()
-        {
-            TestHook.DeleteAll();
-        }
-
-        [TestCleanup]
-        public void TestCleanup()
-        {
-            TestHook.DeleteAll();
-        }
-
         [TestMethod]
         public void Insert_Test()
         {
@@ -45,10 +33,32 @@ namespace UnitTestProject1
             using (var dbConnection = DbManager.CreateConnection())
             {
                 member.Name = expected;
-                var status = dbConnection.Update(member);
-                var memberFromDb = dbConnection.QueryFirstOrDefault<Member>("select * from Member");
-                Assert.AreEqual(expected, memberFromDb.Name);
+                dbConnection.Update(member);
+                NameShouldBe(expected);
             }
+        }
+
+        [TestMethod]
+        public void Delete_Test()
+        {
+            var member = Insert();
+            using (var dbConnection = DbManager.CreateConnection())
+            {
+                dbConnection.Delete(new Member {Id = member.Id});
+                ShouldBeNull();
+            }
+        }
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            TestHook.DeleteAll();
+        }
+
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            TestHook.DeleteAll();
         }
 
         private static Member Insert()
@@ -63,6 +73,24 @@ namespace UnitTestProject1
                 };
                 var count = dbConnection.Insert(memberToDb);
                 return memberToDb;
+            }
+        }
+
+        private static void NameShouldBe(string expected)
+        {
+            using (var dbConnection = DbManager.CreateConnection())
+            {
+                var memberFromDb = dbConnection.QueryFirstOrDefault<Member>("select * from Member");
+                Assert.AreEqual(expected, memberFromDb.Name);
+            }
+        }
+
+        private static void ShouldBeNull()
+        {
+            using (var dbConnection = DbManager.CreateConnection())
+            {
+                var memberFromDb = dbConnection.QueryFirstOrDefault<Member>("select * from Member");
+                Assert.AreEqual(null, memberFromDb);
             }
         }
     }
