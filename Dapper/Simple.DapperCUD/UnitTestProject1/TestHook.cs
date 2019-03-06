@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Data.Entity;
 using System.Data.Entity.SqlServer;
-using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using UnitTestProject1.EntityModel;
 
@@ -10,34 +9,6 @@ namespace UnitTestProject1
     [TestClass]
     public class TestHook
     {
-        //[AssemblyInitialize]
-        public static void AssemblyInitializeAttachFile(TestContext context)
-        {
-            var instance = SqlProviderServices.Instance;
-            var currentDirectory = Directory.GetCurrentDirectory();
-            AppDomain.CurrentDomain.SetData("DataDirectory", currentDirectory);
-            using (var dbContext = new TestDbContext())
-            {
-                if (dbContext.Database.Exists())
-                {
-                    dbContext.Database.Delete();
-                }
-            }
-
-        }
-
-        //[AssemblyCleanup]
-        public static void AssemblyCleanupAttachFile()
-        {
-            using (var dbContext = new TestDbContext())
-            {
-                if (dbContext.Database.Exists())
-                {
-                    dbContext.Database.Delete();
-                }
-            }
-        }
-
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext context)
         {
@@ -52,21 +23,29 @@ namespace UnitTestProject1
                 {
                     dbContext.Database.Delete();
                 }
+
                 dbContext.Database.Initialize(true);
             }
         }
-
-        [AssemblyCleanup]
-        public static void AssemblyCleanup()
+        public static string DeleteAll()
         {
-            //using (var dbContext = new TestDbContext())
-            //{
-            //    if (dbContext.Database.Exists())
-            //    {
-            //        dbContext.Database.Delete();
-            //    }
-            //}
+            var sql = @"
+-- disable referential integrity
+EXEC sp_MSForEachTable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL' 
+
+
+EXEC sp_MSForEachTable 'DELETE FROM ?' 
+
+
+-- enable referential integrity again 
+EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL' 
+";
+            using (var dbContext = new TestDbContext())
+            {
+                dbContext.Database.ExecuteSqlCommand(sql);
+            }
+
+            return sql;
         }
     }
-
 }
