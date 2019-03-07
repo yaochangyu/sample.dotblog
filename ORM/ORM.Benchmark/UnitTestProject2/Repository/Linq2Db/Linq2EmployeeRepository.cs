@@ -17,7 +17,6 @@ namespace UnitTestProject2.Repository.Linq2Db
         public IEnumerable<EmployeeViewModel> GetAllEmployees(out int count)
         {
             IEnumerable<EmployeeViewModel> results = null;
-            var totalCount = 0;
             using (var db = new LabEmployeeDB(this.ConnectionName))
             {
                 var selector = db.Identities
@@ -49,7 +48,7 @@ namespace UnitTestProject2.Repository.Linq2Db
                     return results;
                 }
 
-                selector.OrderBy(p => p.SequenceId);
+                selector = selector.OrderBy(p => p.SequenceId);
                 results = selector.ToList();
             }
 

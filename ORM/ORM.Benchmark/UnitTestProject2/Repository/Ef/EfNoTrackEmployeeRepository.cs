@@ -22,18 +22,6 @@ namespace UnitTestProject2.Repository.Ef
             var totalCount = 0;
             using (var dbContext = new LabDbContext(this.ConnectionName))
             {
-                dbContext.Employees.Add(new Employee()
-                {
-                    Id = Guid.NewGuid(),
-                    Name = "yao",
-                    Age = 19,
-                    Identity = new Identity()
-                    {
-                        Account = "yao",
-                        Password = "1234"
-                    }
-                });
-                dbContext.SaveChanges();
                 var selector = dbContext.Identities
                                         .Select(p => new EmployeeViewModel
                                         {
@@ -52,7 +40,7 @@ namespace UnitTestProject2.Repository.Ef
                     return results;
                 }
 
-                selector.OrderBy(p => p.SequenceId);
+                selector = selector.OrderBy(p => p.SequenceId);
                 results = selector.AsNoTracking().ToList();
             }
 

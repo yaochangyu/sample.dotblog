@@ -9,7 +9,7 @@ using UnitTestProject2.ViewModel;
 
 namespace UnitTestProject2.Repository.Ado
 {
-    public class DataReaderEmployeeRepository : IEmployeeRepository
+    public class DataReaderEmployeeRepository : IAdoEmployeeRepository
     {
         public DataReaderEmployeeRepository(string connectionName)
         {
@@ -18,9 +18,9 @@ namespace UnitTestProject2.Repository.Ado
 
         public string ConnectionName { get; set; }
 
-        public IEnumerable<EmployeeViewModel> GetAllEmployees(out int count)
+        public DataTable GetAllEmployees(out int count)
         {
-            IEnumerable<EmployeeViewModel> results = null;
+            DataTable result = null;
             var totalCount = 0;
             count = 0;
             var countText = @"
@@ -48,16 +48,28 @@ FROM
 
                 dbCommand.CommandText = countText;
                 count = (int)dbCommand.ExecuteScalar();
+                if (count == 0)
+                {
+                    return result;
+                }
 
                 dbCommand.CommandText = selectText;
                 var reader = dbCommand.ExecuteReader(CommandBehavior.SequentialAccess);
+
+                result = new DataTable();
+                for (var i = 0; i < reader.FieldCount; i++)
+                {
+                    result.Columns.Add(reader.GetName(i), reader.GetFieldType(i));
+                }
+
                 while (reader.Read())
                 {
                     var items = new object[reader.FieldCount];
                     reader.GetValues(items);
+                    result.LoadDataRow(items, true);
                 }
             }
-            return results;
+            return result;
         }
     }
 }

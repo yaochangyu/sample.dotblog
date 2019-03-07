@@ -20,30 +20,32 @@ namespace UnitTestProject2.Repository.Dapper
         public IEnumerable<EmployeeViewModel> GetAllEmployees(out int count)
         {
             IEnumerable<EmployeeViewModel> results = null;
-            var totalCount = 0;
+
             count = 0;
             var countText = @"
 SELECT
 	Count(*)
 FROM
-	[dbo].[Employee] [p]
+	[dbo].[Identity] [p]
 ";
             var selectText = @"
 SELECT
-	[p].[Id],
-	[p].[Name],
-	[p].[Age],
-	[p].[SequenceId],
-	[Identity].[Account],
-	[Identity].[Password]
+	[a_Employee].[Id],
+	[a_Employee].[Name],
+	[a_Employee].[Age],
+	[a_Employee].[SequenceId],
+	[p].[Account],
+	[p].[Password]
 FROM
-	[dbo].[Employee] [p]
-		LEFT JOIN [dbo].[Identity] [Identity] ON [p].[Id] = [Identity].[Employee_Id]";
+	[dbo].[Identity] [p]
+		INNER JOIN [dbo].[Employee] [a_Employee] ON [p].[Employee_Id] = [a_Employee].[Id]
+ORDER BY
+	[a_Employee].[SequenceId]";
 
             using (var db = DbManager.CreateConnection(ConnectionName))
             {
-                totalCount = db.QueryFirst<int>(countText);
-                if (totalCount == 0)
+                count = db.QueryFirst<int>(countText);
+                if (count == 0)
                 {
                     return results;
                 }
