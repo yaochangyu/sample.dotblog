@@ -1,0 +1,14 @@
+﻿using System.Collections.Generic;
+using UnitTestProject2.ViewModel;
+
+namespace UnitTestProject2.Repository
+{
+    public interface IEmployeeRepository
+    {
+        string ConnectionName { get; set; }
+
+        //IEnumerable<EmployeeViewModel> GetAllEmployees(out int count);
+        //IEnumerable<T> GetAllEmployees<T>(out int count);
+        IEnumerable<EmployeeViewModel> GetAllEmployees(out int count);
+    }
+}

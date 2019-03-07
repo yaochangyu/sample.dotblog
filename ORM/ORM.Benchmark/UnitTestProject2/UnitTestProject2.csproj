@@ -1,0 +1,139 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\linq2db.SqlServer.2.6.4\build\linq2db.SqlServer.props" Condition="Exists('..\packages\linq2db.SqlServer.2.6.4\build\linq2db.SqlServer.props')" />
+  <Import Project="..\packages\MSTest.TestAdapter.1.3.2\build\net45\MSTest.TestAdapter.props" Condition="Exists('..\packages\MSTest.TestAdapter.1.3.2\build\net45\MSTest.TestAdapter.props')" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{9382CEA9-7588-4453-A090-9645DBC98791}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>UnitTestProject2</RootNamespace>
+    <AssemblyName>UnitTestProject2</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">15.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+    <ReferencePath>$(ProgramFiles)\Common Files\microsoft shared\VSTT\$(VisualStudioVersion)\UITestExtensionPackages</ReferencePath>
+    <IsCodedUITest>False</IsCodedUITest>
+    <TestProjectType>UnitTest</TestProjectType>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Dapper, Version=1.60.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Dapper.1.60.1\lib\net451\Dapper.dll</HintPath>
+    </Reference>
+    <Reference Include="Dapper.Contrib, Version=1.60.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Dapper.Contrib.1.60.1\lib\net451\Dapper.Contrib.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="linq2db, Version=2.6.4.0, Culture=neutral, PublicKeyToken=e41013125f9e410a, processorArchitecture=MSIL">
+      <HintPath>..\packages\linq2db.2.6.4\lib\net46\linq2db.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\MSTest.TestFramework.1.3.2\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\MSTest.TestFramework.1.3.2\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.Linq" />
+    <Reference Include="System.Transactions" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DbManager.cs" />
+    <Compile Include="Repository\Ado\DataReaderEmployeeRepository.cs" />
+    <Compile Include="Repository\Dapper\DapperEmployeeRepository.cs" />
+    <Compile Include="Repository\Dapper\EntityModel\Employee.cs" />
+    <Compile Include="Repository\Dapper\EntityModel\Identity.cs" />
+    <Compile Include="Repository\Dapper\EntityModel\Order.cs" />
+    <Compile Include="Repository\Ef\EntityModel\Employee.cs" />
+    <Compile Include="Repository\Ef\EfNoTrackEmployeeRepository.cs" />
+    <Compile Include="Repository\Ef\EntityModel\Identity.cs" />
+    <Compile Include="Repository\Ef\EntityModel\LabDbContext.cs" />
+    <Compile Include="Repository\Ef\EntityModel\Order.cs" />
+    <Compile Include="Repository\IEmployeeRepository.cs" />
+    <Compile Include="Repository\Linq2Db\EntityModel\CopyMe.SqlServer1.generated.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>CopyMe.SqlServer.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Repository\Linq2Db\Linq2EmployeeRepository.cs" />
+    <Compile Include="UnitTest1.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ViewModel\EmployeeViewModel.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <None Include="LinqToDB.Templates\DataAnnotations.ttinclude" />
+    <None Include="LinqToDB.Templates\DataModel.ttinclude" />
+    <None Include="LinqToDB.Templates\EditableObject.ttinclude" />
+    <None Include="LinqToDB.Templates\Humanizer.ttinclude" />
+    <None Include="LinqToDB.Templates\LinqToDB.SqlServer.SqlTypes.Tools.ttinclude" />
+    <None Include="LinqToDB.Templates\LinqToDB.SqlServer.Tools.ttinclude" />
+    <None Include="LinqToDB.Templates\LinqToDB.SqlServer.ttinclude" />
+    <None Include="LinqToDB.Templates\LinqToDB.Tools.ttinclude" />
+    <None Include="LinqToDB.Templates\LinqToDB.ttinclude" />
+    <None Include="LinqToDB.Templates\MultipleFiles.ttinclude" />
+    <None Include="LinqToDB.Templates\NotifyDataErrorInfo.ttinclude" />
+    <None Include="LinqToDB.Templates\NotifyPropertyChanged.ttinclude" />
+    <None Include="LinqToDB.Templates\ObsoleteAttributes.ttinclude" />
+    <None Include="LinqToDB.Templates\PluralizationService.ttinclude" />
+    <None Include="LinqToDB.Templates\T4Model.ttinclude" />
+    <None Include="LinqToDB.Templates\Validation.ttinclude" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="LinqToDB.Templates\CopyMe.SqlServer.tt.txt" />
+    <Content Include="Repository\Linq2Db\EntityModel\CopyMe.SqlServer.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>CopyMe.SqlServer1.generated.cs</LastGenOutput>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\MSTest.TestAdapter.1.3.2\build\net45\MSTest.TestAdapter.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\MSTest.TestAdapter.1.3.2\build\net45\MSTest.TestAdapter.props'))" />
+    <Error Condition="!Exists('..\packages\MSTest.TestAdapter.1.3.2\build\net45\MSTest.TestAdapter.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\MSTest.TestAdapter.1.3.2\build\net45\MSTest.TestAdapter.targets'))" />
+    <Error Condition="!Exists('..\packages\linq2db.SqlServer.2.6.4\build\linq2db.SqlServer.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\linq2db.SqlServer.2.6.4\build\linq2db.SqlServer.props'))" />
+  </Target>
+  <Import Project="..\packages\MSTest.TestAdapter.1.3.2\build\net45\MSTest.TestAdapter.targets" Condition="Exists('..\packages\MSTest.TestAdapter.1.3.2\build\net45\MSTest.TestAdapter.targets')" />
+</Project>
