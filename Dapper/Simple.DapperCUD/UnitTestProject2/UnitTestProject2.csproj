@@ -6,7 +6,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{9382CEA9-7588-4453-A090-9645DBC98791}</ProjectGuid>
+    <ProjectGuid>{A81E3EA6-84DD-4873-B773-42EB9688219F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>UnitTestProject2</RootNamespace>
@@ -40,12 +40,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Dapper, Version=1.60.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Dapper.1.60.1\lib\net451\Dapper.dll</HintPath>
-    </Reference>
-    <Reference Include="Dapper.Contrib, Version=1.60.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Dapper.Contrib.1.60.1\lib\net451\Dapper.Contrib.dll</HintPath>
-    </Reference>
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.dll</HintPath>
     </Reference>
@@ -55,7 +49,6 @@
     <Reference Include="linq2db, Version=2.6.4.0, Culture=neutral, PublicKeyToken=e41013125f9e410a, processorArchitecture=MSIL">
       <HintPath>..\packages\linq2db.2.6.4\lib\net46\linq2db.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\MSTest.TestFramework.1.3.2\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.dll</HintPath>
     </Reference>
@@ -67,40 +60,20 @@
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Data.Linq" />
-    <Reference Include="System.Transactions" />
-    <Reference Include="System.Xml" />
-    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DataInfo.cs" />
-    <Compile Include="DbManager.cs" />
-    <Compile Include="Repository\Ado\LoadDataEmployeeRepository.cs" />
-    <Compile Include="Repository\Ado\LoadEmployeeRepository.cs" />
-    <Compile Include="Repository\Ado\TableUtility.cs" />
-    <Compile Include="Repository\Ado\DataReaderEmployeeRepository.cs" />
-    <Compile Include="Repository\Dapper\DapperEmployeeRepository.cs" />
-    <Compile Include="Repository\Dapper\EntityModel\Employee.cs" />
-    <Compile Include="Repository\Dapper\EntityModel\Identity.cs" />
-    <Compile Include="Repository\Dapper\EntityModel\Order.cs" />
-    <Compile Include="Repository\Ef\EntityModel\Employee.cs" />
-    <Compile Include="Repository\Ef\EfNoTrackEmployeeRepository.cs" />
-    <Compile Include="Repository\Ef\EntityModel\Identity.cs" />
-    <Compile Include="Repository\Ef\EntityModel\LabDbContext.cs" />
-    <Compile Include="Repository\Ef\EntityModel\Order.cs" />
-    <Compile Include="Repository\IEmployeeRepository.cs" />
-    <Compile Include="Repository\Linq2Db\EntityModel\CopyMe.SqlServer1.generated.cs">
+    <Compile Include="DataModels\CopyMe.SqlServer1.generated.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>CopyMe.SqlServer.tt</DependentUpon>
     </Compile>
-    <Compile Include="Repository\Linq2Db\Linq2EmployeeRepository.cs" />
-    <Compile Include="Repository\SqlIdentityText.cs" />
-    <Compile Include="Repository\SqlEmployeeText.cs" />
-    <Compile Include="TestReport.cs" />
-    <Compile Include="UnitTest1.cs" />
+    <Compile Include="DbManager.cs" />
+    <Compile Include="EntityModel\Member.cs" />
+    <Compile Include="EntityModel\TestDbContext.cs" />
+    <Compile Include="MemberDb.cs" />
+    <Compile Include="TestHook.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ViewModel\EmployeeViewModel.cs" />
+    <Compile Include="UnitTest2.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -123,11 +96,11 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="LinqToDB.Templates\CopyMe.SqlServer.tt.txt" />
-    <Content Include="Repository\Linq2Db\EntityModel\CopyMe.SqlServer.tt">
+    <Content Include="DataModels\CopyMe.SqlServer.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>CopyMe.SqlServer1.generated.cs</LastGenOutput>
     </Content>
+    <Content Include="LinqToDB.Templates\CopyMe.SqlServer.tt.txt" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />

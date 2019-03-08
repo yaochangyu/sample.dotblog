@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using System.Data;
 
 namespace UnitTestProject2.Repository.Ado
 {
-    public class DataReaderEmployeeRepository : IAdoEmployeeRepository
+    public class LoadDataEmployeeRepository : IAdoEmployeeRepository
     {
-        public DataReaderEmployeeRepository(string connectionName)
+        public LoadDataEmployeeRepository(string connectionName)
         {
             this.ConnectionName = connectionName;
         }
@@ -24,7 +22,16 @@ namespace UnitTestProject2.Repository.Ado
 
                 dbCommand.CommandText = SqlEmployeeText.AllEmployee;
                 var reader = dbCommand.ExecuteReader(CommandBehavior.SequentialAccess);
-                result = ToDataTable(reader);
+                
+                result = TableUtility.GetEmployeeTable();
+                while (reader.Read())
+                {
+                    object[] items = new object[reader.FieldCount];
+
+                    reader.GetValues(items);
+                    result.LoadDataRow(items, true);
+                }
+
                 count = result.Rows.Count;
             }
 
@@ -41,7 +48,7 @@ namespace UnitTestProject2.Repository.Ado
                 dbCommand.CommandType = CommandType.Text;
 
                 dbCommand.CommandText = SqlIdentityText.Count;
-                count = (int)dbCommand.ExecuteScalar();
+                count = (int) dbCommand.ExecuteScalar();
                 if (count == 0)
                 {
                     return result;
@@ -49,40 +56,13 @@ namespace UnitTestProject2.Repository.Ado
 
                 dbCommand.CommandText = SqlIdentityText.InnerJoinEmployee;
                 var reader = dbCommand.ExecuteReader(CommandBehavior.SequentialAccess);
-                result = ToDataTable(reader);
-            }
-
-            return result;
-        }
-
-        private static DataTable ToDataTable(IDataReader reader)
-        {
-            DataTable result;
-            DataTable schema = reader.GetSchemaTable();
-            result = new DataTable();
-            List<DataColumn> columns = new List<DataColumn>();
-            if (schema != null)
-            {
-                foreach (DataRow row in schema.Rows)
+                result = TableUtility.GetEmployeeTable();
+                while (reader.Read())
                 {
-                    string columnName = Convert.ToString(row["ColumnName"]);
-                    DataColumn column = new DataColumn(columnName, (Type)row["DataType"]);
-                    column.Unique = (bool)row["IsUnique"];
-                    column.AllowDBNull = (bool)row["AllowDBNull"];
-                    column.AutoIncrement = (bool)row["IsAutoIncrement"];
-                    columns.Add(column);
-                    result.Columns.Add(column);
+                    object[] items = new object[reader.FieldCount];
+                    reader.GetValues(items);
+                    result.LoadDataRow(items, true);
                 }
-            }
-            while (reader.Read())
-            {
-                DataRow row = result.NewRow();
-                for (int i = 0; i < columns.Count; i++)
-                {
-                    row[columns[i]] = reader[i];
-                }
-
-                result.Rows.Add(row);
             }
 
             return result;

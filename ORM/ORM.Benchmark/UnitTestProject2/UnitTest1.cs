@@ -119,7 +119,9 @@ namespace UnitTestProject2
         {
             var actions = new Dictionary<string, IAdoEmployeeRepository>
             {
-                {"DataReaderEmployeeRepository", new DataReaderEmployeeRepository(connectionName)}
+                {"DataReaderEmployeeRepository", new DataReaderEmployeeRepository(connectionName)},
+                {"LoadDataEmployeeRepository", new LoadDataEmployeeRepository(connectionName)},
+                {"LoadEmployeeRepository", new LoadEmployeeRepository(connectionName)},
             };
 
             return actions;

@@ -67,4 +67,7 @@
     <Build Include="dbo\Tables\Identity.sql" />
     <Build Include="dbo\Tables\Order.sql" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="Database1.publish.xml" />
+  </ItemGroup>
 </Project>
