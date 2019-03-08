@@ -27,10 +27,9 @@ namespace UnitTestProject2.Repository.Linq2Db.EntityModel
 	/// </summary>
 	public partial class LabEmployeeDB : LinqToDB.Data.DataConnection
 	{
-		public ITable<Employee>         Employees          { get { return this.GetTable<Employee>(); } }
-		public ITable<Identity>         Identities         { get { return this.GetTable<Identity>(); } }
-		public ITable<MigrationHistory> MigrationHistories { get { return this.GetTable<MigrationHistory>(); } }
-		public ITable<Order>            Orders             { get { return this.GetTable<Order>(); } }
+		public ITable<Employee> Employees  { get { return this.GetTable<Employee>(); } }
+		public ITable<Identity> Identities { get { return this.GetTable<Identity>(); } }
+		public ITable<Order>    Orders     { get { return this.GetTable<Order>(); } }
 
 		public LabEmployeeDB()
 		{
@@ -100,10 +99,10 @@ namespace UnitTestProject2.Repository.Linq2Db.EntityModel
 		#region Associations
 
 		/// <summary>
-		/// FK_dbo.Identity_dbo.Employee_Employee_Id_BackReference
+		/// FK_Identity_Employee_Id_BackReference
 		/// </summary>
 		[Association(ThisKey="Id", OtherKey="EmployeeId", CanBeNull=true, Relationship=Relationship.OneToOne, IsBackReference=true)]
-		public Identity DboIdentitydboEmployeeId { get; set; }
+		public Identity IdentityId { get; set; }
 
 		#endregion
 	}
@@ -120,21 +119,12 @@ namespace UnitTestProject2.Repository.Linq2Db.EntityModel
 		#region Associations
 
 		/// <summary>
-		/// FK_dbo.Identity_dbo.Employee_Employee_Id
+		/// FK_Identity_Employee_Id
 		/// </summary>
-		[Association(ThisKey="EmployeeId", OtherKey="Id", CanBeNull=false, Relationship=Relationship.OneToOne, KeyName="FK_dbo.Identity_dbo.Employee_Employee_Id", BackReferenceName="DboIdentitydboEmployeeId")]
+		[Association(ThisKey="EmployeeId", OtherKey="Id", CanBeNull=false, Relationship=Relationship.OneToOne, KeyName="FK_Identity_Employee_Id", BackReferenceName="IdentityId")]
 		public Employee Employee { get; set; }
 
 		#endregion
-	}
-
-	[Table(Schema="dbo", Name="__MigrationHistory")]
-	public partial class MigrationHistory
-	{
-		[PrimaryKey(1), NotNull] public string MigrationId    { get; set; } // nvarchar(150)
-		[PrimaryKey(2), NotNull] public string ContextKey     { get; set; } // nvarchar(300)
-		[Column,        NotNull] public byte[] Model          { get; set; } // varbinary(max)
-		[Column,        NotNull] public string ProductVersion { get; set; } // nvarchar(32)
 	}
 
 	[Table(Schema="dbo", Name="Order")]
@@ -159,13 +149,6 @@ namespace UnitTestProject2.Repository.Linq2Db.EntityModel
 		{
 			return table.FirstOrDefault(t =>
 				t.EmployeeId == EmployeeId);
-		}
-
-		public static MigrationHistory Find(this ITable<MigrationHistory> table, string MigrationId, string ContextKey)
-		{
-			return table.FirstOrDefault(t =>
-				t.MigrationId == MigrationId &&
-				t.ContextKey  == ContextKey);
 		}
 
 		public static Order Find(this ITable<Order> table, Guid Id)
