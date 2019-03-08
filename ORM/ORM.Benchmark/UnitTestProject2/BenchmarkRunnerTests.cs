@@ -4,10 +4,10 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace UnitTestProject2
 {
     [TestClass]
-    public class UnitTest2
+    public class BenchmarkRunnerTests
     {
         [TestMethod]
-        public void TestMethod1()
+        public void OrmTest()
         {
             var summary = BenchmarkRunner.Run<OrmBenchmark>();
         }

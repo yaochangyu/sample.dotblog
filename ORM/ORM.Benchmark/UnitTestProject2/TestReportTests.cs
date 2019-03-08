@@ -12,11 +12,11 @@ using UnitTestProject2.Repository.Linq2Db;
 namespace UnitTestProject2
 {
     [TestClass]
-    public class UnitTest1
+    public class TestReportTests
     {
         private static IEnumerable<TestReport> Reports;
 
-        public UnitTest1()
+        public TestReportTests()
         {
             string connectionName = "LabDbContext";
             if (Reports == null)
@@ -56,7 +56,7 @@ namespace UnitTestProject2
         }
 
         [TestMethod]
-        public void TestMethod2()
+        public void OrmTest()
         {
             string connectionName = "LabDbContext";
             this.Run(Reports, 5);

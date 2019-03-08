@@ -269,9 +269,9 @@
     <Compile Include="Repository\SqlIdentityText.cs" />
     <Compile Include="Repository\SqlEmployeeText.cs" />
     <Compile Include="TestReport.cs" />
-    <Compile Include="UnitTest1.cs" />
+    <Compile Include="TestReportTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="UnitTest2.cs" />
+    <Compile Include="BenchmarkRunnerTests.cs" />
     <Compile Include="ViewModel\EmployeeViewModel.cs" />
   </ItemGroup>
   <ItemGroup>
