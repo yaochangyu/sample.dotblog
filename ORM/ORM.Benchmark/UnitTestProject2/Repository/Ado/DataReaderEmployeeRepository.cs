@@ -1,11 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Entity;
-using System.Linq;
-using Dapper;
-using UnitTestProject2.Repository.Ef.EntityModel;
-using UnitTestProject2.ViewModel;
 
 namespace UnitTestProject2.Repository.Ado
 {
@@ -27,27 +22,29 @@ namespace UnitTestProject2.Repository.Ado
 SELECT
 	Count(*)
 FROM
-	[dbo].[Employee] [p]
+	[dbo].[Identity] [p]
 ";
             var selectText = @"
 SELECT
-	[p].[Id],
-	[p].[Name],
-	[p].[Age],
-	[p].[SequenceId],
-	[Identity].[Account],
-	[Identity].[Password]
+	[a_Employee].[Id],
+	[a_Employee].[Name],
+	[a_Employee].[Age],
+	[a_Employee].[SequenceId],
+	[p].[Account],
+	[p].[Password]
 FROM
-	[dbo].[Employee] [p]
-		LEFT JOIN [dbo].[Identity] [Identity] ON [p].[Id] = [Identity].[Employee_Id]";
+	[dbo].[Identity] [p]
+		INNER JOIN [dbo].[Employee] [a_Employee] ON [p].[Employee_Id] = [a_Employee].[Id]
+ORDER BY
+	[a_Employee].[SequenceId]";
 
-            using (var dbConnection = DbManager.CreateConnection(ConnectionName))
+            using (var dbConnection = DbManager.CreateConnection(this.ConnectionName))
             using (var dbCommand = dbConnection.CreateCommand())
             {
                 dbCommand.CommandType = CommandType.Text;
 
                 dbCommand.CommandText = countText;
-                count = (int)dbCommand.ExecuteScalar();
+                count = (int) dbCommand.ExecuteScalar();
                 if (count == 0)
                 {
                     return result;
@@ -55,20 +52,35 @@ FROM
 
                 dbCommand.CommandText = selectText;
                 var reader = dbCommand.ExecuteReader(CommandBehavior.SequentialAccess);
-
+                DataTable schema = reader.GetSchemaTable();
                 result = new DataTable();
-                for (var i = 0; i < reader.FieldCount; i++)
+                List<DataColumn> columns = new List<DataColumn>();
+                if (schema != null)
                 {
-                    result.Columns.Add(reader.GetName(i), reader.GetFieldType(i));
+                    foreach (DataRow row in schema.Rows)
+                    {
+                        string columnName = Convert.ToString(row["ColumnName"]);
+                        DataColumn column = new DataColumn(columnName, (Type) row["DataType"]);
+                        column.Unique = (bool) row["IsUnique"];
+                        column.AllowDBNull = (bool) row["AllowDBNull"];
+                        column.AutoIncrement = (bool) row["IsAutoIncrement"];
+                        columns.Add(column);
+                        result.Columns.Add(column);
+                    }
                 }
 
                 while (reader.Read())
                 {
-                    var items = new object[reader.FieldCount];
-                    reader.GetValues(items);
-                    result.LoadDataRow(items, true);
+                    DataRow row = result.NewRow();
+                    for (int i = 0; i < columns.Count; i++)
+                    {
+                        row[columns[i]] = reader[i];
+                    }
+
+                    result.Rows.Add(row);
                 }
             }
+
             return result;
         }
     }

@@ -19,9 +19,12 @@ namespace UnitTestProject2.Repository.Ef
         public IEnumerable<EmployeeViewModel> GetAllEmployees(out int count)
         {
             IEnumerable<EmployeeViewModel> results = null;
-            var totalCount = 0;
             using (var dbContext = new LabDbContext(this.ConnectionName))
             {
+                dbContext.Configuration.LazyLoadingEnabled = false;
+                dbContext.Configuration.ProxyCreationEnabled = false;
+                dbContext.Configuration.AutoDetectChangesEnabled = false;
+
                 var selector = dbContext.Identities
                                         .Select(p => new EmployeeViewModel
                                         {
