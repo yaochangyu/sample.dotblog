@@ -75,6 +75,7 @@
   <ItemGroup>
     <Compile Include="DataInfo.cs" />
     <Compile Include="DbManager.cs" />
+    <Compile Include="Repository\Ado\TableUtility.cs" />
     <Compile Include="Repository\Ado\DataReaderEmployeeRepository.cs" />
     <Compile Include="Repository\Dapper\DapperEmployeeRepository.cs" />
     <Compile Include="Repository\Dapper\EntityModel\Employee.cs" />
@@ -92,6 +93,8 @@
       <DependentUpon>CopyMe.SqlServer.tt</DependentUpon>
     </Compile>
     <Compile Include="Repository\Linq2Db\Linq2EmployeeRepository.cs" />
+    <Compile Include="Repository\SqlIdentityText.cs" />
+    <Compile Include="Repository\SqlEmployeeText.cs" />
     <Compile Include="TestReport.cs" />
     <Compile Include="UnitTest1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

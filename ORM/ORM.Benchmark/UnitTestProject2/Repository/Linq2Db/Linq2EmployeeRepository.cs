@@ -14,6 +14,26 @@ namespace UnitTestProject2.Repository.Linq2Db
 
         public string ConnectionName { get; set; }
 
+        public object GetAll(out int count)
+        {
+            IEnumerable<Employee> results = null;
+            using (var db = new LabEmployeeDB(this.ConnectionName))
+            {
+                var selector = db.Employees.AsQueryable();
+
+                count = selector.Count();
+                if (count == 0)
+                {
+                    return results;
+                }
+
+                selector = selector.OrderBy(p => p.SequenceId);
+                results = selector.ToList();
+            }
+
+            return results;
+        }
+
         public IEnumerable<EmployeeViewModel> GetAllEmployees(out int count)
         {
             IEnumerable<EmployeeViewModel> results = null;
@@ -26,16 +46,11 @@ namespace UnitTestProject2.Repository.Linq2Db
                                      Name = p.Name,
                                      Age = p.Age,
                                      SequenceId = p.SequenceId
-                                 });
-
-                count = selector.Count();
-                if (count == 0)
-                {
-                    return results;
-                }
-
-                selector = selector.OrderBy(p => p.SequenceId);
+                                 })
+                                 .Where(p=>p.SequenceId>0)
+                                 .OrderBy(p=>p.SequenceId);
                 results = selector.ToList();
+                count = results.Count();
             }
 
             return results;
@@ -57,18 +72,6 @@ namespace UnitTestProject2.Repository.Linq2Db
                                      Account = p.Account,
                                      Password = p.Password
                                  });
-
-                //var selector = db.Employees
-                //                 .Select(p => new EmployeeViewModel
-                //                 {
-                //                     Id = p.Id,
-                //                     Name = p.Name,
-                //                     Age = p.Age,
-                //                     SequenceId = p.SequenceId,
-
-                //                     Account = p.DboIdentitydboEmployeeId.Account,
-                //                     Password = p.DboIdentitydboEmployeeId.Password
-                //                 });
 
                 count = selector.Count();
                 if (count == 0)
