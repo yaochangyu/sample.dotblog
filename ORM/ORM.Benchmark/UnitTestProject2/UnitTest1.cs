@@ -6,10 +6,6 @@ using System.Data.Entity.Core.Metadata.Edm;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using UnitTestProject2.Repository;
-using UnitTestProject2.Repository.Ado;
-using UnitTestProject2.Repository.Dapper;
-using UnitTestProject2.Repository.Ef;
 using UnitTestProject2.Repository.Ef.EntityModel;
 using UnitTestProject2.Repository.Linq2Db;
 
@@ -18,23 +14,11 @@ namespace UnitTestProject2
     [TestClass]
     public class UnitTest1
     {
-        private static Dictionary<string, IEmployeeRepository> Repositories;
-        private static Dictionary<string, IAdoEmployeeRepository> AdoRepositories;
         private static IEnumerable<TestReport> Reports;
 
         public UnitTest1()
         {
             string connectionName = "LabDbContext";
-            if (Repositories == null)
-            {
-                Repositories = this.InitialRepositories(connectionName);
-            }
-
-            if (AdoRepositories == null)
-            {
-                AdoRepositories = this.InitialAdoRepositories(connectionName);
-            }
-
             if (Reports == null)
             {
                 Reports = this.CreateTestReports();
@@ -43,14 +27,13 @@ namespace UnitTestProject2
             Database.SetInitializer<LabDbContext>(null);
             using (var dbcontext = new LabDbContext(connectionName))
             {
-                var objectContext = ((IObjectContextAdapter)dbcontext).ObjectContext;
+                var objectContext = ((IObjectContextAdapter) dbcontext).ObjectContext;
                 var mappingCollection =
-                    (StorageMappingItemCollection)objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
+                    (StorageMappingItemCollection) objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
                 mappingCollection.GenerateViews(new List<EdmSchemaError>());
             }
 
-            //Run(Reports,1);
-            foreach (var repository in Repositories)
+            foreach (var repository in Utility.Repositories)
             {
                 int count;
                 repository.Value.GetAllEmployees(out count);
@@ -76,7 +59,6 @@ namespace UnitTestProject2
         public void TestMethod2()
         {
             string connectionName = "LabDbContext";
-
             this.Run(Reports, 5);
         }
 
@@ -103,56 +85,31 @@ namespace UnitTestProject2
             }
         }
 
-        private Dictionary<string, IEmployeeRepository> InitialRepositories(string connectionName)
-        {
-            var actions = new Dictionary<string, IEmployeeRepository>
-            {
-                {"EfNoTrackEmployeeRepository", new EfNoTrackEmployeeRepository(connectionName)},
-                {"Linq2EmployeeRepository", new Linq2EmployeeRepository(connectionName)},
-                {"DapperEmployeeRepository", new DapperEmployeeRepository(connectionName)}
-            };
-
-            return actions;
-        }
-
-        private Dictionary<string, IAdoEmployeeRepository> InitialAdoRepositories(string connectionName)
-        {
-            var actions = new Dictionary<string, IAdoEmployeeRepository>
-            {
-                {"DataReaderEmployeeRepository", new DataReaderEmployeeRepository(connectionName)},
-                {"LoadDataEmployeeRepository", new LoadDataEmployeeRepository(connectionName)},
-                {"LoadEmployeeRepository", new LoadEmployeeRepository(connectionName)},
-                {"AdapterEmployeeRepository", new AdapterEmployeeRepository(connectionName)},
-            };
-
-            return actions;
-        }
-
         private IEnumerable<TestReport> CreateTestReports()
         {
             var reports = new HashSet<TestReport>();
-            foreach (var repository in Repositories)
+            foreach (var repository in Utility.Repositories)
             {
-                var testReport = new TestReport(repository.Key,
+                var testReport = new TestReport(repository.Key.ToString(),
                                                 () =>
                                                 {
                                                     int count = 0;
                                                     var value = repository.Value;
                                                     value.GetAllEmployees(out count);
-                                                    return new DataInfo { RowCount = count };
+                                                    return new DataInfo {RowCount = count};
                                                 });
                 reports.Add(testReport);
             }
-            foreach (var repository in AdoRepositories)
+
+            foreach (var repository in Utility.AdoRepositories)
             {
-                var testReport = new TestReport(repository.Key,
+                var testReport = new TestReport(repository.Key.ToString(),
                                                 () =>
                                                 {
                                                     int count = 0;
                                                     var value = repository.Value;
                                                     value.GetAllEmployees(out count);
-                                                    return new DataInfo { RowCount = count };
-
+                                                    return new DataInfo {RowCount = count};
                                                 });
                 reports.Add(testReport);
             }
