@@ -26,6 +26,43 @@ namespace UnitTestProject2.Repository.Dapper
 SELECT
 	Count(*)
 FROM
+	[dbo].[Employee] [p]
+
+";
+            var selectText = @"
+SELECT
+	[p].[Id],
+	[p].[Name],
+	[p].[Age],
+	[p].[SequenceId]
+FROM
+	[dbo].[Employee] [p]
+ORDER BY
+	[p].[SequenceId]
+";
+
+            using (var db = DbManager.CreateConnection(ConnectionName))
+            {
+                count = db.QueryFirst<int>(countText);
+                if (count == 0)
+                {
+                    return results;
+                }
+
+                results = db.Query<EmployeeViewModel>(selectText);
+            }
+            return results;
+        }
+
+        public IEnumerable<EmployeeViewModel> GetAllEmployeesDetail(out int count)
+        {
+            IEnumerable<EmployeeViewModel> results = null;
+
+            count = 0;
+            var countText = @"
+SELECT
+	Count(*)
+FROM
 	[dbo].[Identity] [p]
 ";
             var selectText = @"
@@ -40,7 +77,8 @@ FROM
 	[dbo].[Identity] [p]
 		INNER JOIN [dbo].[Employee] [a_Employee] ON [p].[Employee_Id] = [a_Employee].[Id]
 ORDER BY
-	[a_Employee].[SequenceId]";
+	[a_Employee].[SequenceId]
+";
 
             using (var db = DbManager.CreateConnection(ConnectionName))
             {

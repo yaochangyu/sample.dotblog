@@ -19,6 +19,33 @@ namespace UnitTestProject2.Repository.Linq2Db
             IEnumerable<EmployeeViewModel> results = null;
             using (var db = new LabEmployeeDB(this.ConnectionName))
             {
+                var selector = db.Employees
+                                 .Select(p => new EmployeeViewModel
+                                 {
+                                     Id = p.Id,
+                                     Name = p.Name,
+                                     Age = p.Age,
+                                     SequenceId = p.SequenceId
+                                 });
+
+                count = selector.Count();
+                if (count == 0)
+                {
+                    return results;
+                }
+
+                selector = selector.OrderBy(p => p.SequenceId);
+                results = selector.ToList();
+            }
+
+            return results;
+        }
+
+        public IEnumerable<EmployeeViewModel> GetAllEmployeesDetail(out int count)
+        {
+            IEnumerable<EmployeeViewModel> results = null;
+            using (var db = new LabEmployeeDB(this.ConnectionName))
+            {
                 var selector = db.Identities
                                  .Select(p => new EmployeeViewModel
                                  {
@@ -30,6 +57,7 @@ namespace UnitTestProject2.Repository.Linq2Db
                                      Account = p.Account,
                                      Password = p.Password
                                  });
+
                 //var selector = db.Employees
                 //                 .Select(p => new EmployeeViewModel
                 //                 {

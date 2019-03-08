@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
 using UnitTestProject2.Repository.Ef.EntityModel;
@@ -17,6 +16,37 @@ namespace UnitTestProject2.Repository.Ef
         public string ConnectionName { get; set; }
 
         public IEnumerable<EmployeeViewModel> GetAllEmployees(out int count)
+        {
+            IEnumerable<EmployeeViewModel> results = null;
+            using (var dbContext = new LabDbContext(this.ConnectionName))
+            {
+                dbContext.Configuration.LazyLoadingEnabled = false;
+                dbContext.Configuration.ProxyCreationEnabled = false;
+                dbContext.Configuration.AutoDetectChangesEnabled = false;
+
+                var selector = dbContext.Employees
+                                        .Select(p => new EmployeeViewModel
+                                        {
+                                            Id = p.Id,
+                                            Name = p.Name,
+                                            Age = p.Age,
+                                            SequenceId = p.SequenceId,
+                                        });
+
+                count = selector.Count();
+                if (count == 0)
+                {
+                    return results;
+                }
+
+                selector = selector.OrderBy(p => p.SequenceId);
+                results = selector.AsNoTracking().ToList();
+            }
+
+            return results;
+        }
+
+        public IEnumerable<EmployeeViewModel> GetAllEmployeesDetail(out int count)
         {
             IEnumerable<EmployeeViewModel> results = null;
             using (var dbContext = new LabDbContext(this.ConnectionName))

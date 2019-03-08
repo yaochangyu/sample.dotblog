@@ -12,7 +12,7 @@ namespace UnitTestProject2.Repository.Ef.EntityModel
 
         public virtual DbSet<Identity> Identities { get; set; }
 
-        public virtual DbSet<Order> Orders { get; set; }
+        //public virtual DbSet<Order> Orders { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {

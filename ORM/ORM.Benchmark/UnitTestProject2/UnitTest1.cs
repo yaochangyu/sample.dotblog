@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity;
+using System.Data.Entity.Core.Mapping;
+using System.Data.Entity.Core.Metadata.Edm;
+using System.Data.Entity.Infrastructure;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using UnitTestProject2.Repository;
-using UnitTestProject2.Repository.Ado;
 using UnitTestProject2.Repository.Dapper;
 using UnitTestProject2.Repository.Ef;
+using UnitTestProject2.Repository.Ef.EntityModel;
 using UnitTestProject2.Repository.Linq2Db;
 
 namespace UnitTestProject2
@@ -28,7 +32,17 @@ namespace UnitTestProject2
             {
                 Reports = this.CreateTestReports(Repositories);
             }
+            
+            Database.SetInitializer<LabDbContext>(null);
+            using (var dbcontext = new LabDbContext(connectionName))
+            {
+                var objectContext = ((IObjectContextAdapter)dbcontext).ObjectContext;
+                var mappingCollection =
+                    (StorageMappingItemCollection)objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
+                mappingCollection.GenerateViews(new List<EdmSchemaError>());
+            }
 
+            //Run(Reports,1);
             foreach (var repository in Repositories)
             {
                 int count;
@@ -41,6 +55,7 @@ namespace UnitTestProject2
         {
             //var repository = new EfNoTrackEmployeeRepository("LabDbContext");
             var repository = new Linq2EmployeeRepository("LabDbContext");
+
             //var repository = new DapperEmployeeRepository("LabDbContext");
             //var repository = new DataReaderEmployeeRepository("LabDbContext");
 
@@ -54,10 +69,16 @@ namespace UnitTestProject2
         public void TestMethod2()
         {
             string connectionName = "LabDbContext";
-          
+
             this.Run(Reports, 5);
         }
+        [TestMethod]
+        public void TestMethod21()
+        {
+            string connectionName = "LabDbContext";
 
+            this.Run(Reports, 5);
+        }
         private void Run(IEnumerable<TestReport> reports, int runTime)
         {
             foreach (var report in reports)
