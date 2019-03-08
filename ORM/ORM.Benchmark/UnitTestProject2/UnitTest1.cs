@@ -122,6 +122,7 @@ namespace UnitTestProject2
                 {"DataReaderEmployeeRepository", new DataReaderEmployeeRepository(connectionName)},
                 {"LoadDataEmployeeRepository", new LoadDataEmployeeRepository(connectionName)},
                 {"LoadEmployeeRepository", new LoadEmployeeRepository(connectionName)},
+                {"AdapterEmployeeRepository", new AdapterEmployeeRepository(connectionName)},
             };
 
             return actions;

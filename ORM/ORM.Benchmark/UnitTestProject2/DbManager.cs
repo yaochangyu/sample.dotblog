@@ -6,12 +6,11 @@ using System.Diagnostics.Contracts;
 
 namespace UnitTestProject2
 {
-    public static class DbManager
+    public class DbManager
     {
 
-        public static IDbConnection CreateConnection(string connectionStringName)
+        public static DbConnection CreateConnection(string connectionStringName)
         {
-            Contract.Requires(!string.IsNullOrWhiteSpace(connectionStringName));
 
             var connectSetting = ConfigurationManager.ConnectionStrings[connectionStringName];
 
@@ -33,7 +32,31 @@ namespace UnitTestProject2
 
             return connection;
         }
+        public static DbDataAdapter CreateDataAdapter(DbConnection connection)
+        {
+            return DbProviderFactories.GetFactory(connection).CreateDataAdapter();
+        }
 
-      
+        public static DataSet ExecuteDataSet(DbCommand command)
+        {
+            string @namespace = command.Connection.GetType().Namespace;
+            DbProviderFactory factory = DbProviderFactories.GetFactory(@namespace);
+            var adapter = factory.CreateDataAdapter();
+            adapter.SelectCommand = command;
+            var result = new DataSet();
+            adapter.Fill(result);
+            return result;
+        }
+
+        public static DataTable ExecuteDataTable(DbCommand command)
+        {
+            string @namespace = command.Connection.GetType().Namespace;
+            DbProviderFactory factory = DbProviderFactories.GetFactory(@namespace);
+            var adapter = factory.CreateDataAdapter();
+            adapter.SelectCommand = command;
+            var result = new DataTable();
+            adapter.Fill(result);
+            return result;
+        }
     }
 }

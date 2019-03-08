@@ -76,6 +76,7 @@
     <Compile Include="DataInfo.cs" />
     <Compile Include="DbManager.cs" />
     <Compile Include="Repository\Ado\LoadDataEmployeeRepository.cs" />
+    <Compile Include="Repository\Ado\AdapterEmployeeRepository.cs" />
     <Compile Include="Repository\Ado\LoadEmployeeRepository.cs" />
     <Compile Include="Repository\Ado\TableUtility.cs" />
     <Compile Include="Repository\Ado\DataReaderEmployeeRepository.cs" />
