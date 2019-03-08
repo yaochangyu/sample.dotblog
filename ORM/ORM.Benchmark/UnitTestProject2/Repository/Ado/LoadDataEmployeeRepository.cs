@@ -22,8 +22,8 @@ namespace UnitTestProject2.Repository.Ado
 
                 dbCommand.CommandText = SqlEmployeeText.AllEmployee;
                 var reader = dbCommand.ExecuteReader(CommandBehavior.SequentialAccess);
-                
-                result = TableUtility.GetEmployeeTable();
+                result = DbManager.CreateTable(reader);
+
                 while (reader.Read())
                 {
                     object[] items = new object[reader.FieldCount];
@@ -56,7 +56,7 @@ namespace UnitTestProject2.Repository.Ado
 
                 dbCommand.CommandText = SqlIdentityText.InnerJoinEmployee;
                 var reader = dbCommand.ExecuteReader(CommandBehavior.SequentialAccess);
-                result = TableUtility.GetEmployeeTable();
+                result = DbManager.CreateTable(reader);
                 while (reader.Read())
                 {
                     object[] items = new object[reader.FieldCount];

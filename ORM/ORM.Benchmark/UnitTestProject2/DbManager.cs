@@ -8,7 +8,16 @@ namespace UnitTestProject2
 {
     public class DbManager
     {
+        public static DataTable CreateTable(IDataReader reader)
+        {
+            var result = new DataTable();
+            for (var i = 0; i < reader.FieldCount; i++)
+            {
+                result.Columns.Add(reader.GetName(i), reader.GetFieldType(i));
+            }
 
+            return result;
+        }
         public static DbConnection CreateConnection(string connectionStringName)
         {
 

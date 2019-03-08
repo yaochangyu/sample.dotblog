@@ -78,7 +78,6 @@
     <Compile Include="Repository\Ado\LoadDataEmployeeRepository.cs" />
     <Compile Include="Repository\Ado\AdapterEmployeeRepository.cs" />
     <Compile Include="Repository\Ado\LoadEmployeeRepository.cs" />
-    <Compile Include="Repository\Ado\TableUtility.cs" />
     <Compile Include="Repository\Ado\DataReaderEmployeeRepository.cs" />
     <Compile Include="Repository\Dapper\DapperEmployeeRepository.cs" />
     <Compile Include="Repository\Dapper\EntityModel\Employee.cs" />
