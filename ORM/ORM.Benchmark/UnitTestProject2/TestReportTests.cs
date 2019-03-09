@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using UnitTestProject2.Repository.Ado;
-using UnitTestProject2.Repository.Dapper;
 
 namespace UnitTestProject2
 {
@@ -43,15 +41,14 @@ namespace UnitTestProject2
         [TestMethod]
         public void Benchmark()
         {
-            this.Run(Reports, 10);
+            this.Run(Reports, 1);
         }
 
-        //[TestMethod]
-        //public void JoinBenchmark()
-        //{
-        //    string connectionName = "LabDbContext";
-        //    this.Run(JoinReports, 1);
-        //}
+        [TestMethod]
+        public void JoinBenchmark()
+        {
+            this.Run(JoinReports, 1);
+        }
 
         private void Run(IEnumerable<TestReport> reports, int runTime)
         {
@@ -81,7 +78,7 @@ namespace UnitTestProject2
             var reports = new HashSet<TestReport>();
             foreach (var repository in Utility.Repositories)
             {
-                var testReport = new TestReport(repository.Key.ToString(),
+                var testReport = new TestReport(repository.Key + ".GetAllEmployees",
                                                 () =>
                                                 {
                                                     var value = repository.Value;
@@ -93,7 +90,7 @@ namespace UnitTestProject2
 
             foreach (var repository in Utility.AdoRepositories)
             {
-                var testReport = new TestReport(repository.Key.ToString(),
+                var testReport = new TestReport(repository.Key + ".GetAllEmployees",
                                                 () =>
                                                 {
                                                     var value = repository.Value;
@@ -111,7 +108,7 @@ namespace UnitTestProject2
             var reports = new HashSet<TestReport>();
             foreach (var repository in Utility.Repositories)
             {
-                var testReport = new TestReport(repository.Key.ToString(),
+                var testReport = new TestReport(repository.Key + ".GetAllEmployeesDetail",
                                                 () =>
                                                 {
                                                     var value = repository.Value;
@@ -123,7 +120,7 @@ namespace UnitTestProject2
 
             foreach (var repository in Utility.AdoRepositories)
             {
-                var testReport = new TestReport(repository.Key.ToString(),
+                var testReport = new TestReport(repository.Key + ".GetAllEmployeesDetail",
                                                 () =>
                                                 {
                                                     var value = repository.Value;

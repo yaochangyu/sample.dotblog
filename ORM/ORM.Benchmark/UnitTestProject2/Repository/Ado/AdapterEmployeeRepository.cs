@@ -46,9 +46,7 @@ namespace UnitTestProject2.Repository.Ado
                 }
 
                 dbCommand.CommandText = SqlIdentityText.InnerJoinEmployee;
-                var reader = dbCommand.ExecuteReader(CommandBehavior.SequentialAccess);
-                result = new DataTable();
-                result.Load(reader);
+                result = DbManager.ExecuteDataTable(dbCommand);
             }
 
             return result;

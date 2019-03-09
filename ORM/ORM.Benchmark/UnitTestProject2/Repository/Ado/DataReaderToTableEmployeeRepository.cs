@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Data;
+﻿using System.Data;
+using System.Data.Common;
 
 namespace UnitTestProject2.Repository.Ado
 {
-    public class DataReaderEmployeeRepository : IAdoEmployeeRepository
+    public class DataReaderToTableEmployeeRepository : IAdoEmployeeRepository
     {
-        public DataReaderEmployeeRepository(string connectionName)
+        public DataReaderToTableEmployeeRepository(string connectionName)
         {
             this.ConnectionName = connectionName;
         }
@@ -57,29 +56,13 @@ namespace UnitTestProject2.Repository.Ado
 
         private static DataTable ToDataTable(IDataReader reader)
         {
-            DataTable result;
-            DataTable schema = reader.GetSchemaTable();
-            result = new DataTable();
-            List<DataColumn> columns = new List<DataColumn>();
-            if (schema != null)
-            {
-                foreach (DataRow row in schema.Rows)
-                {
-                    string columnName = Convert.ToString(row["ColumnName"]);
-                    DataColumn column = new DataColumn(columnName, (Type)row["DataType"]);
-                    column.Unique = (bool)row["IsUnique"];
-                    column.AllowDBNull = (bool)row["AllowDBNull"];
-                    column.AutoIncrement = (bool)row["IsAutoIncrement"];
-                    columns.Add(column);
-                    result.Columns.Add(column);
-                }
-            }
+            var result = DbManager.CreateTable(reader);
             while (reader.Read())
             {
                 DataRow row = result.NewRow();
-                for (int i = 0; i < columns.Count; i++)
+                for (int i = 0; i < result.Columns.Count; i++)
                 {
-                    row[columns[i]] = reader[i];
+                    row[result.Columns[i]] = reader[i];
                 }
 
                 result.Rows.Add(row);

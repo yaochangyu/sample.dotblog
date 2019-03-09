@@ -8,6 +8,8 @@ namespace UnitTestProject2
 {
     public class DbManager
     {
+   
+
         public static DataTable CreateTable(IDataReader reader)
         {
             var result = new DataTable();

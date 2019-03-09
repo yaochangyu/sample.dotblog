@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Data.Common;
 
 namespace UnitTestProject2.Repository.Ado
 {
@@ -22,15 +23,7 @@ namespace UnitTestProject2.Repository.Ado
 
                 dbCommand.CommandText = SqlEmployeeText.AllEmployee;
                 var reader = dbCommand.ExecuteReader(CommandBehavior.SequentialAccess);
-                result = DbManager.CreateTable(reader);
-
-                while (reader.Read())
-                {
-                    object[] items = new object[reader.FieldCount];
-
-                    reader.GetValues(items);
-                    result.LoadDataRow(items, true);
-                }
+                result = ToDataTable(reader);
 
                 count = result.Rows.Count;
             }
@@ -56,13 +49,21 @@ namespace UnitTestProject2.Repository.Ado
 
                 dbCommand.CommandText = SqlIdentityText.InnerJoinEmployee;
                 var reader = dbCommand.ExecuteReader(CommandBehavior.SequentialAccess);
-                result = DbManager.CreateTable(reader);
-                while (reader.Read())
-                {
-                    object[] items = new object[reader.FieldCount];
-                    reader.GetValues(items);
-                    result.LoadDataRow(items, true);
-                }
+                result = ToDataTable(reader);
+            }
+
+            return result;
+        }
+
+        private static DataTable ToDataTable(DbDataReader reader)
+        {
+            DataTable result;
+            result = DbManager.CreateTable(reader);
+            while (reader.Read())
+            {
+                object[] items = new object[reader.FieldCount];
+                reader.GetValues(items);
+                result.LoadDataRow(items, true);
             }
 
             return result;

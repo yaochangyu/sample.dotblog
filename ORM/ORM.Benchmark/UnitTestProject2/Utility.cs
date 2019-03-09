@@ -77,7 +77,7 @@ namespace UnitTestProject2
         {
             var actions = new Dictionary<RepositoryNames, IAdoEmployeeRepository>
             {
-                {RepositoryNames.DataReaderEmployeeRepository, new DataReaderEmployeeRepository(connectionName)},
+                {RepositoryNames.DataReaderEmployeeRepository, new DataReaderToTableEmployeeRepository(connectionName)},
                 {RepositoryNames.LoadDataEmployeeRepository, new LoadDataEmployeeRepository(connectionName)},
                 {RepositoryNames.LoadEmployeeRepository, new LoadEmployeeRepository(connectionName)},
                 {RepositoryNames.AdapterEmployeeRepository, new AdapterEmployeeRepository(connectionName)}
