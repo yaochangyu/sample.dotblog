@@ -21,7 +21,7 @@ namespace UnitTestProject2
 
         public string TestInfo { get; set; }
 
-        public void RunAllEmployees(int runTimes)
+        public void Run(int runTimes)
         {
             var repository = this.action;
             var name = this.testName;

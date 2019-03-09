@@ -7,36 +7,49 @@ using System.Data.Entity.Infrastructure;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using UnitTestProject2.Repository.Ef.EntityModel;
-using UnitTestProject2.Repository.Linq2Db;
 
 namespace UnitTestProject2
 {
     [TestClass]
     public class TestReportTests
     {
-        private static IEnumerable<TestReport> Reports;
+        private static readonly IEnumerable<TestReport> Reports;
+        private static readonly IEnumerable<TestReport> JoinReports;
+        private static readonly string ConnectionName = "LabDbContext";
 
-        public TestReportTests()
+        static TestReportTests()
         {
-            string connectionName = "LabDbContext";
             if (Reports == null)
             {
-                Reports = this.CreateTestReports();
+                Reports = CreateTestReports();
             }
 
-            Database.SetInitializer<LabDbContext>(null);
-            using (var dbcontext = new LabDbContext(connectionName))
+            if (JoinReports == null)
             {
-                var objectContext = ((IObjectContextAdapter) dbcontext).ObjectContext;
+                JoinReports = CreateJoinTestReports();
+            }
+
+            //不檢查Migration
+            Database.SetInitializer<LabDbContext>(null);
+
+            //載入Model Mapping Table
+            using (var dbcontext = new LabDbContext(ConnectionName))
+            {
+                var objectContext = ((IObjectContextAdapter)dbcontext).ObjectContext;
                 var mappingCollection =
-                    (StorageMappingItemCollection) objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
+                    (StorageMappingItemCollection)objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
                 mappingCollection.GenerateViews(new List<EdmSchemaError>());
             }
 
-            foreach (var repository in Utility.Repositories)
+            //暖機
+            foreach (var report in Reports)
             {
-                int count;
-                repository.Value.GetAllEmployees(out count);
+                report.Run(1);
+            }
+
+            foreach (var report in JoinReports)
+            {
+                report.Run(1);
             }
         }
 
@@ -44,29 +57,36 @@ namespace UnitTestProject2
         public void TestMethod1()
         {
             //var repository = new EfNoTrackEmployeeRepository("LabDbContext");
-            var repository = new Linq2EmployeeRepository("LabDbContext");
+            //var repository = new Linq2EmployeeRepository("LabDbContext");
 
             //var repository = new DapperEmployeeRepository("LabDbContext");
             //var repository = new DataReaderEmployeeRepository("LabDbContext");
 
-            int count;
-            var employeesFromDb = repository.GetAllEmployeesDetail(out count);
+            //int count;
+            //var employeesFromDb = repository.GetAllEmployeesDetail(out count);
 
             //Assert.IsTrue(employeesFromDb.Count() > 0);
         }
 
         [TestMethod]
-        public void OrmTest()
+        public void Benchmark()
         {
             string connectionName = "LabDbContext";
-            this.Run(Reports, 5);
+            this.Run(Reports, 1);
+        }
+
+        [TestMethod]
+        public void JoinBenchmark()
+        {
+            string connectionName = "LabDbContext";
+            this.Run(JoinReports, 1);
         }
 
         private void Run(IEnumerable<TestReport> reports, int runTime)
         {
             foreach (var report in reports)
             {
-                report.RunAllEmployees(runTime);
+                report.Run(runTime);
             }
 
             var sortTestReports = reports.OrderBy(p => p.TotalCostTime).ToList();
@@ -85,7 +105,7 @@ namespace UnitTestProject2
             }
         }
 
-        private IEnumerable<TestReport> CreateTestReports()
+        private static IEnumerable<TestReport> CreateTestReports()
         {
             var reports = new HashSet<TestReport>();
             foreach (var repository in Utility.Repositories)
@@ -96,7 +116,7 @@ namespace UnitTestProject2
                                                     int count = 0;
                                                     var value = repository.Value;
                                                     value.GetAllEmployees(out count);
-                                                    return new DataInfo {RowCount = count};
+                                                    return new DataInfo { RowCount = count };
                                                 });
                 reports.Add(testReport);
             }
@@ -109,7 +129,39 @@ namespace UnitTestProject2
                                                     int count = 0;
                                                     var value = repository.Value;
                                                     value.GetAllEmployees(out count);
-                                                    return new DataInfo {RowCount = count};
+                                                    return new DataInfo { RowCount = count };
+                                                });
+                reports.Add(testReport);
+            }
+
+            return reports;
+        }
+
+        private static IEnumerable<TestReport> CreateJoinTestReports()
+        {
+            var reports = new HashSet<TestReport>();
+            foreach (var repository in Utility.Repositories)
+            {
+                var testReport = new TestReport(repository.Key.ToString(),
+                                                () =>
+                                                {
+                                                    int count = 0;
+                                                    var value = repository.Value;
+                                                    value.GetAllEmployeesDetail(out count);
+                                                    return new DataInfo { RowCount = count };
+                                                });
+                reports.Add(testReport);
+            }
+
+            foreach (var repository in Utility.AdoRepositories)
+            {
+                var testReport = new TestReport(repository.Key.ToString(),
+                                                () =>
+                                                {
+                                                    int count = 0;
+                                                    var value = repository.Value;
+                                                    value.GetAllEmployeesDetail(out count);
+                                                    return new DataInfo { RowCount = count };
                                                 });
                 reports.Add(testReport);
             }

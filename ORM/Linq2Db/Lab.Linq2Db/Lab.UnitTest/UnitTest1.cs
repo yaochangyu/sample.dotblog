@@ -96,6 +96,7 @@ namespace Lab.UnitTest
 
             using (var db = new LabEmployee2DB(ConnectionName))
             {
+               
                 db.BulkCopy(employees);
             }
         }
