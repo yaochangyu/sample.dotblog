@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Data.Entity;
 using System.Data.Entity.Core.Mapping;
 using System.Data.Entity.Core.Metadata.Edm;
 using System.Data.Entity.Infrastructure;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnitTestProject2.Repository;
 using UnitTestProject2.Repository.Ado;
 using UnitTestProject2.Repository.Dapper;
@@ -16,7 +12,7 @@ using UnitTestProject2.Repository.Linq2Db;
 
 namespace UnitTestProject2
 {
-    class Utility
+    internal class Utility
     {
         public static Dictionary<RepositoryNames, IEmployeeRepository> Repositories;
         public static Dictionary<RepositoryNames, IAdoEmployeeRepository> AdoRepositories;
@@ -24,32 +20,47 @@ namespace UnitTestProject2
         static Utility()
         {
             string connectionName = "LabDbContext";
-            if (Utility.Repositories == null)
+            if (Repositories == null)
             {
-                Utility.Repositories = InitialRepositories(connectionName);
+                Repositories = InitialRepositories(connectionName);
             }
 
-            if (Utility.AdoRepositories == null)
+            if (AdoRepositories == null)
             {
-                Utility.AdoRepositories = InitialAdoRepositories(connectionName);
+                AdoRepositories = InitialAdoRepositories(connectionName);
             }
 
+            //不檢查migration table
             Database.SetInitializer<LabDbContext>(null);
+
+            //載入對應
             using (var dbcontext = new LabDbContext(connectionName))
             {
-                var objectContext = ((IObjectContextAdapter)dbcontext).ObjectContext;
+                var objectContext = ((IObjectContextAdapter) dbcontext).ObjectContext;
                 var mappingCollection =
-                    (StorageMappingItemCollection)objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
+                    (StorageMappingItemCollection) objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
                 mappingCollection.GenerateViews(new List<EdmSchemaError>());
             }
 
-            //Run(Reports,1);
-            foreach (var repository in Utility.Repositories)
+            //暖機
+            //切換連線字串
+            foreach (var repository in Repositories)
             {
                 int count;
                 repository.Value.GetAllEmployees(out count);
+                repository.Value.GetAllEmployeesDetail(out count);
+                repository.Value.ConnectionName = "LabDbContextLarge";
+            }
+
+            foreach (var repository in AdoRepositories)
+            {
+                int count;
+                repository.Value.GetAllEmployees(out count);
+                repository.Value.GetAllEmployeesDetail(out count);
+                repository.Value.ConnectionName = "LabDbContextLarge";
             }
         }
+
         private static Dictionary<RepositoryNames, IEmployeeRepository> InitialRepositories(string connectionName)
         {
             var actions = new Dictionary<RepositoryNames, IEmployeeRepository>

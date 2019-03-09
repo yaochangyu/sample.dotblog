@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Entity;
-using System.Data.Entity.Core.Mapping;
-using System.Data.Entity.Core.Metadata.Edm;
-using System.Data.Entity.Infrastructure;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using UnitTestProject2.Repository.Ef.EntityModel;
+using UnitTestProject2.Repository.Ado;
+using UnitTestProject2.Repository.Dapper;
 
 namespace UnitTestProject2
 {
@@ -15,7 +12,6 @@ namespace UnitTestProject2
     {
         private static readonly IEnumerable<TestReport> Reports;
         private static readonly IEnumerable<TestReport> JoinReports;
-        private static readonly string ConnectionName = "LabDbContext";
 
         static TestReportTests()
         {
@@ -28,29 +24,6 @@ namespace UnitTestProject2
             {
                 JoinReports = CreateJoinTestReports();
             }
-
-            //不檢查Migration
-            Database.SetInitializer<LabDbContext>(null);
-
-            //載入Model Mapping Table
-            using (var dbcontext = new LabDbContext(ConnectionName))
-            {
-                var objectContext = ((IObjectContextAdapter)dbcontext).ObjectContext;
-                var mappingCollection =
-                    (StorageMappingItemCollection)objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
-                mappingCollection.GenerateViews(new List<EdmSchemaError>());
-            }
-
-            //暖機
-            foreach (var report in Reports)
-            {
-                report.Run(1);
-            }
-
-            foreach (var report in JoinReports)
-            {
-                report.Run(1);
-            }
         }
 
         [TestMethod]
@@ -62,8 +35,7 @@ namespace UnitTestProject2
             //var repository = new DapperEmployeeRepository("LabDbContext");
             //var repository = new DataReaderEmployeeRepository("LabDbContext");
 
-            //int count;
-            //var employeesFromDb = repository.GetAllEmployeesDetail(out count);
+            //var employeesFromDb = repository.GetAllEmployeesDetail(out var count);
 
             //Assert.IsTrue(employeesFromDb.Count() > 0);
         }
@@ -71,16 +43,15 @@ namespace UnitTestProject2
         [TestMethod]
         public void Benchmark()
         {
-            string connectionName = "LabDbContext";
-            this.Run(Reports, 1);
+            this.Run(Reports, 10);
         }
 
-        [TestMethod]
-        public void JoinBenchmark()
-        {
-            string connectionName = "LabDbContext";
-            this.Run(JoinReports, 1);
-        }
+        //[TestMethod]
+        //public void JoinBenchmark()
+        //{
+        //    string connectionName = "LabDbContext";
+        //    this.Run(JoinReports, 1);
+        //}
 
         private void Run(IEnumerable<TestReport> reports, int runTime)
         {
@@ -113,10 +84,9 @@ namespace UnitTestProject2
                 var testReport = new TestReport(repository.Key.ToString(),
                                                 () =>
                                                 {
-                                                    int count = 0;
                                                     var value = repository.Value;
-                                                    value.GetAllEmployees(out count);
-                                                    return new DataInfo { RowCount = count };
+                                                    value.GetAllEmployees(out var count);
+                                                    return new DataInfo {RowCount = count};
                                                 });
                 reports.Add(testReport);
             }
@@ -126,10 +96,9 @@ namespace UnitTestProject2
                 var testReport = new TestReport(repository.Key.ToString(),
                                                 () =>
                                                 {
-                                                    int count = 0;
                                                     var value = repository.Value;
-                                                    value.GetAllEmployees(out count);
-                                                    return new DataInfo { RowCount = count };
+                                                    value.GetAllEmployees(out var count);
+                                                    return new DataInfo {RowCount = count};
                                                 });
                 reports.Add(testReport);
             }
@@ -145,10 +114,9 @@ namespace UnitTestProject2
                 var testReport = new TestReport(repository.Key.ToString(),
                                                 () =>
                                                 {
-                                                    int count = 0;
                                                     var value = repository.Value;
-                                                    value.GetAllEmployeesDetail(out count);
-                                                    return new DataInfo { RowCount = count };
+                                                    value.GetAllEmployeesDetail(out var count);
+                                                    return new DataInfo {RowCount = count};
                                                 });
                 reports.Add(testReport);
             }
@@ -158,10 +126,9 @@ namespace UnitTestProject2
                 var testReport = new TestReport(repository.Key.ToString(),
                                                 () =>
                                                 {
-                                                    int count = 0;
                                                     var value = repository.Value;
-                                                    value.GetAllEmployeesDetail(out count);
-                                                    return new DataInfo { RowCount = count };
+                                                    value.GetAllEmployeesDetail(out var count);
+                                                    return new DataInfo {RowCount = count};
                                                 });
                 reports.Add(testReport);
             }

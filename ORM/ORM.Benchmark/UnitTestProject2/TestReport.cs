@@ -15,11 +15,13 @@ namespace UnitTestProject2
             this.testName = testName;
         }
 
+        public string TestInfo { get; set; }
+
         public double TotalCostTime { get; set; }
 
-        public string TotalTestInfo { get; set; }
+        public long TotalDataCount { get; set; }
 
-        public string TestInfo { get; set; }
+        public string TotalTestInfo { get; set; }
 
         public void Run(int runTimes)
         {
@@ -33,6 +35,7 @@ namespace UnitTestProject2
             var index = 0;
 
             long totalDataCount = 0;
+            double totalCostTime = 0;
             while (runTimes-- > 0)
             {
                 index++;
@@ -52,14 +55,16 @@ namespace UnitTestProject2
                 reportBuilder.AppendLine();
 
                 totalDataCount += dataCount;
-                this.TotalCostTime += costTime;
+                totalCostTime += costTime;
             }
 
             this.TotalTestInfo = $"執行 {name} 測試, " +
-                                 $"共花費:{this.TotalCostTime} ms, " +
+                                 $"共花費:{totalCostTime} ms, " +
                                  $"共執行:{index} 次，取得筆數：{totalDataCount}";
 
             this.TestInfo = reportBuilder.ToString();
+            this.TotalCostTime = totalCostTime;
+            this.TotalDataCount = totalDataCount;
         }
     }
 }
