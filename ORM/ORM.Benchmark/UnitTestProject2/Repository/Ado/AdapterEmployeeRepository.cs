@@ -1,13 +1,20 @@
-﻿using System.Data;
-using System.Data.SqlClient;
+﻿using System.Configuration;
+using System.Data;
+using System.Data.Common;
 
 namespace UnitTestProject2.Repository.Ado
 {
     public class AdapterEmployeeRepository : IAdoEmployeeRepository
     {
+        private readonly DbDataAdapter _dataAdapter;
+
         public AdapterEmployeeRepository(string connectionName)
         {
             this.ConnectionName = connectionName;
+            var providerName = ConfigurationManager.ConnectionStrings[connectionName].ProviderName;
+
+            DbProviderFactory factory = DbProviderFactories.GetFactory(providerName);
+            this._dataAdapter = factory.CreateDataAdapter();
         }
 
         public string ConnectionName { get; set; }
@@ -22,7 +29,7 @@ namespace UnitTestProject2.Repository.Ado
                 dbCommand.CommandType = CommandType.Text;
 
                 dbCommand.CommandText = SqlEmployeeText.AllEmployee;
-                result = DbManager.ExecuteDataTable(dbCommand);
+                result = this.ExecuteDataTable(dbCommand);
                 count = result.Rows.Count;
             }
 
@@ -46,9 +53,16 @@ namespace UnitTestProject2.Repository.Ado
                 }
 
                 dbCommand.CommandText = SqlIdentityText.InnerJoinEmployee;
-                result = DbManager.ExecuteDataTable(dbCommand);
+                result = this.ExecuteDataTable(dbCommand);
             }
 
+            return result;
+        }
+
+        public DataTable ExecuteDataTable(DbCommand command)
+        {
+            var result = new DataTable();
+            this._dataAdapter.Fill(result);
             return result;
         }
     }

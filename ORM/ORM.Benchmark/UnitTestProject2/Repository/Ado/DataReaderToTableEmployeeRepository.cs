@@ -1,5 +1,4 @@
 ﻿using System.Data;
-using System.Data.Common;
 
 namespace UnitTestProject2.Repository.Ado
 {
@@ -40,7 +39,7 @@ namespace UnitTestProject2.Repository.Ado
                 dbCommand.CommandType = CommandType.Text;
 
                 dbCommand.CommandText = SqlIdentityText.Count;
-                count = (int)dbCommand.ExecuteScalar();
+                count = (int) dbCommand.ExecuteScalar();
                 if (count == 0)
                 {
                     return result;
