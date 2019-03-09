@@ -1,20 +1,13 @@
-﻿using System.Configuration;
-using System.Data;
+﻿using System.Data;
 using System.Data.Common;
 
 namespace UnitTestProject2.Repository.Ado
 {
     public class AdapterEmployeeRepository : IAdoEmployeeRepository
     {
-        private readonly DbDataAdapter _dataAdapter;
-
         public AdapterEmployeeRepository(string connectionName)
         {
             this.ConnectionName = connectionName;
-            var providerName = ConfigurationManager.ConnectionStrings[connectionName].ProviderName;
-
-            DbProviderFactory factory = DbProviderFactories.GetFactory(providerName);
-            this._dataAdapter = factory.CreateDataAdapter();
         }
 
         public string ConnectionName { get; set; }
@@ -61,8 +54,12 @@ namespace UnitTestProject2.Repository.Ado
 
         public DataTable ExecuteDataTable(DbCommand command)
         {
+            string @namespace = command.Connection.GetType().Namespace;
+            DbProviderFactory factory = DbProviderFactories.GetFactory(@namespace);
+            var adapter = factory.CreateDataAdapter();
+            adapter.SelectCommand = command;
             var result = new DataTable();
-            this._dataAdapter.Fill(result);
+            adapter.Fill(result);
             return result;
         }
     }
