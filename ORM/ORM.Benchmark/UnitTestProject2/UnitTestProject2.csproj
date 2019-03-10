@@ -241,6 +241,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="TableParser.cs" />
     <Compile Include="Utility.cs" />
     <Compile Include="DataInfo.cs" />
     <Compile Include="DbManager.cs" />

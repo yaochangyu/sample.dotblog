@@ -46,18 +46,16 @@ namespace UnitTestProject2
             //切換連線字串
             foreach (var repository in Repositories)
             {
-                int count;
-                repository.Value.GetAllEmployees(out count);
+                repository.Value.GetAllEmployees(out var count);
                 repository.Value.GetAllEmployeesDetail(out count);
-                repository.Value.ConnectionName = "LabDbContextLarge";
+                //repository.Value.ConnectionName = "LabDbContextLarge";
             }
 
             foreach (var repository in AdoRepositories)
             {
-                int count;
-                repository.Value.GetAllEmployees(out count);
+                repository.Value.GetAllEmployees(out var count);
                 repository.Value.GetAllEmployeesDetail(out count);
-                repository.Value.ConnectionName = "LabDbContextLarge";
+                //repository.Value.ConnectionName = "LabDbContextLarge";
             }
         }
 

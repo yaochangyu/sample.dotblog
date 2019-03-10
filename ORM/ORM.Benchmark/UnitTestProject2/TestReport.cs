@@ -1,70 +1,61 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 
 namespace UnitTestProject2
 {
     public class TestReport
     {
         private readonly Func<DataInfo> action;
-        private readonly string testName;
+
+        //private readonly string testName;
+        public TestReport()
+        {
+        }
 
         public TestReport(string testName, Func<DataInfo> action)
         {
             this.action = action;
-            this.testName = testName;
+            this.Name = testName;
         }
 
-        public string TestInfo { get; set; }
+        public double CostTime { get; set; }
 
-        public double TotalCostTime { get; set; }
+        public long DataCount { get; set; }
 
-        public long TotalDataCount { get; set; }
+        public string Name { get; set; }
 
-        public string TotalTestInfo { get; set; }
+        public int Index { get; set; }
+
+        public IEnumerable<TestReport> TestReports { get; set; }
 
         public void Run(int runTimes)
         {
             var repository = this.action;
-            var name = this.testName;
-
-            var reportBuilder = new StringBuilder();
-
-            reportBuilder.AppendFormat("執行 {0} 測試", name);
-            reportBuilder.AppendLine();
+            var name = this.Name;
             var index = 0;
 
-            long totalDataCount = 0;
-            double totalCostTime = 0;
+            var reports = new List<TestReport>();
             while (runTimes-- > 0)
             {
                 index++;
-
-                int dataCount;
+                var info = new TestReport {Name = name, Index = index};
                 var watch = Stopwatch.StartNew();
+
                 var dataInfo = repository.Invoke();
 
-                dataCount = dataInfo.RowCount;
                 watch.Stop();
+                info.DataCount = dataInfo.RowCount;
+                info.CostTime = watch.Elapsed.TotalMilliseconds;
 
-                var costTime = watch.Elapsed.TotalMilliseconds;
-                reportBuilder.AppendFormat("\t");
-                reportBuilder.AppendFormat($"第 {index} 執行結果, " +
-                                           $"共花費:{costTime} ms, " +
-                                           $"取得 {dataCount} 筆");
-                reportBuilder.AppendLine();
-
-                totalDataCount += dataCount;
-                totalCostTime += costTime;
+                reports.Add(info);
             }
 
-            this.TotalTestInfo = $"執行 {name} 測試, " +
-                                 $"共花費:{totalCostTime} ms, " +
-                                 $"共執行:{index} 次，取得筆數：{totalDataCount}";
-
-            this.TestInfo = reportBuilder.ToString();
-            this.TotalCostTime = totalCostTime;
-            this.TotalDataCount = totalDataCount;
+            this.TestReports = reports;
+            ////this.TestInfo = testInfos.ToStringTable(new[] {"Name", "Index", "Cost Time", "Data Count"},
+            ////                                        a => a.Item1, a => a.Item2, a => a.Item3, a => a.Item4);
+            //this.TotalCostTime = totalCostTime;
+            //this.TotalDataCount = totalDataCount;
         }
     }
 }
