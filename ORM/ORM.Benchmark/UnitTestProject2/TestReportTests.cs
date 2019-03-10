@@ -48,7 +48,7 @@ namespace UnitTestProject2
                 };
 
             Console.WriteLine(authors.ToStringTable(
-                                                    new[] { "Id", "First Name", "Surname" },
+                                                    new[] {"Id", "First Name", "Surname"},
                                                     a => a.Item1, a => a.Item2, a => a.Item3));
         }
 
@@ -67,73 +67,68 @@ namespace UnitTestProject2
         private void Run(IEnumerable<TestReport> reports, int runTime)
         {
             var totalReports = new List<TestReport>();
-            var detailRows = new List<Tuple<int>>();
+            var detailReports = new Dictionary<string, List<Tuple<int, string, int, double, long>>>();
             foreach (var report in reports)
             {
                 report.Run(runTime);
 
-                var totalReport = new TestReport { Name = report.Name };
+                var totalReport = new TestReport {Name = report.Name};
                 foreach (var testReport in report.TestReports)
                 {
                     totalReport.CostTime += testReport.CostTime;
                     totalReport.DataCount += testReport.DataCount;
-                    detailRows.Add(Tuple.Create(testReport.Index));
                 }
 
+                totalReport.TestReports = report.TestReports;
                 totalReports.Add(totalReport);
             }
 
-            var totalRows = totalReports.OrderBy(p => p.CostTime)
-                                        .Select((p, i) => Tuple.Create(i + 1, p.Name, p.CostTime, p.DataCount))
-                                        .ToList();
+            var sortReports = totalReports.OrderBy(p => p.CostTime)
+                                          .ToList();
+            var totalRows = sortReports.Select((p, i) => Tuple.Create(i + 1,
+                                                                      p.Name,
+                                                                      p.CostTime,
+                                                                      p.DataCount))
+                                       .ToList();
 
-            var totalTable = totalRows.ToStringTable(new[] { "Fastest", "Name", "CostTime", "DataCount" },
+            for (int i = 0; i < sortReports.Count; i++)
+            {
+                var sortReport = sortReports[i];
+                foreach (var testReport in sortReport.TestReports)
+                {
+                    var tuple = new Tuple<int, string, int, double, long>(i + 1,
+                                                                          testReport.Name,
+                                                                          testReport.Index,
+                                                                          testReport.CostTime,
+                                                                          testReport.DataCount);
+                    if (detailReports.ContainsKey(sortReport.Name))
+                    {
+                        detailReports[sortReport.Name].Add(tuple);
+                    }
+                    else
+                    {
+                        detailReports.Add(sortReport.Name, new List<Tuple<int, string, int, double, long>> {tuple});
+                    }
+                }
+            }
+
+            var totalTable = totalRows.ToStringTable(new[] {"Fastest", "Name", "CostTime", "DataCount"},
                                                      a => a.Item1,
                                                      a => a.Item2,
                                                      a => a.Item3,
                                                      a => a.Item4
                                                     );
-            var detialTable = detailRows.ToStringTable(new[] { "Index" },
-                                         a => a.Item1
-                                        );
             Console.WriteLine(totalTable);
-            Console.WriteLine(detialTable);
 
-            //for (var i = 0; i < sortTestReports.Count; i++)
-            //{
-            //    var report = sortTestReports[i];
-            //    totalTestInfos.Add(Tuple.Create(i + 1,
-            //                                    report.Name,
-            //                                    0,
-            //                                    report.CostTime,
-            //                                    report.DataCount));
-            //}
-            //var aa = totalTestInfos.ToStringTable(new[] { "Id", "Name", "Index", "Cost Time", "Data Count" },
-            //                                          a => a.Item1, a => a.Item2, a => a.Item3, a => a.Item4, a => a.Item5);
-            //Console.WriteLine(aa);
-            //var sortTestReports = reports.OrderBy(p => p.TotalCostTime).ToList();
-            //var totalTestInfos = new List<Tuple<int, string, int, double, long>>();
-
-            //for (var i = 0; i < sortTestReports.Count; i++)
-            //{
-            //    var report = sortTestReports[i];
-            //    totalTestInfos.Add(Tuple.Create(i + 1, report.Name, 0, report.TotalCostTime,
-            //                                    report.TotalDataCount));
-            //}
-
-            //var table = totalTestInfos.ToStringTable(new[] {"Fastest", "Name", "Times", "Cost Time", "Data Count"},
-            //                                         a => a.Item1, a => a.Item2, a => a.Item3, a => a.Item4,
-            //                                         a => a.Item5);
-
-            //Console.WriteLine(table);
-
-            //for (var i = 0; i < sortTestReports.Count; i++)
-            //{
-            //    var report = sortTestReports[i];
-
-            //    //Console.WriteLine($"第 {i + 1} 名，{report.TestInfo}");
-            //    Console.WriteLine(report.TestInfo);
-            //}
+            foreach (var detailReport in detailReports)
+            {
+                var detailTable = detailReport.Value
+                                              .ToStringTable(new[] {"Fastest", "Name", "Index", "CostTime", "DataCount"},
+                                                             a => a.Item1, a => a.Item2, a => a.Item3, a => a.Item4,
+                                                             a => a.Item5
+                                                            );
+                Console.WriteLine(detailTable);
+            }
         }
 
         private static IEnumerable<TestReport> CreateTestReports()
@@ -146,7 +141,7 @@ namespace UnitTestProject2
                                                 {
                                                     var value = repository.Value;
                                                     value.GetAllEmployees(out var count);
-                                                    return new DataInfo { RowCount = count };
+                                                    return new DataInfo {RowCount = count};
                                                 });
                 reports.Add(testReport);
             }
@@ -158,7 +153,7 @@ namespace UnitTestProject2
                                                 {
                                                     var value = repository.Value;
                                                     value.GetAllEmployees(out var count);
-                                                    return new DataInfo { RowCount = count };
+                                                    return new DataInfo {RowCount = count};
                                                 });
                 reports.Add(testReport);
             }
@@ -176,7 +171,7 @@ namespace UnitTestProject2
                                                 {
                                                     var value = repository.Value;
                                                     value.GetAllEmployeesDetail(out var count);
-                                                    return new DataInfo { RowCount = count };
+                                                    return new DataInfo {RowCount = count};
                                                 });
                 reports.Add(testReport);
             }
@@ -188,7 +183,7 @@ namespace UnitTestProject2
                                                 {
                                                     var value = repository.Value;
                                                     value.GetAllEmployeesDetail(out var count);
-                                                    return new DataInfo { RowCount = count };
+                                                    return new DataInfo {RowCount = count};
                                                 });
                 reports.Add(testReport);
             }
