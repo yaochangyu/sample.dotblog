@@ -29,6 +29,10 @@ namespace UnitTestProject2
 
         public IEnumerable<TestReport> TestReports { get; set; }
 
+        public double Average { get; set; }
+
+        public int RunCount { get; set; }
+
         public void Run(int runTimes)
         {
             var repository = this.action;
@@ -52,10 +56,6 @@ namespace UnitTestProject2
             }
 
             this.TestReports = reports;
-            ////this.TestInfo = testInfos.ToStringTable(new[] {"Name", "Index", "Cost Time", "Data Count"},
-            ////                                        a => a.Item1, a => a.Item2, a => a.Item3, a => a.Item4);
-            //this.TotalCostTime = totalCostTime;
-            //this.TotalDataCount = totalDataCount;
         }
     }
 }

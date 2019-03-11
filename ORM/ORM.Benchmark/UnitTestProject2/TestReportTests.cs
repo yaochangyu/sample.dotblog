@@ -1,7 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Data.Entity;
+using System.Data.Entity.Core.Mapping;
+using System.Data.Entity.Core.Metadata.Edm;
+using System.Data.Entity.Infrastructure;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using UnitTestProject2.Repository.Ef.EntityModel;
 
 namespace UnitTestProject2
 {
@@ -12,9 +18,11 @@ namespace UnitTestProject2
         private static readonly IEnumerable<TestReport> JoinReports;
 
         private readonly int _time = 10;
-
+            
         static TestReportTests()
         {
+            string connectionName = "LabDbContext";
+
             if (Reports == null)
             {
                 Reports = CreateTestReports();
@@ -23,6 +31,34 @@ namespace UnitTestProject2
             if (JoinReports == null)
             {
                 JoinReports = CreateJoinTestReports();
+            }
+
+            //不檢查migration table
+            Database.SetInitializer<LabDbContext>(null);
+
+            //載入對應
+            using (var dbcontext = new LabDbContext(connectionName))
+            {
+                var objectContext = ((IObjectContextAdapter) dbcontext).ObjectContext;
+                var mappingCollection =
+                    (StorageMappingItemCollection) objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
+                mappingCollection.GenerateViews(new List<EdmSchemaError>());
+            }
+
+            //暖機
+            //切換連線字串
+            foreach (var repository in Utility.Repositories)
+            {
+                repository.Value.GetAllEmployees(out var count);
+                repository.Value.GetAllEmployeesDetail(out count);
+                //repository.Value.ConnectionName = "LabDbContextLarge";
+            }
+
+            foreach (var repository in Utility.AdoRepositories)
+            {
+                repository.Value.GetAllEmployees(out var count);
+                repository.Value.GetAllEmployeesDetail(out count);
+                //repository.Value.ConnectionName = "LabDbContextLarge";
             }
         }
 
@@ -48,7 +84,7 @@ namespace UnitTestProject2
                 };
 
             Console.WriteLine(authors.ToStringTable(
-                                                    new[] {"Id", "First Name", "Surname"},
+                                                    new[] { "Id", "First Name", "Surname" },
                                                     a => a.Item1, a => a.Item2, a => a.Item3));
         }
 
@@ -72,13 +108,17 @@ namespace UnitTestProject2
             {
                 report.Run(runTime);
 
-                var totalReport = new TestReport {Name = report.Name};
+                var totalReport = new TestReport { Name = report.Name };
+                var runCount = 0;
                 foreach (var testReport in report.TestReports)
                 {
                     totalReport.CostTime += testReport.CostTime;
                     totalReport.DataCount += testReport.DataCount;
+                    runCount++;
                 }
 
+                totalReport.Average = (totalReport.CostTime) / (runCount + 1);
+                totalReport.RunCount = runCount;
                 totalReport.TestReports = report.TestReports;
                 totalReports.Add(totalReport);
             }
@@ -88,6 +128,8 @@ namespace UnitTestProject2
             var totalRows = sortReports.Select((p, i) => Tuple.Create(i + 1,
                                                                       p.Name,
                                                                       p.CostTime,
+                                                                      p.Average.ToString("#0.0000"),
+                                                                      p.RunCount,
                                                                       p.DataCount))
                                        .ToList();
 
@@ -107,23 +149,25 @@ namespace UnitTestProject2
                     }
                     else
                     {
-                        detailReports.Add(sortReport.Name, new List<Tuple<int, string, int, double, long>> {tuple});
+                        detailReports.Add(sortReport.Name, new List<Tuple<int, string, int, double, long>> { tuple });
                     }
                 }
             }
 
-            var totalTable = totalRows.ToStringTable(new[] {"Fastest", "Name", "CostTime", "DataCount"},
+            var totalTable = totalRows.ToStringTable(new[] { "Fastest", "Name", "CostTime", "Average", "RunCount", "DataCount" },
                                                      a => a.Item1,
                                                      a => a.Item2,
                                                      a => a.Item3,
-                                                     a => a.Item4
+                                                     a => a.Item4,
+                                                     a => a.Item5,
+                                                     a => a.Item6
                                                     );
             Console.WriteLine(totalTable);
 
             foreach (var detailReport in detailReports)
             {
                 var detailTable = detailReport.Value
-                                              .ToStringTable(new[] {"Fastest", "Name", "Index", "CostTime", "DataCount"},
+                                              .ToStringTable(new[] { "Fastest", "Name", "Index", "CostTime", "DataCount" },
                                                              a => a.Item1, a => a.Item2, a => a.Item3, a => a.Item4,
                                                              a => a.Item5
                                                             );
@@ -141,7 +185,7 @@ namespace UnitTestProject2
                                                 {
                                                     var value = repository.Value;
                                                     value.GetAllEmployees(out var count);
-                                                    return new DataInfo {RowCount = count};
+                                                    return new DataInfo { RowCount = count };
                                                 });
                 reports.Add(testReport);
             }
@@ -153,7 +197,7 @@ namespace UnitTestProject2
                                                 {
                                                     var value = repository.Value;
                                                     value.GetAllEmployees(out var count);
-                                                    return new DataInfo {RowCount = count};
+                                                    return new DataInfo { RowCount = count };
                                                 });
                 reports.Add(testReport);
             }
@@ -171,7 +215,7 @@ namespace UnitTestProject2
                                                 {
                                                     var value = repository.Value;
                                                     value.GetAllEmployeesDetail(out var count);
-                                                    return new DataInfo {RowCount = count};
+                                                    return new DataInfo { RowCount = count };
                                                 });
                 reports.Add(testReport);
             }
@@ -183,7 +227,7 @@ namespace UnitTestProject2
                                                 {
                                                     var value = repository.Value;
                                                     value.GetAllEmployeesDetail(out var count);
-                                                    return new DataInfo {RowCount = count};
+                                                    return new DataInfo { RowCount = count };
                                                 });
                 reports.Add(testReport);
             }

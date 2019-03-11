@@ -30,18 +30,7 @@ namespace UnitTestProject2
                 AdoRepositories = InitialAdoRepositories(connectionName);
             }
 
-            //不檢查migration table
-            Database.SetInitializer<LabDbContext>(null);
-
-            //載入對應
-            using (var dbcontext = new LabDbContext(connectionName))
-            {
-                var objectContext = ((IObjectContextAdapter) dbcontext).ObjectContext;
-                var mappingCollection =
-                    (StorageMappingItemCollection) objectContext.MetadataWorkspace.GetItemCollection(DataSpace.CSSpace);
-                mappingCollection.GenerateViews(new List<EdmSchemaError>());
-            }
-
+         
             //暖機
             //切換連線字串
             foreach (var repository in Repositories)
