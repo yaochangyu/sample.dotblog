@@ -63,32 +63,6 @@ namespace UnitTestProject2
         }
 
         [TestMethod]
-        public void TestMethod1()
-        {
-            //var repository = new EfNoTrackEmployeeRepository("LabDbContext");
-            //var repository = new Linq2EmployeeRepository("LabDbContext");
-
-            //var repository = new DapperEmployeeRepository("LabDbContext");
-            //var repository = new DataReaderEmployeeRepository("LabDbContext");
-
-            //var employeesFromDb = repository.GetAllEmployeesDetail(out var count);
-
-            //Assert.IsTrue(employeesFromDb.Count() > 0);
-            IEnumerable<Tuple<int, string, string>> authors =
-                new[]
-                {
-                    Tuple.Create(1, "Isaac", "Asimov"),
-                    Tuple.Create(2, "Robert", "Heinlein"),
-                    Tuple.Create(3, "Frank", "Herbert"),
-                    Tuple.Create(4, "Aldous", "Huxley")
-                };
-
-            Console.WriteLine(authors.ToStringTable(
-                                                    new[] { "Id", "First Name", "Surname" },
-                                                    a => a.Item1, a => a.Item2, a => a.Item3));
-        }
-
-        [TestMethod]
         public void Benchmark()
         {
             this.Run(Reports, this._time);
@@ -133,6 +107,15 @@ namespace UnitTestProject2
                                                                       p.DataCount))
                                        .ToList();
 
+
+            var totalTable = totalRows.ToStringTable(new[] { "Fastest", "Name", "CostTime", "Average", "RunCount", "DataCount" },
+                                                     a => a.Item1,
+                                                     a => a.Item2,
+                                                     a => a.Item3,
+                                                     a => a.Item4,
+                                                     a => a.Item5,
+                                                     a => a.Item6
+                                                    );
             for (int i = 0; i < sortReports.Count; i++)
             {
                 var sortReport = sortReports[i];
@@ -154,14 +137,6 @@ namespace UnitTestProject2
                 }
             }
 
-            var totalTable = totalRows.ToStringTable(new[] { "Fastest", "Name", "CostTime", "Average", "RunCount", "DataCount" },
-                                                     a => a.Item1,
-                                                     a => a.Item2,
-                                                     a => a.Item3,
-                                                     a => a.Item4,
-                                                     a => a.Item5,
-                                                     a => a.Item6
-                                                    );
             Console.WriteLine(totalTable);
 
             foreach (var detailReport in detailReports)

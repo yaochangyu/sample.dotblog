@@ -241,7 +241,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BenchmarkManager.cs" />
     <Compile Include="TableParser.cs" />
+    <Compile Include="UnitTest1.cs" />
     <Compile Include="Utility.cs" />
     <Compile Include="DataInfo.cs" />
     <Compile Include="DbManager.cs" />
