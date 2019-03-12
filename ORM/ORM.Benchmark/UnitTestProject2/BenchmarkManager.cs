@@ -23,14 +23,15 @@ namespace UnitTestProject2
             }
         }
 
-        public static void Statistics(int count = 1)
+        public static List<DataInfo> Statistics(int count = 1)
         {
             var dataInfos = new Dictionary<string, List<DataInfo>>();
-            var index = 1;
-            while (count-- > 0)
+            var watch = Stopwatch.StartNew();
+            var currentCount = count;
+            foreach (var func in s_funcTarget)
             {
-                var watch = Stopwatch.StartNew();
-                foreach (var func in s_funcTarget)
+                var index = 1;
+                while (count-- > 0)
                 {
                     watch.Reset();
                     watch.Restart();
@@ -44,18 +45,22 @@ namespace UnitTestProject2
                     dataInfo.Index = index;
                     if (dataInfos.ContainsKey(func.Key) == false)
                     {
-                        dataInfos.Add(func.Key, new List<DataInfo> { dataInfo });
+                        dataInfos.Add(func.Key, new List<DataInfo> {dataInfo});
                     }
                     else
                     {
                         dataInfos[func.Key].Add(dataInfo);
                     }
+
+                    index++;
                 }
-                index++;
+
+                count = currentCount;
             }
 
             var totalReports = GenerateTotalReports(dataInfos);
             var detailReports = GenerateDetailReport(totalReports);
+            return totalReports;
         }
 
         private static List<DataInfo> GenerateTotalReports(Dictionary<string, List<DataInfo>> sourceInfos)
@@ -74,6 +79,7 @@ namespace UnitTestProject2
                     details.Add(info);
                     runCount++;
                 }
+
                 totalReport.Name = sourceInfo.Key;
                 totalReport.Average = totalReport.CostTime / runCount;
                 totalReport.RunCount = runCount;
@@ -91,7 +97,7 @@ namespace UnitTestProject2
                                                                       p.RowCount))
                                        .ToList();
             var totalTable =
-                totalRows.ToStringTable(new[] { "Fastest", "Name", "CostTime", "Average", "RunCount", "DataCount" },
+                totalRows.ToStringTable(new[] {"Fastest", "Name", "CostTime", "Average", "RunCount", "DataCount"},
                                         a => a.Item1,
                                         a => a.Item2,
                                         a => a.Item3,
@@ -104,7 +110,7 @@ namespace UnitTestProject2
         }
 
         private static Dictionary<string, List<Tuple<int, string, int, double, long>>> GenerateDetailReport(
-             List<DataInfo> sortReports)
+            List<DataInfo> sortReports)
         {
             var detailReports = new Dictionary<string, List<Tuple<int, string, int, double, long>>>();
 
@@ -124,7 +130,7 @@ namespace UnitTestProject2
                     }
                     else
                     {
-                        detailReports.Add(sortReport.Name, new List<Tuple<int, string, int, double, long>> { tuple });
+                        detailReports.Add(sortReport.Name, new List<Tuple<int, string, int, double, long>> {tuple});
                     }
                 }
             }
@@ -132,12 +138,13 @@ namespace UnitTestProject2
             foreach (var detailReport in detailReports)
             {
                 var detailTable = detailReport.Value
-                                              .ToStringTable(new[] { "Fastest", "Name", "Index", "CostTime", "DataCount" },
+                                              .ToStringTable(new[] {"Fastest", "Name", "Index", "CostTime", "DataCount"},
                                                              a => a.Item1, a => a.Item2, a => a.Item3, a => a.Item4,
                                                              a => a.Item5
                                                             );
                 Console.WriteLine(detailTable);
             }
+
             return detailReports;
         }
 

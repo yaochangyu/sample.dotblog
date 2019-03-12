@@ -16,6 +16,7 @@ namespace UnitTestProject2
     {
         public static Dictionary<RepositoryNames, IEmployeeRepository> Repositories;
         public static Dictionary<RepositoryNames, IAdoEmployeeRepository> AdoRepositories;
+        private static bool s_isWarm = false;
 
         static Utility()
         {
@@ -31,21 +32,6 @@ namespace UnitTestProject2
             }
 
          
-            //暖機
-            //切換連線字串
-            foreach (var repository in Repositories)
-            {
-                repository.Value.GetAllEmployees(out var count);
-                repository.Value.GetAllEmployeesDetail(out count);
-                //repository.Value.ConnectionName = "LabDbContextLarge";
-            }
-
-            foreach (var repository in AdoRepositories)
-            {
-                repository.Value.GetAllEmployees(out var count);
-                repository.Value.GetAllEmployeesDetail(out count);
-                //repository.Value.ConnectionName = "LabDbContextLarge";
-            }
         }
 
         private static Dictionary<RepositoryNames, IEmployeeRepository> InitialRepositories(string connectionName)

@@ -8,7 +8,6 @@ namespace UnitTestProject2
 
         public double CostTime { get; set; }
 
-
         public string Name { get; set; }
 
         public int Index { get; set; }
@@ -20,5 +19,7 @@ namespace UnitTestProject2
         public int RunCount { get; set; }
 
         public IEnumerable<DataInfo> Details { get; set; }
+
+        public object Data { get; set; }
     }
 }
