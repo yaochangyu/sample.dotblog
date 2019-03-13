@@ -7,22 +7,22 @@ namespace UnitTestProject2
 {
     internal class BenchmarkManager
     {
-        private static readonly Dictionary<string, Func<Report>> s_targets;
+        private readonly Dictionary<string, Func<Report>> _targets;
 
-        static BenchmarkManager()
+        public BenchmarkManager()
         {
-            if (s_targets == null)
+            if (_targets == null)
             {
-                s_targets = new Dictionary<string, Func<Report>>();
+                _targets = new Dictionary<string, Func<Report>>();
             }
         }
 
-        public static List<Report> Statistics(int count = 1)
+        public List<Report> Statistics(int count = 1)
         {
             var firstReports = new Dictionary<string, List<Report>>();
             var currentCount = count;
             var watch = new Stopwatch();
-            foreach (var target in s_targets)
+            foreach (var target in this._targets)
             {
                 var index = 1;
                 while (count-- > 0)
@@ -38,7 +38,7 @@ namespace UnitTestProject2
                     report.Index = index;
                     if (firstReports.ContainsKey(target.Key) == false)
                     {
-                        firstReports.Add(target.Key, new List<Report> {report});
+                        firstReports.Add(target.Key, new List<Report> { report });
                     }
                     else
                     {
@@ -56,9 +56,9 @@ namespace UnitTestProject2
             return totalReports;
         }
 
-        public static void Warm()
+        public void Warm()
         {
-            foreach (var target in s_targets)
+            foreach (var target in _targets)
             {
                 target.Value.Invoke();
             }
@@ -98,7 +98,7 @@ namespace UnitTestProject2
                                                                       p.RowCount))
                                        .ToList();
             var totalTable =
-                totalRows.ToStringTable(new[] {"Fastest", "Name", "CostTime (ms)", "Average (ms)", "RunCount", "DataCount"},
+                totalRows.ToStringTable(new[] { "Fastest", "Name", "CostTime (ms)", "Average (ms)", "RunCount", "DataCount" },
                                         a => a.Item1,
                                         a => a.Item2,
                                         a => a.Item3,
@@ -131,7 +131,7 @@ namespace UnitTestProject2
                     }
                     else
                     {
-                        detailReports.Add(sortReport.Name, new List<Tuple<int, string, int, double, long>> {tuple});
+                        detailReports.Add(sortReport.Name, new List<Tuple<int, string, int, double, long>> { tuple });
                     }
                 }
             }
@@ -139,7 +139,7 @@ namespace UnitTestProject2
             foreach (var detailReport in detailReports)
             {
                 var detailTable = detailReport.Value
-                                              .ToStringTable(new[] {"Fastest", "Name", "Index", "CostTime (ms)", "DataCount"},
+                                              .ToStringTable(new[] { "Fastest", "Name", "Index", "CostTime (ms)", "DataCount" },
                                                              a => a.Item1, a => a.Item2, a => a.Item3, a => a.Item4,
                                                              a => a.Item5
                                                             );
@@ -149,15 +149,15 @@ namespace UnitTestProject2
             return detailReports;
         }
 
-        public static void Add(string name, Func<Report> target)
+        public void Add(string name, Func<Report> target)
         {
-            if (s_targets.ContainsKey(name))
+            if (this._targets.ContainsKey(name))
             {
-                s_targets[name] = target;
+                this._targets[name] = target;
             }
             else
             {
-                s_targets.Add(name, target);
+                this._targets.Add(name, target);
             }
         }
     }

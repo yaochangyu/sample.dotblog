@@ -11,6 +11,8 @@ namespace UnitTestProject2
     [TestClass]
     public class BenchmarkJoinTest
     {
+        private static readonly BenchmarkManager BenchmarkManager = new BenchmarkManager();
+
         static BenchmarkJoinTest()
         {
             string connectionName = "LabDbContext";
