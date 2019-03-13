@@ -32,6 +32,7 @@ namespace UnitTestProject2
             var actions = new Dictionary<RepositoryNames, IEmployeeRepository>
             {
                 {RepositoryNames.EfNoTrackEmployeeRepository, new EfNoTrackEmployeeRepository(connectionName)},
+                {RepositoryNames.EfEmployeeRepository, new EfEmployeeRepository(connectionName)},
                 {RepositoryNames.Linq2EmployeeRepository, new Linq2EmployeeRepository(connectionName)},
                 {RepositoryNames.DapperEmployeeRepository, new DapperEmployeeRepository(connectionName)}
             };
@@ -72,12 +73,12 @@ namespace UnitTestProject2
             //切換連線字串
             foreach (var repository in Repositories)
             {
-                repository.Value.ConnectionName = "LabDbContextLarge";
+                repository.Value.ConnectionName = "LabDbContextLarge2";
             }
 
             foreach (var repository in AdoRepositories)
             {
-                repository.Value.ConnectionName = "LabDbContextLarge";
+                repository.Value.ConnectionName = "LabDbContextLarge2";
             }
         }
     }

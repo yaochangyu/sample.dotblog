@@ -8,9 +8,6 @@ using UnitTestProject2.Repository.Ef.EntityModel;
 
 namespace UnitTestProject2
 {
-    /// <summary>
-    ///     Summary description for UnitTest1
-    /// </summary>
     [TestClass]
     public class BenchmarkTest
     {
@@ -52,7 +49,7 @@ namespace UnitTestProject2
             //暖機
             BenchmarkManager.Warm();
             Utility.Warm();
-            //Utility.SwitchLargeDb();
+            Utility.SwitchLargeDb();
         }
 
         [TestMethod]

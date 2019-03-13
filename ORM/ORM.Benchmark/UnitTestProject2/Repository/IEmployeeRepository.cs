@@ -8,8 +8,6 @@ namespace UnitTestProject2.Repository
     {
         string ConnectionName { get; set; }
 
-        //IEnumerable<EmployeeViewModel> GetAllEmployees(out int count);
-        //IEnumerable<T> GetAllEmployees<T>(out int count);
         object GetAll(out int count);
 
         IEnumerable<EmployeeViewModel> GetAllEmployees(out int count);

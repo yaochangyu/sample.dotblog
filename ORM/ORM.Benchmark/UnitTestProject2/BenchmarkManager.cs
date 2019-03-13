@@ -33,12 +33,8 @@ namespace UnitTestProject2
                 var index = 1;
                 while (count-- > 0)
                 {
-                    //var watch = Stopwatch.StartNew();
-                    watch.Reset();
                     watch.Restart();
-                    var type1 = func.Value.Method;
-                    var type = func.GetType();
-                    var fullName = type.FullName;
+          
                     var dataInfo = func.Value.Invoke();
 
                     watch.Stop();
@@ -109,7 +105,7 @@ namespace UnitTestProject2
                                                                       p.RowCount))
                                        .ToList();
             var totalTable =
-                totalRows.ToStringTable(new[] {"Fastest", "Name", "CostTime", "Average", "RunCount", "DataCount"},
+                totalRows.ToStringTable(new[] {"Fastest", "Name", "CostTime (ms)", "Average (ms)", "RunCount", "DataCount"},
                                         a => a.Item1,
                                         a => a.Item2,
                                         a => a.Item3,
@@ -150,7 +146,7 @@ namespace UnitTestProject2
             foreach (var detailReport in detailReports)
             {
                 var detailTable = detailReport.Value
-                                              .ToStringTable(new[] {"Fastest", "Name", "Index", "CostTime", "DataCount"},
+                                              .ToStringTable(new[] {"Fastest", "Name", "Index", "CostTime (ms)", "DataCount"},
                                                              a => a.Item1, a => a.Item2, a => a.Item3, a => a.Item4,
                                                              a => a.Item5
                                                             );

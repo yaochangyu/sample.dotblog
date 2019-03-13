@@ -242,6 +242,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BenchmarkManager.cs" />
+    <Compile Include="Repository\Ef\EfEmployeeRepository.cs" />
     <Compile Include="TableParser.cs" />
     <Compile Include="BenchmarkTest.cs" />
     <Compile Include="Utility.cs" />
