@@ -7,19 +7,13 @@ namespace UnitTestProject2
 {
     internal class BenchmarkManager
     {
-        private static readonly Dictionary<string, Func<Report>> s_funcTarget;
-        private static readonly List<Func<Report>> s_targets;
+        private static readonly Dictionary<string, Func<Report>> s_targets;
 
         static BenchmarkManager()
         {
-            if (s_funcTarget == null)
-            {
-                s_funcTarget = new Dictionary<string, Func<Report>>();
-            }
-
             if (s_targets == null)
             {
-                s_targets = new List<Func<Report>>();
+                s_targets = new Dictionary<string, Func<Report>>();
             }
         }
 
@@ -28,27 +22,27 @@ namespace UnitTestProject2
             var firstReports = new Dictionary<string, List<Report>>();
             var currentCount = count;
             var watch = new Stopwatch();
-            foreach (var target in s_funcTarget)
+            foreach (var target in s_targets)
             {
                 var index = 1;
                 while (count-- > 0)
                 {
                     watch.Restart();
 
-                    var dataInfo = target.Value.Invoke();
+                    var report = target.Value.Invoke();
 
                     watch.Stop();
 
-                    dataInfo.CostTime = watch.Elapsed.TotalMilliseconds;
-                    dataInfo.Name = target.Key;
-                    dataInfo.Index = index;
+                    report.CostTime = watch.Elapsed.TotalMilliseconds;
+                    report.Name = target.Key;
+                    report.Index = index;
                     if (firstReports.ContainsKey(target.Key) == false)
                     {
-                        firstReports.Add(target.Key, new List<Report> {dataInfo});
+                        firstReports.Add(target.Key, new List<Report> {report});
                     }
                     else
                     {
-                        firstReports[target.Key].Add(dataInfo);
+                        firstReports[target.Key].Add(report);
                     }
 
                     index++;
@@ -64,7 +58,7 @@ namespace UnitTestProject2
 
         public static void Warm()
         {
-            foreach (var target in s_funcTarget)
+            foreach (var target in s_targets)
             {
                 target.Value.Invoke();
             }
@@ -157,13 +151,13 @@ namespace UnitTestProject2
 
         public static void Add(string name, Func<Report> target)
         {
-            if (s_funcTarget.ContainsKey(name))
+            if (s_targets.ContainsKey(name))
             {
-                s_funcTarget[name] = target;
+                s_targets[name] = target;
             }
             else
             {
-                s_funcTarget.Add(name, target);
+                s_targets.Add(name, target);
             }
         }
     }
