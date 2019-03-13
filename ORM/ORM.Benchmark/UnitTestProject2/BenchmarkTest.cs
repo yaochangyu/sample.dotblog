@@ -20,7 +20,7 @@ namespace UnitTestProject2
                                      () =>
                                      {
                                          var employees = repository.Value.GetAllEmployees(out var count);
-                                         return new DataInfo {RowCount = count};
+                                         return new Report {RowCount = count};
                                      });
             }
 
@@ -30,7 +30,7 @@ namespace UnitTestProject2
                                      () =>
                                      {
                                          var employees = repository.Value.GetAllEmployees(out var count);
-                                         return new DataInfo {RowCount = count};
+                                         return new Report {RowCount = count};
                                      });
             }
 

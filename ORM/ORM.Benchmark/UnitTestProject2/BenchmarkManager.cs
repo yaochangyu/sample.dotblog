@@ -7,48 +7,48 @@ namespace UnitTestProject2
 {
     internal class BenchmarkManager
     {
-        private static readonly Dictionary<string, Func<DataInfo>> s_funcTarget;
-        private static readonly List<Func<DataInfo>> s_targets;
+        private static readonly Dictionary<string, Func<Report>> s_funcTarget;
+        private static readonly List<Func<Report>> s_targets;
 
         static BenchmarkManager()
         {
             if (s_funcTarget == null)
             {
-                s_funcTarget = new Dictionary<string, Func<DataInfo>>();
+                s_funcTarget = new Dictionary<string, Func<Report>>();
             }
 
             if (s_targets == null)
             {
-                s_targets = new List<Func<DataInfo>>();
+                s_targets = new List<Func<Report>>();
             }
         }
 
-        public static List<DataInfo> Statistics(int count = 1)
+        public static List<Report> Statistics(int count = 1)
         {
-            var dataInfos = new Dictionary<string, List<DataInfo>>();
+            var firstReports = new Dictionary<string, List<Report>>();
             var currentCount = count;
             var watch = new Stopwatch();
-            foreach (var func in s_funcTarget)
+            foreach (var target in s_funcTarget)
             {
                 var index = 1;
                 while (count-- > 0)
                 {
                     watch.Restart();
 
-                    var dataInfo = func.Value.Invoke();
+                    var dataInfo = target.Value.Invoke();
 
                     watch.Stop();
 
                     dataInfo.CostTime = watch.Elapsed.TotalMilliseconds;
-                    dataInfo.Name = func.Key;
+                    dataInfo.Name = target.Key;
                     dataInfo.Index = index;
-                    if (dataInfos.ContainsKey(func.Key) == false)
+                    if (firstReports.ContainsKey(target.Key) == false)
                     {
-                        dataInfos.Add(func.Key, new List<DataInfo> {dataInfo});
+                        firstReports.Add(target.Key, new List<Report> {dataInfo});
                     }
                     else
                     {
-                        dataInfos[func.Key].Add(dataInfo);
+                        firstReports[target.Key].Add(dataInfo);
                     }
 
                     index++;
@@ -57,27 +57,27 @@ namespace UnitTestProject2
                 count = currentCount;
             }
 
-            var totalReports = GenerateTotalReports(dataInfos);
+            var totalReports = GenerateTotalReports(firstReports);
             var detailReports = GenerateDetailReport(totalReports);
             return totalReports;
         }
 
         public static void Warm()
         {
-            foreach (var func in s_funcTarget)
+            foreach (var target in s_funcTarget)
             {
-                func.Value.Invoke();
+                target.Value.Invoke();
             }
         }
 
-        private static List<DataInfo> GenerateTotalReports(Dictionary<string, List<DataInfo>> sourceInfos)
+        private static List<Report> GenerateTotalReports(Dictionary<string, List<Report>> sourceInfos)
         {
-            var totalReports = new List<DataInfo>();
+            var totalReports = new List<Report>();
 
             foreach (var sourceInfo in sourceInfos)
             {
-                var totalReport = new DataInfo();
-                var details = new List<DataInfo>();
+                var totalReport = new Report();
+                var details = new List<Report>();
                 var runCount = 0;
                 foreach (var info in sourceInfo.Value)
                 {
@@ -117,7 +117,7 @@ namespace UnitTestProject2
         }
 
         private static Dictionary<string, List<Tuple<int, string, int, double, long>>> GenerateDetailReport(
-            List<DataInfo> sortReports)
+            List<Report> sortReports)
         {
             var detailReports = new Dictionary<string, List<Tuple<int, string, int, double, long>>>();
 
@@ -155,7 +155,7 @@ namespace UnitTestProject2
             return detailReports;
         }
 
-        public static void Add(string name, Func<DataInfo> target)
+        public static void Add(string name, Func<Report> target)
         {
             if (s_funcTarget.ContainsKey(name))
             {

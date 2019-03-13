@@ -2,7 +2,7 @@
 
 namespace UnitTestProject2
 {
-    public class DataInfo
+    public class Report
     {
         public int RowCount { get; set; }
 
@@ -18,7 +18,7 @@ namespace UnitTestProject2
 
         public int RunCount { get; set; }
 
-        public IEnumerable<DataInfo> Details { get; set; }
+        public IEnumerable<Report> Details { get; set; }
 
         public object Data { get; set; }
     }
