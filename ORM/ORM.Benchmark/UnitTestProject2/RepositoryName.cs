@@ -6,7 +6,7 @@
         Linq2EmployeeRepository,
         DapperEmployeeRepository,
         AdapterEmployeeRepository,
-        DataReaderEmployeeRepository,
+        DataReaderToTableEmployeeRepository,
         LoadDataEmployeeRepository,
         LoadEmployeeRepository
     }

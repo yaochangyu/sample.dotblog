@@ -52,7 +52,7 @@ namespace UnitTestProject2
             //暖機
             BenchmarkManager.Warm();
             Utility.Warm();
-            Utility.SwitchLargeDb();
+            //Utility.SwitchLargeDb();
         }
 
         [TestMethod]

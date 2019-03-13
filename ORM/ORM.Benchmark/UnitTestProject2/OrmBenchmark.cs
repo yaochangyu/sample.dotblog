@@ -22,7 +22,7 @@ namespace UnitTestProject2
         public void DataReaderEmployeeRepository()
         {
             int count;
-            Utility.Repositories[RepositoryNames.DataReaderEmployeeRepository].GetAllEmployees(out count);
+            Utility.Repositories[RepositoryNames.DataReaderToTableEmployeeRepository].GetAllEmployees(out count);
         }
 
         [Benchmark]

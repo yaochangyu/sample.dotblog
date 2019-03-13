@@ -36,7 +36,9 @@ namespace UnitTestProject2
                     //var watch = Stopwatch.StartNew();
                     watch.Reset();
                     watch.Restart();
-
+                    var type1 = func.Value.Method;
+                    var type = func.GetType();
+                    var fullName = type.FullName;
                     var dataInfo = func.Value.Invoke();
 
                     watch.Stop();
@@ -160,6 +162,8 @@ namespace UnitTestProject2
 
         public static void Add(string name, Func<DataInfo> target)
         {
+            var type = target.Target.GetType();
+            var fullName = type.FullName;
             if (s_funcTarget.ContainsKey(name))
             {
                 s_funcTarget[name] = target;
