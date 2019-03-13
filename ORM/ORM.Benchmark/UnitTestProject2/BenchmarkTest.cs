@@ -14,6 +14,8 @@ namespace UnitTestProject2
         static BenchmarkTest()
         {
             string connectionName = "LabDbContext";
+
+            //呼叫 BenchmarkManager.Add 傳入需要量測的 Method
             foreach (var repository in Utility.AdoRepositories)
             {
                 BenchmarkManager.Add(repository.Key.ToString(),
