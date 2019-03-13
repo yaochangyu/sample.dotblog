@@ -18,7 +18,7 @@ namespace UnitTestProject2
             //呼叫 BenchmarkManager.Add 傳入需要量測的 Method
             foreach (var repository in Utility.AdoRepositories)
             {
-                BenchmarkManager.Add(repository.Key.ToString()+".Join",
+                BenchmarkManager.Add(repository.Key + ".Join",
                                      () =>
                                      {
                                          var employees = repository.Value.GetAllEmployeesDetail(out var count);
@@ -28,7 +28,7 @@ namespace UnitTestProject2
 
             foreach (var repository in Utility.Repositories)
             {
-                BenchmarkManager.Add(repository.Key.ToString()+".Join",
+                BenchmarkManager.Add(repository.Key + ".Join",
                                      () =>
                                      {
                                          var employees = repository.Value.GetAllEmployeesDetail(out var count);
