@@ -26,13 +26,14 @@ namespace UnitTestProject2
         public static List<DataInfo> Statistics(int count = 1)
         {
             var dataInfos = new Dictionary<string, List<DataInfo>>();
-            var watch = Stopwatch.StartNew();
             var currentCount = count;
+            var watch = new Stopwatch();
             foreach (var func in s_funcTarget)
             {
                 var index = 1;
                 while (count-- > 0)
                 {
+                    //var watch = Stopwatch.StartNew();
                     watch.Reset();
                     watch.Restart();
 
@@ -61,6 +62,15 @@ namespace UnitTestProject2
             var totalReports = GenerateTotalReports(dataInfos);
             var detailReports = GenerateDetailReport(totalReports);
             return totalReports;
+        }
+
+        public static void Warm()
+        {
+            foreach (var func in s_funcTarget)
+            {
+                var dataInfo = func.Value.Invoke();
+                var dataInfoData = dataInfo.Data;
+            }
         }
 
         private static List<DataInfo> GenerateTotalReports(Dictionary<string, List<DataInfo>> sourceInfos)

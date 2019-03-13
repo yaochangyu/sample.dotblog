@@ -1,13 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.Data.Entity;
-using System.Data.Entity.Core.Mapping;
-using System.Data.Entity.Core.Metadata.Edm;
-using System.Data.Entity.Infrastructure;
 using UnitTestProject2.Repository;
 using UnitTestProject2.Repository.Ado;
 using UnitTestProject2.Repository.Dapper;
 using UnitTestProject2.Repository.Ef;
-using UnitTestProject2.Repository.Ef.EntityModel;
 using UnitTestProject2.Repository.Linq2Db;
 
 namespace UnitTestProject2
@@ -30,8 +25,6 @@ namespace UnitTestProject2
             {
                 AdoRepositories = InitialAdoRepositories(connectionName);
             }
-
-         
         }
 
         private static Dictionary<RepositoryNames, IEmployeeRepository> InitialRepositories(string connectionName)
@@ -57,6 +50,35 @@ namespace UnitTestProject2
             };
 
             return actions;
+        }
+
+        public static void Warm()
+        {
+            foreach (var repository in Repositories)
+            {
+                repository.Value.GetAllEmployees(out var count1);
+                repository.Value.GetAllEmployeesDetail(out var count2);
+            }
+
+            foreach (var repository in AdoRepositories)
+            {
+                repository.Value.GetAllEmployees(out var count1);
+                repository.Value.GetAllEmployeesDetail(out var count2);
+            }
+        }
+
+        public static void SwitchLargeDb()
+        {
+            //切換連線字串
+            foreach (var repository in Repositories)
+            {
+                repository.Value.ConnectionName = "LabDbContextLarge";
+            }
+
+            foreach (var repository in AdoRepositories)
+            {
+                repository.Value.ConnectionName = "LabDbContextLarge";
+            }
         }
     }
 }
