@@ -157,8 +157,6 @@ namespace UnitTestProject2
 
         public static void Add(string name, Func<DataInfo> target)
         {
-            var type = target.Target.GetType();
-            var fullName = type.FullName;
             if (s_funcTarget.ContainsKey(name))
             {
                 s_funcTarget[name] = target;
