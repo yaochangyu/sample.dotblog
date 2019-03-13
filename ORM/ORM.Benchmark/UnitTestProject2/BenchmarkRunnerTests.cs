@@ -7,7 +7,7 @@ namespace UnitTestProject2
     public class BenchmarkRunnerTests
     {
         [TestMethod]
-        public void OrmTest()
+        public void BenchmarkRunnerTest()
         {
             var summary = BenchmarkRunner.Run<OrmBenchmark>();
         }

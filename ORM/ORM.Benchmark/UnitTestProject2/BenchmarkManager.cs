@@ -34,7 +34,7 @@ namespace UnitTestProject2
                 while (count-- > 0)
                 {
                     watch.Restart();
-          
+
                     var dataInfo = func.Value.Invoke();
 
                     watch.Stop();
@@ -66,8 +66,7 @@ namespace UnitTestProject2
         {
             foreach (var func in s_funcTarget)
             {
-                var dataInfo = func.Value.Invoke();
-                var dataInfoData = dataInfo.Data;
+                func.Value.Invoke();
             }
         }
 

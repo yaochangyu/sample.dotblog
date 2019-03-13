@@ -272,8 +272,6 @@
     <Compile Include="Repository\Linq2Db\Linq2EmployeeRepository.cs" />
     <Compile Include="Repository\SqlIdentityText.cs" />
     <Compile Include="Repository\SqlEmployeeText.cs" />
-    <Compile Include="TestReport.cs" />
-    <Compile Include="TestReportTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="BenchmarkRunnerTests.cs" />
     <Compile Include="ViewModel\EmployeeViewModel.cs" />
