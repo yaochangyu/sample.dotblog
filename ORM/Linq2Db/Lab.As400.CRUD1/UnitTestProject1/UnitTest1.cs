@@ -20,7 +20,7 @@ namespace UnitTestProject1
         [TestCleanup]
         public void After()
         {
-            //TestHook.Delete();
+            TestHook.Delete();
         }
 
         [TestMethod]
@@ -97,6 +97,7 @@ namespace UnitTestProject1
                 Console.WriteLine(db.LastQuery);
             }
         }
+
         [TestMethod]
         public void 查詢MEMBER_OuterJoin()
         {
@@ -117,6 +118,34 @@ namespace UnitTestProject1
                                .ToList()
                     ;
                 Console.WriteLine(db.LastQuery);
+            }
+        }
+
+        [TestMethod]
+        public void 交易()
+        {
+            this.Inserts();
+            var memberToDb = new Member
+            {
+                ID = 1,
+                NAME = "yao",
+                AGE = 20,
+                REMARK = TestHook.TestData
+            };
+            using (var db = new MemberDb())
+            {
+                db.BeginTransaction();
+                try
+                {
+                    db.Insert(memberToDb);
+                    throw new Exception();
+
+                    db.CommitTransaction();
+                }
+                catch (Exception e)
+                {
+                    db.RollbackTransaction();
+                }
             }
         }
 
