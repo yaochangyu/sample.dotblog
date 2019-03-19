@@ -20,8 +20,8 @@ namespace App.UnitTest
             var targetAppPath = Path.Combine(solutionPath, projectName, "bin", "debug", "app.exe");
 
             DesiredCapabilities appCapabilities = new DesiredCapabilities();
-            //appCapabilities.SetCapability("app", targetAppPath);
-            appCapabilities.SetCapability("app", @"C:\Program Files (x86)\Progress\Telerik UI for WinForms R1 2019\Examples\QuickStart\bin\TelerikExamples.exe");
+            appCapabilities.SetCapability("app", targetAppPath);
+            //appCapabilities.SetCapability("app", @"C:\Program Files (x86)\Progress\Telerik UI for WinForms R1 2019\Examples\QuickStart\bin\TelerikExamples.exe");
 
             WindowsDriver = new WindowsDriver<WindowsElement>(new Uri("http://127.0.0.1:4723"), appCapabilities);
         }
