@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Text;
+using System.Threading;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Firefox;
 using OpenQA.Selenium.Remote;
 
 namespace SeleniumServer.UnitTest
@@ -18,7 +20,7 @@ namespace SeleniumServer.UnitTest
         [ClassInitialize]
         public static void InitializeClass(TestContext testContext)
         {
-            ChromeOptions options = new ChromeOptions();
+            var options = new FirefoxOptions();
             //options.AddAdditionalCapability(CapabilityType.Version, "latest", true);
             //options.AddAdditionalCapability(CapabilityType.Platform, "WIN10", true);
             //options.AddAdditionalCapability("key", "key", true);
@@ -63,6 +65,7 @@ namespace SeleniumServer.UnitTest
         public void TheUntitledTestCaseTest()
         {
             driver.Navigate().GoToUrl("https://www.google.com");
+            Thread.Sleep(100);
             driver.FindElement(By.Name("q")).Clear();
             driver.FindElement(By.Name("q")).SendKeys("selenium webdriver C#");
             driver.FindElement(By.Name("q")).SendKeys(Keys.Enter);
