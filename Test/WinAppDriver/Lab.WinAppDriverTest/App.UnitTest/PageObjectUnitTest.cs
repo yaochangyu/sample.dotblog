@@ -20,6 +20,7 @@ namespace App.UnitTest
 
             DesiredCapabilities appCapabilities = new DesiredCapabilities();
             appCapabilities.SetCapability("app", targetAppPath);
+
             //appCapabilities.SetCapability("app", @"C:\Program Files (x86)\Progress\Telerik UI for WinForms R1 2019\Examples\QuickStart\bin\TelerikExamples.exe");
 
             ;
@@ -47,6 +48,4 @@ namespace App.UnitTest
             loginPage.ClickOK();
         }
     }
-
-
 }
