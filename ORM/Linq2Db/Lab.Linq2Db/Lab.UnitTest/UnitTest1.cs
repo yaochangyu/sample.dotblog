@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using Faker;
 using Lab.EntityModel;
@@ -13,6 +14,28 @@ namespace Lab.UnitTest
     public class UnitTest1
     {
         private static readonly string ConnectionName = "LabDbContext";
+
+        [TestMethod]
+        public void 調用SP_InsertOrUpdateEmployee2()
+        {
+            using (var db = new LabEmployee2DB(ConnectionName))
+            {
+                var toDb = new DataTable();
+                toDb.Columns.Add("Id", typeof(Guid));
+                toDb.Columns.Add("Name", typeof(string));
+                toDb.Columns.Add("Age", typeof(int));
+                toDb.Columns.Add("Remark", typeof(string));
+
+                var row = toDb.NewRow();
+                row["Id"] = Guid.NewGuid();
+                row["Name"] = "yao";
+                row["Age"] = 19;
+                row["Remark"] = "yao";
+                toDb.Rows.Add(row);
+                var count = db.InsertOrUpdateEmployee2(toDb);
+                Assert.IsTrue(count == 1);
+            }
+        }
 
         [TestMethod]
         public void InnerJoin查詢()
@@ -96,7 +119,6 @@ namespace Lab.UnitTest
 
             using (var db = new LabEmployee2DB(ConnectionName))
             {
-               
                 db.BulkCopy(employees);
             }
         }

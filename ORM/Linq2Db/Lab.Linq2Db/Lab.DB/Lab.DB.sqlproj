@@ -63,6 +63,7 @@
     <Folder Include="dbo\Tables\" />
     <Folder Include="Scripts\" />
     <Folder Include="dbo\Stored Procedures" />
+    <Folder Include="dbo\User Defined Types" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Employee.sql" />
@@ -71,6 +72,8 @@
     <None Include="Scripts\DML.sql" />
     <Build Include="dbo\Stored Procedures\InsertOrUpdateEmployee.sql" />
     <Build Include="dbo\Stored Procedures\GetAllEmployee.sql" />
+    <Build Include="dbo\Stored Procedures\InsertOrUpdateEmployee2.sql" />
+    <Build Include="dbo\User Defined Types\InsertOrUpdateEmployeeType.sql" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Scripts\Script.PostDeployment1.sql" />

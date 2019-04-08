@@ -169,14 +169,23 @@ namespace Lab.EntityModel
 
 		#region InsertOrUpdateEmployee
 
-		public static int InsertOrUpdateEmployee(this DataConnection dataConnection, Guid? @Id, string @Name, int? @Age, long? @SequenceId, string @Remark)
+		public static int InsertOrUpdateEmployee(this DataConnection dataConnection, Guid? @Id, string @Name, int? @Age, string @Remark)
 		{
 			return dataConnection.ExecuteProc("[dbo].[InsertOrUpdateEmployee]",
-				new DataParameter("@Id",         @Id,         DataType.Guid),
-				new DataParameter("@Name",       @Name,       DataType.NVarChar),
-				new DataParameter("@Age",        @Age,        DataType.Int32),
-				new DataParameter("@SequenceId", @SequenceId, DataType.Int64),
-				new DataParameter("@Remark",     @Remark,     DataType.NVarChar));
+				new DataParameter("@Id",     @Id,     DataType.Guid),
+				new DataParameter("@Name",   @Name,   DataType.NVarChar),
+				new DataParameter("@Age",    @Age,    DataType.Int32),
+				new DataParameter("@Remark", @Remark, DataType.NVarChar));
+		}
+
+		#endregion
+
+		#region InsertOrUpdateEmployee2
+
+		public static int InsertOrUpdateEmployee2(this DataConnection dataConnection, DataTable @EmployeeType)
+		{
+			return dataConnection.ExecuteProc("[dbo].[InsertOrUpdateEmployee2]",
+				new DataParameter("@EmployeeType", @EmployeeType, DataType.Structured){ DbType = "[dbo].[InsertOrUpdateEmployeeType]" });
 		}
 
 		#endregion
