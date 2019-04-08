@@ -9,11 +9,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
 using LinqToDB;
+using LinqToDB.Common;
+using LinqToDB.Data;
 using LinqToDB.DataProvider.SqlServer;
 using LinqToDB.Extensions;
 using LinqToDB.Mapping;
@@ -149,6 +152,32 @@ namespace Lab.EntityModel
 		/// </summary>
 		[Association(ThisKey="EmployeeId", OtherKey="Id", CanBeNull=true, Relationship=Relationship.ManyToOne, KeyName="FK_Order_Employee_id", BackReferenceName="Orderids")]
 		public Employee Employee { get; set; }
+
+		#endregion
+	}
+
+	public static partial class LabEmployee2DBStoredProcedures
+	{
+		#region GetEmployee
+
+		public static IEnumerable<Employee> GetEmployee(this DataConnection dataConnection)
+		{
+			return dataConnection.QueryProc<Employee>("[dbo].[GetEmployee]");
+		}
+
+		#endregion
+
+		#region InsertOrUpdateEmployee
+
+		public static int InsertOrUpdateEmployee(this DataConnection dataConnection, Guid? @Id, string @Name, int? @Age, long? @SequenceId, string @Remark)
+		{
+			return dataConnection.ExecuteProc("[dbo].[InsertOrUpdateEmployee]",
+				new DataParameter("@Id",         @Id,         DataType.Guid),
+				new DataParameter("@Name",       @Name,       DataType.NVarChar),
+				new DataParameter("@Age",        @Age,        DataType.Int32),
+				new DataParameter("@SequenceId", @SequenceId, DataType.Int64),
+				new DataParameter("@Remark",     @Remark,     DataType.NVarChar));
+		}
 
 		#endregion
 	}

@@ -17,10 +17,9 @@ namespace App.UnitTest
             var projectName = "App";
             string solutionPath = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..\\..\\..\\"));
             var targetAppPath = Path.Combine(solutionPath, projectName, "bin", "debug", "app.exe");
-
+            
             DesiredCapabilities appCapabilities = new DesiredCapabilities();
             appCapabilities.SetCapability("app", targetAppPath);
-
             //appCapabilities.SetCapability("app", @"C:\Program Files (x86)\Progress\Telerik UI for WinForms R1 2019\Examples\QuickStart\bin\TelerikExamples.exe");
 
             ;
