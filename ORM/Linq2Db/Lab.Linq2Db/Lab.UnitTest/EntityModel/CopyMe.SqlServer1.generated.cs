@@ -158,11 +158,11 @@ namespace Lab.EntityModel
 
 	public static partial class LabEmployee2DBStoredProcedures
 	{
-		#region GetEmployee
+		#region GetAllEmployee
 
-		public static IEnumerable<Employee> GetEmployee(this DataConnection dataConnection)
+		public static IEnumerable<Employee> GetAllEmployee(this DataConnection dataConnection)
 		{
-			return dataConnection.QueryProc<Employee>("[dbo].[GetEmployee]");
+			return dataConnection.QueryProc<Employee>("[dbo].[GetAllEmployee]");
 		}
 
 		#endregion

@@ -1,8 +1,7 @@
 ﻿CREATE PROCEDURE dbo.InsertOrUpdateEmployee
   @Id uniqueidentifier,
   @Name nvarchar(50),
-  @Age int,
-  @SequenceId bigint,
+  @Age int, 
   @Remark nvarchar(50) AS
 BEGIN
   IF EXISTS

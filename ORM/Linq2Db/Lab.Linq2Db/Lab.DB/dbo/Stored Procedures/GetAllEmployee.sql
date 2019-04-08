@@ -1,11 +1,12 @@
-﻿CREATE PROCEDURE dbo.GetEmployee
+﻿CREATE PROCEDURE [dbo].[GetAllEmployee]
 
 AS
 	SELECT
-  Id
- ,Name
- ,Age
- ,SequenceId
- ,Remark
-FROM dbo.Employee;
+		 Id
+		,Name
+		,Age
+		,SequenceId
+		,Remark
+	FROM 
+		dbo.Employee;
 GO
