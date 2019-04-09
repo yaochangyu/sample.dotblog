@@ -16,7 +16,17 @@ namespace Lab.UnitTest
         private static readonly string ConnectionName = "LabDbContext";
 
         [TestMethod]
-        public void 調用SP_InsertOrUpdateEmployee2()
+        public void 呼叫預存()
+        {
+            using (var db = new LabEmployee2DB(ConnectionName))
+            {
+                var count = db.InsertOrUpdateEmployee(Guid.NewGuid(), "yao", 19, "Remark");
+                Assert.IsTrue(count == 1);
+            }
+        }
+
+        [TestMethod]
+        public void 呼叫預存2()
         {
             using (var db = new LabEmployee2DB(ConnectionName))
             {
@@ -30,7 +40,7 @@ namespace Lab.UnitTest
                 row["Id"] = Guid.NewGuid();
                 row["Name"] = "yao";
                 row["Age"] = 19;
-                row["Remark"] = "yao";
+                row["Remark"] = "Remark";
                 toDb.Rows.Add(row);
                 var count = db.InsertOrUpdateEmployee2(toDb);
                 Assert.IsTrue(count == 1);
@@ -106,8 +116,8 @@ namespace Lab.UnitTest
         [TestMethod]
         public void 新增大量資料()
         {
-            List<Employee> employees = new List<Employee>();
-            for (int i = 0; i < 10000; i++)
+            var employees = new List<Employee>();
+            for (var i = 0; i < 10000; i++)
             {
                 employees.Add(new Employee
                 {
@@ -129,7 +139,7 @@ namespace Lab.UnitTest
             using (var db = new LabEmployee2DB(ConnectionName))
             {
                 db.BeginTransaction();
-                int count = 0;
+                var count = 0;
                 try
                 {
                     var employee = new Employee {Id = Guid.NewGuid(), Name = "小章", Age = 18};
