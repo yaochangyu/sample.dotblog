@@ -10,17 +10,17 @@ namespace Client.WinForm
         private static readonly HttpClient s_client;
 
         //private static string s_baseUrl = "http://localhost:6672";
-        private static readonly string s_baseUrl = "https://localhost:44344";
+        private static readonly string s_baseUrl = "https://localhost:44314";
 
         static Form1()
         {
             var handler = new HttpClientHandler();
-            //handler.ServerCertificateCustomValidationCallback =
-            //    (request, cert2, cetChain, policyErrors) =>
-            //    {
-            //        //可以在這裡處理憑證
-            //        return true;
-            //    };
+            handler.ServerCertificateCustomValidationCallback =
+                (request, cert2, cetChain, policyErrors) =>
+                {
+                    //可以在這裡處理憑證
+                    return true;
+                };
 
             if (s_client == null)
             {
@@ -48,7 +48,11 @@ namespace Client.WinForm
             var url = "api/Default";
 
             var response = s_client.GetAsync(url).Result;
-            response.EnsureSuccessStatusCode();
+            if (response.IsSuccessStatusCode)
+            {
+                var result = response.Content.ReadAsStringAsync().Result;
+                MessageBox.Show(result);
+            }
         }
     }
 }
