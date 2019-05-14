@@ -1,20 +1,41 @@
 ﻿@model HandleErrorInfo
 @{
-    ViewBag.Title = "Error";
+    ViewBag.Title = "Contact";
 }
 <!DOCTYPE html>
 <html>
 <head>
     <meta name="viewport" content="width=device-width" />
-    @*<title>Error</title>*@
-    <title>@ViewBag.Title - My ASP.NET Application</title>
+    <title>Error</title>
 </head>
 <body>
     <hgroup>
         <h1>Error.</h1>
         <h2>
             An error occurred while processing your request.
+            An unexpected error has occurred. Please contact the system administrator.
         </h2>
+
+        <b>Request Variable from HttpContext:</b> @InstanceUtility.HttpRequestState.GetCurrentVariableToJson()
+        <br />
+        <b>Request Variable from ViewData:</b> @ViewData["Request_Variable"]
+        <br />
+
+        @if (Model != null && HttpContext.Current.IsDebuggingEnabled)
+        {
+            <div>
+                <p>
+                    <b>Exception:</b> @Model.Exception.Message<br />
+                    <b>Controller:</b> @Model.ControllerName<br />
+                    <b>Action:</b> @Model.ActionName<br />
+                </p>
+                <div style="overflow: scroll">
+                    <pre>
+                    @Model.Exception.StackTrace
+                </pre>
+                </div>
+            </div>
+        }
     </hgroup>
 </body>
 </html>

@@ -1,26 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
+﻿using System.Web;
 using Newtonsoft.Json;
 
 namespace WebApplication1
 {
     public class HttpRequestState
     {
-        public virtual  object GetCurrentVariable()
+        private static readonly string RequestVariable = "Request_Variable";
+
+        public virtual object GetCurrentVariable()
         {
-            return HttpContext.Current.Items["RequestVariable"];
+            return HttpContext.Current.Items[RequestVariable];
         }
+
         public virtual string GetCurrentVariableToJson()
         {
-            var requestItem = GetCurrentVariable();
+            var requestItem = this.GetCurrentVariable();
             return requestItem == null ? "Empty" : JsonConvert.SerializeObject(requestItem);
         }
 
         public virtual void SetCurrentVariable(object source)
         {
-            HttpContext.Current.Items["RequestVariable"] = source;
+            HttpContext.Current.Items[RequestVariable] = source;
         }
     }
 }
