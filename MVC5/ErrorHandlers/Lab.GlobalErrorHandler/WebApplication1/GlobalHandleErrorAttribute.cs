@@ -11,8 +11,11 @@ namespace WebApplication1
             var actionName     = filterContext.RouteData.Values["action"].ToString();
             var exception      = filterContext.Exception;
             var logger         = LogManager.GetLogger($"{controllerName}.{actionName}");
-            var logMessage     = $"例外：{exception.Message}";
-            logger.Error(exception, logMessage);
+            var message        = $"例外：{exception.Message}";
+            logger.Error(exception, message);
+
+            filterContext.ExceptionHandled = true;
+            filterContext.HttpContext.Response.Clear();
 
             var handler  = new HandleErrorInfo(filterContext.Exception, controllerName, actionName);
             var viewData = new ViewDataDictionary<HandleErrorInfo>(handler);
