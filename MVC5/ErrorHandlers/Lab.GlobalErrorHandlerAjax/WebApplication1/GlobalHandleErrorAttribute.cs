@@ -6,6 +6,51 @@ namespace WebApplication1
 {
     public class GlobalHandleErrorAttribute : HandleErrorAttribute
     {
+        private static void SetContentResult(ExceptionContext filterContext, object request)
+        {
+            var content = filterContext.HttpContext.IsDebuggingEnabled
+                              ? filterContext.Exception.StackTrace
+                              : "An unexpected error has occurred. Please contact the system administrator.";
+
+            filterContext.Result = new ContentResult
+            {
+                ContentType = "text/plain",
+                Content     = content
+            };
+
+            filterContext.HttpContext.Response.Status = "500 " +
+                                                        filterContext.Exception.Message
+                                                                     .Replace("\r", " ")
+                                                                     .Replace("\n", " ");
+        }
+
+        private static void SetJsonResult(ExceptionContext filterContext, object request)
+        {
+            dynamic data;
+            if (filterContext.HttpContext.IsDebuggingEnabled)
+            {
+                data = new
+                {
+                    filterContext.Exception.Message,
+                    filterContext.Exception.StackTrace,
+                    RequestVariable = request
+                };
+            }
+            else
+            {
+                data = new
+                {
+                    Message = "An unexpected error has occurred. Please contact the system administrator."
+                };
+            }
+
+            filterContext.Result = new JsonResult
+            {
+                JsonRequestBehavior = JsonRequestBehavior.AllowGet,
+                Data                = data
+            };
+        }
+
         public override void OnException(ExceptionContext filterContext)
         {
             var controllerName = filterContext.RouteData.Values["controller"].ToString();
@@ -24,29 +69,8 @@ namespace WebApplication1
 
             if (filterContext.HttpContext.Request.IsAjaxRequest())
             {
-                dynamic data;
-                if (filterContext.HttpContext.IsDebuggingEnabled)
-                {
-                    data = new
-                    {
-                        filterContext.Exception.Message,
-                        filterContext.Exception.StackTrace,
-                        RequestVariable = request
-                    };
-                }
-                else
-                {
-                    data = new
-                    {
-                        Message = "An unexpected error has occurred. Please contact the system administrator."
-                    };
-                }
-
-                filterContext.Result = new JsonResult
-                {
-                    JsonRequestBehavior = JsonRequestBehavior.AllowGet,
-                    Data                = data
-                };
+                SetJsonResult(filterContext, request);
+                //SetContentResult(filterContext, request);
             }
             else
             {
