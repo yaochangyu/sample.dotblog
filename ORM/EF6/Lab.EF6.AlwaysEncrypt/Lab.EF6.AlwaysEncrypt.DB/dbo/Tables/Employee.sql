@@ -1,0 +1,11 @@
+﻿CREATE TABLE [dbo].[Employee] (
+    [Id]   INT           IDENTITY (1, 1) NOT NULL,
+    [Name] NVARCHAR (10) COLLATE Latin1_General_BIN2  ENCRYPTED WITH (
+     COLUMN_ENCRYPTION_KEY = [yao],
+     ALGORITHM = N'AEAD_AES_256_CBC_HMAC_SHA_256',
+     ENCRYPTION_TYPE = DETERMINISTIC
+    ) NOT NULL,
+    [Age]  INT           NULL,
+    CONSTRAINT [PK_Employee_Id] PRIMARY KEY CLUSTERED ([Id] ASC)
+);
+
