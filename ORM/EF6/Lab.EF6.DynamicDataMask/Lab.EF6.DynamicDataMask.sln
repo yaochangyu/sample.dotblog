@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.572
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "Lab.EF6.DynamicDataMask.DB", "Lab.EF6.DynamicDataMask.DB\Lab.EF6.DynamicDataMask.DB.sqlproj", "{5FF3FE3B-C3D9-44E1-9D80-0A7E0731E777}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.EF6.DynamicDataMask.UnitTest", "Lab.EF6.DynamicDataMask.UnitTest\Lab.EF6.DynamicDataMask.UnitTest.csproj", "{0B57A8F3-B297-42C0-804D-F4C52FF03CB2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5FF3FE3B-C3D9-44E1-9D80-0A7E0731E777}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5FF3FE3B-C3D9-44E1-9D80-0A7E0731E777}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5FF3FE3B-C3D9-44E1-9D80-0A7E0731E777}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{5FF3FE3B-C3D9-44E1-9D80-0A7E0731E777}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5FF3FE3B-C3D9-44E1-9D80-0A7E0731E777}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5FF3FE3B-C3D9-44E1-9D80-0A7E0731E777}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{0B57A8F3-B297-42C0-804D-F4C52FF03CB2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B57A8F3-B297-42C0-804D-F4C52FF03CB2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B57A8F3-B297-42C0-804D-F4C52FF03CB2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B57A8F3-B297-42C0-804D-F4C52FF03CB2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1E56141E-3683-4040-B549-31E108F9E55C}
+	EndGlobalSection
+EndGlobal
