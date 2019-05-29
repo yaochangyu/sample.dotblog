@@ -11,9 +11,7 @@ namespace Lab.EF6.DynamicDataMask.UnitTest
         [TestMethod]
         public void 切換沒有遮罩帳號()
         {
-            var dbContext = new TestDbContext();
-
-            try
+            using (var dbContext = new TestDbContext())
             {
                 if (dbContext.Database.Connection.State == ConnectionState.Closed)
                 {
@@ -26,27 +24,18 @@ namespace Lab.EF6.DynamicDataMask.UnitTest
                 dbContext.Database.ExecuteSqlCommand("REVERT");
                 Assert.AreEqual("02-77203699", customers[0].Tel);
             }
-            finally
-            {
-                dbContext.Database.Connection.Dispose();
-            }
         }
 
         [TestMethod]
         public void 切換遮罩帳號()
         {
-            var dbContext = TestDbContext.CreateDbContext();
-            try
+            using (var dbContext = TestDbContext.CreateDbContext())
             {
                 dbContext.Database.ExecuteSqlCommand("EXECUTE AS USER = 'MaskId'");
                 var customers = dbContext.Customers.AsNoTracking().ToList();
 
                 dbContext.Database.ExecuteSqlCommand("REVERT");
                 Assert.AreEqual("xxxx", customers[0].Tel);
-            }
-            finally
-            {
-                dbContext.Database.Connection.Dispose();
             }
         }
 
@@ -67,7 +56,7 @@ namespace Lab.EF6.DynamicDataMask.UnitTest
             using (var dbContext = TestDbContext.CreateDbContext("TestDbContext_MaskId"))
             {
                 var customers = dbContext.Customers.AsNoTracking().ToList();
-                Assert.AreEqual("02-77203699", customers[0].Tel);
+                Assert.AreEqual("xxxx", customers[0].Tel);
             }
         }
     }
