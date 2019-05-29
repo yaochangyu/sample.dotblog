@@ -127,7 +127,7 @@
     <None Include="Scripts\Customer.sql" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="deploy.xml" />
+    <None Include="deploy.publish.xml" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Scripts\Script.PostDeployment1.sql" />
