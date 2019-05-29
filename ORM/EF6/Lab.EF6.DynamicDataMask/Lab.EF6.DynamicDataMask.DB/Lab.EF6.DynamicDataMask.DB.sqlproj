@@ -127,7 +127,7 @@
     <None Include="Scripts\Customer.sql" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Lab.EF6.DynamicDataMask.DB.publish.xml" />
+    <None Include="deploy.xml" />
   </ItemGroup>
   <ItemGroup>
     <PostDeploy Include="Scripts\Script.PostDeployment1.sql" />
