@@ -1,3 +1,0 @@
-﻿CREATE LOGIN [lab]
-    WITH PASSWORD = N'yprlfahgDkgiX#zcgk|uxjulmsFT7_&#$!~<v|k=firs{fj6', SID = 0x495EC373966128499F1E254EE96A6DF9, DEFAULT_LANGUAGE = [us_english], CHECK_POLICY = OFF;
-

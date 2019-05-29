@@ -10,3 +10,15 @@
     PRIMARY KEY CLUSTERED ([ID] ASC)
 );
 
+
+GO
+GRANT SELECT
+    ON OBJECT::[dbo].[Customer] TO [MaskId]
+    AS [dbo];
+
+
+GO
+GRANT SELECT
+    ON OBJECT::[dbo].[Customer] TO [UnmaskId]
+    AS [dbo];
+

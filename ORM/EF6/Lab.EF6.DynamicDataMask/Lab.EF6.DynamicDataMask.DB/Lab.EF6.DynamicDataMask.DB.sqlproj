@@ -118,18 +118,32 @@
   <Import Condition="'$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
   <ItemGroup>
     <Folder Include="Properties" />
+    <Folder Include="Scripts\" />
     <Folder Include="dbo\" />
     <Folder Include="dbo\Tables\" />
     <Folder Include="Security\" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Scripts\Customer.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Lab.EF6.DynamicDataMask.DB.publish.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <PostDeploy Include="Scripts\Script.PostDeployment1.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Scripts\Permission.sql" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Tables\Customer.sql">
       <AnsiNulls>On</AnsiNulls>
       <QuotedIdentifier>On</QuotedIdentifier>
     </Build>
-    <Build Include="Security\lab.sql" />
-    <Build Include="Security\lab_1.sql" />
-    <Build Include="Security\RoleMemberships.sql" />
+    <Build Include="Security\MaskId.sql" />
+    <Build Include="Security\MaskId_1.sql" />
+    <Build Include="Security\UnmaskId.sql" />
+    <Build Include="Security\UnmaskId_1.sql" />
     <Build Include="Security\Permissions.sql" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Linq;
+using Lab.EF6.DynamicDataMask.UnitTest.EntityModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Lab.EF6.DynamicDataMask.UnitTest
@@ -9,6 +12,11 @@ namespace Lab.EF6.DynamicDataMask.UnitTest
         [TestMethod]
         public void TestMethod1()
         {
+            using (var dbContext=new TestDbContext())
+            {
+                var customers = dbContext.Customers.AsNoTracking().ToList();
+                Console.WriteLine(customers[0].Tel);
+            }
         }
     }
 }
