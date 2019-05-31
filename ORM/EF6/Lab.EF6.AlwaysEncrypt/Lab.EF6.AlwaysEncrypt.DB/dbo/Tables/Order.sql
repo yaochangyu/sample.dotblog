@@ -1,0 +1,17 @@
+﻿CREATE TABLE [dbo].[Order]
+(
+	[Id] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY, 
+    [Employee_Id] UNIQUEIDENTIFIER ENCRYPTED WITH (
+     COLUMN_ENCRYPTION_KEY = [yao],
+     ALGORITHM = N'AEAD_AES_256_CBC_HMAC_SHA_256',
+     ENCRYPTION_TYPE = DETERMINISTIC
+    ) NULL, 
+    [ProductName] NVARCHAR(50) NOT NULL, 
+    [Price] NUMERIC(4, 2) NOT NULL, 
+    [SequenceId] INT NOT NULL IDENTITY, 
+    CONSTRAINT [FK_Order_Employee_Id] FOREIGN KEY ([Employee_Id]) REFERENCES [Employee]([Id])
+)
+
+GO
+
+CREATE INDEX [CLIX_Order_SequenceId] ON [dbo].[Order] ([SequenceId] DESC)

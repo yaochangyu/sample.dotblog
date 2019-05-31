@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.28307.572
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{00D1A9C2-B5F0-4AF3-8072-F6C62B433612}") = "Lab.EF6.AlwaysEncrypt.DB", "Lab.EF6.AlwaysEncrypt.DB\Lab.EF6.AlwaysEncrypt.DB.sqlproj", "{E108B5D0-DF8D-4214-9022-8EAC1E869196}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.EF6.AlwaysEncrypt.UnitTest", "Lab.EF6.AlwaysEncrypt.UnitTest\Lab.EF6.AlwaysEncrypt.UnitTest.csproj", "{C7C7D33C-C5C2-4E24-811B-F73F5815D5E9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,6 +19,10 @@ Global
 		{E108B5D0-DF8D-4214-9022-8EAC1E869196}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E108B5D0-DF8D-4214-9022-8EAC1E869196}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E108B5D0-DF8D-4214-9022-8EAC1E869196}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{C7C7D33C-C5C2-4E24-811B-F73F5815D5E9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7C7D33C-C5C2-4E24-811B-F73F5815D5E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7C7D33C-C5C2-4E24-811B-F73F5815D5E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7C7D33C-C5C2-4E24-811B-F73F5815D5E9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

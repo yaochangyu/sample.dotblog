@@ -24,7 +24,7 @@ namespace Lab.EF6.AlwaysEncrypt.UnitTest.ViewModel
         //public decimal Bonus { get; set; }
 
         //=============================================
-        public int Id { get; set; }
+        public Guid Id { get; set; }
 
         [Required]
         [StringLength(10)]

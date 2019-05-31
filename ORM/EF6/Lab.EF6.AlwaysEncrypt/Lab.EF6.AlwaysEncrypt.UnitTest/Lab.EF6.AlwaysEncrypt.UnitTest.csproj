@@ -57,6 +57,9 @@
     <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
       <HintPath>..\packages\EntityFramework.6.2.0\lib\net45\EntityFramework.SqlServer.dll</HintPath>
     </Reference>
+    <Reference Include="FluentAssertions, Version=5.6.0.0, Culture=neutral, PublicKeyToken=33f2691a05b67b6a, processorArchitecture=MSIL">
+      <HintPath>..\packages\FluentAssertions.5.6.0\lib\net47\FluentAssertions.dll</HintPath>
+    </Reference>
     <Reference Include="linq2db, Version=2.7.0.0, Culture=neutral, PublicKeyToken=e41013125f9e410a, processorArchitecture=MSIL">
       <HintPath>..\packages\linq2db.2.7.0\lib\net46\linq2db.dll</HintPath>
     </Reference>
@@ -85,9 +88,13 @@
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
     <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="EF6_Solution.cs" />
     <Compile Include="EntityModel\Employee.cs" />
+    <Compile Include="EntityModel\Identity.cs" />
+    <Compile Include="EntityModel\Order.cs" />
     <Compile Include="EntityModel\TestDbContext.cs" />
     <Compile Include="Linq2DbEntityModel\CopyMe.SqlServer1.generated.cs">
       <AutoGen>True</AutoGen>
