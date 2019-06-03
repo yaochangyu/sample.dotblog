@@ -174,8 +174,7 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
                                               .ToList()
                                               .GroupBy(p => p.Age)
                     ;
-                var employee = employeeGroups.First().First();
-
+                var employee = employeeGroups.First();
                 employee.Should().BeEquivalentTo(expected[0]);
             }
         }
