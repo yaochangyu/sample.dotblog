@@ -1,4 +1,4 @@
-﻿namespace Lab.SafeContext
+﻿namespace Lab.SafeContext.UniTest
 {
     public class Calculation
     {

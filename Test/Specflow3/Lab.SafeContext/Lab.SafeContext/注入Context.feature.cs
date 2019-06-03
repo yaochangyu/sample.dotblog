@@ -10,7 +10,7 @@
 // ------------------------------------------------------------------------------
 #region Designer generated code
 #pragma warning disable
-namespace Lab.SafeContext
+namespace Lab.SafeContext.UniTest
 {
     using TechTalk.SpecFlow;
     
@@ -62,7 +62,7 @@ namespace Lab.SafeContext
             if (((testRunner.FeatureContext != null) 
                         && (testRunner.FeatureContext.FeatureInfo.Title != "注入Context")))
             {
-                global::Lab.SafeContext.注入ContextFeature.FeatureSetup(null);
+                global::Lab.SafeContext.UniTest.注入ContextFeature.FeatureSetup(null);
             }
         }
         

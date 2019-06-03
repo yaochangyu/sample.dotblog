@@ -2,7 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TechTalk.SpecFlow;
 
-namespace Lab.SafeContext
+namespace Lab.SafeContext.UniTest
 {
     [Binding]
     [Scope(Feature = "實作Steps")]

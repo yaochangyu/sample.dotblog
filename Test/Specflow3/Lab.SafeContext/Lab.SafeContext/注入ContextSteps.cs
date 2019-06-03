@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using TechTalk.SpecFlow;
 using TechTalk.SpecFlow.Infrastructure;
 
-namespace Lab.SafeContext
+namespace Lab.SafeContext.UniTest
 {
     [Binding]
     [Scope(Feature = "注入Context")]

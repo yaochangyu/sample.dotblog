@@ -1,6 +1,6 @@
 ﻿using TechTalk.SpecFlow;
 
-namespace Lab.SafeContext
+namespace Lab.SafeContext.UniTest
 {
     [Binding]
     public sealed class GlobalStepDefinition : Steps
