@@ -47,11 +47,11 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
             {
                 var employee1 = new Employee
                 {
-                    Id       = Guid.NewGuid(),
-                    Name     = "小章",
-                    Age      = 18,
+                    Id = Guid.NewGuid(),
+                    Name = "小章",
+                    Age = 18,
                     CreateAt = new DateTime(2019, 12, 1),
-                    Identity = new Identity {Account = "yao", Password = "123456"}
+                    Identity = new Identity { Account = "yao", Password = "123456" }
                 };
                 employee1.Orders = new List<Order>
                 {
@@ -95,11 +95,11 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
                 dbContext.Configuration.AutoDetectChangesEnabled = false;
                 var employee1 = new Employee
                 {
-                    Id       = Guid.NewGuid(),
-                    Name     = "小章",
-                    Age      = 18,
+                    Id = Guid.NewGuid(),
+                    Name = "小章",
+                    Age = 18,
                     CreateAt = new DateTime(2019, 12, 1),
-                    Identity = new Identity {Account = "yao", Password = "123456"}
+                    Identity = new Identity { Account = "yao", Password = "123456" }
                 };
                 employee1.Orders = new List<Order>
                 {
@@ -119,24 +119,27 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
                     }
                 };
                 dbContext.Employees.Add(employee1);
+                dbContext.SaveChanges();
 
                 var employee2 = new Employee
                 {
-                    Id       = Guid.NewGuid(),
-                    Name     = "小英",
-                    Age      = 23,
+                    Id = Guid.NewGuid(),
+                    Name = "小英",
+                    Age = 23,
                     CreateAt = new DateTime(1909, 1, 2),
-                    Identity = new Identity {Account = "James", Password = "123456"}
+                    Identity = new Identity { Account = "James", Password = "123456" }
                 };
 
                 dbContext.Employees.Add(employee2);
+                dbContext.SaveChanges();
+
                 var employee3 = new Employee
                 {
-                    Id       = Guid.NewGuid(),
-                    Name     = "小明",
-                    Age      = 33,
+                    Id = Guid.NewGuid(),
+                    Name = "小明",
+                    Age = 33,
                     CreateAt = new DateTime(2011, 2, 2),
-                    Identity = new Identity {Account = "JOJO", Password = "123456"}
+                    Identity = new Identity { Account = "JOJO", Password = "123456" }
                 };
                 dbContext.Employees.Add(employee3);
 
@@ -162,19 +165,19 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
             {
                 new {Name = "小明", Age = 33},
                 new {Name = "小英", Age = 23},
-                new {Name = "小章", Age = 18}
+                new {Name = "小章", Age = 18},
             };
 
             using (var dbContext = new TestDbContext())
             {
-                dbContext.Configuration.LazyLoadingEnabled   = false;
+                dbContext.Configuration.LazyLoadingEnabled = false;
                 dbContext.Configuration.ProxyCreationEnabled = false;
                 var employeeGroups = dbContext.Employees
                                               .AsNoTracking()
                                               .ToList()
                                               .GroupBy(p => p.Age)
                     ;
-                var employee = employeeGroups.First();
+                var employee = employeeGroups.First().First();
                 employee.Should().BeEquivalentTo(expected[0]);
             }
         }
@@ -196,7 +199,7 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
             };
             using (var dbContext = new TestDbContext())
             {
-                dbContext.Configuration.LazyLoadingEnabled   = false;
+                dbContext.Configuration.LazyLoadingEnabled = false;
                 dbContext.Configuration.ProxyCreationEnabled = false;
 
                 var employees = dbContext.Employees
@@ -234,7 +237,7 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
 
             using (var dbContext = new TestDbContext())
             {
-                dbContext.Configuration.LazyLoadingEnabled   = false;
+                dbContext.Configuration.LazyLoadingEnabled = false;
                 dbContext.Configuration.ProxyCreationEnabled = false;
                 var employees = dbContext.Employees
                                          .SelectMany(o => o.Orders, (employee, order) => new
@@ -242,15 +245,15 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
                                              employee.Id,
                                              employee.Age,
                                              employee.Name,
-                                             Order = new {order.Id, order.Price, order.ProductName}
+                                             Order = new { order.Id, order.Price, order.ProductName }
                                          })
                                          .AsNoTracking()
                                          .ToList()
                     ;
 
-                var group = employees.GroupBy(e => new {e.Id, e.Name, e.Age},
+                var group = employees.GroupBy(e => new { e.Id, e.Name, e.Age },
                                               e => e.Order,
-                                              (e, o) => new {e.Id, e.Name, e.Age, Orders = o})
+                                              (e, o) => new { e.Id, e.Name, e.Age, Orders = o })
                                      .ToList()
                     ;
 
@@ -304,16 +307,16 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
                 {
                     var employee = new EmployeeViewModel
                     {
-                        Id   = element.Id,
+                        Id = element.Id,
                         Name = element.Name,
-                        Age  = element.Age.Value
+                        Age = element.Age.Value
                     };
                     OrderViewModel order = null;
                     if (element.Order != null)
                     {
                         order = new OrderViewModel
                         {
-                            Id          = element.Order.Id,
+                            Id = element.Order.Id,
                             ProductName = element.Order.ProductName
                         };
                     }
