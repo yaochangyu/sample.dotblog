@@ -150,12 +150,14 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
             ////無法使用SQL分組
             //using (var dbContext = new TestDbContext())
             //{
+            //    dbContext.Database.Log = Console.WriteLine;
             //    var employeeGroups = dbContext.Employees
             //                                  .AsNoTracking()
             //                                  .GroupBy(p => p.Age)
             //                                  .ToList()
             //        ;
             //}
+
             var expected = new[]
             {
                 new {Name = "小明", Age = 33},
@@ -219,7 +221,7 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
             //{
             //    var orders = dbContext.Employees.Select(p => p.Orders).AsNoTracking().ToList();
             //}
-                var expected = new[]
+            var expected = new[]
             {
                 new
                 {
