@@ -1,34 +1,30 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Lab.EF6.AlwaysEncrypt.UnitTest.ViewModel
 {
-    public partial class Employee
+    public class Employee
     {
-        //public int Id { get; set; }
-        //[Required]
-        //[StringLength(10)]
-        //public string Name { get; set; }
+        private string _name;
 
-        //public int? Age { get; set; }
-
-        //public DateTime CreateAt { get; set; }
-
-        //public DateTime ModifyAt { get; set; }
-
-        //public decimal Bonus { get; set; }
-
-        //=============================================
         public Guid Id { get; set; }
 
         [Required]
         [StringLength(10)]
-        public string Name { get; set; }
+        public string Name
+        {
+            get
+            {
+                if (this._name == "小章")
+                {
+                    this._name = "yao";
+                }
+
+                return this._name;
+            }
+            set => this._name = value;
+        }
 
         public int? Age { get; set; }
 

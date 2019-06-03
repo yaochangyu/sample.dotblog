@@ -47,11 +47,11 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
             {
                 var employee1 = new Employee
                 {
-                    Id = Guid.NewGuid(),
-                    Name = "小章",
-                    Age = 18,
+                    Id       = Guid.NewGuid(),
+                    Name     = "小章",
+                    Age      = 18,
                     CreateAt = new DateTime(2019, 12, 1),
-                    Identity = new Identity { Account = "yao", Password = "123456" }
+                    Identity = new Identity {Account = "yao", Password = "123456"}
                 };
                 employee1.Orders = new List<Order>
                 {
@@ -95,11 +95,11 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
                 dbContext.Configuration.AutoDetectChangesEnabled = false;
                 var employee1 = new Employee
                 {
-                    Id = Guid.NewGuid(),
-                    Name = "小章",
-                    Age = 18,
+                    Id       = Guid.NewGuid(),
+                    Name     = "小章",
+                    Age      = 18,
                     CreateAt = new DateTime(2019, 12, 1),
-                    Identity = new Identity { Account = "yao", Password = "123456" }
+                    Identity = new Identity {Account = "yao", Password = "123456"}
                 };
                 employee1.Orders = new List<Order>
                 {
@@ -123,11 +123,11 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
 
                 var employee2 = new Employee
                 {
-                    Id = Guid.NewGuid(),
-                    Name = "小英",
-                    Age = 23,
+                    Id       = Guid.NewGuid(),
+                    Name     = "小英",
+                    Age      = 23,
                     CreateAt = new DateTime(1909, 1, 2),
-                    Identity = new Identity { Account = "James", Password = "123456" }
+                    Identity = new Identity {Account = "James", Password = "123456"}
                 };
 
                 dbContext.Employees.Add(employee2);
@@ -135,11 +135,11 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
 
                 var employee3 = new Employee
                 {
-                    Id = Guid.NewGuid(),
-                    Name = "小明",
-                    Age = 33,
+                    Id       = Guid.NewGuid(),
+                    Name     = "小明",
+                    Age      = 33,
                     CreateAt = new DateTime(2011, 2, 2),
-                    Identity = new Identity { Account = "JOJO", Password = "123456" }
+                    Identity = new Identity {Account = "JOJO", Password = "123456"}
                 };
                 dbContext.Employees.Add(employee3);
 
@@ -165,12 +165,12 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
             {
                 new {Name = "小明", Age = 33},
                 new {Name = "小英", Age = 23},
-                new {Name = "小章", Age = 18},
+                new {Name = "小章", Age = 18}
             };
 
             using (var dbContext = new TestDbContext())
             {
-                dbContext.Configuration.LazyLoadingEnabled = false;
+                dbContext.Configuration.LazyLoadingEnabled   = false;
                 dbContext.Configuration.ProxyCreationEnabled = false;
                 var employeeGroups = dbContext.Employees
                                               .AsNoTracking()
@@ -199,7 +199,7 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
             };
             using (var dbContext = new TestDbContext())
             {
-                dbContext.Configuration.LazyLoadingEnabled = false;
+                dbContext.Configuration.LazyLoadingEnabled   = false;
                 dbContext.Configuration.ProxyCreationEnabled = false;
 
                 var employees = dbContext.Employees
@@ -212,6 +212,86 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
                                                                 option.WithStrictOrdering();
                                                                 return option;
                                                             });
+            }
+        }
+
+        [TestMethod]
+        public void 無法使用自訂對應_1()
+        {
+            var expected = new[]
+            {
+                new {Name = "小明", Age  = 33},
+                new {Name = "小英", Age  = 23},
+                new {Name = "yao", Age = 18}
+
+                //new {Name = "小歪", Age  = 0}
+            };
+
+            //using (var dbContext = new TestDbContext())
+            //{
+            //    var employees = dbContext.Employees
+            //                             .Select(p => new ViewModel.Employee
+            //                             {
+            //                                 Id   = p.Id,
+            //                                 Name = p.Name == "小章" ? "yao" : p.Name,
+            //                                 Age  = p.Age  == null ? 0 : p.Age
+            //                             })
+            //                             .AsNoTracking()
+            //                             .ToList()
+            //        ;
+            //}
+
+            using (var dbContext = new TestDbContext())
+            {
+                var employees = dbContext.Employees
+                                         .Select(p => new
+                                         {
+                                             p.Id,
+                                             p.Name,
+                                             p.Age
+                                         })
+                                         .AsNoTracking()
+                                         .ToList()
+                                         .Select(p => new
+                                         {
+                                             p.Id,
+                                             Name = p.Name == "小章" ? "yao" : p.Name,
+                                             Age  = p.Age  == null ? 0 : p.Age
+                                         })
+                    ;
+                employees.Should().BeEquivalentTo(expected);
+            }
+        }
+
+        [TestMethod]
+        public void 無法使用自訂對應_2()
+        {
+            var expected = new[]
+            {
+                new {Name = "小明", Age  = 33},
+                new {Name = "小英", Age  = 23},
+                new {Name = "yao", Age = 18}
+            };
+
+            using (var dbContext = new TestDbContext())
+            {
+                var employees = dbContext.Employees
+                                         .Select(p => new
+                                         {
+                                             p.Id,
+                                             p.Name,
+                                             p.Age
+                                         })
+                                         .AsNoTracking()
+                                         .ToList()
+                                         .Select(p => new ViewModel.Employee
+                                         {
+                                             Id   = p.Id,
+                                             Name = p.Name,
+                                             Age  = p.Age
+                                         })
+                    ;
+                employees.Should().BeEquivalentTo(expected);
             }
         }
 
@@ -237,7 +317,7 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
 
             using (var dbContext = new TestDbContext())
             {
-                dbContext.Configuration.LazyLoadingEnabled = false;
+                dbContext.Configuration.LazyLoadingEnabled   = false;
                 dbContext.Configuration.ProxyCreationEnabled = false;
                 var employees = dbContext.Employees
                                          .SelectMany(o => o.Orders, (employee, order) => new
@@ -245,15 +325,15 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
                                              employee.Id,
                                              employee.Age,
                                              employee.Name,
-                                             Order = new { order.Id, order.Price, order.ProductName }
+                                             Order = new {order.Id, order.Price, order.ProductName}
                                          })
                                          .AsNoTracking()
                                          .ToList()
                     ;
 
-                var group = employees.GroupBy(e => new { e.Id, e.Name, e.Age },
+                var group = employees.GroupBy(e => new {e.Id, e.Name, e.Age},
                                               e => e.Order,
-                                              (e, o) => new { e.Id, e.Name, e.Age, Orders = o })
+                                              (e, o) => new {e.Id, e.Name, e.Age, Orders = o})
                                      .ToList()
                     ;
 
@@ -267,7 +347,7 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
         }
 
         [TestMethod]
-        public void 無法直接投影集合2()
+        public void 無法直接投影集合_2()
         {
             var expected = new[]
             {
@@ -307,16 +387,16 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
                 {
                     var employee = new EmployeeViewModel
                     {
-                        Id = element.Id,
+                        Id   = element.Id,
                         Name = element.Name,
-                        Age = element.Age.Value
+                        Age  = element.Age.Value
                     };
                     OrderViewModel order = null;
                     if (element.Order != null)
                     {
                         order = new OrderViewModel
                         {
-                            Id = element.Order.Id,
+                            Id          = element.Order.Id,
                             ProductName = element.Order.ProductName
                         };
                     }

@@ -101,7 +101,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>CopyMe.SqlServer.tt</DependentUpon>
     </Compile>
-    <Compile Include="EF6_UnitTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ViewModel\Employee.cs" />
   </ItemGroup>
