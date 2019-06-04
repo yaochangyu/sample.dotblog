@@ -7,16 +7,15 @@ using TechTalk.SpecFlow.Assist;
 
 namespace Lab.Db.TestCase.UnitTest
 {
-
     [Binding]
-    [Scope(Feature = "會員管理作業V1")]
-    public class 會員管理作業V1Steps : Steps
+    [Scope(Feature = "會員管理作業V2")]
+    public class 會員管理作業V2Steps : Steps
     {
         public static string ConnectionString = null;
 
-        static 會員管理作業V1Steps()
+        static 會員管理作業V2Steps()
         {
-            ConnectionString = string.Format(TestHook.TempConnectionString, "會員管理作業V1");
+            ConnectionString = string.Format(TestHook.TempConnectionString, "會員管理作業V2");
         }
 
         [After]
@@ -57,7 +56,7 @@ namespace Lab.Db.TestCase.UnitTest
         {
             var toDb = table.CreateSet(() => new Member
             {
-                Remark = TestHook.TestData,
+                Remark   = TestHook.TestData,
                 CreateAt = TestHook.TestNow,
                 CreateBy = TestHook.TestUserId
             });
@@ -81,7 +80,7 @@ namespace Lab.Db.TestCase.UnitTest
         [When(@"調用MemberRepository\.Delete")]
         public void When調用MemberRepository_Delete()
         {
-            var fromUI = this.ScenarioContext.Get<DeleteMemberRequest>("fromUI");
+            var fromUI     = this.ScenarioContext.Get<DeleteMemberRequest>("fromUI");
             var repository = new MemberRepository();
             repository.ConnectionString = ConnectionString;
             repository.Delete(fromUI, TestHook.TestUserId);
@@ -90,10 +89,10 @@ namespace Lab.Db.TestCase.UnitTest
         [When(@"調用MemberRepository\.Insert")]
         public void When調用MemberRepository_Insert()
         {
-            var fromUI = this.ScenarioContext.Get<InsertMemberRequest>("fromUI");
+            var fromUI     = this.ScenarioContext.Get<InsertMemberRequest>("fromUI");
             var repository = new MemberRepository();
-            repository.Now = TestHook.TestNow;
-            repository.Id = TestHook.Parse("1");
+            repository.Now              = TestHook.TestNow;
+            repository.Id               = TestHook.Parse("1");
             repository.ConnectionString = ConnectionString;
             repository.Insert(fromUI, TestHook.TestUserId);
         }
@@ -101,9 +100,9 @@ namespace Lab.Db.TestCase.UnitTest
         [When(@"調用MemberRepository\.Update")]
         public void When調用MemberRepository_Update()
         {
-            var fromUI = this.ScenarioContext.Get<UpdateMemberRequest>("fromUI");
+            var fromUI     = this.ScenarioContext.Get<UpdateMemberRequest>("fromUI");
             var repository = new MemberRepository();
-            repository.Now = TestHook.TestNow;
+            repository.Now              = TestHook.TestNow;
             repository.ConnectionString = ConnectionString;
             repository.Update(fromUI, TestHook.TestUserId);
         }

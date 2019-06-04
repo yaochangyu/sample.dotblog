@@ -9,14 +9,14 @@ namespace Lab.Db.TestCase.UnitTest
 {
 
     [Binding]
-    [Scope(Feature = "會員管理作業V1")]
-    public class 會員管理作業V1Steps : Steps
+    [Scope(Feature = "會員管理作業V3")]
+    public class 會員管理作業V3Steps : Steps
     {
         public static string ConnectionString = null;
 
-        static 會員管理作業V1Steps()
+        static 會員管理作業V3Steps()
         {
-            ConnectionString = string.Format(TestHook.TempConnectionString, "會員管理作業V1");
+            ConnectionString = string.Format(TestHook.TempConnectionString, "會員管理作業V3");
         }
 
         [After]

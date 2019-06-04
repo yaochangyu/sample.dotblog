@@ -9,6 +9,9 @@ namespace Lab.Db.TestCase.UnitTest
     [Binding]
     internal class TestHook
     {
+        public static string TempConnectionString =
+            @"data source=(localdb)\mssqllocaldb;initial catalog=Lab.Db.TestCase.UnitTest.{0};integrated security=True;MultipleActiveResultSets=True;App=EntityFramework";
+
         private const string HOST_ADDRESS = "http://localhost:9527";
 
         public static readonly string   TestData   = "出發吧，跟我一起進入偉大的航道";
@@ -18,28 +21,20 @@ namespace Lab.Db.TestCase.UnitTest
         [AfterTestRun]
         public static void AfterTestRun()
         {
-            using (var dbContext = new LabDbContext(會員管理作業V1Steps.ConnectionString))
-            {
-                if (dbContext.Database.Exists())
-                {
-                    dbContext.Database.Delete();
-                }
-            }
+            DeleteDb(會員管理作業V1Steps.ConnectionString);
+            DeleteDb(會員管理作業V2Steps.ConnectionString);
+            DeleteDb(會員管理作業V3Steps.ConnectionString);
+            DeleteDb(會員管理作業V4Steps.ConnectionString);
         }
 
         [BeforeTestRun]
         public static void BeforeTestRun()
         {
             var instance = SqlProviderServices.Instance;
-            using (var dbContext = new LabDbContext(會員管理作業V1Steps.ConnectionString))
-            {
-                if (dbContext.Database.Exists())
-                {
-                    dbContext.Database.Delete();
-                }
-
-                dbContext.Database.Initialize(true);
-            }
+            InitialDb(會員管理作業V1Steps.ConnectionString);
+            InitialDb(會員管理作業V2Steps.ConnectionString);
+            InitialDb(會員管理作業V3Steps.ConnectionString);
+            InitialDb(會員管理作業V4Steps.ConnectionString);
         }
 
         public static int DeleteAll(string connectionString)
@@ -58,6 +53,30 @@ EXEC sp_MSForEachTable 'ALTER TABLE ? WITH CHECK CHECK CONSTRAINT ALL'
             using (var dbContext = new LabDbContext(connectionString))
             {
                 return dbContext.Database.ExecuteSqlCommand(sql);
+            }
+        }
+
+        private static void DeleteDb(string connectionString)
+        {
+            using (var dbContext = new LabDbContext(connectionString))
+            {
+                if (dbContext.Database.Exists())
+                {
+                    dbContext.Database.Delete();
+                }
+            }
+        }
+
+        private static void InitialDb(string connectionString)
+        {
+            using (var dbContext = new LabDbContext(connectionString))
+            {
+                if (dbContext.Database.Exists())
+                {
+                    dbContext.Database.Delete();
+                }
+
+                dbContext.Database.Initialize(true);
             }
         }
 
