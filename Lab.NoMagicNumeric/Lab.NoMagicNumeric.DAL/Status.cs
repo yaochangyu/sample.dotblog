@@ -1,6 +1,6 @@
 ﻿namespace Lab.NoMagicNumeric.DAL
 {
-    public class Define
+    public class Status
     {
         public string Code { get; set; }
 

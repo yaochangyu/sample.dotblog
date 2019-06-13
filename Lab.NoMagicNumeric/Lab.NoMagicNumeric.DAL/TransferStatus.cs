@@ -2,8 +2,8 @@
 {
     public class TransferStatus
     {
-        public static Define Transform { get; set; } = new Define {Code = "Y", Description = "已轉換"};
+        public static Status Transform { get; set; } = new Status {Code = "Y", Description = "已轉換"};
 
-        public static Define NoTransform { get; set; } = new Define {Code = "N", Description = "未轉換"};
+        public static Status NoTransform { get; set; } = new Status {Code = "N", Description = "未轉換"};
     }
 }

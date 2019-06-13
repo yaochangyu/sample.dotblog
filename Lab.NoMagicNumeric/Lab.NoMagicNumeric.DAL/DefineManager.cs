@@ -7,8 +7,8 @@ namespace Lab.NoMagicNumeric.DAL
 {
     public static class DefineManager
     {
-        private static readonly ConcurrentDictionary<Type, Dictionary<string, Define>> _caches =
-            new ConcurrentDictionary<Type, Dictionary<string, Define>>();
+        private static readonly ConcurrentDictionary<Type, Dictionary<string, Status>> _caches =
+            new ConcurrentDictionary<Type, Dictionary<string, Status>>();
 
         private static readonly ConcurrentDictionary<Type, Dictionary<string, DefineAttribute>> _enumCaches =
             new ConcurrentDictionary<Type, Dictionary<string, DefineAttribute>>();
@@ -66,9 +66,9 @@ namespace Lab.NoMagicNumeric.DAL
             return GetEnumLookup(type)[key];
         }
 
-        public static Dictionary<string, Define> GetLookup<T>()
+        public static Dictionary<string, Status> GetLookup<T>()
         {
-            Dictionary<string, Define> result = null;
+            Dictionary<string, Status> result = null;
             var                        type   = typeof(T);
 
             if (_caches.ContainsKey(type))
@@ -77,7 +77,7 @@ namespace Lab.NoMagicNumeric.DAL
             }
             else
             {
-                result = new Dictionary<string, Define>();
+                result = new Dictionary<string, Status>();
 
                 var propertyInfos = type.GetProperties(BindingFlags.Instance |
                                                        BindingFlags.Static   |
@@ -85,7 +85,7 @@ namespace Lab.NoMagicNumeric.DAL
 
                 foreach (var property in propertyInfos)
                 {
-                    var value = property.GetValue(null, null) as Define;
+                    var value = property.GetValue(null, null) as Status;
                     result.Add(value.Code, value);
                 }
 

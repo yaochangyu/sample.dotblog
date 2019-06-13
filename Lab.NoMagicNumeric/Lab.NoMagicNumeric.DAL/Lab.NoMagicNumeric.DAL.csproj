@@ -50,7 +50,7 @@
   <ItemGroup>
     <Compile Include="ApproveStatus.cs" />
     <Compile Include="DefineManager.cs" />
-    <Compile Include="Define.cs" />
+    <Compile Include="Status.cs" />
     <Compile Include="DefineAttribute.cs" />
     <Compile Include="EntityModel\LabDbContext.cs" />
     <Compile Include="EntityModel\Order.cs" />
