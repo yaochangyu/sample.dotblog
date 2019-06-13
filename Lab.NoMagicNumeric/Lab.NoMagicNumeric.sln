@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28803.352
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.NoMagicNumeric.UnitTest", "Lab.NoMagicNumeric.UnitTest\Lab.NoMagicNumeric.UnitTest.csproj", "{6FB80E56-09E3-46F8-A039-0BBF1A295500}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.NoMagicNumeric.DAL", "Lab.NoMagicNumeric.DAL\Lab.NoMagicNumeric.DAL.csproj", "{F450D927-9C8B-44B6-B960-DB8FFCCE7F34}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6FB80E56-09E3-46F8-A039-0BBF1A295500}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FB80E56-09E3-46F8-A039-0BBF1A295500}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FB80E56-09E3-46F8-A039-0BBF1A295500}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FB80E56-09E3-46F8-A039-0BBF1A295500}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F450D927-9C8B-44B6-B960-DB8FFCCE7F34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F450D927-9C8B-44B6-B960-DB8FFCCE7F34}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F450D927-9C8B-44B6-B960-DB8FFCCE7F34}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F450D927-9C8B-44B6-B960-DB8FFCCE7F34}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {015788DE-161C-4D1D-8661-9D1C45C3199D}
+	EndGlobalSection
+EndGlobal
