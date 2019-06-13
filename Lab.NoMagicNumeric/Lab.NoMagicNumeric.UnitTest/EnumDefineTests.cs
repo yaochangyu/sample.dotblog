@@ -9,35 +9,50 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Lab.NoMagicNumeric.UnitTest
 {
     [TestClass]
-    public class UnitTest1
+    public partial class EnumDefineTests
     {
-        [TestMethod]
-        public void GetLookup_By_ApproveStatus_Approve()
+        private DefineAttribute GetEnumApprove(string key)
         {
-            var description = DefineManager.GetLookup<ApproveStatus>()["99"].Description;
+            var defineAttributes = DefineManager.GetEnumLookup<EnumApprove>();
+            System.Enum.TryParse(key, out EnumApprove value);
+            return defineAttributes[value.ToString()];
+        }
+
+        [TestMethod]
+        public void GetEnumLookup_By_EnumApprove_Approve()
+        {
+            var description = DefineManager.GetEnumLookup(typeof(EnumApprove))["Approve"].Description;
             Assert.AreEqual("已核准", description);
         }
+
         [TestMethod]
-        public void GetLookup_By_ApproveStatus_Open()
+        public void GetEnumLookup_By_EnumApprove_Open()
         {
-            var description = DefineManager.GetLookup<ApproveStatus>()["10"].Description;
+            var description = DefineManager.GetEnumLookup<EnumApprove>()["Open"].Description;
             Assert.AreEqual("已開立", description);
         }
 
         [TestMethod]
-        public void GetLookup_By_TransferStatus_Y()
+        public void GetEnumLookup_By_EnumTransfer_N()
         {
-            var description = DefineManager.GetLookup<TransferStatus>()["Y"].Description;
+            var description = DefineManager.GetEnumLookup<EnumTransfer>("N").Description;
+            Assert.AreEqual("未轉換", description);
+        }
+
+        [TestMethod]
+        public void GetEnumLookup_By_EnumTransfer_Y()
+        {
+            var description = DefineManager.GetEnumLookup<EnumTransfer>("Y").Description;
             Assert.AreEqual("已轉換", description);
         }
 
         [TestMethod]
-        public void GetLookup_By_TransferStatus_N()
+        public void GetEnumLookup_Extension_Test()
         {
-            var description = DefineManager.GetLookup<TransferStatus>()["N"].Description;
+            var description = EnumTransfer.N.GetDefine().Description;
             Assert.AreEqual("未轉換", description);
         }
-
+     
         [TestMethod]
         public void EF_Select_Mapping()
         {
@@ -67,9 +82,11 @@ namespace Lab.NoMagicNumeric.UnitTest
                                       {
                                           p.Id,
                                           p.IsTransform,
-                                          TransformDescription = DefineManager.GetLookup<TransferStatus>()[p.IsTransform].Description,
+                                          TransformDescription =
+                                              DefineManager.GetEnumLookup<EnumTransfer>()[p.IsTransform]
+                                                           .Description,
                                           p.Status,
-                                          StatusDescription = DefineManager.GetLookup<ApproveStatus>()[p.Status].Description,
+                                          StatusDescription = this.GetEnumApprove(p.Status).Description
                                       })
                                       .ToList()
                     ;
@@ -79,7 +96,7 @@ namespace Lab.NoMagicNumeric.UnitTest
                                                     option.WithoutStrictOrdering();
                                                     return option;
                                                 });
-
+            
             }
         }
     }
