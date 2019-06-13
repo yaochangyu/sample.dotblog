@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Lab.NoMagicNumeric.DAL;
@@ -9,50 +8,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Lab.NoMagicNumeric.UnitTest
 {
     [TestClass]
-    public partial class EnumDefineTests
+    public class EnumDefineTests
     {
-        private DefineAttribute GetEnumApprove(string key)
-        {
-            var defineAttributes = DefineManager.GetEnumLookup<EnumApprove>();
-            System.Enum.TryParse(key, out EnumApprove value);
-            return defineAttributes[value.ToString()];
-        }
-
-        [TestMethod]
-        public void GetEnumLookup_By_EnumApprove_Approve()
-        {
-            var description = DefineManager.GetEnumLookup(typeof(EnumApprove))["Approve"].Description;
-            Assert.AreEqual("已核准", description);
-        }
-
-        [TestMethod]
-        public void GetEnumLookup_By_EnumApprove_Open()
-        {
-            var description = DefineManager.GetEnumLookup<EnumApprove>()["Open"].Description;
-            Assert.AreEqual("已開立", description);
-        }
-
-        [TestMethod]
-        public void GetEnumLookup_By_EnumTransfer_N()
-        {
-            var description = DefineManager.GetEnumLookup<EnumTransfer>("N").Description;
-            Assert.AreEqual("未轉換", description);
-        }
-
-        [TestMethod]
-        public void GetEnumLookup_By_EnumTransfer_Y()
-        {
-            var description = DefineManager.GetEnumLookup<EnumTransfer>("Y").Description;
-            Assert.AreEqual("已轉換", description);
-        }
-
-        [TestMethod]
-        public void GetEnumLookup_Extension_Test()
-        {
-            var description = EnumTransfer.N.GetDefine().Description;
-            Assert.AreEqual("未轉換", description);
-        }
-     
         [TestMethod]
         public void EF_Select_Mapping()
         {
@@ -83,7 +40,7 @@ namespace Lab.NoMagicNumeric.UnitTest
                                           p.Id,
                                           p.IsTransform,
                                           TransformDescription =
-                                              DefineManager.GetEnumLookup<EnumTransfer>()[p.IsTransform]
+                                              DefineManager.GetLookupByName<EnumTransfer>()[p.IsTransform]
                                                            .Description,
                                           p.Status,
                                           StatusDescription = this.GetEnumApprove(p.Status).Description
@@ -96,8 +53,77 @@ namespace Lab.NoMagicNumeric.UnitTest
                                                     option.WithoutStrictOrdering();
                                                     return option;
                                                 });
-            
             }
+        }
+
+        private DefineAttribute GetEnumApprove(string key)
+        {
+            var defineAttributes = DefineManager.GetLookupByName<EnumApprove>();
+            Enum.TryParse(key, out EnumApprove value);
+            return defineAttributes[value.ToString()];
+        }
+
+        [TestMethod]
+        public void GetLookupByName_EnumApprove_Approve()
+        {
+            var description = DefineManager.GetLookupByName(typeof(EnumApprove), "Approve").Description;
+            Assert.AreEqual("已核准", description);
+        }
+
+        [TestMethod]
+        public void GetLookupByName_EnumApprove_Open()
+        {
+            var description = DefineManager.GetLookupByName<EnumApprove>()["Open"].Description;
+            Assert.AreEqual("已開立", description);
+        }
+
+        [TestMethod]
+        public void GetLookupByName_EnumTransfer_N()
+        {
+            var description = DefineManager.GetLookupByName(typeof(EnumTransfer), "N").Description;
+            Assert.AreEqual("未轉換", description);
+        }
+
+        [TestMethod]
+        public void GetLookupByName_EnumTransfer_Y()
+        {
+            var description = DefineManager.GetLookupByName<EnumTransfer>("Y").Description;
+            Assert.AreEqual("已轉換", description);
+        }
+
+        [TestMethod]
+        public void GetLookupByName_Extension_Test()
+        {
+            var description = EnumTransfer.N.GetDefineByName().Description;
+            Assert.AreEqual("未轉換", description);
+        }
+
+        [TestMethod]
+        public void GetLookupByValue_EnumApprove_Approve()
+        {
+            var description = DefineManager.GetLookupByValue(typeof(EnumApprove), "99").Description;
+            Assert.AreEqual("已核准", description);
+        }
+
+        [TestMethod]
+        public void GetLookupByValue_EnumApprove_Open()
+        {
+            var description = DefineManager.GetLookupByValue<EnumApprove>()["10"].Description;
+            Assert.AreEqual("已開立", description);
+        }
+
+        [TestMethod]
+        public void GetLookupByValue_EnumTransfer_N()
+        {
+            var description = DefineManager.GetLookupByValue(typeof(EnumTransfer), "0").Description;
+            Assert.AreEqual("未轉換", description);
+        }
+
+        [TestMethod]
+        public void GetLookupByValue_EnumTransfer_Y()
+        {
+            var description = DefineManager.GetLookupByValue<EnumTransfer>("1").Description;
+            Assert.AreEqual("已轉換", description);
         }
     }
 }
