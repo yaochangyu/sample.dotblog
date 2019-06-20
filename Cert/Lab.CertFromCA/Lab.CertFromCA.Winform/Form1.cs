@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Windows.Forms;
-using CERTCLILib;
-using CERTENROLLLib;
 
 namespace Lab.CertFromCA.Winform
 {
@@ -30,15 +28,64 @@ namespace Lab.CertFromCA.Winform
         public Form1()
         {
             this.InitializeComponent();
+            this.SubjectBodyBindingSource.DataSource = new SubjectBody
+            {
+                CommonName       = "*.lab.local,*.lab1.local",
+                OrganizationUnit = "MIS",
+                Organization     = "THS",
+                Country          = "TW",
+                Locality         = "Taipei"
+            };
+            this.CaConfigBindingSource.DataSource = new CaConfig
+            {
+                Server       = @"FQDN\CA",
+                TemplateName = "WebServer"
+            };
         }
 
-        private void CreateRequestButton_Click(object sender, EventArgs e)
+        private void Encroll_Button_Click(object sender, EventArgs e)
         {
+            var templateName = this.templateNameComboBox.Text;
+            var caServer      = this.serverTextBox.Text;
+            var keyLength     = 2048;
             var certification = new Certification();
-            certification.FindCA();
+            var subjectBody   = this.SubjectBodyBindingSource[0] as SubjectBody;
+
+            var create = certification.CreateRequest(subjectBody,
+                                                     OID.ServerAuthentication.Oid,
+                                                     keyLength);
+            var send = certification.SendRequest(create, caServer, templateName);
+            certification.Enroll(send, null);
+            MessageBox.Show("Done!!");
         }
 
+        private void SelectCA_Button_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var certification = new Certification();
+                certification.SelectCA();
+            }
+            catch (Exception ex)
+            {
+                //Check if the user closed the dialog. Do nothing.
+                if (ex.HResult.ToString() == "-2147023673")
+                {
+                    //MessageBox.Show("Closed By user");
+                }
 
+                //Check if there is no available CA Servers.
+                else if (ex.HResult.ToString() == "-2147024637")
+                {
+                    MessageBox.Show("Can't find available Servers");
+                }
 
+                // If unknown error occurs.
+                else
+                {
+                    MessageBox.Show(ex.Message + " " + ex.HResult);
+                }
+            }
+        }
     }
 }

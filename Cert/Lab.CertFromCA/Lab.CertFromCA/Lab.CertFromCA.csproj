@@ -43,6 +43,7 @@
   <ItemGroup>
     <Compile Include="CertificateConfiguration.cs" />
     <Compile Include="Certification.cs" />
+    <Compile Include="Properties\Annotations.cs" />
     <Compile Include="SubjectBody.cs" />
     <Compile Include="RequestDisposition.cs" />
     <Compile Include="Format.cs" />

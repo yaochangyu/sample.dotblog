@@ -156,7 +156,7 @@ namespace Lab.CertFromCA
             File.WriteAllText(dir + @"\" + "cert.pfx", pfx);
         }
 
-        public string FindCA()
+        public string SelectCA()
         {
             CCertConfig  certConfig  = new CCertConfigClass();
             CCertRequest certRequest = new CCertRequestClass();

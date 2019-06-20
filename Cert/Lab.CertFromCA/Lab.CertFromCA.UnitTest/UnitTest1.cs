@@ -48,7 +48,7 @@ namespace Lab.CertFromCA.UnitTest
             //var caServer = @"ad.lab.local\lab-ca";
             var caServer      = @"NTTP3VS22.nttp3.ths.com.tw\CA";
             var certification = new Certification();
-            certification.FindCA();
+            certification.SelectCA();
         }
     }
 }
