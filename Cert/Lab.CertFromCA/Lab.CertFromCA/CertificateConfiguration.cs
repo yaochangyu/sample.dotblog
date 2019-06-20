@@ -1,6 +1,6 @@
 ﻿namespace Lab.CertFromCA
 {
-    public enum CertificateConfiguration
+    public enum CertificateConfiguration:int
     {
         CC_DEFAULTCONFIG           = 0x0,
         CC_UIPICKCONFIG            = 0x1,

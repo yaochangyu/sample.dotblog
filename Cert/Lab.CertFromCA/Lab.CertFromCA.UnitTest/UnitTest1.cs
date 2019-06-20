@@ -17,7 +17,8 @@ namespace Lab.CertFromCA.UnitTest
             var certification = new Certification();
             var subjectBody = new SubjectBody()
             {
-                CommonName = "*.lab.local"
+                CommonName = "*.lab.local,*.lab1.local"
+                //CommonName = "*.lab.local"
             };
             var create = certification.CreateRequest(subjectBody,
                                            OID.ServerAuthentication.Oid,
