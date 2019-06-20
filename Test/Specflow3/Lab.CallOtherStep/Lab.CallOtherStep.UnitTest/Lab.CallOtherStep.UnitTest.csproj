@@ -74,12 +74,14 @@
   <ItemGroup>
     <Compile Include="Calculation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SpecFlowFeature1Steps.cs" />
     <Compile Include="TwoVariable.cs" />
     <Compile Include="計算機V1Steps.cs" />
     <Compile Include="計算機V2Steps.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="SpecFlowFeature1.feature" />
     <None Include="計算機V2.feature" />
     <None Include="計算機V1.feature" />
   </ItemGroup>

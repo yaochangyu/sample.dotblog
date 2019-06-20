@@ -5,6 +5,7 @@ using TechTalk.SpecFlow.Assist;
 namespace Lab.CallOtherStep.UnitTest
 {
     [Binding]
+    [Scope(Feature = "計算機V2")]
     public class 計算機V2Steps : Steps
     {
         [Given(@"I have entered two number into the calculator")]
