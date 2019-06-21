@@ -53,6 +53,7 @@
             this.templateNameComboBox = new System.Windows.Forms.ComboBox();
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
             this.passwordTextBox = new System.Windows.Forms.TextBox();
+            this.richTextBox2 = new System.Windows.Forms.RichTextBox();
             commonNameLabel = new System.Windows.Forms.Label();
             countryLabel = new System.Windows.Forms.Label();
             localityLabel = new System.Windows.Forms.Label();
@@ -245,7 +246,7 @@
             // 
             this.richTextBox1.Location = new System.Drawing.Point(342, 102);
             this.richTextBox1.Name = "richTextBox1";
-            this.richTextBox1.Size = new System.Drawing.Size(282, 150);
+            this.richTextBox1.Size = new System.Drawing.Size(282, 72);
             this.richTextBox1.TabIndex = 20;
             this.richTextBox1.Text = "";
             // 
@@ -257,11 +258,20 @@
             this.passwordTextBox.Size = new System.Drawing.Size(100, 20);
             this.passwordTextBox.TabIndex = 21;
             // 
+            // richTextBox2
+            // 
+            this.richTextBox2.Location = new System.Drawing.Point(342, 180);
+            this.richTextBox2.Name = "richTextBox2";
+            this.richTextBox2.Size = new System.Drawing.Size(282, 72);
+            this.richTextBox2.TabIndex = 22;
+            this.richTextBox2.Text = "";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(645, 316);
+            this.Controls.Add(this.richTextBox2);
             this.Controls.Add(passwordLabel);
             this.Controls.Add(this.passwordTextBox);
             this.Controls.Add(this.richTextBox1);
@@ -310,6 +320,7 @@
         private System.Windows.Forms.ComboBox templateNameComboBox;
         private System.Windows.Forms.RichTextBox richTextBox1;
         private System.Windows.Forms.TextBox passwordTextBox;
+        private System.Windows.Forms.RichTextBox richTextBox2;
     }
 }
 

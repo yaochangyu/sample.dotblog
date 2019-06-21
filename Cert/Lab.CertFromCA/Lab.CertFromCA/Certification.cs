@@ -16,7 +16,7 @@ namespace Lab.CertFromCA
         private static string ConvertCn(string source)
         {
             var builder = new StringBuilder();
-            var split   = source.Split(',');
+            var split = source.Split(',');
             for (var i = 0; i < split.Length; i++)
             {
                 if (i == 0)
@@ -34,17 +34,17 @@ namespace Lab.CertFromCA
 
         public string CreateRequest(string cn, string ou, string o, string l, string s, string c,
                                     string oid,
-                                    int    keyLength)
+                                    int keyLength)
         {
             var csp = new CCspInformations();
             csp.AddAvailableCsps();
 
             var privateKey = new CX509PrivateKey();
-            privateKey.Length          = keyLength;
-            privateKey.KeySpec         = X509KeySpec.XCN_AT_SIGNATURE;
-            privateKey.KeyUsage        = X509PrivateKeyUsageFlags.XCN_NCRYPT_ALLOW_ALL_USAGES;
-            privateKey.MachineContext  = false;
-            privateKey.ExportPolicy    = X509PrivateKeyExportFlags.XCN_NCRYPT_ALLOW_EXPORT_FLAG;
+            privateKey.Length = keyLength;
+            privateKey.KeySpec = X509KeySpec.XCN_AT_SIGNATURE;
+            privateKey.KeyUsage = X509PrivateKeyUsageFlags.XCN_NCRYPT_ALLOW_ALL_USAGES;
+            privateKey.MachineContext = false;
+            privateKey.ExportPolicy = X509PrivateKeyExportFlags.XCN_NCRYPT_ALLOW_EXPORT_FLAG;
             privateKey.CspInformations = csp;
             privateKey.Create();
 
@@ -55,24 +55,24 @@ namespace Lab.CertFromCA
 
             var extensionKeyUsage = new CX509ExtensionKeyUsage();
             extensionKeyUsage.InitializeEncode(X509KeyUsageFlags.XCN_CERT_DIGITAL_SIGNATURE_KEY_USAGE |
-                                               X509KeyUsageFlags.XCN_CERT_NON_REPUDIATION_KEY_USAGE   |
-                                               X509KeyUsageFlags.XCN_CERT_KEY_ENCIPHERMENT_KEY_USAGE  |
+                                               X509KeyUsageFlags.XCN_CERT_NON_REPUDIATION_KEY_USAGE |
+                                               X509KeyUsageFlags.XCN_CERT_KEY_ENCIPHERMENT_KEY_USAGE |
                                                X509KeyUsageFlags.XCN_CERT_DATA_ENCIPHERMENT_KEY_USAGE);
-            pkcs10.X509Extensions.Add((CX509Extension) extensionKeyUsage);
+            pkcs10.X509Extensions.Add((CX509Extension)extensionKeyUsage);
 
-            var objectId                  = new CObjectId();
-            var objectIds                 = new CObjectIds();
+            var objectId = new CObjectId();
+            var objectIds = new CObjectIds();
             var extensionEnhancedKeyUsage = new CX509ExtensionEnhancedKeyUsage();
 
             objectId.InitializeFromValue(oid);
             objectIds.Add(objectId);
             extensionEnhancedKeyUsage.InitializeEncode(objectIds);
-            pkcs10.X509Extensions.Add((CX509Extension) extensionEnhancedKeyUsage);
+            pkcs10.X509Extensions.Add((CX509Extension)extensionEnhancedKeyUsage);
 
             // TODO: Create CERTS with SAN: http://msdn.microsoft.com/en-us/library/windows/desktop/aa378081(v=vs.85).aspx
 
             var san = GetSAN(cn);
-            pkcs10.X509Extensions.Add((CX509Extension) san);
+            pkcs10.X509Extensions.Add((CX509Extension)san);
 
             var distinguishedName = new CX500DistinguishedName();
             cn = ConvertCn(cn);
@@ -91,8 +91,8 @@ namespace Lab.CertFromCA
         }
 
         public string CreateRequest(SubjectBody subjectBody,
-                                    string      oid,
-                                    int         keyLength)
+                                    string oid,
+                                    int keyLength)
         {
             return this.CreateRequest(subjectBody.CommonName, subjectBody.OrganizationUnit, subjectBody.Organization,
                                       subjectBody.Locality, subjectBody.State, subjectBody.Country, oid,
@@ -100,17 +100,17 @@ namespace Lab.CertFromCA
         }
 
         public string CreateTemplateRequest(string cn, string ou, string o, string l, string s, string c,
-                                            int    keyLength,
+                                            int keyLength,
                                             string templateName)
         {
             var csp = new CCspInformations();
             csp.AddAvailableCsps();
             var privateKey = new CX509PrivateKey();
-            privateKey.Length          = keyLength;
-            privateKey.KeySpec         = X509KeySpec.XCN_AT_SIGNATURE;
-            privateKey.KeyUsage        = X509PrivateKeyUsageFlags.XCN_NCRYPT_ALLOW_ALL_USAGES;
-            privateKey.MachineContext  = false;
-            privateKey.ExportPolicy    = X509PrivateKeyExportFlags.XCN_NCRYPT_ALLOW_EXPORT_FLAG;
+            privateKey.Length = keyLength;
+            privateKey.KeySpec = X509KeySpec.XCN_AT_SIGNATURE;
+            privateKey.KeyUsage = X509PrivateKeyUsageFlags.XCN_NCRYPT_ALLOW_ALL_USAGES;
+            privateKey.MachineContext = false;
+            privateKey.ExportPolicy = X509PrivateKeyExportFlags.XCN_NCRYPT_ALLOW_EXPORT_FLAG;
             privateKey.CspInformations = csp;
             privateKey.Create();
 
@@ -120,7 +120,7 @@ namespace Lab.CertFromCA
                                             templateName);
 
             var san = GetSAN(cn);
-            pkcs10.X509Extensions.Add((CX509Extension) san);
+            pkcs10.X509Extensions.Add((CX509Extension)san);
 
             var distinguishedName = new CX500DistinguishedName();
 
@@ -136,8 +136,8 @@ namespace Lab.CertFromCA
         }
 
         public string CreateTemplateRequest(SubjectBody subjectBody,
-                                            int         keyLength,
-                                            string      templateName)
+                                            int keyLength,
+                                            string templateName)
         {
             return this.CreateTemplateRequest(subjectBody.CommonName, subjectBody.OrganizationUnit,
                                               subjectBody.Organization, subjectBody.Locality,
@@ -145,13 +145,10 @@ namespace Lab.CertFromCA
                                               keyLength, templateName);
         }
 
-        /// <summary>
-        /// </summary>
-        /// <param name="filePath"></param>
-        /// <param name="content"></param>
-        /// <remarks>不能直接寫檔File.WriteAllText(filePath, content);，要先由Base6轉成字串</remarks>
         private static void Download(string filePath, string content)
         {
+            //不能直接寫檔，要先由Base6轉成字串，否則X509Certificate2會解碼失敗
+            //File.WriteAllText(filePath, content);
             using (var fs = new FileStream(filePath, FileMode.Create))
             {
                 var base64String = Convert.FromBase64String(content);
@@ -162,7 +159,7 @@ namespace Lab.CertFromCA
         public IEnumerable<Template> GetCaTemplates(string caServer)
         {
             CCertRequest certRequest = new CCertRequestClass();
-            var          templates   = new List<Template>();
+            var templates = new List<Template>();
 
             var regex = new Regex(@"([A-Za-z]+)");
             var value = certRequest.GetCAProperty(caServer, 29, 0, 4, 0).ToString();
@@ -173,7 +170,7 @@ namespace Lab.CertFromCA
                 var match = regex.Match(line);
                 if (match.Success)
                 {
-                    templates.Add(new Template {Name = line});
+                    templates.Add(new Template { Name = line });
                 }
             }
 
@@ -182,7 +179,7 @@ namespace Lab.CertFromCA
 
         private static CX509ExtensionAlternativeNames GetSAN(string cn)
         {
-            var san              = new CX509ExtensionAlternativeNames();
+            var san = new CX509ExtensionAlternativeNames();
             var alternativeNames = new CAlternativeNames();
 
             foreach (var item in cn.Split(','))
@@ -198,7 +195,7 @@ namespace Lab.CertFromCA
 
         private static void Install(string filePath, string password)
         {
-            var cert  = new X509Certificate2(filePath, password, X509KeyStorageFlags.PersistKeySet);
+            var cert = new X509Certificate2(filePath, password, X509KeyStorageFlags.PersistKeySet);
             var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
             store.Open(OpenFlags.ReadWrite);
             store.Add(cert);
@@ -215,7 +212,8 @@ namespace Lab.CertFromCA
                                   );
             var dir = Directory.GetParent(Assembly.GetExecutingAssembly().Location).ToString();
             var pfx = enroll.CreatePFX(password, PFXExportOptions.PFXExportChainWithRoot);
-
+            
+            //註冊成功會把憑證安裝在CurrentUser，所以我要把它安裝到LocalComputer
             var fileName = "cert.pfx";
             var filePath = $@"{dir}\{fileName}";
             Download(filePath, pfx);
@@ -227,15 +225,15 @@ namespace Lab.CertFromCA
             //TODO:應該由常數轉換
             var items = new List<OID>();
 
-            items.Add(new OID {Name = "Server Authentication", Oid = "1.3.6.1.5.5.7.3.1"});
-            items.Add(new OID {Name = "Client Authentication", Oid = "1.3.6.1.5.5.7.3.2"});
-            items.Add(new OID {Name = "CodeSigning", Oid           = "1.3.6.1.5.5.7.3.3"});
-            items.Add(new OID {Name = "Email Protection", Oid      = "1.3.6.1.5.5.7.3.4"});
-            items.Add(new OID {Name = "IPSEC EndSystem", Oid       = "1.3.6.1.5.5.7.3.5"});
-            items.Add(new OID {Name = "IPSEC Tunnel", Oid          = "1.3.6.1.5.5.7.3.6"});
-            items.Add(new OID {Name = "IPSEC User", Oid            = "1.3.6.1.5.5.7.3.7"});
-            items.Add(new OID {Name = "TimeStamping", Oid          = "1.3.6.1.5.5.7.3.8"});
-            items.Add(new OID {Name = "OCSPSigning", Oid           = "1.3.6.1.5.5.7.3.9"});
+            items.Add(new OID { Name = "Server Authentication", Oid = "1.3.6.1.5.5.7.3.1" });
+            items.Add(new OID { Name = "Client Authentication", Oid = "1.3.6.1.5.5.7.3.2" });
+            items.Add(new OID { Name = "CodeSigning", Oid = "1.3.6.1.5.5.7.3.3" });
+            items.Add(new OID { Name = "Email Protection", Oid = "1.3.6.1.5.5.7.3.4" });
+            items.Add(new OID { Name = "IPSEC EndSystem", Oid = "1.3.6.1.5.5.7.3.5" });
+            items.Add(new OID { Name = "IPSEC Tunnel", Oid = "1.3.6.1.5.5.7.3.6" });
+            items.Add(new OID { Name = "IPSEC User", Oid = "1.3.6.1.5.5.7.3.7" });
+            items.Add(new OID { Name = "TimeStamping", Oid = "1.3.6.1.5.5.7.3.8" });
+            items.Add(new OID { Name = "OCSPSigning", Oid = "1.3.6.1.5.5.7.3.9" });
 
             return items;
         }
@@ -250,19 +248,19 @@ namespace Lab.CertFromCA
 
             switch (strDisposition)
             {
-                case (int) RequestDisposition.CR_DISP_INCOMPLETE:
+                case (int)RequestDisposition.CR_DISP_INCOMPLETE:
                     msg = "incomplete certificate";
                     break;
-                case (int) RequestDisposition.CR_DISP_DENIED:
+                case (int)RequestDisposition.CR_DISP_DENIED:
                     msg = "request denied";
                     break;
-                case (int) RequestDisposition.CR_DISP_ISSUED:
+                case (int)RequestDisposition.CR_DISP_ISSUED:
                     msg = "certificate issued";
                     break;
-                case (int) RequestDisposition.CR_DISP_UNDER_SUBMISSION:
+                case (int)RequestDisposition.CR_DISP_UNDER_SUBMISSION:
                     msg = "request pending";
                     break;
-                case (int) RequestDisposition.CR_DISP_REVOKED:
+                case (int)RequestDisposition.CR_DISP_REVOKED:
                     msg = "certificate revoked";
                     break;
             }
@@ -272,13 +270,13 @@ namespace Lab.CertFromCA
 
         public string SelectCA()
         {
-            CCertConfig  certConfig  = new CCertConfigClass();
+            CCertConfig certConfig = new CCertConfigClass();
             CCertRequest certRequest = new CCertRequestClass();
 
             try
             {
                 // Get CA config from UI
-                var caConfig = certConfig.GetConfig((int) CertificateConfiguration.CC_UIPICKCONFIG);
+                var caConfig = certConfig.GetConfig((int)CertificateConfiguration.CC_UIPICKCONFIG);
 
                 if (string.IsNullOrWhiteSpace(caConfig))
                 {
@@ -289,7 +287,7 @@ namespace Lab.CertFromCA
                 var ca = certConfig.GetField("Config");
 
                 // Get CA Type
-                var caType     = certRequest.GetCAProperty(caConfig, 10, 0, 1, 0).ToString();
+                var caType = certRequest.GetCAProperty(caConfig, 10, 0, 1, 0).ToString();
                 var caTypeText = "";
                 switch (caType)
                 {
@@ -343,14 +341,14 @@ namespace Lab.CertFromCA
 
             var certRequest = new CCertRequest();
             var requestResult =
-                (RequestDisposition) certRequest.Submit((int) EncodingType.XCN_CRYPT_STRING_BASE64HEADER,
+                (RequestDisposition)certRequest.Submit((int)EncodingType.XCN_CRYPT_STRING_BASE64HEADER,
                                                         createRequest,
                                                         attributes,
                                                         caServer);
             string cert = null;
             if (requestResult == RequestDisposition.CR_DISP_ISSUED)
             {
-                cert = certRequest.GetCertificate((int) EncodingType.XCN_CRYPT_STRING_BASE64REQUESTHEADER);
+                cert = certRequest.GetCertificate((int)EncodingType.XCN_CRYPT_STRING_BASE64REQUESTHEADER);
             }
 
             return cert;

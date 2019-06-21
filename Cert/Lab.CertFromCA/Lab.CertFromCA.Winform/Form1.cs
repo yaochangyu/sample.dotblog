@@ -10,46 +10,56 @@ namespace Lab.CertFromCA.Winform
             this.InitializeComponent();
             this.SubjectBodyBindingSource.DataSource = new SubjectBody
             {
-                CommonName       = "*.lab.local,*.lab1.local",
+                CommonName = "*.lab.local,*.lab1.local",
                 OrganizationUnit = "MIS",
-                Organization     = "THS",
-                Country          = "TW",
-                Locality         = "Taipei"
+                Organization = "THS",
+                Country = "TW",
+                Locality = "Taipei"
             };
             this.CaConfigBindingSource.DataSource = new CaConfig
             {
-                Server       = @"ad.lab.local\lab-ca",
+                Server = @"ad.lab.local\lab-ca",
                 TemplateName = "WebServer",
-                Password     = "12345678"
+                Password = "12345678"
             };
             this.templateNameComboBox.DisplayMember = "Name";
-            this.templateNameComboBox.ValueMember   = "Name";
+            this.templateNameComboBox.ValueMember = "Name";
         }
 
         private void Encroll_Button_Click(object sender, EventArgs e)
         {
-            var templateName  = this.templateNameComboBox.Text;
-            var caServer      = this.serverTextBox.Text;
-            var keyLength     = 2048;
-            var certification = new Certification();
-            var subjectBody   = this.SubjectBodyBindingSource[0] as SubjectBody;
+            try
+            {
+                var templateName = this.templateNameComboBox.Text;
+                var caServer = this.serverTextBox.Text;
+                var keyLength = 2048;
+                var certification = new Certification();
+                var subjectBody = this.SubjectBodyBindingSource[0] as SubjectBody;
 
-            var create = certification.CreateRequest(subjectBody,
-                                                     OID.ServerAuthentication.Oid,
-                                                     keyLength);
-            var send = certification.SendRequest(create, caServer, templateName);
-            this.richTextBox1.Text = send;
-            certification.InstallAndDownload(send, "pass@w0rd1~");
-            MessageBox.Show("Done!!");
+                var create = certification.CreateRequest(subjectBody,
+                                                         OID.ServerAuthentication.Oid,
+                                                         keyLength);
+                this.richTextBox1.Text = create;
+
+                var send = certification.SendRequest(create, caServer, templateName);
+                this.richTextBox2.Text = send;
+
+                certification.InstallAndDownload(send, "pass@w0rd1~");
+                MessageBox.Show("Done!!");
+            }
+            catch (Exception exception)
+            {
+                MessageBox.Show($"{exception.Message},{exception.HResult}");
+            }
         }
 
         private void SelectCA_Button_Click(object sender, EventArgs e)
         {
             try
             {
-                var caConfig      = this.CaConfigBindingSource[0] as CaConfig;
+                var caConfig = this.CaConfigBindingSource[0] as CaConfig;
                 var certification = new Certification();
-                caConfig.Server                      = certification.SelectCA();
+                caConfig.Server = certification.SelectCA();
                 this.templateNameComboBox.DataSource = certification.GetCaTemplates(caConfig.Server);
             }
             catch (Exception ex)
