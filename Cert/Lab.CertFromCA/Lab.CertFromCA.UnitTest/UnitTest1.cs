@@ -24,7 +24,7 @@ namespace Lab.CertFromCA.UnitTest
                                            OID.ServerAuthentication.Oid,
                                            keyLength);
             var send = certification.SendRequest(create, caServer, templateName);
-            certification.Enroll(send, null);
+            certification.InstallAndDownload(send, null);
         }
         [TestMethod]
         //[Ignore]

@@ -143,7 +143,7 @@ namespace Lab.CertFromCA
                                               keyLength, templateName);
         }
 
-        public void Enroll(string certText, string password)
+        public void InstallAndDownload(string certText, string password)
         {
             var enroll = new CX509EnrollmentClass();
             enroll.Initialize(X509CertificateEnrollmentContext.ContextUser);
