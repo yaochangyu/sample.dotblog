@@ -32,6 +32,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <ApplicationIcon>favicons\favicon.ico</ApplicationIcon>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -101,6 +104,14 @@
       <Project>{C2D2A935-18BA-42B5-AF21-1420A4B3C460}</Project>
       <Name>Lab.CertFromCA</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="favicons\android-chrome-192x192.png" />
+    <Content Include="favicons\android-chrome-512x512.png" />
+    <Content Include="favicons\apple-touch-icon.png" />
+    <Content Include="favicons\favicon-16x16.png" />
+    <Content Include="favicons\favicon-32x32.png" />
+    <Content Include="favicons\favicon.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

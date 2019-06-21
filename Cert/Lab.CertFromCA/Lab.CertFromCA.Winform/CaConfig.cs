@@ -8,6 +8,7 @@ namespace Lab.CertFromCA.Winform
     {
         private string _server;
         private string _templateName;
+        private string _password;
 
         public string Server
         {
@@ -29,6 +30,18 @@ namespace Lab.CertFromCA.Winform
                 if (value == this._templateName) return;
 
                 this._templateName = value;
+                this.OnPropertyChanged();
+            }
+        }
+
+        public string Password
+        {
+            get => this._password;
+            set
+            {
+                if (value == this._password) return;
+
+                this._password = value;
                 this.OnPropertyChanged();
             }
         }

@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.RegularExpressions;
 using CERTCLILib;
 using CERTENROLLLib;
+using X509KeyUsageFlags = CERTENROLLLib.X509KeyUsageFlags;
 
 namespace Lab.CertFromCA
 {
@@ -83,7 +85,7 @@ namespace Lab.CertFromCA
 
             var enroll = new CX509Enrollment();
             enroll.InitializeFromRequest(pkcs10);
-            var request = enroll.CreateRequest();
+            var request = enroll.CreateRequest(EncodingType.XCN_CRYPT_STRING_BASE64HEADER);
 
             return request;
         }
@@ -128,7 +130,7 @@ namespace Lab.CertFromCA
 
             var enroll = new CX509Enrollment();
             enroll.InitializeFromRequest(pkcs10);
-            var strRequest = enroll.CreateRequest();
+            var strRequest = enroll.CreateRequest(EncodingType.XCN_CRYPT_STRING_BASE64HEADER);
 
             return strRequest;
         }
@@ -143,18 +145,18 @@ namespace Lab.CertFromCA
                                               keyLength, templateName);
         }
 
-        public void InstallAndDownload(string certText, string password)
+        /// <summary>
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="content"></param>
+        /// <remarks>不能直接寫檔File.WriteAllText(filePath, content);，要先由Base6轉成字串</remarks>
+        private static void Download(string filePath, string content)
         {
-            var enroll = new CX509EnrollmentClass();
-            enroll.Initialize(X509CertificateEnrollmentContext.ContextUser);
-            enroll.InstallResponse(InstallResponseRestrictionFlags.AllowUntrustedRoot,
-                                   certText,
-                                   EncodingType.XCN_CRYPT_STRING_BASE64REQUESTHEADER,
-                                   password
-                                  );
-            var dir = Directory.GetParent(Assembly.GetExecutingAssembly().Location).ToString();
-            var pfx = enroll.CreatePFX(password, PFXExportOptions.PFXExportChainWithRoot);
-            File.WriteAllText(dir + @"\" + "cert.pfx", pfx);
+            using (var fs = new FileStream(filePath, FileMode.Create))
+            {
+                var base64String = Convert.FromBase64String(content);
+                fs.Write(base64String, 0, base64String.Length);
+            }
         }
 
         public IEnumerable<Template> GetCaTemplates(string caServer)
@@ -194,8 +196,35 @@ namespace Lab.CertFromCA
             return san;
         }
 
+        private static void Install(string filePath, string password)
+        {
+            var cert  = new X509Certificate2(filePath, password, X509KeyStorageFlags.PersistKeySet);
+            var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
+            store.Open(OpenFlags.ReadWrite);
+            store.Add(cert);
+        }
+
+        public void InstallAndDownload(string certText, string password)
+        {
+            var enroll = new CX509EnrollmentClass();
+            enroll.Initialize(X509CertificateEnrollmentContext.ContextUser);
+            enroll.InstallResponse(InstallResponseRestrictionFlags.AllowUntrustedRoot,
+                                   certText,
+                                   EncodingType.XCN_CRYPT_STRING_BASE64REQUESTHEADER,
+                                   password
+                                  );
+            var dir = Directory.GetParent(Assembly.GetExecutingAssembly().Location).ToString();
+            var pfx = enroll.CreatePFX(password, PFXExportOptions.PFXExportChainWithRoot);
+
+            var fileName = "cert.pfx";
+            var filePath = $@"{dir}\{fileName}";
+            Download(filePath, pfx);
+            Install(filePath, password);
+        }
+
         public List<OID> ListOids()
         {
+            //TODO:應該由常數轉換
             var items = new List<OID>();
 
             items.Add(new OID {Name = "Server Authentication", Oid = "1.3.6.1.5.5.7.3.1"});
@@ -313,10 +342,11 @@ namespace Lab.CertFromCA
             }
 
             var certRequest = new CCertRequest();
-            var requestResult = (RequestDisposition) certRequest.Submit((int) EncodingType.XCN_CRYPT_STRING_BASE64,
-                                                                        createRequest,
-                                                                        attributes,
-                                                                        caServer);
+            var requestResult =
+                (RequestDisposition) certRequest.Submit((int) EncodingType.XCN_CRYPT_STRING_BASE64HEADER,
+                                                        createRequest,
+                                                        attributes,
+                                                        caServer);
             string cert = null;
             if (requestResult == RequestDisposition.CR_DISP_ISSUED)
             {
