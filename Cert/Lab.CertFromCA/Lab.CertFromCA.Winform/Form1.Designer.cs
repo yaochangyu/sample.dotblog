@@ -38,10 +38,10 @@
             System.Windows.Forms.Label serverLabel;
             System.Windows.Forms.Label templateNameLabel;
             System.Windows.Forms.Label passwordLabel;
+            System.Windows.Forms.Label friendlyNameLabel;
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.SelectCA_Button = new System.Windows.Forms.Button();
             this.commonNameTextBox = new System.Windows.Forms.TextBox();
-            this.SubjectBodyBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.countryTextBox = new System.Windows.Forms.TextBox();
             this.localityTextBox = new System.Windows.Forms.TextBox();
             this.organizationTextBox = new System.Windows.Forms.TextBox();
@@ -49,11 +49,13 @@
             this.stateTextBox = new System.Windows.Forms.TextBox();
             this.Encroll_Button = new System.Windows.Forms.Button();
             this.serverTextBox = new System.Windows.Forms.TextBox();
-            this.CaConfigBindingSource = new System.Windows.Forms.BindingSource(this.components);
             this.templateNameComboBox = new System.Windows.Forms.ComboBox();
             this.richTextBox1 = new System.Windows.Forms.RichTextBox();
             this.passwordTextBox = new System.Windows.Forms.TextBox();
             this.richTextBox2 = new System.Windows.Forms.RichTextBox();
+            this.SubjectBodyBindingSource = new System.Windows.Forms.BindingSource(this.components);
+            this.CaConfigBindingSource = new System.Windows.Forms.BindingSource(this.components);
+            this.friendlyNameTextBox = new System.Windows.Forms.TextBox();
             commonNameLabel = new System.Windows.Forms.Label();
             countryLabel = new System.Windows.Forms.Label();
             localityLabel = new System.Windows.Forms.Label();
@@ -63,6 +65,7 @@
             serverLabel = new System.Windows.Forms.Label();
             templateNameLabel = new System.Windows.Forms.Label();
             passwordLabel = new System.Windows.Forms.Label();
+            friendlyNameLabel = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.SubjectBodyBindingSource)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.CaConfigBindingSource)).BeginInit();
             this.SuspendLayout();
@@ -167,10 +170,6 @@
             this.commonNameTextBox.TabIndex = 5;
             this.commonNameTextBox.Text = "*.lab.local,*.lab1.local";
             // 
-            // SubjectBodyBindingSource
-            // 
-            this.SubjectBodyBindingSource.DataSource = typeof(Lab.CertFromCA.SubjectBody);
-            // 
             // countryTextBox
             // 
             this.countryTextBox.DataBindings.Add(new System.Windows.Forms.Binding("Text", this.SubjectBodyBindingSource, "Country", true));
@@ -213,7 +212,7 @@
             // 
             // Encroll_Button
             // 
-            this.Encroll_Button.Location = new System.Drawing.Point(251, 273);
+            this.Encroll_Button.Location = new System.Drawing.Point(251, 299);
             this.Encroll_Button.Name = "Encroll_Button";
             this.Encroll_Button.Size = new System.Drawing.Size(75, 23);
             this.Encroll_Button.TabIndex = 16;
@@ -228,10 +227,6 @@
             this.serverTextBox.Name = "serverTextBox";
             this.serverTextBox.Size = new System.Drawing.Size(214, 20);
             this.serverTextBox.TabIndex = 17;
-            // 
-            // CaConfigBindingSource
-            // 
-            this.CaConfigBindingSource.DataSource = typeof(Lab.CertFromCA.Winform.CaConfig);
             // 
             // templateNameComboBox
             // 
@@ -266,11 +261,38 @@
             this.richTextBox2.TabIndex = 22;
             this.richTextBox2.Text = "";
             // 
+            // SubjectBodyBindingSource
+            // 
+            this.SubjectBodyBindingSource.DataSource = typeof(Lab.CertFromCA.SubjectBody);
+            // 
+            // CaConfigBindingSource
+            // 
+            this.CaConfigBindingSource.DataSource = typeof(Lab.CertFromCA.Winform.CaConfig);
+            // 
+            // friendlyNameLabel
+            // 
+            friendlyNameLabel.AutoSize = true;
+            friendlyNameLabel.Location = new System.Drawing.Point(62, 304);
+            friendlyNameLabel.Name = "friendlyNameLabel";
+            friendlyNameLabel.Size = new System.Drawing.Size(77, 13);
+            friendlyNameLabel.TabIndex = 22;
+            friendlyNameLabel.Text = "Friendly Name:";
+            // 
+            // friendlyNameTextBox
+            // 
+            this.friendlyNameTextBox.DataBindings.Add(new System.Windows.Forms.Binding("Text", this.CaConfigBindingSource, "FriendlyName", true));
+            this.friendlyNameTextBox.Location = new System.Drawing.Point(145, 301);
+            this.friendlyNameTextBox.Name = "friendlyNameTextBox";
+            this.friendlyNameTextBox.Size = new System.Drawing.Size(100, 20);
+            this.friendlyNameTextBox.TabIndex = 23;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(645, 316);
+            this.ClientSize = new System.Drawing.Size(645, 333);
+            this.Controls.Add(friendlyNameLabel);
+            this.Controls.Add(this.friendlyNameTextBox);
             this.Controls.Add(this.richTextBox2);
             this.Controls.Add(passwordLabel);
             this.Controls.Add(this.passwordTextBox);
@@ -321,6 +343,7 @@
         private System.Windows.Forms.RichTextBox richTextBox1;
         private System.Windows.Forms.TextBox passwordTextBox;
         private System.Windows.Forms.RichTextBox richTextBox2;
+        private System.Windows.Forms.TextBox friendlyNameTextBox;
     }
 }
 

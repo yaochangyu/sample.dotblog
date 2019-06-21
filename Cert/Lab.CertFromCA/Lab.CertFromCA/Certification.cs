@@ -8,7 +8,6 @@ using System.Text.RegularExpressions;
 using CERTCLILib;
 using CERTENROLLLib;
 using X509KeyUsageFlags = CERTENROLLLib.X509KeyUsageFlags;
-
 namespace Lab.CertFromCA
 {
     public class Certification
@@ -16,7 +15,12 @@ namespace Lab.CertFromCA
         private static string ConvertCn(string source)
         {
             var builder = new StringBuilder();
+            if (source.IndexOf(",") < 0)
+            {
+                return $"CN = {source}";
+            }
             var split = source.Split(',');
+
             for (var i = 0; i < split.Length; i++)
             {
                 if (i == 0)
@@ -145,10 +149,13 @@ namespace Lab.CertFromCA
                                               keyLength, templateName);
         }
 
+        /// <summary>
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <param name="content"></param>
+        /// <remarks>不能直接寫檔File.WriteAllText(filePath, content);，要先由Base6轉成字串</remarks>
         private static void Download(string filePath, string content)
         {
-            //不能直接寫檔，要先由Base6轉成字串，否則X509Certificate2會解碼失敗
-            //File.WriteAllText(filePath, content);
             using (var fs = new FileStream(filePath, FileMode.Create))
             {
                 var base64String = Convert.FromBase64String(content);
@@ -201,10 +208,11 @@ namespace Lab.CertFromCA
             store.Add(cert);
         }
 
-        public void InstallAndDownload(string certText, string password)
+        public void InstallAndDownload(string certText, string password, string friendlyName)
         {
             var enroll = new CX509EnrollmentClass();
             enroll.Initialize(X509CertificateEnrollmentContext.ContextUser);
+            enroll.CertificateFriendlyName = friendlyName;
             enroll.InstallResponse(InstallResponseRestrictionFlags.AllowUntrustedRoot,
                                    certText,
                                    EncodingType.XCN_CRYPT_STRING_BASE64REQUESTHEADER,
@@ -212,8 +220,7 @@ namespace Lab.CertFromCA
                                   );
             var dir = Directory.GetParent(Assembly.GetExecutingAssembly().Location).ToString();
             var pfx = enroll.CreatePFX(password, PFXExportOptions.PFXExportChainWithRoot);
-            
-            //註冊成功會把憑證安裝在CurrentUser，所以我要把它安裝到LocalComputer
+
             var fileName = "cert.pfx";
             var filePath = $@"{dir}\{fileName}";
             Download(filePath, pfx);
