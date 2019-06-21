@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -156,44 +157,6 @@ namespace Lab.CertFromCA
             File.WriteAllText(dir + @"\" + "cert.pfx", pfx);
         }
 
-        public string SelectCA()
-        {
-            CCertConfig  certConfig  = new CCertConfigClass();
-            CCertRequest certRequest = new CCertRequestClass();
-
-            // Get CA config from UI
-            var caConfig = certConfig.GetConfig((int) CertificateConfiguration.CC_UIPICKCONFIG);
-
-            if (string.IsNullOrWhiteSpace(caConfig))
-            {
-                return null;
-            }
-
-            // Get CA Connection string
-            var ca = certConfig.GetField("Config");
-
-            // Get CA Type
-            var caType     = certRequest.GetCAProperty(caConfig, 10, 0, 1, 0).ToString();
-            var caTypeText = "";
-            switch (caType)
-            {
-                case "0":
-                    caTypeText = "ENTERPRISE ROOT CA";
-                    break;
-                case "1":
-                    caTypeText = "ENTERPRISE SUB CA";
-                    break;
-                case "3":
-                    caTypeText = "STANDALONE ROOT CA";
-                    break;
-                case "4":
-                    caTypeText = "STANDALONE SUB CA";
-                    break;
-            }
-
-            return ca;
-        }
-
         public IEnumerable<Template> GetCaTemplates(string caServer)
         {
             CCertRequest certRequest = new CCertRequestClass();
@@ -276,6 +239,66 @@ namespace Lab.CertFromCA
             }
 
             return msg;
+        }
+
+        public string SelectCA()
+        {
+            CCertConfig  certConfig  = new CCertConfigClass();
+            CCertRequest certRequest = new CCertRequestClass();
+
+            try
+            {
+                // Get CA config from UI
+                var caConfig = certConfig.GetConfig((int) CertificateConfiguration.CC_UIPICKCONFIG);
+
+                if (string.IsNullOrWhiteSpace(caConfig))
+                {
+                    return null;
+                }
+
+                // Get CA Connection string
+                var ca = certConfig.GetField("Config");
+
+                // Get CA Type
+                var caType     = certRequest.GetCAProperty(caConfig, 10, 0, 1, 0).ToString();
+                var caTypeText = "";
+                switch (caType)
+                {
+                    case "0":
+                        caTypeText = "ENTERPRISE ROOT CA";
+                        break;
+                    case "1":
+                        caTypeText = "ENTERPRISE SUB CA";
+                        break;
+                    case "3":
+                        caTypeText = "STANDALONE ROOT CA";
+                        break;
+                    case "4":
+                        caTypeText = "STANDALONE SUB CA";
+                        break;
+                }
+
+                return ca;
+            }
+            catch (Exception ex)
+            {
+                string error = null;
+
+                if (ex.HResult.ToString() == "-2147023673")
+                {
+                    error = "Closed By user";
+                }
+                else if (ex.HResult.ToString() == "-2147024637")
+                {
+                    error = "Can't find available Servers";
+                }
+                else
+                {
+                    error = ex.Message + " " + ex.HResult;
+                }
+
+                throw new Exception(error, ex);
+            }
         }
 
         public string SendRequest(string createRequest, string caServer,
