@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28803.352
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.ExceptionStack.BLL", "Lab.ExceptionStack.BLL\Lab.ExceptionStack.BLL.csproj", "{31529EDC-DA07-4103-9401-BA365B836152}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.ExceptionStack.Winform", "Lab.ExceptionStack.Winform\Lab.ExceptionStack.Winform.csproj", "{8AA295AE-34EC-43DE-A047-344BD757BCED}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{31529EDC-DA07-4103-9401-BA365B836152}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31529EDC-DA07-4103-9401-BA365B836152}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31529EDC-DA07-4103-9401-BA365B836152}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31529EDC-DA07-4103-9401-BA365B836152}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8AA295AE-34EC-43DE-A047-344BD757BCED}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8AA295AE-34EC-43DE-A047-344BD757BCED}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8AA295AE-34EC-43DE-A047-344BD757BCED}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8AA295AE-34EC-43DE-A047-344BD757BCED}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {68BC26D0-6042-42D0-83E9-A521EE4A0821}
+	EndGlobalSection
+EndGlobal
