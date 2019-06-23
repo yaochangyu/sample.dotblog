@@ -3,11 +3,11 @@
 namespace Lab.ExceptionStack.BLL
 {
     [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property,AllowMultiple = false)]
-    public class ErrorDescription : Attribute
+    public class ErrorDescriptionAttribute : Attribute
     {
         public string Description { get; set; }
 
-        public ErrorDescription(string description)
+        public ErrorDescriptionAttribute(string description)
         {
             this.Description = description;
         }

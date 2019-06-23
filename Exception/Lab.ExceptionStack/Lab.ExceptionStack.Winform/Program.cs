@@ -2,25 +2,24 @@
 using System.Threading;
 using System.Windows.Forms;
 using Lab.ExceptionStack.BLL;
+using NLog;
 
 namespace Lab.ExceptionStack.Winform
 {
     internal static class Program
     {
+        private static readonly ILogger s_logger = LogManager.GetCurrentClassLogger();
+
         private static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)
         {
-            var exception        = e.Exception;
-            var errorDescription = exception.GetCurrentErrorDescription();
-            var errorMsg         = $"{errorDescription.Description},{exception.Message}";
-            Show($"{errorMsg}");
+            var exception = e.Exception;
+            Show(exception);
         }
 
         private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
         {
-            var exception        = (Exception) e.ExceptionObject;
-            var errorDescription = exception.GetCurrentErrorDescription();
-            var errorMsg         = $"{errorDescription.Description},{exception.Message}";
-            Show($"{errorMsg}");
+            var exception = (Exception) e.ExceptionObject;
+            Show(exception);
         }
 
         /// <summary>
@@ -30,11 +29,7 @@ namespace Lab.ExceptionStack.Winform
         private static void Main()
         {
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
-
-            // Add handler to handle the exception raised by main threads
-            Application.ThreadException += Application_ThreadException;
-
-            // Add handler to handle the exception raised by additional threads
+            Application.ThreadException                += Application_ThreadException;
             AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 
             Application.EnableVisualStyles();
@@ -42,9 +37,12 @@ namespace Lab.ExceptionStack.Winform
             Application.Run(new Form1());
         }
 
-        private static void Show(string errorMessage)
+        private static void Show(Exception exception)
         {
-            MessageBox.Show(errorMessage, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            var errorDescription = exception.GetCurrentErrorDescription();
+            var errorMsg         = $"{errorDescription.Description},{exception.Message}";
+            s_logger.Error(exception, errorMsg);
+            MessageBox.Show(errorMsg, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 }
