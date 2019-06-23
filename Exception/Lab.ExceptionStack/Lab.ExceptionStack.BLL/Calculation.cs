@@ -4,17 +4,16 @@ namespace Lab.ExceptionStack.BLL
 {
     public class Calculation
     {
-        [ErrorDescription("加法")]
+        [ErrorDescription("加法錯誤")]
         public decimal Add(decimal firstNumber, decimal secondNumber)
         {
-            return firstNumber + secondNumber;
+            throw new Exception("Fail");
         }
-        [ErrorDescription("減法")]
 
+        [ErrorDescription("減法錯誤")]
         public decimal Sub(decimal firstNumber, decimal secondNumber)
         {
             throw new Exception("Fail");
-            //return firstNumber - secondNumber;
         }
     }
 }

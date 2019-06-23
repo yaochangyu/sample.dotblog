@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.ExceptionStack.BLL", "L
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.ExceptionStack.Winform", "Lab.ExceptionStack.Winform\Lab.ExceptionStack.Winform.csproj", "{8AA295AE-34EC-43DE-A047-344BD757BCED}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.ExceptionStack.BLL.UnitTest", "Lab.ExceptionStack.BLL.UnitTest\Lab.ExceptionStack.BLL.UnitTest.csproj", "{7DA4B9BB-98AC-4FE3-98FB-CEF6D66B5952}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{8AA295AE-34EC-43DE-A047-344BD757BCED}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8AA295AE-34EC-43DE-A047-344BD757BCED}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8AA295AE-34EC-43DE-A047-344BD757BCED}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7DA4B9BB-98AC-4FE3-98FB-CEF6D66B5952}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7DA4B9BB-98AC-4FE3-98FB-CEF6D66B5952}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7DA4B9BB-98AC-4FE3-98FB-CEF6D66B5952}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7DA4B9BB-98AC-4FE3-98FB-CEF6D66B5952}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
