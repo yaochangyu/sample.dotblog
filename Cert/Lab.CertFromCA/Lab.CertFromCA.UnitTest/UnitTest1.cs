@@ -12,13 +12,11 @@ namespace Lab.CertFromCA.UnitTest
             var templateName = "WebServer";
             var keyLength = 2048;
 
-            //var caServer = @"ad.lab.local\lab-ca";
-            var caServer = @"NTTP3VS22.nttp3.ths.com.tw\CA";
+            var caServer = @"ad.lab.local\lab-ca";
             var certification = new Certification();
             var subjectBody = new SubjectBody()
             {
                 CommonName = "*.lab.local,*.lab1.local"
-                //CommonName = "*.lab.local"
             };
             var create = certification.CreateRequest(subjectBody,
                                            OID.ServerAuthentication.Oid,
@@ -33,8 +31,7 @@ namespace Lab.CertFromCA.UnitTest
             var templateName = "WebServer";
             var keyLength = 2048;
 
-            //var caServer = @"ad.lab.local\lab-ca";
-            var caServer = @"NTTP3VS22.nttp3.ths.com.tw\CA";
+            var caServer = @"ad.lab.local\lab-ca";
             var certification = new Certification();
             var templates = certification.GetCaTemplates(caServer);
         }
@@ -45,8 +42,7 @@ namespace Lab.CertFromCA.UnitTest
             var templateName = "WebServer";
             var keyLength    = 2048;
 
-            //var caServer = @"ad.lab.local\lab-ca";
-            var caServer      = @"NTTP3VS22.nttp3.ths.com.tw\CA";
+            var caServer = @"ad.lab.local\lab-ca";
             var certification = new Certification();
             certification.SelectCA();
         }
