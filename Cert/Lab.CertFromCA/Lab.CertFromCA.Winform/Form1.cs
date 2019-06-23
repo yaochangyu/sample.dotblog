@@ -18,8 +18,7 @@ namespace Lab.CertFromCA.Winform
             };
             this.CaConfigBindingSource.DataSource = new CaConfig
             {
-                //Server = @"ad.lab.local\lab-ca",
-                Server       = @"nttp3vs22.nttp3.ths.com.tw\CA",
+                Server = @"ad.lab.local\lab-ca",
                 TemplateName = "WebServer",
                 Password     = "12345678",
                 FriendlyName = "Demo"
