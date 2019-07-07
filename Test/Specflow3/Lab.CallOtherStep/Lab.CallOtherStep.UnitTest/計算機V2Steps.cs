@@ -14,19 +14,13 @@ namespace Lab.CallOtherStep.UnitTest
             this.ScenarioContext.Set(table.CreateInstance<TwoVariable>(), "variable");
         }
 
-        [Given(@"I press add and the result should be success")]
-        public void GivenIPressAddAndTheResultShouldBeSuccess()
+        [When(@"I press add")]
+        public void WhenIPressAdd()
         {
-            var      expected = 120d;
-            string[] header   = {"FirstNumber", "SecondNumber"};
-            string[] row      = {"50", "70"};
-            var      table    = new Table(header);
-            table.AddRow(row);
-
-            this.Given(@"I have entered two number into the calculator", table);
-            this.When(@"I press add");
-            this.Then($@"the result should be {expected} on the screen");
-
+            var variable    = this.ScenarioContext.Get<TwoVariable>("variable");
+            var calculation = new Calculation();
+            var actual      = calculation.Add(variable.FirstNumber, variable.SecondNumber);
+            this.ScenarioContext.Set(actual, "actual");
         }
 
         [Then(@"the result should be (.*) on the screen")]
@@ -36,13 +30,18 @@ namespace Lab.CallOtherStep.UnitTest
             Assert.AreEqual(expected, actual);
         }
 
-        [When(@"I press add")]
-        public void WhenIPressAdd()
+        [Given(@"I press add and the result should be success")]
+        public void GivenIPressAddAndTheResultShouldBeSuccess()
         {
-            var variable    = this.ScenarioContext.Get<TwoVariable>("variable");
-            var calculation = new Calculation();
-            var actual      = calculation.Add(variable.FirstNumber, variable.SecondNumber);
-            this.ScenarioContext.Set(actual, "actual");
+            var      expected = 120d;
+            string[] header   = { "FirstNumber", "SecondNumber" };
+            string[] row      = { "50", "70" };
+            var      table    = new Table(header);
+            table.AddRow(row);
+
+            this.Given(@"I have entered two number into the calculator", table);
+            this.When(@"I press add");
+            this.Then($@"the result should be {expected} on the screen");
         }
     }
 }
