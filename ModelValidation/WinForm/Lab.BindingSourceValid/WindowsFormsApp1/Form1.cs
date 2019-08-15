@@ -91,8 +91,6 @@ namespace WindowsFormsApp1
                 return;
             }
 
-            errorProvider.Clear();
-
             this.RegisterChangeRowEvent(true);
             this.SetPreviousRow();
         }

@@ -28,7 +28,7 @@ namespace WindowsFormsApp1
             errorProvider.Clear();
             var validationContext = new ValidationContext(instance, null, null);
             validationResults = new List<ValidationResult>();
-            var isValid =Validator.TryValidateObject(instance, validationContext,validationResults, true);
+            var isValid = Validator.TryValidateObject(instance, validationContext, validationResults, true);
             if (isValid)
             {
                 return isValid;
