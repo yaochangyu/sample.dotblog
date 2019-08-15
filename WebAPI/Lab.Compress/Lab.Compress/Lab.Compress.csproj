@@ -120,13 +120,16 @@
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\SwaggerConfig.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
-    <Compile Include="Compressor.cs" />
+    <Compile Include="GZip.cs" />
     <Compile Include="Controllers\DefaultController.cs" />
     <Compile Include="Controllers\PersonModel.cs" />
     <Compile Include="Controllers\TestController.cs" />
+    <Compile Include="Deflate.cs" />
     <Compile Include="Filters\CompressContentAttribute.cs" />
     <Compile Include="Filters\DeflateCompressionAttribute.cs" />
+    <Compile Include="Filters\DeflateDecompressionAttribute.cs" />
     <Compile Include="Filters\GZipCompressionAttribute.cs" />
+    <Compile Include="Filters\GZipDecompressionAttribute.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>

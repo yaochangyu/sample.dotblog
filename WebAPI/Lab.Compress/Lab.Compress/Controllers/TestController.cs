@@ -1,18 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
-using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
 using Faker;
-using Ionic.Zlib;
 using Lab.Compress.Filters;
-using Newtonsoft.Json;
 
 namespace Lab.Compress.Controllers
 {
@@ -26,9 +19,9 @@ namespace Lab.Compress.Controllers
             var times   = 0;
             for (var i = 0; i < 1000; i++)
             {
-                builder.AppendLine($"{(i + 1).ToString("0000")},您好," +
-                                   $"我是 {Name.FullName()}," +
-                                   $"今年 {RandomNumber.Next(1,100)}歲," +
+                builder.AppendLine($"{(i + 1).ToString("0000")},您好,"   +
+                                   $"我是 {Name.FullName()},"            +
+                                   $"今年 {RandomNumber.Next(1, 100)}歲," +
                                    $"家裡住在 {Address.Country()},{Address.City()}");
                 times++;
             }
@@ -45,11 +38,24 @@ namespace Lab.Compress.Controllers
             });
         }
 
+        //public IHttpActionResult Post()
+        //{
+        //    var zipContent = this.Request.Content.ReadAsByteArrayAsync().Result;
+        //    var unzipContent = Deflate.Decompress(zipContent);
+        //    var result     = Encoding.UTF8.GetString(unzipContent);
+        //    return new ResponseMessageResult(new HttpResponseMessage
+        //    {
+        //        StatusCode = HttpStatusCode.OK,
+        //        Content    = new StringContent(result, Encoding.UTF8)
+        //    });
+        //}
+
+        [DeflateDecompression]
+        //[GZipDecompression]
         public IHttpActionResult Post()
         {
-            var zipContent = this.Request.Content.ReadAsByteArrayAsync().Result;
-            var content = Deflate.Decompress(zipContent);
-            var result = Encoding.UTF8.GetString(content);
+            var content = this.Request.Content.ReadAsByteArrayAsync().Result;
+            var result  = Encoding.UTF8.GetString(content);
             return new ResponseMessageResult(new HttpResponseMessage
             {
                 StatusCode = HttpStatusCode.OK,
