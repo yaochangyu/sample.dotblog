@@ -45,52 +45,16 @@ namespace Lab.Compress.Controllers
             });
         }
 
-        public async Task<IHttpActionResult> Get()
-        {
-            var people = new List<PersonModel>
-            {
-                new PersonModel
-                {
-                    FirstName = "Test",
-                    LastName  = "One",
-                    Age       = 25
-                },
-                new PersonModel
-                {
-                    FirstName = "Test",
-                    LastName  = "Two",
-                    Age       = 45
-                }
-            };
-            using (var handler = new HttpClientHandler())
-            {
-                handler.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-                using (var client = new HttpClient(handler, false))
-                {
-                    var json      = JsonConvert.SerializeObject(people);
-                    var jsonBytes = Encoding.UTF8.GetBytes(json);
-                    var ms        = new MemoryStream();
-                    using (var gzip = new GZipStream(ms, CompressionMode.Compress, true))
-                    {
-                        gzip.Write(jsonBytes, 0, jsonBytes.Length);
-                    }
-
-                    ms.Position = 0;
-                    var content = new StreamContent(ms);
-                    content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                    content.Headers.ContentEncoding.Add("gzip");
-                    var response = await client.PostAsync("http://localhost:54425/api/Gzipping", content);
-                    var results  = await response.Content.ReadAsAsync<IEnumerable<PersonModel>>();
-                    Debug.WriteLine(string.Join(", ", results));
-                }
-            }
-
-            return this.Ok();
-        }
-
         public IHttpActionResult Post()
         {
-            return this.Ok();
+            var zipContent = this.Request.Content.ReadAsByteArrayAsync().Result;
+            var content = Deflate.Decompress(zipContent);
+            var result = Encoding.UTF8.GetString(content);
+            return new ResponseMessageResult(new HttpResponseMessage
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content    = new StringContent(result, Encoding.UTF8)
+            });
         }
     }
 }
