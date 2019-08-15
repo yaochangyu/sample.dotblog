@@ -7,15 +7,19 @@ namespace WindowsFormsApp1
 {
     public partial class Form1 : Form
     {
-        private bool          _cancelEdit;
+        private bool          _isDelete;
         private int           _previousBindingPosition;
         private InsertRequest _previousInsertRequest;
+        private static string DateTimeFormat = "yyyy/MM/dd hh:mm:ss";
 
         public Form1()
         {
             this.InitializeComponent();
             var insertRequestBinding = this.InsertRequest_BindingSource;
             var insertRequestGrid    = this.InsertRequest_DataGridView;
+
+            insertRequestGrid.MultiSelect   = false;
+            insertRequestGrid.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
 
             insertRequestBinding.DataSource = new BindingList<InsertRequest>
             {
@@ -24,31 +28,33 @@ namespace WindowsFormsApp1
                     Id = Guid.NewGuid(), Age = 20, Birthday = DateTime.Now, Name = "yao"
                 }
             };
-            this._previousBindingPosition = insertRequestBinding.Position;
-            this._previousInsertRequest   = (InsertRequest) insertRequestBinding.Current;
-
-            insertRequestBinding.PositionChanged += this.InsertRequest_BindingSource_PositionChanged;
-
-            insertRequestGrid.MultiSelect   =  false;
-            insertRequestGrid.SelectionMode =  DataGridViewSelectionMode.FullRowSelect;
-            this.Id_TextBox.Click           += this.Id_TextBox_Click;
+            this.SetPreviousRow();
+            this.Id_TextBox.Click                     += this.Id_TextBox_Click;
+            this.Birthday_DateTimePicker.Format       =  DateTimePickerFormat.Custom;
+            this.Birthday_DateTimePicker.CustomFormat =  DateTimeFormat;
+            this.Birthday_DateTimePicker.ValueChanged += this.Birthday_DateTimePicker_ValueChanged;
         }
 
         private void Add_Button_Click(object sender, EventArgs e)
         {
             this.InsertRequest_BindingSource.AddNew();
+            this.Birthday_DateTimePicker.CustomFormat = " ";
+        }
+
+        private void Birthday_DateTimePicker_ValueChanged(object sender, EventArgs e)
+        {
+            this.Birthday_DateTimePicker.CustomFormat = DateTimeFormat;
         }
 
         private void Delete_Button_Click(object sender, EventArgs e)
         {
-            this._cancelEdit = true;
+            this._isDelete = true;
             this.InsertRequest_BindingSource.RemoveCurrent();
         }
 
         private void Form2_Load(object sender, EventArgs e)
         {
-            var insertRequestGrid = this.InsertRequest_DataGridView;
-            insertRequestGrid.SelectionChanged += this.InsertRequest_DataGridView_SelectionChanged;
+            this.RegisterChangeRowEvent(true);
         }
 
         private void Id_TextBox_Click(object sender, EventArgs e)
@@ -63,48 +69,48 @@ namespace WindowsFormsApp1
         private void InsertRequest_BindingSource_PositionChanged(object sender, EventArgs e)
         {
             var insertRequestBinding = (BindingSource) sender;
+            var insertRequest        = this._previousInsertRequest;
+            var errorProvider        = this.ErrorProvider;
 
-            if (this._cancelEdit)
+            if (this._isDelete)
             {
-                this._cancelEdit = true;
-                this.SetPreviousBindState();
-                this.SetGridCurrentCell();
-
+                this._isDelete = false;
+                this.SetPreviousRow();
+                this.StayCurrentRow();
+                errorProvider.Clear();
                 return;
             }
 
             insertRequestBinding.EndEdit();
-            this.RegisterPositionEvent(false);
-            var request = this._previousInsertRequest;
-            var isValid = this.ValidateControl(request, this.ErrorProvider, out var errorValidationResults);
+            this.RegisterChangeRowEvent(false);
+            var isValid = this.ValidateControl(insertRequest, errorProvider, out var errorValidationResults);
             if (!isValid)
             {
-                this.SetGridCurrentCell();
-                this.RegisterPositionEvent(true);
+                this.StayCurrentRow();
+                this.RegisterChangeRowEvent(true);
                 return;
             }
 
-            this.ErrorProvider.Clear();
-            this.RegisterPositionEvent(true);
-            this.SetPreviousBindState();
+            errorProvider.Clear();
+
+            this.RegisterChangeRowEvent(true);
+            this.SetPreviousRow();
         }
 
         private void InsertRequest_DataGridView_SelectionChanged(object sender, EventArgs e)
         {
-            if (this._cancelEdit)
+            if (this._isDelete)
             {
-                this._cancelEdit = true;
+                this._isDelete = false;
                 return;
             }
 
-            var insertRequestGrid = (DataGridView) sender;
-            this.RegisterPositionEvent(false);
-            var previousCell = this.InsertRequest_DataGridView[0, this._previousBindingPosition];
-            insertRequestGrid.CurrentCell = previousCell;
-            this.RegisterPositionEvent(true);
+            this.RegisterChangeRowEvent(false);
+            this.StayCurrentRow();
+            this.RegisterChangeRowEvent(true);
         }
 
-        private void RegisterPositionEvent(bool isRegister)
+        private void RegisterChangeRowEvent(bool isRegister)
         {
             var requestBinding = this.InsertRequest_BindingSource;
             var dataGridView   = this.InsertRequest_DataGridView;
@@ -120,21 +126,29 @@ namespace WindowsFormsApp1
             }
         }
 
-        private void SetGridCurrentCell()
-        {
-            this.InsertRequest_DataGridView.ClearSelection();
-            this.InsertRequest_DataGridView
-                .Rows[this._previousBindingPosition]
-                .Selected = true;
-            var previousCell = this.InsertRequest_DataGridView[0, this._previousBindingPosition];
-            this.InsertRequest_DataGridView.CurrentCell = previousCell;
-        }
-
-        private void SetPreviousBindState()
+        private void SetPreviousRow()
         {
             var insertRequestBinding = this.InsertRequest_BindingSource;
             this._previousBindingPosition = insertRequestBinding.Position;
             this._previousInsertRequest   = insertRequestBinding.Current as InsertRequest;
+            if (this._previousInsertRequest.Birthday.HasValue)
+            {
+                this.Birthday_DateTimePicker.CustomFormat = DateTimeFormat;
+            }
+        }
+
+        private void StayCurrentRow()
+        {
+            var insertRequestGrid = this.InsertRequest_DataGridView;
+            var insertRequestBind = this.InsertRequest_BindingSource;
+
+            insertRequestGrid.ClearSelection();
+            insertRequestGrid
+                .Rows[this._previousBindingPosition]
+                .Selected = true;
+            var previousCell = insertRequestGrid[0, this._previousBindingPosition];
+            insertRequestGrid.CurrentCell = previousCell;
+            insertRequestBind.Position    = this._previousBindingPosition;
         }
     }
 }

@@ -8,13 +8,13 @@ namespace WindowsFormsApp1.Member
 {
     public class InsertRequest : INotifyPropertyChanged
     {
-        private Guid _id;
+        private Guid? _id;
         private string _name;
-        private DateTime _birthday;
-        private int _age;
+        private DateTime? _birthday;
+        private int? _age;
 
         [Required]
-        public Guid Id
+        public Guid? Id
         {
             get => this._id;
             set
@@ -41,7 +41,7 @@ namespace WindowsFormsApp1.Member
         }
 
         [Required]
-        public DateTime Birthday
+        public DateTime? Birthday
         {
             get => this._birthday;
             set
@@ -54,7 +54,8 @@ namespace WindowsFormsApp1.Member
         }
 
         [Range(1, 150)]
-        public int Age
+        [Required]
+        public int? Age
         {
             get => this._age;
             set
