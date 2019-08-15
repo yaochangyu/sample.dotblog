@@ -10,5 +10,5 @@ Scenario: 加法
 	When I press add
 	Then the result should be 120 on the screen
 
-Scenario: 呼叫加法
+Scenario: 呼叫加法11
 	Given I press add and the result should be success

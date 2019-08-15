@@ -115,11 +115,11 @@ this.ScenarioInitialize(scenarioInfo);
         }
         
         [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("呼叫加法")]
+        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("呼叫加法11")]
         [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "計算機V2")]
-        public virtual void 呼叫加法()
+        public virtual void 呼叫加法11()
         {
-            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("呼叫加法", null, ((string[])(null)));
+            TechTalk.SpecFlow.ScenarioInfo scenarioInfo = new TechTalk.SpecFlow.ScenarioInfo("呼叫加法11", null, ((string[])(null)));
 #line 13
 this.ScenarioInitialize(scenarioInfo);
             this.ScenarioStart();
