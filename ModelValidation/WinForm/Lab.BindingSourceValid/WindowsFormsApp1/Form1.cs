@@ -7,10 +7,10 @@ namespace WindowsFormsApp1
 {
     public partial class Form1 : Form
     {
-        private bool          _isDelete;
-        private int           _previousBindingPosition;
-        private InsertRequest _previousInsertRequest;
-        private static string DateTimeFormat = "yyyy/MM/dd hh:mm:ss";
+        private static readonly string        DateTimeFormat = "yyyy/MM/dd hh:mm:ss";
+        private                 bool          _isDelete;
+        private                 int           _previousBindingPosition;
+        private                 InsertRequest _previousInsertRequest;
 
         public Form1()
         {
@@ -141,9 +141,10 @@ namespace WindowsFormsApp1
             var insertRequestBind = this.InsertRequest_BindingSource;
 
             insertRequestGrid.ClearSelection();
-            insertRequestGrid
-                .Rows[this._previousBindingPosition]
-                .Selected = true;
+            //insertRequestGrid
+            //    .Rows[this._previousBindingPosition]
+            //    .Selected = true;
+            insertRequestGrid.Rows[this._previousBindingPosition].Selected = true;
             var previousCell = insertRequestGrid[0, this._previousBindingPosition];
             insertRequestGrid.CurrentCell = previousCell;
             insertRequestBind.Position    = this._previousBindingPosition;
