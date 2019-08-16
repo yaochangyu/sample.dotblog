@@ -16,7 +16,7 @@ namespace Lab.Compress.ViaDecompressHandler.UnitTest
             var url  = "api/test/Decompression";
             var data = CreateData();
 
-            var content = new CompressContent(new StringContent(data, Encoding.UTF8, "application/json"),
+            var content = new CompressContent(new StringContent(data, Encoding.UTF8, "text/plain"),
                                               CompressMethod.Deflate);
 
             var request = new HttpRequestMessage(HttpMethod.Post, url)
@@ -35,7 +35,7 @@ namespace Lab.Compress.ViaDecompressHandler.UnitTest
             var url  = "api/test/Decompression";
             var data = CreateData();
 
-            var content = new CompressContent(new StringContent(data, Encoding.UTF8, "application/json"),
+            var content = new CompressContent(new StringContent(data, Encoding.UTF8, "text/plain"),
                                               CompressMethod.GZip);
 
             var request = new HttpRequestMessage(HttpMethod.Post, url)
