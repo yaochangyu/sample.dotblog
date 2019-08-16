@@ -42,7 +42,7 @@ namespace Lab.Compress.ViaDecompressHandler.UnitTest
             {
                 Content = content
             };
-            var client   = new HttpClient {BaseAddress = new Uri("http://localhost:9529")};
+            var client   = MsTestHook.Client;
             var response = client.SendAsync(request).Result;
             var result   = response.Content.ReadAsStringAsync().Result;
             Assert.AreEqual(response.StatusCode, HttpStatusCode.OK);

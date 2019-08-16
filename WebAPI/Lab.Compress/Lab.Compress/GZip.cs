@@ -25,26 +25,6 @@ namespace Lab.Compress
             }
         }
 
-        public static byte[] Compress1(byte[] sourceBytes)
-        {
-            if (sourceBytes == null)
-            {
-                return null;
-            }
-
-            using (var output = new MemoryStream())
-            {
-                using (var compressor = new GZipStream(output,
-                                                       CompressionMode.Compress,
-                                                       CompressionLevel.BestSpeed))
-                {
-                    compressor.Write(sourceBytes, 0, sourceBytes.Length);
-                }
-
-                return output.ToArray();
-            }
-        }
-
         public static byte[] Decompress(byte[] sourceBytes)
         {
             using (var compressedStream = new MemoryStream(sourceBytes))
@@ -55,26 +35,6 @@ namespace Lab.Compress
             {
                 zipStream.CopyTo(outputStream);
                 return outputStream.ToArray();
-            }
-        }
-
-        public static byte[] Decompress1(byte[] sourceBytes)
-        {
-            if (sourceBytes == null)
-            {
-                return null;
-            }
-
-            using (var output = new MemoryStream())
-            {
-                using (var compressor = new GZipStream(output,
-                                                       CompressionMode.Decompress,
-                                                       CompressionLevel.BestSpeed))
-                {
-                    compressor.Write(sourceBytes, 0, sourceBytes.Length);
-                }
-
-                return output.ToArray();
             }
         }
     }
