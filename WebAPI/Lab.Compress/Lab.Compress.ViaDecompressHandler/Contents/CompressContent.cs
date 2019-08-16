@@ -35,7 +35,9 @@ namespace Lab.Compress.ViaDecompressHandler
             if (this._compressionMethod == CompressMethod.GZip)
             {
                 using (var gzipStream = new GZipStream(stream, 
-                                                       CompressionMode.Compress))
+                                                       CompressionMode.Compress,
+                                                       CompressionLevel.BestSpeed,
+                                                       true))
                 {
                     await this._originalContent.CopyToAsync(gzipStream);
                 }
@@ -43,7 +45,9 @@ namespace Lab.Compress.ViaDecompressHandler
             else if (this._compressionMethod == CompressMethod.Deflate)
             {
                 using (var deflateStream = new DeflateStream(stream, 
-                                                             CompressionMode.Compress))
+                                                             CompressionMode.Compress,
+                                                             CompressionLevel.BestSpeed,
+                                                             true))
                 {
                     await this._originalContent.CopyToAsync(deflateStream);
                 }
