@@ -7,16 +7,16 @@
     <ProductVersion>
     </ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{27065B5F-D7A7-4CEC-8CE9-385F50003C0A}</ProjectGuid>
+    <ProjectGuid>{D121E383-42F4-4B3A-BD3C-F7BB46C4BFA3}</ProjectGuid>
     <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Lab.Compress</RootNamespace>
-    <AssemblyName>Lab.Compress</AssemblyName>
+    <RootNamespace>Lab.Compress.ViaDecompressHandler</RootNamespace>
+    <AssemblyName>Lab.Compress.ViaDecompressHandler</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <UseIISExpress>true</UseIISExpress>
     <Use64BitIISExpress />
-    <IISExpressSSLPort>44339</IISExpressSSLPort>
+    <IISExpressSSLPort>44341</IISExpressSSLPort>
     <IISExpressAnonymousAuthentication />
     <IISExpressWindowsAuthentication />
     <IISExpressUseClassicPipelineMode />
@@ -118,21 +118,18 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\RouteConfig.cs" />
-    <Compile Include="App_Start\SwaggerConfig.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
-    <Compile Include="GZip.cs" />
+    <Compile Include="Contents\CompressContent.cs" />
+    <Compile Include="Contents\CompressMethod.cs" />
     <Compile Include="Controllers\DefaultController.cs" />
     <Compile Include="Controllers\TestController.cs" />
-    <Compile Include="Deflate.cs" />
-    <Compile Include="Filters\CompressContentAttribute.cs" />
-    <Compile Include="Filters\DeflateCompressionAttribute.cs" />
-    <Compile Include="Filters\DeflateDecompressionAttribute.cs" />
-    <Compile Include="Filters\GZipCompressionAttribute.cs" />
-    <Compile Include="Filters\GZipDecompressionAttribute.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="Handlers\DecompressHandler.cs" />
+    <Compile Include="Handlers\DecompressHandler2.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="App_Start\SwaggerConfig.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Views\web.config" />
@@ -161,9 +158,9 @@
         <WebProjectProperties>
           <UseIIS>True</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>8039</DevelopmentServerPort>
+          <DevelopmentServerPort>2510</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>https://localhost:44339/</IISUrl>
+          <IISUrl>https://localhost:44341/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>

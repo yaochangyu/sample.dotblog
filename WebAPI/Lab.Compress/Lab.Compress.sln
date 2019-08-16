@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Compress", "Lab.Compres
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Compress.UnitTest", "Lab.Compress.UnitTest\Lab.Compress.UnitTest.csproj", "{B83E3345-26D1-46BB-8751-186B33C688CA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Compress.ViaDecompressHandler", "Lab.Compress.ViaDecompressHandler\Lab.Compress.ViaDecompressHandler.csproj", "{D121E383-42F4-4B3A-BD3C-F7BB46C4BFA3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Compress.ViaDecompressHandler.UnitTest", "Lab.Compress.ViaDecompressHandler.UnitTest\Lab.Compress.ViaDecompressHandler.UnitTest.csproj", "{36379FB3-4EDD-4AE6-92A3-6E76F539EF46}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{B83E3345-26D1-46BB-8751-186B33C688CA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B83E3345-26D1-46BB-8751-186B33C688CA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B83E3345-26D1-46BB-8751-186B33C688CA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D121E383-42F4-4B3A-BD3C-F7BB46C4BFA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D121E383-42F4-4B3A-BD3C-F7BB46C4BFA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D121E383-42F4-4B3A-BD3C-F7BB46C4BFA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D121E383-42F4-4B3A-BD3C-F7BB46C4BFA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36379FB3-4EDD-4AE6-92A3-6E76F539EF46}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36379FB3-4EDD-4AE6-92A3-6E76F539EF46}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36379FB3-4EDD-4AE6-92A3-6E76F539EF46}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36379FB3-4EDD-4AE6-92A3-6E76F539EF46}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
