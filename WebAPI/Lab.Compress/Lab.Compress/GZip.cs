@@ -16,7 +16,8 @@ namespace Lab.Compress
             {
                 using (var zipStream = new GZipStream(outputStream,
                                                       CompressionMode.Compress,
-                                                      CompressionLevel.BestSpeed))
+                                                      CompressionLevel.BestSpeed,
+                                                      true))
                 {
                     zipStream.Write(sourceBytes, 0, sourceBytes.Length);
                 }
