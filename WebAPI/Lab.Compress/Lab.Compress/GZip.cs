@@ -30,7 +30,9 @@ namespace Lab.Compress
             using (var compressedStream = new MemoryStream(sourceBytes))
             using (var zipStream = new GZipStream(compressedStream,
                                                   CompressionMode.Decompress,
-                                                  CompressionLevel.BestSpeed))
+                                                  CompressionLevel.BestSpeed,
+                                                  true))
+
             using (var outputStream = new MemoryStream())
             {
                 zipStream.CopyTo(outputStream);

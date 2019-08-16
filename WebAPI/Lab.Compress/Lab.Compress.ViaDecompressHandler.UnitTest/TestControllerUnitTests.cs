@@ -11,7 +11,7 @@ namespace Lab.Compress.ViaDecompressHandler.UnitTest
     public class TestControllerUnitTests
     {
         [TestMethod]
-        public void 用戶端用CompressContent_Deflate壓縮_伺服器端解壓縮()
+        public void Client_DeflateCompressHttpContent_Server_DeflateHandlerDecompress()
         {
             var url  = "api/test/Decompression";
             var data = CreateData();
@@ -30,7 +30,7 @@ namespace Lab.Compress.ViaDecompressHandler.UnitTest
         }
 
         [TestMethod]
-        public void 用戶端用CompressContent_GZip壓縮_伺服器端解壓縮()
+        public void Client_GZipCompressHttpContent_Server_GZipHandlerDecompress()
         {
             var url  = "api/test/Decompression";
             var data = CreateData();
