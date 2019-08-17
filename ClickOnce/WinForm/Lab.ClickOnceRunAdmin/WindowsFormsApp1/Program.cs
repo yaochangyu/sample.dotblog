@@ -30,11 +30,12 @@ namespace WindowsFormsApp1
         [STAThread]
         private static void Main(string[] args)
         {
-            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
-            Application.ThreadException                += Unhandled_Application_ThreadException;
-            AppDomain.CurrentDomain.UnhandledException += Unhandled_CurrentDomain_UnhandledException;
+            //TODO:捕捉全域例外
+            GlobalErrorHandler();
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
             if (AppManager.IsRunningAsAdministrator())
             {
                 if (AppManager.IsAdminAlreadyRunning())
@@ -67,6 +68,18 @@ namespace WindowsFormsApp1
                 //TODO:主執行緒堵塞
                 AppManager.RunAsAdminAndWait(s_process);
             }
+        }
+
+        private static void GlobalErrorHandler()
+        {
+            throw new NotImplementedException();
+        }
+
+        private static void GolbalErrorHandler()
+        {
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+            Application.ThreadException                += Unhandled_Application_ThreadException;
+            AppDomain.CurrentDomain.UnhandledException += Unhandled_CurrentDomain_UnhandledException;
         }
 
         private static void CheckUpdateWithEvent(int checkInterval)

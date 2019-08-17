@@ -59,6 +59,7 @@
     <Compile Include="AppDeployInfo.cs" />
     <Compile Include="AppManager.cs" />
     <Compile Include="assembly.cs" />
+    <Compile Include="CommandArgs.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>

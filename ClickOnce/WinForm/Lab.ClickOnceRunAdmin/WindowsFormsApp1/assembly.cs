@@ -1,736 +1,489 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using System.ComponentModel;
+using System.Xml.Schema;
+using System.Xml.Serialization;
 
 namespace WindowsFormsApp1
 {
-
     // NOTE: Generated code may require at least .NET Framework 4.5 or .NET Core/Standard 2.0.
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v1")]
-    [System.Xml.Serialization.XmlRootAttribute(Namespace = "urn:schemas-microsoft-com:asm.v1", IsNullable = false)]
-    public partial class assembly
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true, Namespace                                = "urn:schemas-microsoft-com:asm.v1")]
+    [XmlRoot(Namespace     = "urn:schemas-microsoft-com:asm.v1", IsNullable = false)]
+    public class assembly
     {
+        /// <remarks />
+        public assemblyAssemblyIdentity assemblyIdentity
+        {
+            get => this.assemblyIdentityField;
+            set => this.assemblyIdentityField = value;
+        }
+
+        /// <remarks />
+        public assemblyDescription description
+        {
+            get => this.descriptionField;
+            set => this.descriptionField = value;
+        }
+
+        /// <remarks />
+        [XmlElement(Namespace = "urn:schemas-microsoft-com:asm.v2")]
+        public deployment deployment
+        {
+            get => this.deploymentField;
+            set => this.deploymentField = value;
+        }
+
+        /// <remarks />
+        [XmlElement(Namespace = "urn:schemas-microsoft-com:clickonce.v2")]
+        public compatibleFrameworks compatibleFrameworks
+        {
+            get => this.compatibleFrameworksField;
+            set => this.compatibleFrameworksField = value;
+        }
+
+        /// <remarks />
+        [XmlElement(Namespace = "urn:schemas-microsoft-com:asm.v2")]
+        public dependency dependency
+        {
+            get => this.dependencyField;
+            set => this.dependencyField = value;
+        }
+
+        /// <remarks />
+        [XmlAttribute]
+        public decimal manifestVersion
+        {
+            get => this.manifestVersionField;
+            set => this.manifestVersionField = value;
+        }
 
         private assemblyAssemblyIdentity assemblyIdentityField;
-
-        private assemblyDescription descriptionField;
-
-        private deployment deploymentField;
 
         private compatibleFrameworks compatibleFrameworksField;
 
         private dependency dependencyField;
 
+        private deployment deploymentField;
+
+        private assemblyDescription descriptionField;
+
         private decimal manifestVersionField;
-
-        /// <remarks/>
-        public assemblyAssemblyIdentity assemblyIdentity
-        {
-            get
-            {
-                return this.assemblyIdentityField;
-            }
-            set
-            {
-                this.assemblyIdentityField = value;
-            }
-        }
-
-        /// <remarks/>
-        public assemblyDescription description
-        {
-            get
-            {
-                return this.descriptionField;
-            }
-            set
-            {
-                this.descriptionField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(Namespace = "urn:schemas-microsoft-com:asm.v2")]
-        public deployment deployment
-        {
-            get
-            {
-                return this.deploymentField;
-            }
-            set
-            {
-                this.deploymentField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(Namespace = "urn:schemas-microsoft-com:clickonce.v2")]
-        public compatibleFrameworks compatibleFrameworks
-        {
-            get
-            {
-                return this.compatibleFrameworksField;
-            }
-            set
-            {
-                this.compatibleFrameworksField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(Namespace = "urn:schemas-microsoft-com:asm.v2")]
-        public dependency dependency
-        {
-            get
-            {
-                return this.dependencyField;
-            }
-            set
-            {
-                this.dependencyField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public decimal manifestVersion
-        {
-            get
-            {
-                return this.manifestVersionField;
-            }
-            set
-            {
-                this.manifestVersionField = value;
-            }
-        }
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v1")]
-    public partial class assemblyAssemblyIdentity
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v1")]
+    public class assemblyAssemblyIdentity
     {
+        /// <remarks />
+        [XmlAttribute]
+        public string name
+        {
+            get => this.nameField;
+            set => this.nameField = value;
+        }
 
-        private string nameField;
+        /// <remarks />
+        [XmlAttribute]
+        public string version
+        {
+            get => this.versionField;
+            set => this.versionField = value;
+        }
 
-        private string versionField;
+        /// <remarks />
+        [XmlAttribute]
+        public byte publicKeyToken
+        {
+            get => this.publicKeyTokenField;
+            set => this.publicKeyTokenField = value;
+        }
 
-        private byte publicKeyTokenField;
+        /// <remarks />
+        [XmlAttribute]
+        public string language
+        {
+            get => this.languageField;
+            set => this.languageField = value;
+        }
+
+        /// <remarks />
+        [XmlAttribute]
+        public string processorArchitecture
+        {
+            get => this.processorArchitectureField;
+            set => this.processorArchitectureField = value;
+        }
 
         private string languageField;
 
+        private string nameField;
+
         private string processorArchitectureField;
 
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string name
-        {
-            get
-            {
-                return this.nameField;
-            }
-            set
-            {
-                this.nameField = value;
-            }
-        }
+        private byte publicKeyTokenField;
 
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string version
-        {
-            get
-            {
-                return this.versionField;
-            }
-            set
-            {
-                this.versionField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public byte publicKeyToken
-        {
-            get
-            {
-                return this.publicKeyTokenField;
-            }
-            set
-            {
-                this.publicKeyTokenField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string language
-        {
-            get
-            {
-                return this.languageField;
-            }
-            set
-            {
-                this.languageField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string processorArchitecture
-        {
-            get
-            {
-                return this.processorArchitectureField;
-            }
-            set
-            {
-                this.processorArchitectureField = value;
-            }
-        }
+        private string versionField;
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v1")]
-    public partial class assemblyDescription
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v1")]
+    public class assemblyDescription
     {
+        /// <remarks />
+        [XmlAttribute(Form = XmlSchemaForm.Qualified, Namespace = "urn:schemas-microsoft-com:asm.v2")]
+        public string publisher
+        {
+            get => this.publisherField;
+            set => this.publisherField = value;
+        }
 
-        private string publisherField;
+        /// <remarks />
+        [XmlAttribute(Form = XmlSchemaForm.Qualified, Namespace = "urn:schemas-microsoft-com:asm.v2")]
+        public string product
+        {
+            get => this.productField;
+            set => this.productField = value;
+        }
 
         private string productField;
 
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute(Form = System.Xml.Schema.XmlSchemaForm.Qualified, Namespace = "urn:schemas-microsoft-com:asm.v2")]
-        public string publisher
-        {
-            get
-            {
-                return this.publisherField;
-            }
-            set
-            {
-                this.publisherField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute(Form = System.Xml.Schema.XmlSchemaForm.Qualified, Namespace = "urn:schemas-microsoft-com:asm.v2")]
-        public string product
-        {
-            get
-            {
-                return this.productField;
-            }
-            set
-            {
-                this.productField = value;
-            }
-        }
+        private string publisherField;
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v2")]
-    [System.Xml.Serialization.XmlRootAttribute(Namespace = "urn:schemas-microsoft-com:asm.v2", IsNullable = false)]
-    public partial class deployment
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true, Namespace                                = "urn:schemas-microsoft-com:asm.v2")]
+    [XmlRoot(Namespace     = "urn:schemas-microsoft-com:asm.v2", IsNullable = false)]
+    public class deployment
     {
+        /// <remarks />
+        [XmlAttribute]
+        public bool install
+        {
+            get => this.installField;
+            set => this.installField = value;
+        }
+
+        /// <remarks />
+        [XmlAttribute]
+        public bool mapFileExtensions
+        {
+            get => this.mapFileExtensionsField;
+            set => this.mapFileExtensionsField = value;
+        }
+
+        /// <remarks />
+        [XmlAttribute]
+        public bool trustURLParameters
+        {
+            get => this.trustURLParametersField;
+            set => this.trustURLParametersField = value;
+        }
+
+        /// <remarks />
+        [XmlAttribute(Form = XmlSchemaForm.Qualified, Namespace = "urn:schemas-microsoft-com:clickonce.v1")]
+        public bool createDesktopShortcut
+        {
+            get => this.createDesktopShortcutField;
+            set => this.createDesktopShortcutField = value;
+        }
+
+        private bool createDesktopShortcutField;
 
         private bool installField;
 
         private bool mapFileExtensionsField;
 
         private bool trustURLParametersField;
-
-        private bool createDesktopShortcutField;
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public bool install
-        {
-            get
-            {
-                return this.installField;
-            }
-            set
-            {
-                this.installField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public bool mapFileExtensions
-        {
-            get
-            {
-                return this.mapFileExtensionsField;
-            }
-            set
-            {
-                this.mapFileExtensionsField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public bool trustURLParameters
-        {
-            get
-            {
-                return this.trustURLParametersField;
-            }
-            set
-            {
-                this.trustURLParametersField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute(Form = System.Xml.Schema.XmlSchemaForm.Qualified, Namespace = "urn:schemas-microsoft-com:clickonce.v1")]
-        public bool createDesktopShortcut
-        {
-            get
-            {
-                return this.createDesktopShortcutField;
-            }
-            set
-            {
-                this.createDesktopShortcutField = value;
-            }
-        }
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:clickonce.v2")]
-    [System.Xml.Serialization.XmlRootAttribute(Namespace = "urn:schemas-microsoft-com:clickonce.v2", IsNullable = false)]
-    public partial class compatibleFrameworks
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true,
+        Namespace          = "urn:schemas-microsoft-com:clickonce.v2")]
+    [XmlRoot(Namespace = "urn:schemas-microsoft-com:clickonce.v2", IsNullable = false)]
+    public class compatibleFrameworks
     {
-
-        private compatibleFrameworksFramework frameworkField;
-
-        /// <remarks/>
+        /// <remarks />
         public compatibleFrameworksFramework framework
         {
-            get
-            {
-                return this.frameworkField;
-            }
-            set
-            {
-                this.frameworkField = value;
-            }
+            get => this.frameworkField;
+            set => this.frameworkField = value;
         }
+
+        private compatibleFrameworksFramework frameworkField;
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:clickonce.v2")]
-    public partial class compatibleFrameworksFramework
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:clickonce.v2")]
+    public class compatibleFrameworksFramework
     {
+        /// <remarks />
+        [XmlAttribute]
+        public string targetVersion
+        {
+            get => this.targetVersionField;
+            set => this.targetVersionField = value;
+        }
 
-        private string targetVersionField;
+        /// <remarks />
+        [XmlAttribute]
+        public string profile
+        {
+            get => this.profileField;
+            set => this.profileField = value;
+        }
+
+        /// <remarks />
+        [XmlAttribute]
+        public string supportedRuntime
+        {
+            get => this.supportedRuntimeField;
+            set => this.supportedRuntimeField = value;
+        }
 
         private string profileField;
 
         private string supportedRuntimeField;
 
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string targetVersion
-        {
-            get
-            {
-                return this.targetVersionField;
-            }
-            set
-            {
-                this.targetVersionField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string profile
-        {
-            get
-            {
-                return this.profileField;
-            }
-            set
-            {
-                this.profileField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string supportedRuntime
-        {
-            get
-            {
-                return this.supportedRuntimeField;
-            }
-            set
-            {
-                this.supportedRuntimeField = value;
-            }
-        }
+        private string targetVersionField;
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v2")]
-    [System.Xml.Serialization.XmlRootAttribute(Namespace = "urn:schemas-microsoft-com:asm.v2", IsNullable = false)]
-    public partial class dependency
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true, Namespace                                = "urn:schemas-microsoft-com:asm.v2")]
+    [XmlRoot(Namespace     = "urn:schemas-microsoft-com:asm.v2", IsNullable = false)]
+    public class dependency
     {
-
-        private dependencyDependentAssembly dependentAssemblyField;
-
-        /// <remarks/>
+        /// <remarks />
         public dependencyDependentAssembly dependentAssembly
         {
-            get
-            {
-                return this.dependentAssemblyField;
-            }
-            set
-            {
-                this.dependentAssemblyField = value;
-            }
+            get => this.dependentAssemblyField;
+            set => this.dependentAssemblyField = value;
         }
+
+        private dependencyDependentAssembly dependentAssemblyField;
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v2")]
-    public partial class dependencyDependentAssembly
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v2")]
+    public class dependencyDependentAssembly
     {
+        /// <remarks />
+        public dependencyDependentAssemblyAssemblyIdentity assemblyIdentity
+        {
+            get => this.assemblyIdentityField;
+            set => this.assemblyIdentityField = value;
+        }
+
+        /// <remarks />
+        public dependencyDependentAssemblyHash hash
+        {
+            get => this.hashField;
+            set => this.hashField = value;
+        }
+
+        /// <remarks />
+        [XmlAttribute]
+        public string dependencyType
+        {
+            get => this.dependencyTypeField;
+            set => this.dependencyTypeField = value;
+        }
+
+        /// <remarks />
+        [XmlAttribute]
+        public string codebase
+        {
+            get => this.codebaseField;
+            set => this.codebaseField = value;
+        }
+
+        /// <remarks />
+        [XmlAttribute]
+        public ushort size
+        {
+            get => this.sizeField;
+            set => this.sizeField = value;
+        }
 
         private dependencyDependentAssemblyAssemblyIdentity assemblyIdentityField;
 
-        private dependencyDependentAssemblyHash hashField;
+        private string codebaseField;
 
         private string dependencyTypeField;
 
-        private string codebaseField;
+        private dependencyDependentAssemblyHash hashField;
 
         private ushort sizeField;
-
-        /// <remarks/>
-        public dependencyDependentAssemblyAssemblyIdentity assemblyIdentity
-        {
-            get
-            {
-                return this.assemblyIdentityField;
-            }
-            set
-            {
-                this.assemblyIdentityField = value;
-            }
-        }
-
-        /// <remarks/>
-        public dependencyDependentAssemblyHash hash
-        {
-            get
-            {
-                return this.hashField;
-            }
-            set
-            {
-                this.hashField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string dependencyType
-        {
-            get
-            {
-                return this.dependencyTypeField;
-            }
-            set
-            {
-                this.dependencyTypeField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string codebase
-        {
-            get
-            {
-                return this.codebaseField;
-            }
-            set
-            {
-                this.codebaseField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public ushort size
-        {
-            get
-            {
-                return this.sizeField;
-            }
-            set
-            {
-                this.sizeField = value;
-            }
-        }
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v2")]
-    public partial class dependencyDependentAssemblyAssemblyIdentity
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v2")]
+    public class dependencyDependentAssemblyAssemblyIdentity
     {
+        /// <remarks />
+        [XmlAttribute]
+        public string name
+        {
+            get => this.nameField;
+            set => this.nameField = value;
+        }
 
-        private string nameField;
+        /// <remarks />
+        [XmlAttribute]
+        public string version
+        {
+            get => this.versionField;
+            set => this.versionField = value;
+        }
 
-        private string versionField;
+        /// <remarks />
+        [XmlAttribute]
+        public byte publicKeyToken
+        {
+            get => this.publicKeyTokenField;
+            set => this.publicKeyTokenField = value;
+        }
 
-        private byte publicKeyTokenField;
+        /// <remarks />
+        [XmlAttribute]
+        public string language
+        {
+            get => this.languageField;
+            set => this.languageField = value;
+        }
+
+        /// <remarks />
+        [XmlAttribute]
+        public string processorArchitecture
+        {
+            get => this.processorArchitectureField;
+            set => this.processorArchitectureField = value;
+        }
+
+        /// <remarks />
+        [XmlAttribute]
+        public string type
+        {
+            get => this.typeField;
+            set => this.typeField = value;
+        }
 
         private string languageField;
 
+        private string nameField;
+
         private string processorArchitectureField;
+
+        private byte publicKeyTokenField;
 
         private string typeField;
 
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string name
-        {
-            get
-            {
-                return this.nameField;
-            }
-            set
-            {
-                this.nameField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string version
-        {
-            get
-            {
-                return this.versionField;
-            }
-            set
-            {
-                this.versionField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public byte publicKeyToken
-        {
-            get
-            {
-                return this.publicKeyTokenField;
-            }
-            set
-            {
-                this.publicKeyTokenField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string language
-        {
-            get
-            {
-                return this.languageField;
-            }
-            set
-            {
-                this.languageField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string processorArchitecture
-        {
-            get
-            {
-                return this.processorArchitectureField;
-            }
-            set
-            {
-                this.processorArchitectureField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string type
-        {
-            get
-            {
-                return this.typeField;
-            }
-            set
-            {
-                this.typeField = value;
-            }
-        }
+        private string versionField;
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v2")]
-    public partial class dependencyDependentAssemblyHash
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true, Namespace = "urn:schemas-microsoft-com:asm.v2")]
+    public class dependencyDependentAssemblyHash
     {
+        /// <remarks />
+        [XmlElement(Namespace = "http://www.w3.org/2000/09/xmldsig#")]
+        public Transforms Transforms
+        {
+            get => this.transformsField;
+            set => this.transformsField = value;
+        }
 
-        private Transforms transformsField;
+        /// <remarks />
+        [XmlElement(Namespace = "http://www.w3.org/2000/09/xmldsig#")]
+        public DigestMethod DigestMethod
+        {
+            get => this.digestMethodField;
+            set => this.digestMethodField = value;
+        }
+
+        /// <remarks />
+        [XmlElement(Namespace = "http://www.w3.org/2000/09/xmldsig#")]
+        public string DigestValue
+        {
+            get => this.digestValueField;
+            set => this.digestValueField = value;
+        }
 
         private DigestMethod digestMethodField;
 
         private string digestValueField;
 
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(Namespace = "http://www.w3.org/2000/09/xmldsig#")]
-        public Transforms Transforms
-        {
-            get
-            {
-                return this.transformsField;
-            }
-            set
-            {
-                this.transformsField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(Namespace = "http://www.w3.org/2000/09/xmldsig#")]
-        public DigestMethod DigestMethod
-        {
-            get
-            {
-                return this.digestMethodField;
-            }
-            set
-            {
-                this.digestMethodField = value;
-            }
-        }
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlElementAttribute(Namespace = "http://www.w3.org/2000/09/xmldsig#")]
-        public string DigestValue
-        {
-            get
-            {
-                return this.digestValueField;
-            }
-            set
-            {
-                this.digestValueField = value;
-            }
-        }
+        private Transforms transformsField;
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://www.w3.org/2000/09/xmldsig#")]
-    [System.Xml.Serialization.XmlRootAttribute(Namespace = "http://www.w3.org/2000/09/xmldsig#", IsNullable = false)]
-    public partial class Transforms
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true, Namespace                                  = "http://www.w3.org/2000/09/xmldsig#")]
+    [XmlRoot(Namespace     = "http://www.w3.org/2000/09/xmldsig#", IsNullable = false)]
+    public class Transforms
     {
-
-        private TransformsTransform transformField;
-
-        /// <remarks/>
+        /// <remarks />
         public TransformsTransform Transform
         {
-            get
-            {
-                return this.transformField;
-            }
-            set
-            {
-                this.transformField = value;
-            }
+            get => this.transformField;
+            set => this.transformField = value;
         }
+
+        private TransformsTransform transformField;
     }
 
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://www.w3.org/2000/09/xmldsig#")]
-    public partial class TransformsTransform
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true, Namespace = "http://www.w3.org/2000/09/xmldsig#")]
+    public class TransformsTransform
     {
-
-        private string algorithmField;
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
+        /// <remarks />
+        [XmlAttribute]
         public string Algorithm
         {
-            get
-            {
-                return this.algorithmField;
-            }
-            set
-            {
-                this.algorithmField = value;
-            }
+            get => this.algorithmField;
+            set => this.algorithmField = value;
         }
-    }
-
-    /// <remarks/>
-    [System.SerializableAttribute()]
-    [System.ComponentModel.DesignerCategoryAttribute("code")]
-    [System.Xml.Serialization.XmlTypeAttribute(AnonymousType = true, Namespace = "http://www.w3.org/2000/09/xmldsig#")]
-    [System.Xml.Serialization.XmlRootAttribute(Namespace = "http://www.w3.org/2000/09/xmldsig#", IsNullable = false)]
-    public partial class DigestMethod
-    {
 
         private string algorithmField;
-
-        /// <remarks/>
-        [System.Xml.Serialization.XmlAttributeAttribute()]
-        public string Algorithm
-        {
-            get
-            {
-                return this.algorithmField;
-            }
-            set
-            {
-                this.algorithmField = value;
-            }
-        }
     }
 
+    /// <remarks />
+    [Serializable]
+    [DesignerCategory("code")]
+    [XmlType(AnonymousType = true, Namespace                                  = "http://www.w3.org/2000/09/xmldsig#")]
+    [XmlRoot(Namespace     = "http://www.w3.org/2000/09/xmldsig#", IsNullable = false)]
+    public class DigestMethod
+    {
+        /// <remarks />
+        [XmlAttribute]
+        public string Algorithm
+        {
+            get => this.algorithmField;
+            set => this.algorithmField = value;
+        }
+
+        private string algorithmField;
+    }
 }

@@ -2,7 +2,7 @@
 
 namespace WindowsFormsApp1
 {
-    internal class AppDeployInfo
+    public class AppDeployInfo
     {
         public string PublisherName { get; set; }
 
