@@ -30,7 +30,6 @@ namespace WindowsFormsApp1
         [STAThread]
         private static void Main(string[] args)
         {
-            //TODO:捕捉全域例外
             GlobalErrorHandler();
 
             Application.EnableVisualStyles();
@@ -65,21 +64,9 @@ namespace WindowsFormsApp1
                 //TODO:另一條執行緒檢查更新
                 StartCheckUpdateAsync(10000);
 
-                //TODO:主執行緒堵塞
-                AppManager.RunAsAdminAndWait(s_process);
+                //TODO:執行管理員身分，主執行緒堵塞
+                AppManager.RunAsAdminAndWaitForExit(s_process);
             }
-        }
-
-        private static void GlobalErrorHandler()
-        {
-            throw new NotImplementedException();
-        }
-
-        private static void GolbalErrorHandler()
-        {
-            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
-            Application.ThreadException                += Unhandled_Application_ThreadException;
-            AppDomain.CurrentDomain.UnhandledException += Unhandled_CurrentDomain_UnhandledException;
         }
 
         private static void CheckUpdateWithEvent(int checkInterval)
@@ -99,6 +86,7 @@ namespace WindowsFormsApp1
                     {
                         var updated = ApplicationDeployment.CurrentDeployment.Update();
                         s_isStart = false;
+                        s_process.Kill();
                     }
                 }
                 catch (Exception ex)
@@ -121,6 +109,13 @@ namespace WindowsFormsApp1
                     SpinWait.SpinUntil(() => !s_isStart, checkInterval);
                 }
             }
+        }
+
+        private static void GlobalErrorHandler()
+        {
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+            Application.ThreadException                += Unhandled_Application_ThreadException;
+            AppDomain.CurrentDomain.UnhandledException += Unhandled_CurrentDomain_UnhandledException;
         }
 
         private static void StartCheckUpdateAsync(int checkInterval)

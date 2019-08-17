@@ -164,7 +164,7 @@ namespace WindowsFormsApp1
             return windowsPrincipal.IsInRole(WindowsBuiltInRole.Administrator);
         }
 
-        public static void RunAsAdminAndWait(Process process = null)
+        public static void RunAsAdminAndWaitForExit(Process process = null)
         {
             if (!IsRunningAsAdministrator())
             {

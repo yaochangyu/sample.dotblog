@@ -259,8 +259,4 @@ paket-files/
 # Python Tools for Visual Studio (PTVS)
 __pycache__/
 *.pyc
-/Model/WinForm.ModelValidation
-/MVVM/Winform/Lab.Winform/BindDataAndCommand
-/WebAPI/Multi WebAPI On Single Host
-/ModelValidation/ClickOnce/MsBuild
-/Test/Specflow3/Lab.Specflow3/UnitTestProject1
+
