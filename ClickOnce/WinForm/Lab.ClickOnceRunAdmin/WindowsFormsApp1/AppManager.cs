@@ -166,32 +166,34 @@ namespace WindowsFormsApp1
 
         public static void RunAsAdminAndWaitForExit(Process process = null)
         {
-            if (!IsRunningAsAdministrator())
+            if (IsRunningAsAdministrator())
             {
-                try
-                {
-                    if (process == null)
-                    {
-                        process = CreateAdminProcess();
-                    }
+                return;
+            }
 
-                    process.Start();
-                    process.WaitForExit();
-                    Environment.Exit(1);
-                }
-                catch (Win32Exception ex)
+            try
+            {
+                if (process == null)
                 {
-                    if (ex.NativeErrorCode == 1223) //The operation was canceled by the user.
-                    {
-                        MessageBox.Show("Why did you not selected Yes?\r\nLet me one more time",
-                                        "Info",
-                                        MessageBoxButtons.OK,
-                                        MessageBoxIcon.Stop);
-                    }
-                    else
-                    {
-                        throw new Exception("Something went wrong :-(");
-                    }
+                    process = CreateAdminProcess();
+                }
+
+                process.Start();
+                process.WaitForExit();
+                Environment.Exit(1);
+            }
+            catch (Win32Exception ex)
+            {
+                if (ex.NativeErrorCode == 1223) //The operation was canceled by the user.
+                {
+                    MessageBox.Show("Why did you not selected Yes?\r\nLet me one more time",
+                                    "Info",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Stop);
+                }
+                else
+                {
+                    throw new Exception("Something went wrong :-(");
                 }
             }
         }
