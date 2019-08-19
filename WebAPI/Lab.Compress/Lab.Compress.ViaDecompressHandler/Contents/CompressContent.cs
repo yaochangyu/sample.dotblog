@@ -32,13 +32,16 @@ namespace Lab.Compress.ViaDecompressHandler
 
         protected override async Task SerializeToStreamAsync(Stream stream, TransportContext context)
         {
+            var bytes = this.StreamToBytes(stream);
+
             if (this._compressionMethod == CompressMethod.GZip)
             {
                 using (var gzipStream = new GZipStream(stream, 
                                                        CompressionMode.Compress,
-                                                       CompressionLevel.BestSpeed,
+                                                       CompressionLevel.BestCompression,
                                                        true))
                 {
+
                     await this._originalContent.CopyToAsync(gzipStream);
                 }
             }
@@ -46,7 +49,7 @@ namespace Lab.Compress.ViaDecompressHandler
             {
                 using (var deflateStream = new DeflateStream(stream, 
                                                              CompressionMode.Compress,
-                                                             CompressionLevel.BestSpeed,
+                                                             CompressionLevel.BestCompression,
                                                              true))
                 {
                     await this._originalContent.CopyToAsync(deflateStream);
@@ -54,6 +57,15 @@ namespace Lab.Compress.ViaDecompressHandler
             }
         }
 
+        private byte[] StreamToBytes(Stream stream)
+        {
+            byte[] bytes = new byte[stream.Length];
+            stream.Read(bytes, 0, bytes.Length);
+
+            // 設置當前流的位置為流的開始
+            stream.Seek(0, SeekOrigin.Begin);
+            return bytes;
+        }
         protected override bool TryComputeLength(out long length)
         {
             length = -1;

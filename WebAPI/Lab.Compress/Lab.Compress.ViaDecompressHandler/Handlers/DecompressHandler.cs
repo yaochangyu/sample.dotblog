@@ -26,7 +26,7 @@ namespace Lab.Compress.ViaDecompressHandler.Handlers
                     {
                         using (var gzipStream = new GZipStream(compressStream,
                                                                CompressionMode.Decompress,
-                                                               CompressionLevel.BestSpeed,
+                                                               CompressionLevel.BestCompression,
                                                                true))
                         {
                             await gzipStream.CopyToAsync(decompressStream);
@@ -36,7 +36,7 @@ namespace Lab.Compress.ViaDecompressHandler.Handlers
                     {
                         using (var gzipStream = new DeflateStream(compressStream,
                                                                   CompressionMode.Decompress,
-                                                                  CompressionLevel.BestSpeed,
+                                                                  CompressionLevel.BestCompression,
                                                                   true))
                         {
                             await gzipStream.CopyToAsync(decompressStream);
