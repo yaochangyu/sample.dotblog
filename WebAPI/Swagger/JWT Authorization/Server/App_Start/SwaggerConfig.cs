@@ -65,7 +65,7 @@ namespace Server
                         //
                         // NOTE: You must also configure 'EnableApiKeySupport' below in the SwaggerUI section
                         c.ApiKey("apiKey")
-                            .Description("JWT Authentication")
+                            .Description("Standard Authorization header using the Bearer scheme. Example: \"bearer {token}\"")
                             .Name("Authorization")
                             .In("header");
                         //c.ApiKey("apiKey")
