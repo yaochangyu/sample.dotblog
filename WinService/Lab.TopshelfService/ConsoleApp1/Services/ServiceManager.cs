@@ -29,7 +29,7 @@
 
             foreach (var service in Container._serviceCaches)
             {
-                ((IService) service.Value).Start();
+                service.Value.Start();
             }
 
             this._isStart = true;
@@ -44,7 +44,7 @@
 
             foreach (var service in Container._serviceCaches)
             {
-                ((IService) service.Value).Stop();
+                service.Value.Stop();
             }
 
             this._isStart = false;

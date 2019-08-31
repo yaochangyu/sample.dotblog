@@ -1,6 +1,6 @@
 ﻿namespace ConsoleApp1.Services
 {
-    internal interface IService
+    public interface IService
     {
         void Start();
 

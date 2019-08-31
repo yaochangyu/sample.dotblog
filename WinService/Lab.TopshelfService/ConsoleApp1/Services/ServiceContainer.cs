@@ -5,21 +5,21 @@ namespace ConsoleApp1.Services
 {
     public class ServiceContainer
     {
-        internal readonly Dictionary<Type, object> _serviceCaches;
+        internal readonly Dictionary<Type, IService> _serviceCaches;
 
         public ServiceContainer()
         {
             if (this._serviceCaches == null)
             {
-                this._serviceCaches = new Dictionary<Type, object>();
+                this._serviceCaches = new Dictionary<Type, IService>();
             }
         }
 
-        public void Add<T>()
+        public void Add<T>() where T : IService
         {
             var key     = typeof(T);
             var isExist = this._serviceCaches.TryGetValue(key, out var result);
-            var service = Activator.CreateInstance(key);
+            var service = Activator.CreateInstance(key) as IService;
             if (!isExist)
             {
                 this._serviceCaches.Add(key, service);
