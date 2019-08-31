@@ -1,12 +1,21 @@
 ﻿using System;
 using System.Timers;
+using NLog;
 
 namespace ConsoleApp1
 {
     public class DoThing
     {
         private readonly Timer _timer;
+        private static ILogger s_logger;
 
+        static DoThing()
+        {
+            if (s_logger==null)
+            {
+                s_logger = LogManager.GetCurrentClassLogger();
+            }
+        }
         public DoThing()
         {
             this._timer         =  new Timer(1000) { AutoReset = true };
@@ -16,13 +25,13 @@ namespace ConsoleApp1
         public void Start()
         {
             this._timer.Start();
-            Console.WriteLine($"Timer Start");
+            s_logger.Trace($"Timer Start");
         }
 
         public void Stop()
         {
             this._timer.Stop();
-            Console.WriteLine($"Timer Stop");
+            s_logger.Trace($"Timer Stop");
         }
     }
 }
