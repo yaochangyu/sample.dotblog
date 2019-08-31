@@ -8,11 +8,11 @@ namespace ConsoleApp1
     {
         private static void Main(string[] args)
         {
-            Topshelf.Configure();
+            WindowsServiceConfig.Configure();
         }
     }
 
-    class Topshelf
+    class WindowsServiceConfig
     {
         public static void Configure()
         {
