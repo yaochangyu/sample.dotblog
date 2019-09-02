@@ -1,4 +1,4 @@
-﻿namespace Server.UnitTest
+﻿namespace Server.UnitTest.Repositories
 {
     public class ProductRepository : IProductRepository
     {

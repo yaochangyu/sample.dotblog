@@ -1,4 +1,5 @@
 ﻿using System.Web.Http;
+using Server.UnitTest.Repositories;
 
 namespace Server.UnitTest.Controllers
 {

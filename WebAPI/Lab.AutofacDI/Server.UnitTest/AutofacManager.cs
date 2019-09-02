@@ -5,6 +5,7 @@ using Autofac;
 using Autofac.Core;
 using Autofac.Integration.WebApi;
 using Server.UnitTest.Controllers;
+using Server.UnitTest.Repositories;
 
 namespace Server.UnitTest
 {

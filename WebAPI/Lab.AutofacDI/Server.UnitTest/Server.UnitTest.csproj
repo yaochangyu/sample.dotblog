@@ -120,8 +120,8 @@
   <ItemGroup>
     <Compile Include="AutofacManager.cs" />
     <Compile Include="Controllers\DefaultController.cs" />
-    <Compile Include="IProductRepository.cs" />
-    <Compile Include="ProductRepository.cs" />
+    <Compile Include="Repositories\IProductRepository.cs" />
+    <Compile Include="Repositories\ProductRepository.cs" />
     <Compile Include="Startup.cs" />
     <Compile Include="UnitTest1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

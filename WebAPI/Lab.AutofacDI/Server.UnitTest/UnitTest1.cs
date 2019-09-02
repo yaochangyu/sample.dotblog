@@ -5,6 +5,7 @@ using Microsoft.Owin.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NSubstitute;
 using Server.UnitTest.Controllers;
+using Server.UnitTest.Repositories;
 
 namespace Server.UnitTest
 {
