@@ -12,7 +12,7 @@ namespace Server.UnitTest.Controllers
             this.ProductRepository = productRepository;
         }
 
-        // GET api/values/
+        // GET api/default/
         public string Get()
         {
             return this.ProductRepository.GetName();
