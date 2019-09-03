@@ -1,10 +1,8 @@
 ﻿using System.Reflection;
 using System.Web.Http;
-using System.Web.Http.Controllers;
 using Autofac;
 using Autofac.Core;
 using Autofac.Integration.WebApi;
-using Server.UnitTest.Controllers;
 using Server.UnitTest.Repositories;
 
 namespace Server.UnitTest
@@ -40,9 +38,9 @@ namespace Server.UnitTest
         {
             this.Container = builder.Build();
 
-            var container          = this.Container;
+            var container = this.Container;
 
-                     var dependencyResolver = new AutofacWebApiDependencyResolver(container);
+            var dependencyResolver = new AutofacWebApiDependencyResolver(container);
             this.HttpConfig.DependencyResolver = dependencyResolver;
 
             return container;

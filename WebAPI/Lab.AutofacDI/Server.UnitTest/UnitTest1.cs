@@ -47,12 +47,17 @@ namespace Server.UnitTest
         }
 
         [TestMethod]
-        public void When_Call_Get_Should_Be_Product2()
+        public void Given_ChangeInstance_When_Call_Get_Should_Be_FakeRepository2()
         {
+            var fakeRepository = Substitute.For<IProductRepository>();
+            fakeRepository.GetName().Returns("Fake Repository2");
+
+            SetProductRepository(fakeRepository);
+
             var url      = "api/Default";
             var response = s_client.GetAsync(url).Result;
             var result   = response.Content.ReadAsAsync<string>().Result;
-            Assert.AreEqual("Product2", result);
+            Assert.AreEqual("Fake Repository2", result);
         }
 
         [TestInitialize]
@@ -60,7 +65,16 @@ namespace Server.UnitTest
         {
             var autofacManager = Startup.AutofacManager;
             var builder        = autofacManager.CreateApiBuilder();
-            var container = autofacManager.CreateContainer(builder);
+            var container      = autofacManager.CreateContainer(builder);
+        }
+
+        [TestMethod]
+        public void When_Call_Get_Should_Be_Product2()
+        {
+            var url      = "api/Default";
+            var response = s_client.GetAsync(url).Result;
+            var result   = response.Content.ReadAsAsync<string>().Result;
+            Assert.AreEqual("Product2", result);
         }
 
         private static void SetDefaultController(IProductRepository repository)
