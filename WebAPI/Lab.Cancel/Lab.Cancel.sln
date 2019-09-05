@@ -1,0 +1,43 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29025.244
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Server\Server.csproj", "{2FDC6401-3471-41A9-909E-361203B9CB16}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client", "Client\Client.csproj", "{15E36498-2A57-41F7-AA5F-EF20C4E41233}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2FDC6401-3471-41A9-909E-361203B9CB16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2FDC6401-3471-41A9-909E-361203B9CB16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2FDC6401-3471-41A9-909E-361203B9CB16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2FDC6401-3471-41A9-909E-361203B9CB16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{15E36498-2A57-41F7-AA5F-EF20C4E41233}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15E36498-2A57-41F7-AA5F-EF20C4E41233}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15E36498-2A57-41F7-AA5F-EF20C4E41233}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15E36498-2A57-41F7-AA5F-EF20C4E41233}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B67E4ECB-1FD7-4881-B7FA-BA419BC3D8DB}
+	EndGlobalSection
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 3
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://ths-dev.nttp3.ths.com.tw/tfs/defaultcollection
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = Client\\Client.csproj
+		SccProjectName1 = Client
+		SccLocalPath1 = Client
+		SccProjectUniqueName2 = Server\\Server.csproj
+		SccProjectName2 = Server
+		SccLocalPath2 = Server
+	EndGlobalSection
+EndGlobal
