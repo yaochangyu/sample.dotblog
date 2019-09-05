@@ -1,6 +1,6 @@
 ﻿using System.Web.Http;
 using Owin;
-using Server;
+using Server1;
 
 namespace Client
 {
@@ -8,11 +8,12 @@ namespace Client
     {
         public void Configuration(IAppBuilder app)
         {
-            var configuration = new HttpConfiguration();
-            WebApiConfig.Register(configuration);
-            //app.UseErrorPage();
+            var httpConfig = new HttpConfiguration();
+            Route.Configure(httpConfig);
+            app.UseErrorPage();
+
             //app.UseWelcomePage("/Welcome");
-            app.UseWebApi(configuration);
+            app.UseWebApi(httpConfig);
         }
     }
 }

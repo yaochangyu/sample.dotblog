@@ -98,6 +98,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Configurations\Route.cs" />
     <Compile Include="Filters\CancellationTokenOperationFilter.cs" />
     <Compile Include="Controllers\DefaultController.cs" />
     <Compile Include="EntityModel\Product.cs" />
@@ -106,7 +107,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\ProductRepository.cs" />
     <Compile Include="Configurations\Startup.cs" />
-    <Compile Include="Configurations\SwaggerConfig.cs" />
+    <Compile Include="Configurations\Swagger.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

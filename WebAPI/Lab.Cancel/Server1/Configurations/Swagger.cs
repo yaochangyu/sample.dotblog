@@ -10,15 +10,15 @@ using Server1.Filters;
 using Swagger.Net.Application;
 using Swagger.Net;
 
-[assembly: PreApplicationStartMethod(typeof(SwaggerConfig), "Register")]
+[assembly: PreApplicationStartMethod(typeof(Server1.Swagger), "Register")]
 
 namespace Server1
 {
-    public class SwaggerConfig
+    public class Swagger
     {
-        public static void Register(HttpConfiguration config)
+        public static void Configure(HttpConfiguration config)
         {
-            var thisAssembly = typeof(SwaggerConfig).Assembly;
+            var thisAssembly = typeof(Swagger).Assembly;
 
             config.EnableSwagger(c =>
                     {
