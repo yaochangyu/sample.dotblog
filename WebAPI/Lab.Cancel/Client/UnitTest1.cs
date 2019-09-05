@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Owin.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NLog;
-using Server.EntityModel;
+using Server1.EntityModel;
 
 namespace Client
 {
@@ -144,8 +144,8 @@ namespace Client
                 request.ContinueWith(task =>
                                      {
                                          var status =
-                                             $"Status      = {task.Status}\r\n" +
-                                             $"IsCanceled  = {task.IsCanceled}\r\n" +
+                                             $"Status      = {task.Status}\r\n"      +
+                                             $"IsCanceled  = {task.IsCanceled}\r\n"  +
                                              $"IsCompleted = {task.IsCompleted}\r\n" +
                                              $"IsFaulted   = {task.IsFaulted}";
 
