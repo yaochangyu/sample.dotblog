@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Owin.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NLog;
+using Server.EntityModel;
 
 namespace Client
 {
@@ -33,6 +35,14 @@ namespace Client
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext context)
         {
+            using (var dbDbContext = TestDbContext.Create())
+            {
+                if (dbDbContext.Database.Exists() == false)
+                {
+                    dbDbContext.Database.Initialize(true);
+                }
+            }
+
             s_webApp = WebApp.Start<Startup>(HOST_ADDRESS);
 
             //Console.WriteLine("Web API started!");
@@ -112,6 +122,42 @@ namespace Client
             var response = await request;
             var content  = response.Content.ReadAsAsync<string>().Result;
             Assert.AreEqual("10", content);
+        }
+
+        [TestMethod]
+        public void InsertCancel()
+        {
+            var cancelToken = new CancellationTokenSource();
+
+            var url      = "api/Default";
+            var products = new List<Product>();
+            for (var i = 0; i < 10000; i++)
+            {
+                products.Add(new Product {Id = Guid.NewGuid(), Name = i.ToString()});
+            }
+
+            var request = s_client.PostAsJsonAsync(url, products, cancelToken.Token);
+
+            Task.Delay(10000).Wait();
+
+            var response =
+                request.ContinueWith(task =>
+                                     {
+                                         var status =
+                                             $"Status      = {task.Status}\r\n" +
+                                             $"IsCanceled  = {task.IsCanceled}\r\n" +
+                                             $"IsCompleted = {task.IsCompleted}\r\n" +
+                                             $"IsFaulted   = {task.IsFaulted}";
+
+                                         s_logger.Trace(status);
+                                         return task;
+                                     },
+                                     TaskContinuationOptions.None
+                                    );
+
+            cancelToken.Cancel();
+            Task.Delay(5000).Wait();
+            Task.WaitAll(response);
         }
     }
 }

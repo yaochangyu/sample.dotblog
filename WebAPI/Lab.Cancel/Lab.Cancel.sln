@@ -28,16 +28,4 @@ Global
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B67E4ECB-1FD7-4881-B7FA-BA419BC3D8DB}
 	EndGlobalSection
-	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 3
-		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccTeamFoundationServer = https://ths-dev.nttp3.ths.com.tw/tfs/defaultcollection
-		SccLocalPath0 = .
-		SccProjectUniqueName1 = Client\\Client.csproj
-		SccProjectName1 = Client
-		SccLocalPath1 = Client
-		SccProjectUniqueName2 = Server\\Server.csproj
-		SccProjectName2 = Server
-		SccLocalPath2 = Server
-	EndGlobalSection
 EndGlobal

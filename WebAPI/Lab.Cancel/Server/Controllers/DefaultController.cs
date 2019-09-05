@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -6,6 +7,8 @@ using System.Threading.Tasks;
 using System.Web.Http;
 using System.Web.Http.Results;
 using NLog;
+using Server.EntityModel;
+using Server.Repositories;
 
 namespace Server.Controllers
 {
@@ -47,20 +50,12 @@ namespace Server.Controllers
             return new ResponseMessageResult(new HttpResponseMessage(HttpStatusCode.NoContent));
         }
 
-        private async Task<string> GetDataAsync(CancellationToken cancel)
+        public async Task<IHttpActionResult> Post(ICollection<Product> sources, CancellationToken cancel)
         {
-            return await Task.Run(() =>
-                                  {
-                                      long n = 0;
-                                      while (!cancel.IsCancellationRequested)
-                                      {
-                                          Console.WriteLine(n);
-                                          n = n + 1;
-                                          Task.Delay(1000, cancel);
-                                      }
+            var productRepository = new ProductRepository();
 
-                                      return $"{n}";
-                                  }, cancel);
+            await productRepository.InsertAsync(sources, cancel);
+            return new ResponseMessageResult(new HttpResponseMessage(HttpStatusCode.NoContent));
         }
     }
 }
