@@ -7,6 +7,8 @@ namespace Server1
     {
         public static void Configure(HttpConfiguration httpConfig)
         {
+            httpConfig.MapHttpAttributeRoutes();
+
             httpConfig.Routes.MapHttpRoute(
                                            "swagger_root",
                                            "",
@@ -17,7 +19,9 @@ namespace Server1
             httpConfig.Routes.MapHttpRoute(
                                            "DefaultApi",
                                            "api/{controller}/{id}",
-                                           new {id = RouteParameter.Optional});
+                                           new {id = RouteParameter.Optional}
+                                          );
         }
+
     }
 }

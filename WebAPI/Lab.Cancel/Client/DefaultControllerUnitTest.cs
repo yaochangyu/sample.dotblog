@@ -11,14 +11,14 @@ using Server1.EntityModel;
 namespace Client
 {
     [TestClass]
-    public class UnitTest1
+    public class DefaultControllerUnitTest
     {
-        private const           string      HOST_ADDRESS = "http://localhost:8001";
+        //private const           string      HOST_ADDRESS = "http://localhost:8001";
+        private const           string      HOST_ADDRESS = "https://localhost:44378";
         private static readonly ILogger     s_logger;
-        private static          IDisposable s_webApp;
         private static          HttpClient  s_client;
 
-        static UnitTest1()
+        static DefaultControllerUnitTest()
         {
             if (s_logger == null)
             {
@@ -29,7 +29,7 @@ namespace Client
         [AssemblyCleanup]
         public static void AssemblyCleanup()
         {
-            s_webApp.Dispose();
+            s_client.Dispose();
         }
 
         [AssemblyInitialize]
@@ -43,10 +43,6 @@ namespace Client
                 }
             }
 
-            s_webApp = WebApp.Start<Startup>(HOST_ADDRESS);
-
-            //Console.WriteLine("Web API started!");
-            s_logger.Trace("Web API Start");
             s_client             = new HttpClient();
             s_client.BaseAddress = new Uri(HOST_ADDRESS);
         }

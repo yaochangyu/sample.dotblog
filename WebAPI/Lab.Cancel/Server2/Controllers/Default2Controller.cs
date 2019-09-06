@@ -9,11 +9,13 @@ using NLog;
 
 namespace Server1.Controllers
 {
-    public class DefaultController : ApiController
+    [RoutePrefix("api/books")]
+    public class Default2Controller : ApiController
     {
-        private static readonly ILogger s_logger;
+        private static readonly ILogger                 s_logger;
+        private readonly        CancellationTokenSource _cancel;
 
-        static DefaultController()
+        static Default2Controller()
         {
             if (s_logger == null)
             {
@@ -21,7 +23,25 @@ namespace Server1.Controllers
             }
         }
 
+        public Default2Controller()
+        {
+            if (this._cancel == null)
+            {
+                this._cancel = new CancellationTokenSource();
+            }
+        }
+
+        //[HttpGet]
+        [Route("orders")]
+
+        //[Route("bg")]
+        public async Task<IHttpActionResult> Cancel()
+        {
+            return new ResponseMessageResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+        }
+
         // GET api/default
+        [Route("")]
         public async Task<IHttpActionResult> Get(CancellationToken cancel)
         {
             var index = 0;

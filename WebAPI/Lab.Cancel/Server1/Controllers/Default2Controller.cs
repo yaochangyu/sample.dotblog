@@ -9,11 +9,13 @@ using NLog;
 
 namespace Server1.Controllers
 {
-    public class DefaultController : ApiController
+    [RoutePrefix("api/default2")]
+    public class Default2Controller : ApiController
     {
         private static readonly ILogger s_logger;
-
-        static DefaultController()
+        object _lock = new object();
+        private CancellationTokenSource _cancel;
+        static Default2Controller()
         {
             if (s_logger == null)
             {
@@ -21,9 +23,28 @@ namespace Server1.Controllers
             }
         }
 
-        // GET api/default
-        public async Task<IHttpActionResult> Get(CancellationToken cancel)
+
+        [HttpPost]
+        [Route("canncel")]
+        public async Task<IHttpActionResult> Cancel()
         {
+            lock (_lock)
+            {
+                this._cancel.Cancel();
+            }
+            return new ResponseMessageResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+        }
+
+        // GET api/default
+        [Route("")]
+        public async Task<IHttpActionResult> Get()
+        {
+            if (this._cancel == null)
+            {
+                this._cancel = new CancellationTokenSource();
+            }
+
+            var cancel = this._cancel.Token;
             var index = 0;
             try
             {

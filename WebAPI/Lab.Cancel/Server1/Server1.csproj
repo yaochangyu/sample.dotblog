@@ -99,6 +99,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configurations\Route.cs" />
+    <Compile Include="Controllers\Default2Controller.cs" />
     <Compile Include="Filters\CancellationTokenOperationFilter.cs" />
     <Compile Include="Controllers\DefaultController.cs" />
     <Compile Include="EntityModel\Product.cs" />
