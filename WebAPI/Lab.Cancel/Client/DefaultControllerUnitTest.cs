@@ -74,6 +74,7 @@ namespace Client
                                     );
 
             cancelToken.Cancel();
+            //s_client.CancelPendingRequests();
             Task.Delay(1000).Wait();
             Task.WaitAll(response);
         }
