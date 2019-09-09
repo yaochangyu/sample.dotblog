@@ -73,8 +73,8 @@ namespace Client
                                      TaskContinuationOptions.None
                                     );
 
-            cancelToken.Cancel();
-            //s_client.CancelPendingRequests();
+            //cancelToken.Cancel();
+            s_client.CancelPendingRequests();
             Task.Delay(1000).Wait();
             Task.WaitAll(response);
         }
