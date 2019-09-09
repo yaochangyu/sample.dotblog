@@ -102,9 +102,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Startup.cs" />
+    <Compile Include="DefaultController2UnitTest.cs" />
     <Compile Include="DefaultControllerUnitTest.cs" />
+    <Compile Include="HttpRequestExtensions.cs" />
+    <Compile Include="Startup.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TimeoutHandler.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
