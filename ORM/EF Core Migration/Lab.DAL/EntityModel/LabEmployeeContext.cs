@@ -12,7 +12,12 @@ namespace Lab.DAL.EntityModel
 
         public virtual DbSet<Order> Order { get; set; }
 
-        public LabEmployeeContext(DbContextOptions<LabEmployeeContext> options = null)
+        public LabEmployeeContext()
+        {
+            
+        }
+
+        public LabEmployeeContext(DbContextOptions<LabEmployeeContext> options)
             : base(options)
         {
             if (options == null)
