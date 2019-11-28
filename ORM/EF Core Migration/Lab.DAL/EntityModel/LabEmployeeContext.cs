@@ -12,13 +12,14 @@ namespace Lab.DAL.EntityModel
 
         public virtual DbSet<Order> Order { get; set; }
 
-        public LabEmployeeContext()
-        {
-        }
-
-        public LabEmployeeContext(DbContextOptions<LabEmployeeContext> options)
+        public LabEmployeeContext(DbContextOptions<LabEmployeeContext> options = null)
             : base(options)
         {
+            if (options == null)
+            {
+                options = DbOptionsFactory.DbContextOptions;
+            }
+
             if (!s_migrated[0])
             {
                 lock (s_migrated)
