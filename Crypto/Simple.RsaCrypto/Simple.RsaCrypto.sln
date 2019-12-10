@@ -1,0 +1,101 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RsaCrypto", "RsaCrypto\RsaCrypto.csproj", "{EF4BEF64-DDC6-44A6-BA71-C842CB860944}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RasCryptor", "RasCryptor\RasCryptor.csproj", "{D00FA738-BCCA-4A1F-9072-5D7E5967E312}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "A", "A\A.csproj", "{6078FC0A-4C1C-4EE6-9941-FFEBF5E95575}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "B", "B\B.csproj", "{C9963E01-F314-4256-A1CA-99B08AEC07A2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WindowsFormsApplication1", "WindowsFormsApplication1\WindowsFormsApplication1.csproj", "{9D902ED9-F5FC-4631-BC91-2EB937FE0B05}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|Mixed Platforms = Debug|Mixed Platforms
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|Mixed Platforms = Release|Mixed Platforms
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EF4BEF64-DDC6-44A6-BA71-C842CB860944}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{EF4BEF64-DDC6-44A6-BA71-C842CB860944}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{EF4BEF64-DDC6-44A6-BA71-C842CB860944}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{EF4BEF64-DDC6-44A6-BA71-C842CB860944}.Debug|x86.ActiveCfg = Debug|x86
+		{EF4BEF64-DDC6-44A6-BA71-C842CB860944}.Debug|x86.Build.0 = Debug|x86
+		{EF4BEF64-DDC6-44A6-BA71-C842CB860944}.Release|Any CPU.ActiveCfg = Release|x86
+		{EF4BEF64-DDC6-44A6-BA71-C842CB860944}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{EF4BEF64-DDC6-44A6-BA71-C842CB860944}.Release|Mixed Platforms.Build.0 = Release|x86
+		{EF4BEF64-DDC6-44A6-BA71-C842CB860944}.Release|x86.ActiveCfg = Release|x86
+		{EF4BEF64-DDC6-44A6-BA71-C842CB860944}.Release|x86.Build.0 = Release|x86
+		{D00FA738-BCCA-4A1F-9072-5D7E5967E312}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D00FA738-BCCA-4A1F-9072-5D7E5967E312}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D00FA738-BCCA-4A1F-9072-5D7E5967E312}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{D00FA738-BCCA-4A1F-9072-5D7E5967E312}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{D00FA738-BCCA-4A1F-9072-5D7E5967E312}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D00FA738-BCCA-4A1F-9072-5D7E5967E312}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D00FA738-BCCA-4A1F-9072-5D7E5967E312}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D00FA738-BCCA-4A1F-9072-5D7E5967E312}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{D00FA738-BCCA-4A1F-9072-5D7E5967E312}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{D00FA738-BCCA-4A1F-9072-5D7E5967E312}.Release|x86.ActiveCfg = Release|Any CPU
+		{6078FC0A-4C1C-4EE6-9941-FFEBF5E95575}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{6078FC0A-4C1C-4EE6-9941-FFEBF5E95575}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{6078FC0A-4C1C-4EE6-9941-FFEBF5E95575}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{6078FC0A-4C1C-4EE6-9941-FFEBF5E95575}.Debug|x86.ActiveCfg = Debug|x86
+		{6078FC0A-4C1C-4EE6-9941-FFEBF5E95575}.Debug|x86.Build.0 = Debug|x86
+		{6078FC0A-4C1C-4EE6-9941-FFEBF5E95575}.Release|Any CPU.ActiveCfg = Release|x86
+		{6078FC0A-4C1C-4EE6-9941-FFEBF5E95575}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{6078FC0A-4C1C-4EE6-9941-FFEBF5E95575}.Release|Mixed Platforms.Build.0 = Release|x86
+		{6078FC0A-4C1C-4EE6-9941-FFEBF5E95575}.Release|x86.ActiveCfg = Release|x86
+		{6078FC0A-4C1C-4EE6-9941-FFEBF5E95575}.Release|x86.Build.0 = Release|x86
+		{C9963E01-F314-4256-A1CA-99B08AEC07A2}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{C9963E01-F314-4256-A1CA-99B08AEC07A2}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{C9963E01-F314-4256-A1CA-99B08AEC07A2}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{C9963E01-F314-4256-A1CA-99B08AEC07A2}.Debug|x86.ActiveCfg = Debug|x86
+		{C9963E01-F314-4256-A1CA-99B08AEC07A2}.Debug|x86.Build.0 = Debug|x86
+		{C9963E01-F314-4256-A1CA-99B08AEC07A2}.Release|Any CPU.ActiveCfg = Release|x86
+		{C9963E01-F314-4256-A1CA-99B08AEC07A2}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{C9963E01-F314-4256-A1CA-99B08AEC07A2}.Release|Mixed Platforms.Build.0 = Release|x86
+		{C9963E01-F314-4256-A1CA-99B08AEC07A2}.Release|x86.ActiveCfg = Release|x86
+		{C9963E01-F314-4256-A1CA-99B08AEC07A2}.Release|x86.Build.0 = Release|x86
+		{9D902ED9-F5FC-4631-BC91-2EB937FE0B05}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{9D902ED9-F5FC-4631-BC91-2EB937FE0B05}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{9D902ED9-F5FC-4631-BC91-2EB937FE0B05}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{9D902ED9-F5FC-4631-BC91-2EB937FE0B05}.Debug|x86.ActiveCfg = Debug|x86
+		{9D902ED9-F5FC-4631-BC91-2EB937FE0B05}.Debug|x86.Build.0 = Debug|x86
+		{9D902ED9-F5FC-4631-BC91-2EB937FE0B05}.Release|Any CPU.ActiveCfg = Release|x86
+		{9D902ED9-F5FC-4631-BC91-2EB937FE0B05}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{9D902ED9-F5FC-4631-BC91-2EB937FE0B05}.Release|Mixed Platforms.Build.0 = Release|x86
+		{9D902ED9-F5FC-4631-BC91-2EB937FE0B05}.Release|x86.ActiveCfg = Release|x86
+		{9D902ED9-F5FC-4631-BC91-2EB937FE0B05}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 6
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs15
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = A\\A.csproj
+		SccProjectName1 = A
+		SccLocalPath1 = A
+		SccProjectUniqueName2 = B\\B.csproj
+		SccProjectName2 = B
+		SccLocalPath2 = B
+		SccProjectUniqueName3 = RasCryptor\\RasCryptor.csproj
+		SccProjectName3 = RasCryptor
+		SccLocalPath3 = RasCryptor
+		SccProjectUniqueName4 = RsaCrypto\\RsaCrypto.csproj
+		SccProjectName4 = RsaCrypto
+		SccLocalPath4 = RsaCrypto
+		SccProjectUniqueName5 = WindowsFormsApplication1\\WindowsFormsApplication1.csproj
+		SccProjectName5 = WindowsFormsApplication1
+		SccLocalPath5 = WindowsFormsApplication1
+	EndGlobalSection
+EndGlobal
