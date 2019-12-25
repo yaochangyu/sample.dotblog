@@ -17,12 +17,6 @@ namespace Lab.HangfireApp
                                        new {id = RouteParameter.Optional}
                                       );
 
-            config.Routes.MapHttpRoute("swagger_root",
-                                       "",
-                                       null,
-                                       null,
-                                       new RedirectHandler(message => message.RequestUri.ToString(), "swagger"));
-
             app.UseWelcomePage("/");
             app.UseWebApi(config);
             app.UseErrorPage();

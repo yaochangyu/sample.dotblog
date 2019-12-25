@@ -42,6 +42,9 @@
     <Reference Include="Hangfire.Core, Version=1.7.8.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Hangfire.Core.1.7.8\lib\net46\Hangfire.Core.dll</HintPath>
     </Reference>
+    <Reference Include="Hangfire.MemoryStorage, Version=1.6.3.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Hangfire.MemoryStorage.1.6.3\lib\net40\Hangfire.MemoryStorage.dll</HintPath>
+    </Reference>
     <Reference Include="Hangfire.SqlServer, Version=1.7.8.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Hangfire.SqlServer.1.7.8\lib\net45\Hangfire.SqlServer.dll</HintPath>
     </Reference>
@@ -96,6 +99,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controllers\Job.cs" />
     <Compile Include="Controllers\JobApiController.cs" />
     <Compile Include="DashboardAuthorizationFilter.cs" />
     <Compile Include="HangfireConfig.cs" />
