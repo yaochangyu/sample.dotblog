@@ -13,7 +13,7 @@ namespace Lab.HangfireApp
             var config = new HttpConfiguration();
           
             SwaggerConfig.Register(config);
-            HangfireConfig.Register1(app);
+            HangfireConfig.Register(app);
             config.Routes.MapHttpRoute("DefaultApi",
                                        "api/{controller}/{id}",
                                        new {id = RouteParameter.Optional}
