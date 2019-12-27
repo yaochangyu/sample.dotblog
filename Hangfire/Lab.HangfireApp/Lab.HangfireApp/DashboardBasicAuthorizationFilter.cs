@@ -16,6 +16,19 @@ namespace Lab.HangfireApp
             // is the part of the `Microsoft.Owin` package.
 
             var owinContext = new OwinContext(context.GetOwinEnvironment());
+            if (owinContext.Request.Scheme != "https")
+            {
+                string redirectUri = new UriBuilder("https", owinContext.Request.Host.ToString(), 443, context.Request.Path).ToString();
+
+                owinContext.Response.StatusCode = 301;
+                owinContext.Response.Redirect(redirectUri);
+                return false;
+            }
+            if (owinContext.Request.IsSecure == false)
+            {
+                owinContext.Response.Write("Secure connection is required to access Hangfire Dashboard.");
+                return false;
+            }
             var user        = owinContext.Authentication.User;
             if (user != null)
             {
