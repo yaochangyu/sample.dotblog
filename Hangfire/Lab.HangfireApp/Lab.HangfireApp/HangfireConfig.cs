@@ -1,6 +1,7 @@
 ﻿using System.Configuration;
 using Hangfire;
 using Hangfire.Console;
+using Microsoft.Owin.Security.Cookies;
 using Owin;
 
 namespace Lab.HangfireApp
@@ -12,13 +13,24 @@ namespace Lab.HangfireApp
             GlobalConfiguration.Configuration
                                .UseSqlServerStorage("Hangfire")
                                .UseConsole();
-
-            app.UseHangfireDashboard("/hangfire");
+            var dashboardOptions = new DashboardOptions
+            {
+                Authorization = new[]
+                {
+                    new DashboardAuthorizationFilter()
+                }
+            };
+            app.UseHangfireDashboard("/hangfire", dashboardOptions);
             app.UseHangfireServer();
         }
 
         public static void Register1(IAppBuilder app)
         {
+            app.UseCookieAuthentication(new CookieAuthenticationOptions()
+            {
+                AuthenticationType = "HangfireLogin",
+            });
+
             GlobalConfiguration.Configuration
                                .UseSqlServerStorage("Hangfire")
                                .UseConsole();
@@ -27,7 +39,7 @@ namespace Lab.HangfireApp
             {
                 Authorization = new[]
                 {
-                    new DashboardAuthorizationFilter(), new DashboardAuthorizationFilter()
+                    new DashboardBasicAuthorizationFilter(), 
                 }
             };
             

@@ -10,10 +10,11 @@ namespace Lab.HangfireApp.Controllers
     {
         public async Task<IHttpActionResult> Post(string content)
         {
-            BackgroundJob.Enqueue(() => Job.LongRunning(JobCancellationToken.Null));
+            //BackgroundJob.Enqueue(() => Job.LongRunning(JobCancellationToken.Null));
+            //BackgroundJob.Enqueue(() => Job.LongRunning2(JobCancellationToken.Null));
 
             ////立即執行一次
-            //BackgroundJob.Enqueue(() => Job.Send(content, null));
+            BackgroundJob.Enqueue(() => Job.Send(content, null));
 
             ////延遲執行一次
             //BackgroundJob.Schedule(() => Job.Send(content, null), TimeSpan.FromSeconds(3));
