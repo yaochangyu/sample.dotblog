@@ -59,6 +59,7 @@
     <Content Include="Index.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Compile Include="CustomBootstrapper.cs" />
     <Compile Include="PersonNancyModule.cs" />
     <Compile Include="GuidGeneratorNancyModule.cs" />
     <Compile Include="Program.cs" />
