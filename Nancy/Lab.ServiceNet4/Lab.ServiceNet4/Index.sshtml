@@ -1,0 +1,7 @@
+﻿<html>
+    <body>
+        <h4>@ViewBag.Data</h4>
+        <p>Id:@Model.Id</p>
+        <p>Name:@Model.Name</p>
+    </body>
+</html>

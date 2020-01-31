@@ -53,6 +53,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Index.sshtml">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <Compile Include="PersonNancyModule.cs" />
     <Compile Include="GuidGeneratorNancyModule.cs" />
     <Compile Include="Program.cs" />

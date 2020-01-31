@@ -9,7 +9,7 @@ namespace Lab.ServiceNet4
     {
         public PersonNancyModule() : base("api/person")
         {
-            this.Get[""]            = this.GetAllAction1;
+            this.Get[""]            = this.GetAllAction2;
             this.Get["{id:int}"]    = this.GetAction;
             this.Post[""]           = this.InsertAction1;
             this.Put["{id:int}"]    = this.EditAction;
@@ -50,6 +50,13 @@ namespace Lab.ServiceNet4
 
             //TODO:Do thing
             return new {id, name};
+        }
+
+        private dynamic GetAllAction2(dynamic arg)
+        {
+            var person = new Person() {Id = Guid.NewGuid(), Name = "yao", SequenceId = 1};
+            this.ViewBag.Data = "From Nancy";
+            return this.View["Index.sshtml",person];
         }
 
         private dynamic InsertAction(dynamic parameters)
