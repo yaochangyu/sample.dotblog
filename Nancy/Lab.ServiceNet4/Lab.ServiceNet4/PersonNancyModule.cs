@@ -58,6 +58,12 @@ namespace Lab.ServiceNet4
             this.ViewBag.Data = "From Nancy";
             return this.View["Index.sshtml",person];
         }
+        private dynamic GetAllAction3(dynamic arg)
+        {
+            var person = new Person() {Id = Guid.NewGuid(), Name = "yao", SequenceId = 1};
+            this.ViewBag.Data = "From Nancy";
+            return this.View["Index.html",person];
+        }
 
         private dynamic InsertAction(dynamic parameters)
         {

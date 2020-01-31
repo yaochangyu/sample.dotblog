@@ -56,6 +56,9 @@
     <None Include="Index.sshtml">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <Content Include="Index.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Compile Include="PersonNancyModule.cs" />
     <Compile Include="GuidGeneratorNancyModule.cs" />
     <Compile Include="Program.cs" />
