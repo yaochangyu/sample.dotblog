@@ -61,6 +61,7 @@
     </Content>
     <Compile Include="BaseModule.cs" />
     <Compile Include="CustomBootstrapper.cs" />
+    <Compile Include="CustomApplicationStartup.cs" />
     <Compile Include="PersonNancyModule.cs" />
     <Compile Include="GeneratorNancyModule.cs" />
     <Compile Include="Program.cs" />
