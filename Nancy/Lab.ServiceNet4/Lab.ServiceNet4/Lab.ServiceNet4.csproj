@@ -59,9 +59,10 @@
     <Content Include="Index.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Compile Include="BaseModule.cs" />
     <Compile Include="CustomBootstrapper.cs" />
     <Compile Include="PersonNancyModule.cs" />
-    <Compile Include="GuidGeneratorNancyModule.cs" />
+    <Compile Include="GeneratorNancyModule.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
