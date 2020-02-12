@@ -47,6 +47,24 @@ namespace Lab.EF6.SqliteCodeFirst.UnitTest
         }
 
         [TestMethod]
+        public void InsertTwoTable()
+        {
+            var toDb = new Employee
+            {
+                Id       = Guid.NewGuid(),
+                Name     = "yao",
+                Age      = 18,
+                Identity = new Identity {Account = "yao", Password = "123456"}
+            };
+            using (var db = new LabDbContext())
+            {
+                db.Employees.Add(toDb);
+                var count = db.SaveChanges();
+                Assert.AreEqual(2, count);
+            }
+        }
+
+        [TestMethod]
         public void Query_GUID_Type()
         {
             var id = Guid.NewGuid();
@@ -64,26 +82,11 @@ namespace Lab.EF6.SqliteCodeFirst.UnitTest
 
             using (var db = new LabDbContext())
             {
-                var employee = db.Employees.Where(p => p.Id == id).AsNoTracking().ToList();
+                var employee = db.Employees
+                                 .Where(p => p.Id == id)
+                                 .AsNoTracking()
+                                 .FirstOrDefault();
                 Assert.IsNull(employee);
-            }
-        }
-
-        [TestMethod]
-        public void InsertTwoTable()
-        {
-            var toDb = new Employee
-            {
-                Id   = Guid.NewGuid(),
-                Name = "yao",
-                Age  = 18,
-                Identity = new Identity(){Account="yao",Password="123456"}
-            };
-            using (var db = new LabDbContext())
-            {
-                db.Employees.Add(toDb);
-                var count = db.SaveChanges();
-                Assert.AreEqual(2, count);
             }
         }
     }
