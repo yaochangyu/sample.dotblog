@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29728.190
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "System.Data.SQLite.EF6.Migrations", "System.Data.SQLite.EF6.Migrations\System.Data.SQLite.EF6.Migrations.csproj", "{CCCEFAA1-AB8C-4A7F-A63A-6164FA738184}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.EF6.SqliteCodeFirstNet4.DAL", "Lab.EF6.SqliteCodeFirstNet4.DAL\Lab.EF6.SqliteCodeFirstNet4.DAL.csproj", "{C936A111-DC5B-48E1-9FB7-A7FFF2DE9680}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CCCEFAA1-AB8C-4A7F-A63A-6164FA738184}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CCCEFAA1-AB8C-4A7F-A63A-6164FA738184}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CCCEFAA1-AB8C-4A7F-A63A-6164FA738184}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CCCEFAA1-AB8C-4A7F-A63A-6164FA738184}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C936A111-DC5B-48E1-9FB7-A7FFF2DE9680}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C936A111-DC5B-48E1-9FB7-A7FFF2DE9680}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C936A111-DC5B-48E1-9FB7-A7FFF2DE9680}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C936A111-DC5B-48E1-9FB7-A7FFF2DE9680}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E3C15E5F-2475-4DBD-8956-1A8806AE5EB5}
+	EndGlobalSection
+EndGlobal
