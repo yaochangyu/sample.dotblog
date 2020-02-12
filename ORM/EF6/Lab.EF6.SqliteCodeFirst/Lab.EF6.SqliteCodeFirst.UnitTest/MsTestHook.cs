@@ -1,7 +1,4 @@
-﻿using System;
-using System.Data.Entity.SqlServer;
-using System.IO;
-using Lab.EF6.SqliteCodeFirst.UnitTest.EntityModel;
+﻿using System.IO;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Lab.EF6.SqliteCodeFirst.UnitTest
@@ -12,26 +9,21 @@ namespace Lab.EF6.SqliteCodeFirst.UnitTest
         [AssemblyCleanup]
         public static void AssemblyCleanup()
         {
-            using (var dbContext = new LabDbContext())
-            {
-                if (dbContext.Database.Exists())
-                {
-                    //dbContext.Database.Delete();
-                }
-            }
+            DeleteDb();
         }
 
         [AssemblyInitialize]
         public static void AssemblyInitialize(TestContext context)
         {
-            var currentDirectory = Directory.GetCurrentDirectory();
-            AppDomain.CurrentDomain.SetData("DataDirectory", currentDirectory);
-            using (var dbContext = new LabDbContext())
+            DeleteDb();
+        }
+
+        private static void DeleteDb()
+        {
+            var filePath = "lab.db";
+            if (File.Exists(filePath))
             {
-                if (dbContext.Database.Exists())
-                {
-                    //dbContext.Database.Delete();
-                }
+                File.Delete(filePath);
             }
         }
     }

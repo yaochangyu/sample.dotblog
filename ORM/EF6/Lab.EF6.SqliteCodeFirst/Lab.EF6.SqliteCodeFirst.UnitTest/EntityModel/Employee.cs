@@ -15,5 +15,7 @@ namespace Lab.EF6.SqliteCodeFirst.UnitTest.EntityModel
         public string Name { get; set; }
 
         public int Age { get; set; }
+
+        public virtual Identity Identity { get; set; }  
     }
 }

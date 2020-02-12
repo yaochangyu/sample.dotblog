@@ -8,10 +8,13 @@ namespace Lab.EF6.SqliteCodeFirst.UnitTest.EntityModel
 
         public DbSet<Employee> Employees { get; set; }
 
+        public DbSet<Identity> Identities { get; set; }
+
         public LabDbContext() : base("DefaultConnection")
         {
             Migrate();
         }
+
         private static void Migrate()
         {
             if (!s_migrated[0])
@@ -27,6 +30,7 @@ namespace Lab.EF6.SqliteCodeFirst.UnitTest.EntityModel
                 }
             }
         }
+
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
             //modelBuilder.Entity<Employee>().HasKey(r => r.Id, config => config.IsClustered(true) );

@@ -81,7 +81,12 @@
   <ItemGroup>
     <Compile Include="EntityModel\Configuration.cs" />
     <Compile Include="EntityModel\Employee.cs" />
+    <Compile Include="EntityModel\Identity.cs" />
     <Compile Include="EntityModel\LabDbContext.cs" />
+    <Compile Include="Migrations\202002120319093_Add Identity table and relational to employee.cs" />
+    <Compile Include="Migrations\202002120319093_Add Identity table and relational to employee.designer.cs">
+      <DependentUpon>202002120319093_Add Identity table and relational to employee.cs</DependentUpon>
+    </Compile>
     <Compile Include="MsTestHook.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UnitTest1.cs" />
@@ -90,7 +95,11 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <EmbeddedResource Include="Migrations\202002120319093_Add Identity table and relational to employee.resx">
+      <DependentUpon>202002120319093_Add Identity table and relational to employee.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
