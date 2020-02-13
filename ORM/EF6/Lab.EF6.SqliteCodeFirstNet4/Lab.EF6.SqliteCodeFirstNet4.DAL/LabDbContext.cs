@@ -1,4 +1,5 @@
 ﻿using System.Data.Entity;
+using SQLite.CodeFirst;
 
 namespace Lab.EF6.SqliteCodeFirstNet4.DAL
 {
@@ -10,10 +11,9 @@ namespace Lab.EF6.SqliteCodeFirstNet4.DAL
 
         public LabDbContext() : base("DefaultConnection")
         {
-            Migrate();
         }
 
-        private static void Migrate()
+        protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {
             if (!s_migrated[0])
             {
@@ -21,16 +21,13 @@ namespace Lab.EF6.SqliteCodeFirstNet4.DAL
                 {
                     if (!s_migrated[0])
                     {
-                        Database.SetInitializer(new MigrateDatabaseToLatestVersion<LabDbContext,
-                                                    Configuration>());
+                        var initializer = new SqliteDropCreateDatabaseWhenModelChanges<LabDbContext>(modelBuilder);
+                        Database.SetInitializer(initializer);
+
                         s_migrated[0] = true;
                     }
                 }
             }
-        }
-
-        protected override void OnModelCreating(DbModelBuilder modelBuilder)
-        {
         }
     }
 }

@@ -14,6 +14,8 @@ namespace Lab.EF6.SqliteCodeFirstNet4.DAL
         [StringLength(100)]
         public string Name { get; set; }
 
-        //public int Age { get; set; }
+        public int Age { get; set; }
+
+        //public int Age1 { get; set; }
     }
 }
