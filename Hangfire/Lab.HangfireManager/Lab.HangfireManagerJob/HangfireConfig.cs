@@ -1,5 +1,6 @@
 ﻿using Hangfire;
 using Hangfire.Console;
+using Hangfire.HttpJob;
 using Owin;
 
 namespace Lab.HangfireManagerJob
@@ -10,8 +11,10 @@ namespace Lab.HangfireManagerJob
         {
             GlobalConfiguration.Configuration
                                .UseSqlServerStorage("Hangfire")
-                               .UseConsole();
- 
+                               .UseConsole()
+                               .UseHangfireHttpJob()
+                ;
+
             app.UseHangfireDashboard("/hangfire");
             app.UseHangfireServer();
         }
