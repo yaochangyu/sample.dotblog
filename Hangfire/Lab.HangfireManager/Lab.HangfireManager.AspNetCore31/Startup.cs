@@ -22,7 +22,11 @@ namespace Lab.HangfireManager.AspNetCore31
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHangfireServer();
+            var jobServerOptions = new BackgroundJobServerOptions()
+            {
+                
+            };
+            app.UseHangfireServer(jobServerOptions);
             app.UseHangfireDashboard("/hangfire",
                                      new DashboardOptions
                                      {

@@ -37,7 +37,7 @@ namespace Lab.HangfireJob
         public string CallWebApi(
             [DisplayData("服務端點",
                          "http://localhost:8080/test.html?name=youname",
-                         "请求外部连接,必须http或者https开头")]
+                         "請求位置必須為 http or https")]
             Uri url,
             [DisplayData("請求方式",
                          "POST",
