@@ -8,15 +8,14 @@ namespace Lab.HangfireManager
     {
         public Dictionary<string, string> GetData()
         {
-            var aa = Encoding.GetEncodings()
-                             .GroupBy(f => f.Name, (f1, f2) => f2.FirstOrDefault())
-                             .ToDictionary(f => f.Name, f => f.DisplayName);
-            return aa;
+            return Encoding.GetEncodings()
+                           .GroupBy(f => f.Name, (f1, f2) => f2.FirstOrDefault())
+                           .ToDictionary(f => f.Name, f => f.DisplayName);
         }
 
         public string GetDefaultValue()
         {
-            return "utf-8";
+            return null;
         }
     }
 }

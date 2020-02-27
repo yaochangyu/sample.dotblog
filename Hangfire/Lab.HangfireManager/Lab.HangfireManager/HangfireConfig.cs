@@ -1,14 +1,72 @@
 ﻿using System;
 using System.Linq;
+using System.Reflection;
 using Hangfire;
 using Hangfire.Console;
+using Hangfire.Dashboard;
 using Hangfire.Dashboard.Management;
 using Owin;
 
 namespace Lab.HangfireManager
 {
+    public enum StorageType
+    {
+        LocalStorage,
+        MemoryStorage,
+
+        SqlServerStorage
+
+        //RedisStorage,
+        //FirebirdStorage,
+        //FirebaseStorage,
+        //MongoStorage,
+        //MySqlStorage,
+        //PostgreSqlStorage,
+        //RavenStorage,
+        //SQLiteStorage
+    }
+
     internal class HangfireConfig
     {
+        private static string DbConnectionName = "Hangfire";
+        private static string Url = "/hangfire";
+
+        public static void Register(IAppBuilder app)
+        {
+            GlobalConfiguration.Configuration
+                               .UseDashboardMetric(DashboardMetrics.ServerCount)
+                               .UseDashboardMetric(DashboardMetrics.RecurringJobCount)
+                               .UseDashboardMetric(DashboardMetrics.RetriesCount)
+                               .UseDashboardMetric(DashboardMetrics.EnqueuedCountOrNull)
+                               .UseDashboardMetric(DashboardMetrics.FailedCountOrNull)
+                               .UseDashboardMetric(DashboardMetrics.EnqueuedAndQueueCount)
+                               .UseDashboardMetric(DashboardMetrics.ScheduledCount)
+                               .UseDashboardMetric(DashboardMetrics.ProcessingCount)
+                               .UseDashboardMetric(DashboardMetrics.SucceededCount)
+                               .UseDashboardMetric(DashboardMetrics.FailedCount)
+                               .UseDashboardMetric(DashboardMetrics.DeletedCount)
+                               .UseDashboardMetric(DashboardMetrics.AwaitingCount)
+                               .UseManagementPages(cc => cc.AddJobs(() => { return GetModuleTypes(); }))
+                               .UseSqlServerStorage(DbConnectionName)
+                               .UseConsole()
+                ;
+            var options = new BackgroundJobServerOptions
+            {
+                ServerName  = $"{Environment.MachineName}.{Guid.NewGuid().ToString()}",
+                WorkerCount = 20,
+                Queues      = new[] {"critical", "normal", "low"}
+            };
+            var dashboardOptions = new DashboardOptions
+            {
+                Authorization = new IDashboardAuthorizationFilter[] {new DashboardAuthorizationFilter()}
+            };
+
+            app.UseHangfireDashboard(Url, dashboardOptions);
+
+            //app.UseHangfireServer(options);
+            app.UseHangfireServer();
+        }
+
         private static Type[] GetModuleTypes()
         {
             //var baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -18,7 +76,8 @@ namespace Lab.HangfireManager
             //    assembliePaths = assembliePaths.Concat(System.IO.Directory.GetFiles(moduleDirectory, "*.dll")).ToArray();
 
             //var assemblies = assembliePaths.Select(f => System.Reflection.Assembly.LoadFile(f)).ToArray();
-            var assemblies = new[] {typeof(AnalysisJob).Assembly};
+            //var assemblies = new[] {typeof(AnalysisJob).Assembly};
+            var assemblies = new[] {Assembly.GetExecutingAssembly()};
             var moduleTypes = assemblies.SelectMany(f =>
                                                     {
                                                         try
@@ -34,18 +93,6 @@ namespace Lab.HangfireManager
                                         .ToArray();
 
             return moduleTypes;
-        }
-
-        public static void Register(IAppBuilder app)
-        {
-            GlobalConfiguration.Configuration
-                               .UseManagementPages(cc => cc.AddJobs(() => { return GetModuleTypes(); }))
-                               .UseSqlServerStorage("Hangfire")
-                               .UseConsole()
-                ;
-
-            app.UseHangfireDashboard("/hangfire");
-            app.UseHangfireServer();
         }
     }
 }

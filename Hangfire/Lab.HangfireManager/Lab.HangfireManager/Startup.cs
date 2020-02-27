@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.Web.Http;
+﻿using System.Web.Http;
 using Hangfire;
 using Owin;
 
@@ -12,6 +10,7 @@ namespace Lab.HangfireManager
         {
             // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=316888
             var config = new HttpConfiguration();
+            config.Filters.Add(new ErrorHandlerAttribute());
             HangfireConfig.Register(app);
             config.Routes.MapHttpRoute("DefaultApi",
                                        "api/{controller}/{id}",
@@ -22,18 +21,9 @@ namespace Lab.HangfireManager
             app.UseWebApi(config);
             app.UseErrorPage();
 
-            var job = new AnalysisJob();
+            var job = new DemoJob();
             RecurringJob.AddOrUpdate(() => Job.Send("Hi~"), Cron.Daily);
-            //RecurringJob.AddOrUpdate(() => job.SendEmail(null,JobCancellationToken.Null), Cron.Daily);
-
-        }
-    }
-    internal class Job
-    {
-        public static void Send(string message)
-        {
-            //Thread.Sleep(10000);
-            Trace.WriteLine($"Message:{message}, Now:{DateTime.Now}");
+            RecurringJob.AddOrUpdate(() => job.Action(null, JobCancellationToken.Null), Cron.Daily);
         }
     }
 }

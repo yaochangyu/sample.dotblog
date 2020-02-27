@@ -130,7 +130,10 @@
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AnalysisJob.cs" />
+    <Compile Include="DemoJob.cs" />
+    <Compile Include="DashboardAuthorizationFilter.cs" />
+    <Compile Include="ErrorHandlerAttribute.cs" />
+    <Compile Include="Job.cs" />
     <Compile Include="MimeTypes.cs" />
     <Compile Include="EncodingsInputDataList.cs" />
     <Compile Include="HttpMethod.cs" />
