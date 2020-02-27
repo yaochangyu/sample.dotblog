@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HangfireManagerJob", "L
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HangfireManager", "Lab.HangfireManager\Lab.HangfireManager.csproj", "{2783C70D-9C48-4A84-A6C7-9C77BE900CC2}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HangfireManager.AspNetCore31", "Lab.HangfireManager.AspNetCore31\Lab.HangfireManager.AspNetCore31.csproj", "{3A5CC039-6E87-4BD0-965C-0B57F1BF0701}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HangfireJob", "Lab.HangfireJob\Lab.HangfireJob.csproj", "{BE41D09C-5D43-40F8-BA67-D664B3E1CCCB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{2783C70D-9C48-4A84-A6C7-9C77BE900CC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2783C70D-9C48-4A84-A6C7-9C77BE900CC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2783C70D-9C48-4A84-A6C7-9C77BE900CC2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3A5CC039-6E87-4BD0-965C-0B57F1BF0701}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3A5CC039-6E87-4BD0-965C-0B57F1BF0701}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3A5CC039-6E87-4BD0-965C-0B57F1BF0701}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3A5CC039-6E87-4BD0-965C-0B57F1BF0701}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE41D09C-5D43-40F8-BA67-D664B3E1CCCB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE41D09C-5D43-40F8-BA67-D664B3E1CCCB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE41D09C-5D43-40F8-BA67-D664B3E1CCCB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE41D09C-5D43-40F8-BA67-D664B3E1CCCB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
