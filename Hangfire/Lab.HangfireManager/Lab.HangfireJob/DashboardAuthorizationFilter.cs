@@ -1,7 +1,7 @@
 ﻿using Hangfire.Annotations;
 using Hangfire.Dashboard;
 
-namespace Lab.HangfireManager
+namespace Lab.HangfireJob
 {
     public class DashboardAuthorizationFilter : IDashboardAuthorizationFilter
     {

@@ -5,27 +5,11 @@ using Hangfire;
 using Hangfire.Console;
 using Hangfire.Dashboard;
 using Hangfire.Dashboard.Management;
+using Lab.HangfireJob;
 using Owin;
 
-namespace Lab.HangfireManager
+namespace Lab.HangfireManager.AspNet48
 {
-    public enum StorageType
-    {
-        LocalStorage,
-        MemoryStorage,
-
-        SqlServerStorage
-
-        //RedisStorage,
-        //FirebirdStorage,
-        //FirebaseStorage,
-        //MongoStorage,
-        //MySqlStorage,
-        //PostgreSqlStorage,
-        //RavenStorage,
-        //SQLiteStorage
-    }
-
     internal class HangfireConfig
     {
         private static string DbConnectionName = "Hangfire";
@@ -63,7 +47,7 @@ namespace Lab.HangfireManager
 
             app.UseHangfireDashboard(Url, dashboardOptions);
 
-            //app.UseHangfireServer(options);
+            app.UseHangfireServer(options);
             app.UseHangfireServer();
         }
 
@@ -77,7 +61,7 @@ namespace Lab.HangfireManager
 
             //var assemblies = assembliePaths.Select(f => System.Reflection.Assembly.LoadFile(f)).ToArray();
             //var assemblies = new[] {typeof(AnalysisJob).Assembly};
-            var assemblies = new[] {Assembly.GetExecutingAssembly()};
+            var assemblies = new[] {typeof(DemoJob).Assembly};
             var moduleTypes = assemblies.SelectMany(f =>
                                                     {
                                                         try

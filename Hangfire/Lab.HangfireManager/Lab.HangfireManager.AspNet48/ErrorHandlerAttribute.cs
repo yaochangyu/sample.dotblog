@@ -3,12 +3,13 @@ using System.Net.Http;
 using System.Web.Http.Filters;
 using Newtonsoft.Json;
 
-namespace Lab.HangfireManager
+namespace Lab.HangfireManager.AspNet48
 {
     /// <summary>
     ///     unexpected error handler override.
     /// </summary>
     public class ErrorHandlerAttribute : ExceptionFilterAttribute
+
     {
         /// <summary>
         ///     override exception method.
@@ -21,8 +22,9 @@ namespace Lab.HangfireManager
                                               .ControllerContext
                                               .ControllerDescriptor
                                               .ControllerName;
-            var actionName      = actionContext.ActionContext.ActionDescriptor.ActionName;
-            var exception       = actionContext.Exception;
+            var actionName = actionContext.ActionContext.ActionDescriptor.ActionName;
+            var exception  = actionContext.Exception;
+
             //var requestVariable = actionContext.Request.GetRequestVariable();
             //var requestJson     = requestVariable == null ? "Empty" : JsonConvert.SerializeObject(requestVariable);
             //var logger          = LogManager.GetLogger($"{controllerName}.{actionName}");
@@ -30,7 +32,7 @@ namespace Lab.HangfireManager
             ////var name = actionContext.Request.GetRequestContext().Principal.Identity.Name; // HttpContext.Current.User.Identity.Name;
             //var logMessage = $"{exception.Message}.\r\n傳入參數->{requestJson}";
             //logger.Error(exception, logMessage);
-            var json = JsonConvert.SerializeObject(new { Message = $"{exception.Message}" });
+            var json = JsonConvert.SerializeObject(new {Message = $"{exception.Message}"});
             actionContext.Response = new HttpResponseMessage(HttpStatusCode.InternalServerError)
             {
                 Content = new StringContent(json)

@@ -1,8 +1,7 @@
 ﻿using System.Web.Http;
-using Hangfire;
 using Owin;
 
-namespace Lab.HangfireManager
+namespace Lab.HangfireManager.AspNet48
 {
     public class Startup
     {
@@ -20,10 +19,6 @@ namespace Lab.HangfireManager
             app.UseWelcomePage("/");
             app.UseWebApi(config);
             app.UseErrorPage();
-
-            var job = new DemoJob();
-            RecurringJob.AddOrUpdate(() => Job.Send("Hi~"), Cron.Daily);
-            RecurringJob.AddOrUpdate(() => job.Action(null, JobCancellationToken.Null), Cron.Daily);
         }
     }
 }

@@ -7,16 +7,16 @@
     <ProductVersion>
     </ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{2783C70D-9C48-4A84-A6C7-9C77BE900CC2}</ProjectGuid>
+    <ProjectGuid>{3557A7FC-16E2-45BC-9535-08ECC5119760}</ProjectGuid>
     <ProjectTypeGuids>{349c5851-65df-11da-9384-00065b846f21};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Lab.HangfireManager</RootNamespace>
-    <AssemblyName>Lab.HangfireManager</AssemblyName>
+    <RootNamespace>Lab.HangfireManager.AspNet48</RootNamespace>
+    <AssemblyName>Lab.HangfireManager.AspNet48</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <UseIISExpress>true</UseIISExpress>
     <Use64BitIISExpress />
-    <IISExpressSSLPort>44337</IISExpressSSLPort>
+    <IISExpressSSLPort>44346</IISExpressSSLPort>
     <IISExpressAnonymousAuthentication />
     <IISExpressWindowsAuthentication />
     <IISExpressUseClassicPipelineMode />
@@ -130,13 +130,7 @@
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DemoJob.cs" />
-    <Compile Include="DashboardAuthorizationFilter.cs" />
     <Compile Include="ErrorHandlerAttribute.cs" />
-    <Compile Include="Job.cs" />
-    <Compile Include="MimeTypes.cs" />
-    <Compile Include="EncodingsInputDataList.cs" />
-    <Compile Include="HttpMethod.cs" />
     <Compile Include="HangfireConfig.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Startup.cs" />
@@ -149,6 +143,12 @@
     <None Include="Web.Release.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Lab.HangfireJob\Lab.HangfireJob.csproj">
+      <Project>{be41d09c-5d43-40f8-ba67-d664b3e1cccb}</Project>
+      <Name>Lab.HangfireJob</Name>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
@@ -163,9 +163,9 @@
         <WebProjectProperties>
           <UseIIS>True</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>55681</DevelopmentServerPort>
+          <DevelopmentServerPort>52191</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
-          <IISUrl>https://localhost:44337/</IISUrl>
+          <IISUrl>https://localhost:44346/</IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
           <UseCustomServer>False</UseCustomServer>
           <CustomServerUrl>
