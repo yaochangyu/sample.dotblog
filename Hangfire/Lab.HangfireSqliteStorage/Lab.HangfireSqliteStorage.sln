@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29728.190
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HangfireSqliteStorage.ConsoleApp", "Lab.HangfireSqliteStorage.ConsoleApp\Lab.HangfireSqliteStorage.ConsoleApp.csproj", "{D8C67B9A-F563-499A-BC13-237253619059}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D8C67B9A-F563-499A-BC13-237253619059}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8C67B9A-F563-499A-BC13-237253619059}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8C67B9A-F563-499A-BC13-237253619059}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8C67B9A-F563-499A-BC13-237253619059}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C1265389-EED0-4C02-B7BB-0743D49E4EF7}
+	EndGlobalSection
+EndGlobal
