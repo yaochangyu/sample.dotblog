@@ -10,21 +10,7 @@ namespace Lab.HangfireUnitTest
     [ManagementPage("演示", "low")]
     public class DemoJob
     {
-        public IBackgroundJobClient JobClient
-        {
-            get
-            {
-                if (this._jobClient == null)
-                {
-                    this._jobClient = new BackgroundJobClient();
-                }
-
-                return this._jobClient;
-            }
-            set => this._jobClient = value;
-        }
-
-        private IBackgroundJobClient _jobClient;
+        public IBackgroundJobClient JobClient { get; set; }
 
         public DemoJob(IBackgroundJobClient jobClient)
         {
