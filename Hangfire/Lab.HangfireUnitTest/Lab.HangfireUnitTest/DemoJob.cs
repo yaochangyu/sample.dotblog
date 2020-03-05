@@ -7,16 +7,35 @@ using Hangfire.Server;
 
 namespace Lab.HangfireUnitTest
 {
-    [ManagementPage("演示", "low")]
+    [ManagementPage("演示", "default")]
     public class DemoJob
     {
-        public IBackgroundJobClient JobClient { get; set; }
+        public IBackgroundJobClient JobClient
+        {
+            get
+            {
+                if (this._jobClient == null)
+                {
+                    this._jobClient = new BackgroundJobClient();
+                }
+
+                return this._jobClient;
+            }
+            set => this._jobClient = value;
+        }
+
+        private IBackgroundJobClient _jobClient;
+
+        public DemoJob()
+        {
+        }
 
         public DemoJob(IBackgroundJobClient jobClient)
         {
             this.JobClient = jobClient;
         }
 
+        [Queue("default")]
         [Hangfire.Dashboard.Management.Support.Job]
         [DisplayName("呼叫內部方法")]
         [Description("呼叫內部方法")]
@@ -28,11 +47,11 @@ namespace Lab.HangfireUnitTest
             {
                 return;
             }
+            Console.WriteLine("Action 方法被調用");
 
             context.WriteLine($"測試用，Now:{DateTime.Now}");
-
-            //Thread.Sleep(30000);
         }
+
 
         public void EnqueueAction()
         {

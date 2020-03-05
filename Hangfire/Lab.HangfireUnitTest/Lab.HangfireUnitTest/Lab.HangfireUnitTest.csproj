@@ -150,9 +150,10 @@
     <Compile Include="Startup.cs" />
     <Compile Include="DemoJob.cs" />
     <Compile Include="HangfireConfig.cs" />
-    <Compile Include="MsTestHook.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="UnitTest1.cs" />
+    <Compile Include="BackgroundJobServer_IntegrateTest.cs" />
+    <Compile Include="BackgroundJobServerOwin_IntegrateTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

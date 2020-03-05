@@ -3,9 +3,8 @@ using System.Linq;
 using System.Reflection;
 using Hangfire;
 using Hangfire.Console;
-using Hangfire.Dashboard;
 using Hangfire.Dashboard.Management;
-using Hangfire.SQLite;
+using Hangfire.MemoryStorage;
 using Owin;
 
 namespace Lab.HangfireUnitTest
@@ -19,12 +18,19 @@ namespace Lab.HangfireUnitTest
         {
             GlobalConfiguration.Configuration
                                .UseManagementPages(cc => cc.AddJobs(() => { return GetModuleTypes(); }))
-                               .UseSQLiteStorage(DbConnectionName)
+                               .UseMemoryStorage()
+
+                               //.UseSQLiteStorage(DbConnectionName)
                                .UseConsole()
                 ;
-            app.UseHangfireDashboard(Url);
 
-            app.UseHangfireServer();
+            app.UseHangfireServer(new BackgroundJobServerOptions
+            {
+                ServerCheckInterval     = new TimeSpan(0, 0, 0),
+                SchedulePollingInterval = new TimeSpan(0, 0, 0),
+                Queues                  = new[] {"default"}
+            });
+            app.UseHangfireDashboard(Url);
         }
 
         private static Type[] GetModuleTypes()
