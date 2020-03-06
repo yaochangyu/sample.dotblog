@@ -3,12 +3,20 @@ using System.Diagnostics;
 using System.Threading;
 using Hangfire;
 using Hangfire.Console;
+using Hangfire.Logging;
 using Hangfire.Server;
 
 namespace Lab.HangfireApp.Controllers
 {
     internal class Job
     {
+        private static ILog s_logger;
+
+        static Job()
+        {
+            s_logger = LogProvider.GetCurrentClassLogger();
+        }
+
         //[Queue("a1")]
         public static void LongRunning(IJobCancellationToken cancellationToken)
         {
@@ -49,6 +57,7 @@ namespace Lab.HangfireApp.Controllers
 
         public static void Send(string message, IJobCancellationToken cancelToken)
         {
+            s_logger.Info($"Message:{message}, Now:{DateTime.Now}");
             //Thread.Sleep(10000);
             Trace.WriteLine($"Message:{message}, Now:{DateTime.Now}");
         }
@@ -57,6 +66,7 @@ namespace Lab.HangfireApp.Controllers
         {
             context.SetTextColor(ConsoleTextColor.Red);
             context.WriteLine($"Message:{message}, Now:{DateTime.Now}");
+
             //Thread.Sleep(10000);
             Trace.WriteLine($"Message:{message}, Now:{DateTime.Now}");
         }

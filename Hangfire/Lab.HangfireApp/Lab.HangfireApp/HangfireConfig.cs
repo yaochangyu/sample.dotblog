@@ -1,6 +1,7 @@
 ﻿using Hangfire;
 using Hangfire.Console;
 using Hangfire.Dashboard;
+using Hangfire.MemoryStorage;
 using Microsoft.Owin.Security.Cookies;
 using Owin;
 
@@ -16,9 +17,11 @@ namespace Lab.HangfireApp
             });
 
             GlobalConfiguration.Configuration
-                               .UseSqlServerStorage("Hangfire")
-                               .UseConsole();
-
+                      .UseConsole()
+                      .UseSqlServerStorage("Hangfire")
+                      .UseNLogLogProvider()
+       //.UseMemoryStorage()
+       ;
             IDashboardAuthorizationFilter dashboardAuthorization = null;
 #if DEV
             dashboardAuthorization = new DashboardAuthorizationFilter();
