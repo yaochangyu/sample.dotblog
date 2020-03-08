@@ -22,21 +22,26 @@ namespace Lab.HangfireServer.Jobs
                 throw new Exception("噴錯了~");
             }
 
-            consoleLog.WriteLine($"執行完畢：目前時間{DateTime.Now}");
+            consoleLog.WriteLine($"執行完畢，目前時間：{DateTime.Now}");
         }
 
         [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
-        [DisableConcurrentExecution(30)]
+        [DisableConcurrentExecution(120)]
         public void PollyRetry(string msg, PerformContext consoleLog, IJobCancellationToken cancelToken)
         {
             var retryPolicy = Policy.Handle<Exception>()
-                                    .Retry(3,
-                                           (exception, retryCount, context) =>
-                                           {
-                                               consoleLog.WriteLine($"重試次數：{retryCount}，目前時間：{DateTime.Now}");
-                                           });
+                                    .WaitAndRetry(new[]
+                                                  {
+                                                      TimeSpan.FromSeconds(5),
+                                                      TimeSpan.FromSeconds(10),
+                                                      TimeSpan.FromSeconds(15)
+                                                  },
+                                                  (exception, retryTime, context) =>
+                                                  {
+                                                      consoleLog.WriteLine($"延遲重試：{retryTime}，目前時間：{DateTime.Now}");
+                                                  });
             retryPolicy.Execute(() => this.PollyAction(msg, consoleLog, cancelToken));
-            consoleLog.WriteLine($"執行完畢：目前時間{DateTime.Now}");
+            consoleLog.WriteLine($"執行完畢，目前時間：{DateTime.Now}");
         }
 
         [DisableConcurrentExecution(5)]
@@ -60,7 +65,7 @@ namespace Lab.HangfireServer.Jobs
                 throw new Exception("噴錯了~");
             }
 
-            consoleLog.WriteLine($"執行完畢：目前時間{DateTime.Now}");
+            consoleLog.WriteLine($"執行完畢，目前時間：{DateTime.Now}");
         }
     }
 }
