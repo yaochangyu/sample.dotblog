@@ -12,11 +12,12 @@ namespace Lab.HangfireServer
 {
     internal class HangfireConfig
     {
-        private static string DbConnectionName = "Hangfire";
-        private static string Url = "/hangfire";
+        private static readonly string Url              = "/hangfire";
+        private static          string DbConnectionName = "Hangfire";
 
         public static void Register(IAppBuilder app)
         {
+            GlobalJobFilters.Filters.Add(new AutomaticRetryAttribute { Attempts = 5 });
             GlobalConfiguration.Configuration
                                .UseDashboardMetric(DashboardMetrics.ServerCount)
                                .UseDashboardMetric(DashboardMetrics.RecurringJobCount)
@@ -31,14 +32,16 @@ namespace Lab.HangfireServer
                                .UseDashboardMetric(DashboardMetrics.DeletedCount)
                                .UseDashboardMetric(DashboardMetrics.AwaitingCount)
                                //.UseSqlServerStorage(DbConnectionName)
-                               .UseMemoryStorage()
+                               .UseMemoryStorage(new MemoryStorageOptions
+                               {
+                                   FetchNextJobTimeout = new TimeSpan(0, 0, 5)
+                               })
                                .UseConsole()
                 ;
             var options = new BackgroundJobServerOptions
             {
-                ServerName  = $"{Environment.MachineName}.{Guid.NewGuid().ToString()}",
                 WorkerCount = 20,
-                Queues      = new[] {"critical", "normal", "low"}
+                Queues      = new[] {"default", "critical", "normal", "low"}
             };
             var dashboardOptions = new DashboardOptions
             {
@@ -48,7 +51,8 @@ namespace Lab.HangfireServer
             app.UseHangfireDashboard(Url, dashboardOptions);
 
             app.UseHangfireServer(options);
-            app.UseHangfireServer();
+
+            //app.UseHangfireServer();
         }
 
         private static Type[] GetModuleTypes()

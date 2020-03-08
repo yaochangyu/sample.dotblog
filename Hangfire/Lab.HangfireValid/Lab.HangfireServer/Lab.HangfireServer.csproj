@@ -87,6 +87,9 @@
     <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
       <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
     </Reference>
+    <Reference Include="Polly, Version=7.0.0.0, Culture=neutral, PublicKeyToken=c8a3ffc3f8f825cc, processorArchitecture=MSIL">
+      <HintPath>..\packages\Polly.7.2.0\lib\net472\Polly.dll</HintPath>
+    </Reference>
     <Reference Include="Swagger.Net, Version=8.3.25.2, Culture=neutral, PublicKeyToken=cd1bb07a5ac7c7bc, processorArchitecture=MSIL">
       <HintPath>..\packages\Swagger-Net.8.3.25.2\lib\net45\Swagger.Net.dll</HintPath>
     </Reference>
@@ -139,6 +142,7 @@
     <Compile Include="Filters\ErrorHandlerAttribute.cs" />
     <Compile Include="App_Start\HangfireConfig.cs" />
     <Compile Include="Filters\DashboardAuthorizationFilter.cs" />
+    <Compile Include="Jobs\Job.cs" />
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

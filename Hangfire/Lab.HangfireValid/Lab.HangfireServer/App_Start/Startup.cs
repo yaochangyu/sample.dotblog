@@ -13,11 +13,14 @@ namespace Lab.HangfireServer
             config.Filters.Add(new ErrorHandlerAttribute());
             HangfireConfig.Register(app);
             SwaggerConfig.Register(config);
+            
+            config.MapHttpAttributeRoutes();
             config.Routes.MapHttpRoute("DefaultApi",
                                        "api/{controller}/{id}",
                                        new {id = RouteParameter.Optional}
                                       );
 
+            
             app.UseWelcomePage("/");
             app.UseWebApi(config);
             app.UseErrorPage();
