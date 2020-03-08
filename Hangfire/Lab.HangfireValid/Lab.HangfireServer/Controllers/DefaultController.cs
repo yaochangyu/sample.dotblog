@@ -61,5 +61,12 @@ namespace Lab.HangfireServer.Controllers
         {
             this._client.Enqueue(() => this._job.PollyRetry(msg, null, null));
         }
+
+        [HttpGet]
+        [Route("WaitTimeout")]
+        public void WaitTimeout(string msg)
+        {
+            this._client.Enqueue(() => this._job.WaitTimeout(msg, null, null));
+        }
     }
 }

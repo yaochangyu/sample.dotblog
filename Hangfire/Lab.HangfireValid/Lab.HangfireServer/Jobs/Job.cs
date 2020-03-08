@@ -46,6 +46,7 @@ namespace Lab.HangfireServer.Jobs
             consoleLog.WriteLine($"執行完畢，目前時間：{DateTime.Now}");
         }
 
+        [JobDisplayName("WaitTimeout - {0}")]
         [DisableConcurrentExecution(5)]
         public void WaitTimeout(string msg, PerformContext context, IJobCancellationToken cancelToken)
         {

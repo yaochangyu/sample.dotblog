@@ -17,7 +17,7 @@ namespace Lab.HangfireServer
 
         public static void Register(IAppBuilder app)
         {
-            GlobalJobFilters.Filters.Add(new AutomaticRetryAttribute { Attempts = 5 });
+            GlobalJobFilters.Filters.Add(new AutomaticRetryAttribute {Attempts = 0});
             GlobalConfiguration.Configuration
                                .UseDashboardMetric(DashboardMetrics.ServerCount)
                                .UseDashboardMetric(DashboardMetrics.RecurringJobCount)
@@ -31,10 +31,11 @@ namespace Lab.HangfireServer
                                .UseDashboardMetric(DashboardMetrics.FailedCount)
                                .UseDashboardMetric(DashboardMetrics.DeletedCount)
                                .UseDashboardMetric(DashboardMetrics.AwaitingCount)
+
                                //.UseSqlServerStorage(DbConnectionName)
                                .UseMemoryStorage(new MemoryStorageOptions
                                {
-                                   FetchNextJobTimeout = new TimeSpan(0, 0, 5)
+                                   //FetchNextJobTimeout = new TimeSpan(0, 1, 30)
                                })
                                .UseConsole()
                 ;
