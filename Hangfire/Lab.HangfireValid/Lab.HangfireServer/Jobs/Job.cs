@@ -9,6 +9,7 @@ namespace Lab.HangfireServer.Jobs
 {
     public class Job
     {
+        [JobDisplayName("AutoRetry - {0}")]
         [AutomaticRetry(Attempts           = 3,
                         DelaysInSeconds    = new[] {5, 10, 15},
                         OnAttemptsExceeded = AttemptsExceededAction.Delete)]
@@ -25,6 +26,7 @@ namespace Lab.HangfireServer.Jobs
             consoleLog.WriteLine($"執行完畢，目前時間：{DateTime.Now}");
         }
 
+        [JobDisplayName("PollyRetry - {0}")]
         [AutomaticRetry(Attempts = 0, OnAttemptsExceeded = AttemptsExceededAction.Delete)]
         [DisableConcurrentExecution(120)]
         public void PollyRetry(string msg, PerformContext consoleLog, IJobCancellationToken cancelToken)

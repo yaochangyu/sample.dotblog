@@ -1,4 +1,5 @@
-﻿using System.Web.Http;
+﻿using System.Threading;
+using System.Web.Http;
 using Hangfire;
 using Hangfire.States;
 using Lab.HangfireServer.Jobs;
@@ -22,6 +23,28 @@ namespace Lab.HangfireServer.Controllers
         public void AutoRetry(string msg)
         {
             this._client.Enqueue(() => this._job.AutoRetry(msg, null, null));
+        }
+
+        [HttpGet]
+        [Route("CreateAutoRetryJob")]
+        public void CreateAutoRetryJob()
+        {
+            for (var i = 0; i < 100; i++)
+            {
+                this._client.Enqueue(() => this._job.AutoRetry(i.ToString(), null, null));
+                Thread.Sleep(100);
+            }
+        }
+
+        [HttpGet]
+        [Route("CreatePollyRetryJob")]
+        public void CreatePollyRetryJob()
+        {
+            for (var i = 0; i < 100; i++)
+            {
+                this._client.Enqueue(() => this._job.PollyRetry(i.ToString(), null, null));
+                Thread.Sleep(100);
+            }
         }
 
         [Route("SpecifyQueue")]
