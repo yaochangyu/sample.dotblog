@@ -31,6 +31,8 @@ namespace WebApiCore31
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+
+            app.UseMetricsAllMiddleware();
         }
 
         // This method gets called by the runtime. Use this method to add services to the container.

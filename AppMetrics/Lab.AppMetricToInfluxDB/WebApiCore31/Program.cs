@@ -30,9 +30,11 @@ namespace WebApiCore31
                                                                            {
                                                                                p.Enabled          = true;
                                                                                p.ReportingEnabled = true;
-                                                                           });
+                                                                           })
+                                                             ;
                                                      })
                        .UseMetrics()
+                       .UseMetricsWebTracking()
                        .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); })
                 ;
         }
