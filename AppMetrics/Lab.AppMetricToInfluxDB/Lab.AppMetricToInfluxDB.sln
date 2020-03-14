@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.29728.190
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApi.IIS.NET48", "WebApi.IIS.NET48\WebApi.IIS.NET48.csproj", "{9D588BD4-4C87-4F1A-9E22-C69A0CFD481E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp.NET48", "ConsoleApp.NET48\ConsoleApp.NET48.csproj", "{421E9D7B-D261-4A36-A5FA-ACDDD5B37E6B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{9D588BD4-4C87-4F1A-9E22-C69A0CFD481E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9D588BD4-4C87-4F1A-9E22-C69A0CFD481E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9D588BD4-4C87-4F1A-9E22-C69A0CFD481E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{421E9D7B-D261-4A36-A5FA-ACDDD5B37E6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{421E9D7B-D261-4A36-A5FA-ACDDD5B37E6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{421E9D7B-D261-4A36-A5FA-ACDDD5B37E6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{421E9D7B-D261-4A36-A5FA-ACDDD5B37E6B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
