@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApi.IIS.NET48", "WebApi.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp.NET48", "ConsoleApp.NET48\ConsoleApp.NET48.csproj", "{421E9D7B-D261-4A36-A5FA-ACDDD5B37E6B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiCore31", "WebApiCore31\WebApiCore31.csproj", "{52520223-D66B-42D9-ACF6-8453E5D2AA54}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{421E9D7B-D261-4A36-A5FA-ACDDD5B37E6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{421E9D7B-D261-4A36-A5FA-ACDDD5B37E6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{421E9D7B-D261-4A36-A5FA-ACDDD5B37E6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{52520223-D66B-42D9-ACF6-8453E5D2AA54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{52520223-D66B-42D9-ACF6-8453E5D2AA54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{52520223-D66B-42D9-ACF6-8453E5D2AA54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{52520223-D66B-42D9-ACF6-8453E5D2AA54}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
