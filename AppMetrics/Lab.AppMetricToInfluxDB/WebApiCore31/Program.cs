@@ -10,7 +10,7 @@ namespace WebApiCore31
     public class Program
     {
         private const string InfluxDbUrl  = "http://127.0.0.1:8086";
-        private const string InfluxDbName = "appmetricsreservoirs";
+        private const string InfluxDbName = "AppMetricsAspCore31";
 
         public static IHostBuilder CreateHostBuilder(string[] args)
         {
@@ -23,10 +23,18 @@ namespace WebApiCore31
                                                      {
                                                          builder.Filter.With(filter);
                                                          builder.Report.ToInfluxDb(InfluxDbUrl, InfluxDbName,
-                                                                                   TimeSpan.FromSeconds(1));
+                                                                                   TimeSpan.FromSeconds(5));
+                                                         builder.Report.ToConsole(TimeSpan.FromSeconds(5));
+                                                         builder.Configuration
+                                                                .Configure(p =>
+                                                                           {
+                                                                               p.Enabled          = true;
+                                                                               p.ReportingEnabled = true;
+                                                                           });
                                                      })
                        .UseMetrics()
-                       .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); });
+                       .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); })
+                ;
         }
 
         public static void Main(string[] args)
