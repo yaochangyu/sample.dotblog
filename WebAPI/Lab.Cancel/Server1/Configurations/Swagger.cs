@@ -12,6 +12,7 @@ using Swagger.Net.Application;
 
 namespace Server1
 {
+
     public class Swagger
     {
         public static void Configure(HttpConfiguration config)

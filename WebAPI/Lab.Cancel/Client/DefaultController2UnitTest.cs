@@ -1,107 +1,131 @@
 ﻿using System;
-using System.IO;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NLog;
 
 namespace Client
 {
-    namespace Server1
+    public class AuthorityCode
     {
+        public int Code { get; set; }
+
+        public string Name { get; set; }
+
+        public static ICollection<AuthorityCode> ConvertTo<TSource>() where TSource : Enum
+        {
+            //ICollection<AuthorityCode> results = null;
+            //return results;
+
+            return Enum.GetNames(typeof(TSource))
+                       .Cast<TSource>()
+                       .Select(p => new AuthorityCode
+                       {
+                           Code = Convert.ToInt32(p),
+                           Name = p.ToString()
+                       })
+                       .ToList()
+                ;
+        }
+    }
+
+    public static class EnumerationExtensions
+    {
+        public static TSource Add<TSource>(this TSource source, TSource value) where TSource : struct, IConvertible
+        {
+            if (!typeof(TSource).IsEnum)
+            {
+                throw new ArgumentException("T must be an enumerated type");
+            }
+
+            return (TSource) (object) (Convert.ToInt32(source) | Convert.ToInt32(value));
+        }
+
+        public static TSource Add1<TSource>(this TSource source, TSource value) where TSource : Enum
+        {
+            return (TSource) (object) (Convert.ToInt32(source) | Convert.ToInt32(value));
+        }
+
+        public static bool Has<TSource>(this TSource source, TSource value) where TSource : struct, IConvertible
+        {
+            if (!typeof(TSource).IsEnum)
+            {
+                throw new ArgumentException("T must be an enumerated type");
+            }
+
+            return (Convert.ToInt32(source) & Convert.ToInt32(value)) == Convert.ToInt32(value);
+        }
+
+        public static bool Has1<TSource>(this TSource source, TSource value) where TSource : Enum
+        {
+            return (Convert.ToInt32(source) & Convert.ToInt32(value)) == Convert.ToInt32(value);
+        }
+
+        public static TSource Remove<TSource>(this TSource source, TSource value) where TSource : struct, IConvertible
+        {
+            if (!typeof(TSource).IsEnum)
+            {
+                throw new ArgumentException("T must be an enumerated type");
+            }
+
+            return (TSource) (object) (Convert.ToInt32(source) & ~Convert.ToInt32(value));
+        }
+
+        public static TSource Remove1<TSource>(this TSource source, TSource value) where TSource : Enum
+        {
+            return (TSource) (object) (Convert.ToInt32(source) & ~Convert.ToInt32(value));
+        }
+    }
+
+    [Flags]
+    internal enum EnumPermissionType
+    {
+        None    = 0,
+        Read    = 1,
+        Add     = 2,
+        Edit    = 4,
+        Delete  = 8,
+        Print   = 16,
+        RunFlow = 32,
+        Export  = 64,
+        All     = Read | Add | Edit | Delete | Print | RunFlow
     }
 
     [TestClass]
-    public class DefaultController2UnitTest
+    public class UnitTest1
     {
-        //private const           string      HOST_ADDRESS = "http://localhost:8001";
-        private const           string     HOST_ADDRESS = "https://localhost:44378";
-        private static readonly ILogger    s_logger;
-        private static          HttpClient s_client;
-
-        static DefaultController2UnitTest()
+        [TestMethod]
+        public void ConvertTo()
         {
-            if (s_logger == null)
-            {
-                s_logger = LogManager.GetCurrentClassLogger();
-            }
+            var authorityCodes = AuthorityCode.ConvertTo<EnumPermissionType>();
         }
 
         [TestMethod]
-        public void Default2_Cancel()
+        public void HasAdd()
         {
-            var cancelToken = new CancellationTokenSource();
-
-            var url = "api/default2";
-
-            //var cancelUrl = "api/default2/canncel";
-            var request = s_client.GetAsync(url, HttpCompletionOption.ResponseContentRead, cancelToken.Token);
-
-            //Task.Delay(2000).Wait();
-            Task.Delay(1000).Wait();
-
-            var response =
-                request.ContinueWith(task =>
-                                     {
-                                         var status =
-                                             $"Status      = {task.Status}\r\n"      +
-                                             $"IsCanceled  = {task.IsCanceled}\r\n"  +
-                                             $"IsCompleted = {task.IsCompleted}\r\n" +
-                                             $"IsFaulted   = {task.IsFaulted}";
-
-                                         s_logger.Trace(status);
-                                         return task;
-                                     },
-                                     TaskContinuationOptions.None
-                                    );
-            cancelToken.Cancel();
-            Task.Delay(1000).Wait();
-            Task.WaitAll(response);
+            var fromDb    = 7;
+            var operation = (EnumPermissionType) fromDb;
+            var has       = operation.Has(EnumPermissionType.Add);
+            Assert.AreEqual(true, has);
         }
 
         [TestMethod]
-        public async Task TestAsync()
+        public void HasRead()
         {
-            var handler = new TimeoutHandler
-            {
-                DefaultTimeout = TimeSpan.FromSeconds(5),
-                InnerHandler   = new HttpClientHandler()
-            };
-            var url = "api/default";
-
-            using (var cts = new CancellationTokenSource())
-            using (var client = new HttpClient(handler))
-            {
-                client.BaseAddress = new Uri(HOST_ADDRESS);
-                client.Timeout     = Timeout.InfiniteTimeSpan;
-
-                var request = new HttpRequestMessage(HttpMethod.Get, url);
-
-                // Uncomment to test per-request timeout
-                //request.SetTimeout(TimeSpan.FromSeconds(5));
-
-                // Uncomment to test that cancellation still works properly
-                //cts.CancelAfter(TimeSpan.FromSeconds(2));
-
-                using (var response = await client.SendAsync(request, cts.Token))
-                {
-                    Console.WriteLine(response.StatusCode);
-                }
-            }
+            var fromDb = "Add,Read";
+            Enum.TryParse<EnumPermissionType>(fromDb, out var operation);
+            var has = operation.Has(EnumPermissionType.Read);
+            Assert.AreEqual(true, has);
         }
 
-        [TestCleanup]
-        public void TestCleanup()
+        [TestMethod]
+        public void Remove()
         {
-            s_client.Dispose();
-        }
-
-        [TestInitialize]
-        public void TestInitialize()
-        {
-            s_client             = new HttpClient();
-            s_client.BaseAddress = new Uri(HOST_ADDRESS);
+            var operation = EnumPermissionType.None
+                                              .Add(EnumPermissionType.Add)
+                                              .Add(EnumPermissionType.Read);
+            var after = operation.Remove(EnumPermissionType.Read);
+            var has   = after.Has(EnumPermissionType.Read);
+            Assert.AreEqual(false, has);
         }
     }
 }

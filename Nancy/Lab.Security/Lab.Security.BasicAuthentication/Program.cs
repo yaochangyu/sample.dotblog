@@ -10,7 +10,7 @@ namespace Lab.Security.BasicAuthentication
     {
         private static void Main(string[] args)
         {
-            var baseUri = new Uri("http://localhost:9527");
+            var baseUri = new Uri("https://localhost:9527");
             using (var host = new NancyHost(baseUri))
             {
                 host.Start();
