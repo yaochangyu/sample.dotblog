@@ -1,3 +1,4 @@
+using App.Metrics;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -13,6 +14,9 @@ namespace WebApiCore31
 
         public Startup(IConfiguration configuration)
         {
+            var metrics = new MetricsBuilder()
+                          .Report.ToConsole()
+                          .Build();
             this.Configuration = configuration;
         }
 
