@@ -34,17 +34,16 @@ namespace WebApi.IIS.NET452
                                                        {
                                                            var reportFactory =
                                                                provider.GetRequiredService<IReportFactory>();
-                                                           var metrics = provider.GetRequiredService<IMetrics>();
+                                                           var metrics  = provider.GetRequiredService<IMetrics>();
                                                            var reporter = reportFactory.CreateReporter();
                                                            reporter.RunReports(metrics, cancellationToken);
                                                        });
-
         }
 
         public void ConfigureServices(IServiceCollection services)
         {
-            var influxDbSettings = new InfluxDBSettings("AppMetricsWebApi452",
-                                                        new Uri("http://127.0.0.1:8086"));
+            var influxDbSettings = new InfluxDBSettings(AppSetting.InfluxDB.DatabaseName,
+                                                        new Uri(AppSetting.InfluxDB.Url));
             services.AddLogging();
 
             services.AddControllersAsServices();

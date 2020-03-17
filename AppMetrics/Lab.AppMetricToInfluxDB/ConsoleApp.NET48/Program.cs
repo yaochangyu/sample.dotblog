@@ -12,17 +12,14 @@ namespace ConsoleApp.NET48
 {
     internal class Program
     {
-        private const string InfluxDbUrl  = "http://127.0.0.1:8086";
-        private const string InfluxDbName = "ConsoleAppNet48";
-
         public static async Task Main()
         {
             long threshold      = 1;
             var  metricsBuilder = new MetricsBuilder();
             var  healthBuilder  = new HealthBuilder();
 
-            var metrics = metricsBuilder.Report.ToInfluxDb(InfluxDbUrl,
-                                                           InfluxDbName,
+            var metrics = metricsBuilder.Report.ToInfluxDb(AppSetting.InfluxDB.Url,
+                                                           AppSetting.InfluxDB.DatabaseName,
                                                            TimeSpan.FromSeconds(5))
                                         .Report.ToConsole(TimeSpan.FromSeconds(5))
                                         .Build()

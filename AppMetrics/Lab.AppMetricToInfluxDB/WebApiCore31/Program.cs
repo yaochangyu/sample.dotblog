@@ -17,9 +17,6 @@ namespace WebApiCore31
 {
     public class Program
     {
-        public const string InfluxDbUrl  = "http://127.0.0.1:8086";
-        public const string InfluxDbName = "AppMetricsAspCore31";
-
         public static IHostBuilder CreateHostBuilder(string[] args)
         {
             var thresholdBytes = 200;
@@ -39,7 +36,8 @@ namespace WebApiCore31
                        .ConfigureMetricsWithDefaults(builder =>
                                                      {
                                                          builder.Filter.With(filter);
-                                                         builder.Report.ToInfluxDb(InfluxDbUrl, InfluxDbName,
+                                                         builder.Report.ToInfluxDb(AppSetting.InfluxDB.Url,
+                                                                                   AppSetting.InfluxDB.DatabaseName,
                                                                                    TimeSpan.FromSeconds(5));
                                                          builder.Report.ToConsole(TimeSpan.FromSeconds(5));
                                                          builder.Configuration

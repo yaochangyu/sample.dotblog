@@ -12,8 +12,6 @@ namespace ConsoleApp.NET452
 {
     public static class ServiceCollectionExtensions
     {
-        private const string influxUrl      = "http://127.0.0.1:8086";
-        private const string influxDatabase = "appmetricsnet452";
 
         public static IServiceCollection ConfigureMetrics(this IServiceCollection services)
         {
@@ -54,7 +52,7 @@ namespace ConsoleApp.NET452
                                               BackoffPeriod         = TimeSpan.FromSeconds(10),
                                               Timeout               = TimeSpan.FromSeconds(3)
                                           },
-                                          InfluxDbSettings = new InfluxDBSettings(influxDatabase, new Uri(influxUrl)),
+                                          InfluxDbSettings = new InfluxDBSettings(AppSetting.InfluxDB.DatabaseName, new Uri(AppSetting.InfluxDB.Url)),
                                           ReportInterval   = TimeSpan.FromSeconds(5)
                                       }, influxFilter);
                                   })

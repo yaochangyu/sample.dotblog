@@ -36,7 +36,7 @@ namespace ConsoleApp.NET452
                                                  () =>
                                                  {
                                                      // Run Metrics
-                                                     
+
                                                  },
                                                  cancellationTokenSource.Token);
                           });
