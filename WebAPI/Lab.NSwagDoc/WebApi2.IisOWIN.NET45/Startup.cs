@@ -10,17 +10,18 @@ namespace WebApi2.IisOWIN.NET45
         {
             //var config = new HttpConfiguration();
             var config = GlobalConfiguration.Configuration;
-            app.UseSwaggerUi3(typeof(Startup).Assembly, settings =>
-                                                        {
-                                                            settings.GeneratorSettings.DefaultUrlTemplate =
-                                                                "api/{controller}/{id?}";
+            app.UseSwaggerUi3(typeof(Startup).Assembly,
+                              settings =>
+                              {
+                                  settings.GeneratorSettings.DefaultUrlTemplate =
+                                      "api/{controller}/{id?}";
 
-                                                            settings.PostProcess = document =>
-                                                                                   {
-                                                                                       document.Info.Title =
-                                                                                           "WebAPI OWIN Demo";
-                                                                                   };
-                                                        });
+                                  settings.PostProcess = document =>
+                                                         {
+                                                             document.Info.Title =
+                                                                 "WebAPI OWIN Demo";
+                                                         };
+                              });
 
             //app.UseWebApi(config);
             //config.MapHttpAttributeRoutes();
