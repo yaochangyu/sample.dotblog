@@ -12,11 +12,9 @@ namespace WebApi2.IisOWIN.NET45
             var config = GlobalConfiguration.Configuration;
             app.UseSwaggerUi3(typeof(Startup).Assembly, settings =>
                                                         {
-                                                            //針對RPC-Style WebAPI，指定路由包含Action名稱
                                                             settings.GeneratorSettings.DefaultUrlTemplate =
-                                                                "api/{controller}/{action}/{id?}";
+                                                                "api/{controller}/{id?}";
 
-                                                            //可加入客製化調整邏輯
                                                             settings.PostProcess = document =>
                                                                                    {
                                                                                        document.Info.Title =
