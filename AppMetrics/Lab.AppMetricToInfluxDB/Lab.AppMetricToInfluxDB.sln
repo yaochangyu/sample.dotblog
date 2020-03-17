@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp.NET452", "Consol
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp.NET48", "ConsoleApp.NET48\ConsoleApp.NET48.csproj", "{8DAF5FD4-E3D0-4E4A-8DF9-D46B8E5D6CB9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApi.Core22.NET48", "WebApi.Core22.NET48\WebApi.Core22.NET48.csproj", "{780A8396-B38E-40C2-B188-7D612E05AC48}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{8DAF5FD4-E3D0-4E4A-8DF9-D46B8E5D6CB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8DAF5FD4-E3D0-4E4A-8DF9-D46B8E5D6CB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8DAF5FD4-E3D0-4E4A-8DF9-D46B8E5D6CB9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{780A8396-B38E-40C2-B188-7D612E05AC48}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{780A8396-B38E-40C2-B188-7D612E05AC48}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{780A8396-B38E-40C2-B188-7D612E05AC48}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{780A8396-B38E-40C2-B188-7D612E05AC48}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
