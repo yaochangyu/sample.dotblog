@@ -19,7 +19,7 @@ namespace WebApi2.IisOWIN.NET45
                                   settings.PostProcess = document =>
                                                          {
                                                              document.Info.Title =
-                                                                 "WebAPI OWIN Demo";
+                                                                 "WebAPI 2 OWIN Demo";
                                                          };
                               });
 
