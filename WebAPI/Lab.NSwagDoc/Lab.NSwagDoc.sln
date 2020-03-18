@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp.OWIN.NET45", "Co
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApi2.IisOWIN.NET45", "WebApi2.IisOWIN.NET45\WebApi2.IisOWIN.NET45.csproj", "{999DE2DB-8D55-4734-974E-743A9F7935B5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiCore31", "WebApiCore31\WebApiCore31.csproj", "{BC7A3F27-07F4-4A4D-B0A3-75A151A7880B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{999DE2DB-8D55-4734-974E-743A9F7935B5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{999DE2DB-8D55-4734-974E-743A9F7935B5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{999DE2DB-8D55-4734-974E-743A9F7935B5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC7A3F27-07F4-4A4D-B0A3-75A151A7880B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC7A3F27-07F4-4A4D-B0A3-75A151A7880B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC7A3F27-07F4-4A4D-B0A3-75A151A7880B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC7A3F27-07F4-4A4D-B0A3-75A151A7880B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
