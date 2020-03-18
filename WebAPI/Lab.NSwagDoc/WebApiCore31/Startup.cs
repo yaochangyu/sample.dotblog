@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -21,6 +22,7 @@ namespace WebApiCore31
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseBrowserLink();
             }
 
             app.UseHttpsRedirection();
@@ -42,7 +44,12 @@ namespace WebApiCore31
             services.AddControllers();
 
             // Add OpenAPI v3 document
-            services.AddOpenApiDocument();
+            services.AddOpenApiDocument((settings, provider) =>
+                                        {
+                                            //settings.OperationProcessors.Add(new MyOperationProcessor());
+                                            //settings.DocumentProcessors.Add(new MyDocumentProcessor());
+                                        });
+            services.AddTransient<IActionDescriptorProvider, RemoveCancellationTokenActionDescriptorProvider>();
 
             // Add Swagger v2 document
             // services.AddSwaggerDocument();
