@@ -23,10 +23,6 @@ namespace WebApiCore31
         {
             this._appSettings = appSettings.Value;
         }
-        public JwtAuthenticationProvider(AppSettings appSettings)
-        {
-            this._appSettings = appSettings;
-        }
 
         public string Authenticate(string userName, string password)
         {
