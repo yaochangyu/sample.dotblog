@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
@@ -32,23 +32,41 @@ namespace WebApiCore31.Security
                 return AuthenticateResult.Fail("Missing Authorization Header");
             }
 
+            //檢查 Header
+            //將 Authorization Header 轉型成 AuthenticationHeaderValue 物件
             AuthenticationHeaderValue.TryParse(this.Request.Headers["Authorization"], out var authenticationHeader);
             if (authenticationHeader == null)
             {
                 return AuthenticateResult.Fail("Invalid Authorization Header");
             }
 
-            var credentialBytes = Convert.FromBase64String(authenticationHeader.Parameter);
-            var credentials     = Encoding.UTF8.GetString(credentialBytes).Split(new[] {':'}, 2);
-            var userId          = credentials[0];
-            var password        = credentials[1];
-            var isValid         = await this._authenticationProvider.Authenticate(userId,password);
-            if (!isValid)
+            //只允許 Basic Authentication
+            if (string.Compare(authenticationHeader.Scheme, "basic", true) == 0 == false)
             {
-                return AuthenticateResult.Fail("Invalid Username or Password");
+                return AuthenticateResult.Fail("Only Support Basic Authority Header");
             }
 
-            //�إ�Claim�A�Y�ݭn��h��T�i�H�q��Ʈw��
+            string userId   = null;
+            string password = null;
+            try
+            {
+                //Base64 String 轉成文字，切割，取出帳號密碼
+                var credentialBytes = Convert.FromBase64String(authenticationHeader.Parameter);
+                var credentials     = Encoding.UTF8.GetString(credentialBytes).Split(new[] {':'}, 2);
+                userId   = credentials[0];
+                password = credentials[1];
+                var isValid = await this._authenticationProvider.Authenticate(userId, password);
+                if (!isValid)
+                {
+                    return AuthenticateResult.Fail("Invalid Username or Password");
+                }
+            }
+            catch (Exception)
+            {
+                return AuthenticateResult.Fail("Invalid Authority Header");
+            }
+
+            //建立Claim，若需要更多資訊可以從資料庫拿
             var claims = new[]
             {
                 //new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
