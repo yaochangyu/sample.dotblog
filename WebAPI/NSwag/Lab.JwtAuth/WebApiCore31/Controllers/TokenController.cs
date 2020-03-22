@@ -5,9 +5,6 @@ using WebApiCore31;
 
 namespace JwtAuthDemo.Controllers
 {
-    /// <summary>
-    ///     主要負責 JWT Token 相關操作
-    /// </summary>
     [Authorize]
     [ApiController]
     public class TokenController : ControllerBase
@@ -18,13 +15,6 @@ namespace JwtAuthDemo.Controllers
         {
             this._jwtProvider = jwtProvider;
         }
-
-        //[AllowAnonymous]
-        //[HttpPost("login")]
-        //public ActionResult<string> login(LoginRequest login)
-        //{
-        //    return this._jwtProvider.Authenticate(login.UserId, login.Password);
-        //}
 
         [AllowAnonymous]
         [HttpPost("login")]
@@ -39,17 +29,5 @@ namespace JwtAuthDemo.Controllers
 
             return this.Ok(token);
         }
-
-        private bool ValidateUser(LoginRequest login)
-        {
-            return true; // TODO
-        }
-    }
-
-    public class LoginRequest
-    {
-        public string UserId { get; set; }
-
-        public string Password { get; set; }
     }
 }
