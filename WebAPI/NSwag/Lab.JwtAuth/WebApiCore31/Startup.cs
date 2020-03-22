@@ -60,9 +60,7 @@ namespace WebApiCore31
             var appSettingsSection = this.Configuration.GetSection("AppSettings");
             var appSettings        = appSettingsSection.Get<AppSettings>();
 
-            //services.Configure<AppSettings>(appSettingsSection);
-            services.AddSingleton(appSettings);
-
+            services.Configure<AppSettings>(appSettingsSection);
 
             // configure jwt authentication
             var key = Encoding.ASCII.GetBytes(appSettings.Secret);
