@@ -78,5 +78,11 @@ namespace WebApiCore31.Security
 
             return AuthenticateResult.Success(ticket);
         }
+
+        protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
+        {
+            this.Response.Headers["WWW-Authenticate"] = $"Basic realm=\"Demo APP\", charset=\"UTF-8\"";
+            await base.HandleChallengeAsync(properties);
+        }
     }
 }
