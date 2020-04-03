@@ -10,6 +10,7 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{7B62549A-47C1-444A-B603-9A25AA13BD74}</ProjectGuid>
     <OutputType>WinExe</OutputType>
+    <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
     <RootNamespace>WinFormNet48</RootNamespace>
     <AssemblyName>WinFormNet48</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>

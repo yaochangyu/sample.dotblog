@@ -19,7 +19,6 @@ namespace WinFormNet48
 
         public void InitBrowser()
         {
-            Cef.Initialize(new CefSettings());
             var fileName = Path.Combine(Directory.GetCurrentDirectory(), "Views/Index.html");
 
             this._browser = new ChromiumWebBrowser(fileName)
@@ -32,7 +31,6 @@ namespace WinFormNet48
 
         private void HtmlForm_FormClosed(object sender, FormClosedEventArgs e)
         {
-            Cef.Shutdown();
             this._browser?.Dispose();
         }
     }
