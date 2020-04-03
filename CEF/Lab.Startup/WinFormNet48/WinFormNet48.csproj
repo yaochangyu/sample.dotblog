@@ -278,6 +278,7 @@
   <PropertyGroup>
     <PreBuildEvent>xcopy /s /y $(ProjectDir)Content $(TargetDir)Content\
 xcopy /s /y $(ProjectDir)Scripts $(TargetDir)Scripts\
+xcopy /s /y $(ProjectDir)Views $(TargetDir)Views\
 
 
 </PreBuildEvent>
