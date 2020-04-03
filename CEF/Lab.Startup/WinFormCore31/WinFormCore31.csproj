@@ -2,16 +2,28 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <Platforms>x64;x86</Platforms>
     <OutputPath>bin</OutputPath>
-    <DocumentationFile>bin\WinFormCore30.xml</DocumentationFile>
+    <DocumentationFile>bin\WinFormCore31.xml</DocumentationFile>
+    <CefSharpAnyCpuSupport>true</CefSharpAnyCpuSupport>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Bootstrap" Version="4.4.1" />
     <PackageReference Include="CefSharp.Common" Version="79.1.360" />
     <PackageReference Include="CefSharp.WinForms" Version="79.1.360" />
+    <PackageReference Include="JQuery" Version="3.4.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="LoadHtmlForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="LoadHtmlForm.Designer.cs">
+      <DependentUpon>LoadHtmlForm.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
 
   <ItemGroup>
@@ -25,4 +37,8 @@
       <Private>true</Private>
     </Reference>
   </ItemGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Command="xcopy /s /y &quot;%25userprofile%25/.nuget/packages/jquery/3.4.1/Content/Scripts&quot; $(TargetDir)Scripts\&#xD;&#xA;xcopy /s /y &quot;%25userprofile%25/.nuget/packages/bootstrap/4.4.1/content/Scripts&quot; $(TargetDir)Scripts\&#xD;&#xA;xcopy /s /y &quot;%25userprofile%25/.nuget/packages/bootstrap/4.4.1/content/Content&quot; $(TargetDir)Content\&#xD;&#xA;xcopy /s /y $(ProjectDir)Views $(TargetDir)Views\" />
+  </Target>
 </Project>

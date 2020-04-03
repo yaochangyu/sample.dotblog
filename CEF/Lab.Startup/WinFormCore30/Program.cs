@@ -24,7 +24,7 @@ namespace WinFormCore30
             AppDomain.CurrentDomain.AssemblyResolve += Resolver;
             InitializeCefSharp();
 
-            Application.Run(new Form1());
+            Application.Run(new LoadHtmlForm());
         }
 
         private static void Application_ApplicationExit(object sender, EventArgs e)
@@ -38,9 +38,9 @@ namespace WinFormCore30
             var settings = new CefSettings();
 
             // Set BrowserSubProcessPath based on app bitness at runtime
-            settings.BrowserSubprocessPath = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase,
-                                                          Environment.Is64BitProcess ? "x64" : "x86",
-                                                          "CefSharp.BrowserSubprocess.exe");
+            //settings.BrowserSubprocessPath = Path.Combine(AppDomain.CurrentDomain.SetupInformation.ApplicationBase,
+            //                                              Environment.Is64BitProcess ? "x64" : "x86",
+            //                                              "CefSharp.BrowserSubprocess.exe");
 
             // Make sure you set performDependencyCheck false
             Cef.Initialize(settings, false, browserProcessHandler: null);
