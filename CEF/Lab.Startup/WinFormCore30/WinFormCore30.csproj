@@ -4,25 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <Platforms>x64;x86;AnyCPU</Platforms>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutputPath>bin</OutputPath>
-    <DocumentationFile>bin\WinFormCore30.xml</DocumentationFile>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <OutputPath>bin</OutputPath>
-    <DocumentationFile>bin\WinFormCore30.xml</DocumentationFile>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutputPath>bin</OutputPath>
-    <DocumentationFile>bin\WinFormCore30.xml</DocumentationFile>
-  </PropertyGroup>
-
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Platforms>x64;x86</Platforms>
     <OutputPath>bin</OutputPath>
     <DocumentationFile>bin\WinFormCore30.xml</DocumentationFile>
   </PropertyGroup>

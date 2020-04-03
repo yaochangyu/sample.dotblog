@@ -18,7 +18,6 @@ namespace WinFormCore31
 
         public void InitBrowser()
         {
-            Cef.Initialize(new CefSettings());
             this._browser = new ChromiumWebBrowser("www.google.com")
             {
                 Dock = DockStyle.Fill
@@ -28,7 +27,6 @@ namespace WinFormCore31
 
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
-            Cef.Shutdown();
             this._browser?.Dispose();
         }
     }
