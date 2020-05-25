@@ -21,9 +21,9 @@ namespace Server.SignalR
             this.Start();
         }
 
-        public void Broadcast(string name, string message)
+        public void Broadcast(string name, string country)
         {
-            this.Clients.All.ShowMessage(name, message);
+            this.Clients.All.ShowMessage(name, country);
         }
 
         public void Start()

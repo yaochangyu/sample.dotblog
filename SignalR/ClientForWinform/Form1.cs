@@ -28,11 +28,14 @@ namespace ClientForWinform
             this._hubProxy.On("ShowMessage",
                               (string name, string country) =>
                               {
-                                  this.Messages_TextBox.InvokeIfNecessary(() =>
-                                                                          {
-                                                                              this.Messages_TextBox
-                                                                                  .AppendText($"Hi, My name is {name}, I come from {country}\r\n");
-                                                                          });
+                                  this.Messages_TextBox
+                                      .InvokeIfNecessary(() =>
+                                                         {
+                                                             var msg = $"Hi, My name is {name}, I come from {country}\r\n";
+                                                             this.Messages_TextBox
+                                                                 .AppendText(msg);
+                                                             Console.WriteLine(msg);
+                                                         });
                               });
 
             //this._hubProxy.On("ShowMessage",
