@@ -14,22 +14,25 @@ namespace Server.Controllers
     [RoutePrefix("api/values")]
     public class ValuesController : ApiController
     {
-        private bool IsRunning { get; set; }
-
-        private readonly CancellationTokenSource _cancellation;
+        private static volatile bool IsRunning;
 
         [HttpPost]
         [Route("AddSchedule")]
         public IHttpActionResult AddSchedule(CancellationToken cancel)
         {
-            this.IsRunning = true;
-            var context = GlobalHost.ConnectionManager.GetHubContext<BroadcastHub>();
+            if (IsRunning)
+            {
+                return new ResponseMessageResult(new HttpResponseMessage(HttpStatusCode.Accepted));
+            }
 
+            IsRunning = true;
+
+            var context = GlobalHost.ConnectionManager.GetHubContext<BroadcastHub>();
             var interval = new TimeSpan(0, 0, 0, 10);
             Task.Factory
                 .StartNew(() =>
                           {
-                              while (this.IsRunning)
+                              while (IsRunning)
                               {
                                   try
                                   {
@@ -49,7 +52,8 @@ namespace Server.Controllers
                                   }
                                   finally
                                   {
-                                      var isExist = !this.IsRunning || cancel.IsCancellationRequested;
+                                      var isStop  = !IsRunning;
+                                      var isExist = isStop || cancel.IsCancellationRequested;
                                       SpinWait.SpinUntil(() => isExist, interval);
                                   }
                               }
@@ -60,10 +64,10 @@ namespace Server.Controllers
 
         [HttpPost]
         [Route("")]
-        public IHttpActionResult Post(string name, string country, string connectionId)
+        public IHttpActionResult Post(string name, string country, string connectionIds)
         {
             var context = GlobalHost.ConnectionManager.GetHubContext<BroadcastHub>();
-            if (connectionId == "*")
+            if (string.IsNullOrWhiteSpace(connectionIds))
             {
                 context.Clients
                        .All
@@ -71,14 +75,23 @@ namespace Server.Controllers
             }
             else
             {
+                //不支援多筆
                 context.Clients
                        .Clients(new List<string>
                        {
-                           connectionId
+                           connectionIds
                        })
                        .ShowMessage(name, country);
             }
 
+            return new ResponseMessageResult(new HttpResponseMessage(HttpStatusCode.Accepted));
+        }
+
+        [HttpPost]
+        [Route("RemoveSchedule")]
+        public IHttpActionResult RemoveSchedule(CancellationToken cancel)
+        {
+            IsRunning = false;
             return new ResponseMessageResult(new HttpResponseMessage(HttpStatusCode.Accepted));
         }
     }
