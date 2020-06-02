@@ -6,11 +6,11 @@ namespace Lab.DAL.EntityModel
     {
         private static readonly bool[] s_migrated = {false};
 
-        public virtual DbSet<Employee> Employee { get; set; }
+        public virtual DbSet<Employee> Employees { get; set; }
 
-        public virtual DbSet<Identity> Identity { get; set; }
+        public virtual DbSet<Identity> Identities { get; set; }
 
-        public virtual DbSet<Order> Order { get; set; }
+        public virtual DbSet<Order> Orders { get; set; }
 
         public LabEmployeeContext()
         {

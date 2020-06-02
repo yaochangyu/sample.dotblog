@@ -14,7 +14,7 @@ namespace Lab.DAL.UnitTest
         {
             using (var dbContext=new LabEmployeeContext(DbOptionsFactory.DbContextOptions))
             {
-                var employees = dbContext.Employee.AsNoTracking().ToList();
+                var employees = dbContext.Employees.AsNoTracking().ToList();
             }
         }
     }

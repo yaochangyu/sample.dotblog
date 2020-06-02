@@ -5,6 +5,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Lab.DAL.EntityModel
 {
+    [Table("Employee")]
+
     public class Employee
     {
         [Key]
@@ -15,6 +17,7 @@ namespace Lab.DAL.EntityModel
 
         public int? Age { get; set; }
 
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long SequenceId { get; set; }
 
         public string Remark { get; set; }
