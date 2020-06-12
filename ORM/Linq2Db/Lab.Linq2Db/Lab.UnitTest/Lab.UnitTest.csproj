@@ -64,6 +64,7 @@
     <Compile Include="EmployeeRepository2.cs" />
     <Compile Include="EmployeeRepository3.cs" />
     <Compile Include="EmployeeViewModel.cs" />
+    <Compile Include="EntityModel\LabEmployee2DB.cs" />
     <Compile Include="EntityModel\CopyMe.SqlServer1.generated.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

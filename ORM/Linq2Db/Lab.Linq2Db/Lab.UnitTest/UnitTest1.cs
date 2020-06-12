@@ -16,7 +16,7 @@ namespace Lab.UnitTest
     [TestClass]
     public class UnitTest1
     {
-        private static readonly string    ConnectionName = "LabDbContext";
+        private static readonly string    ConnectionName = "SLabDbContext";
         internal                Validator Validator      = new Validator("yaochang");
 
         [TestMethod]
@@ -134,39 +134,25 @@ namespace Lab.UnitTest
         [TestMethod]
         public void 新增一筆()
         {
-            var dbConnectString = DataConnection.GetConnectionString(ConnectionName);
+            //using (var db = LabEmployee2DB.CreateSecretDb())
+            //{
+            //    if (db.Connection.State == ConnectionState.Closed)
+            //    {
+            //        db.Connection.Open();
+            //    }
 
-            //解密
-            dbConnectString = this.Validator.Decrypt(dbConnectString);
-            DataConnection.SetConnectionString(ConnectionName, dbConnectString);
+            //    var count = db.Insert(new Employee {Id = Guid.NewGuid(), Name = "小章", Age = 18});
+            //    Assert.IsTrue(count == 1);
 
-            LabEmployee2DB db = null;
-            try
+            //    db.Connection.Close();
+            //}
+
+            using (var db = LabEmployee2DB.CreateSecretDb())
             {
-                db = new LabEmployee2DB(ConnectionName);
-            }
-            finally
-            {
-                db.Close();
-                db.Dispose();
-            }
-
-            using (db = new LabEmployee2DB(ConnectionName))
-            {
-                db.OnClosing += this.Db_OnClosing;
-                db.OnClosed  += this.Db_OnClosed;
-                if (db.Connection.State == ConnectionState.Closed)
-                {
-                    db.Connection.Open();
-                }
-
+                
                 var count = db.Insert(new Employee {Id = Guid.NewGuid(), Name = "小章", Age = 18});
                 Assert.IsTrue(count == 1);
-
-                db.Connection.Close();
             }
-
-            db.DisposeCommand();
         }
 
         [TestMethod]
@@ -187,14 +173,6 @@ namespace Lab.UnitTest
             {
                 db.BulkCopy(employees);
             }
-        }
-
-        private void Db_OnClosed(object sender, EventArgs e)
-        {
-        }
-
-        private void Db_OnClosing(object sender, EventArgs e)
-        {
         }
 
         private void Insert(LabEmployee2DB db = null)
@@ -269,7 +247,7 @@ namespace Lab.UnitTest
                 using (var cs = new CryptoStream(ms, this.des.CreateEncryptor(this.rgbKey, this.rgbIv),
                                                  CryptoStreamMode.Write))
                 {
-                    byte[] buff = Encoding.UTF8.GetBytes(rawText);
+                    var buff = Encoding.UTF8.GetBytes(rawText);
                     cs.Write(buff, 0, buff.Length);
                 }
 
