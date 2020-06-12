@@ -149,7 +149,6 @@ namespace Lab.UnitTest
 
             using (var db = LabEmployee2DB.CreateSecretDb())
             {
-                
                 var count = db.Insert(new Employee {Id = Guid.NewGuid(), Name = "小章", Age = 18});
                 Assert.IsTrue(count == 1);
             }
@@ -171,7 +170,22 @@ namespace Lab.UnitTest
 
             using (var db = new LabEmployee2DB(ConnectionName))
             {
-                db.BulkCopy(employees);
+                var bulkCopyOptions = new BulkCopyOptions
+                    {BulkCopyType = BulkCopyType.ProviderSpecific, UseInternalTransaction = true};
+                db.BulkCopy(bulkCopyOptions, employees);
+            }
+        }
+
+        [TestMethod]
+        public void 新增多筆()
+        {
+            using (var db = LabEmployee2DB.CreateSecretDb())
+            {
+                var employee1 = new Employee {Id = Guid.NewGuid(), Name = "余小章", Age = 20};
+                var employee2 = new Employee {Id = Guid.NewGuid(), Name = "小章", Age  = 18};
+                var employees = new List<Employee> {employee2, employee1};
+                var count     = db.Insert(employees, "Employee");
+                Assert.IsTrue(count == 2);
             }
         }
 
