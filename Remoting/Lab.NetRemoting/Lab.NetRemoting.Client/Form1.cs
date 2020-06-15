@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Runtime.Remoting;
-using System.Runtime.Remoting.Activation;
 using System.Windows.Forms;
 using Lab.NetRemoting.Core;
 using Newtonsoft.Json;
@@ -17,8 +15,13 @@ namespace Lab.NetRemoting.Client
             this.InitializeComponent();
 
             //WellKnown 啟用模式，在客戶端建立物件時，只能呼叫預設的建構函式
-            this._trMessage = (ITrMessage) Activator.GetObject(typeof(ITrMessage), this._url);
-            Console.WriteLine($"{DateTime.Now}, 已連接伺服器：{this._url}");
+            //this._trMessage = (ITrMessage)Activator.GetObject(typeof(ITrMessage), this._url);
+            //Console.WriteLine($"{DateTime.Now}, 已連接伺服器：{this._url}");
+
+            //WellKnown 啟用模式+ITrMessageFactory，間接呼叫帶有參數的建構函式
+            var serverFactory = (ITrMessageFactory)Activator.GetObject(typeof(ITrMessageFactory), this._url);
+            serverFactory.Url = this._url;
+            this._trMessage = serverFactory.CreateInstance("余小章");
 
             ////客戶端啟用模式，主要是要傳參數給建構函數，需參考 Lab.NetRemoting.Implement，若 TrMessage 有異動，客戶端的部署難度會增加
             //RemotingConfiguration.RegisterActivatedClientType(typeof(ITrMessage), this._url);

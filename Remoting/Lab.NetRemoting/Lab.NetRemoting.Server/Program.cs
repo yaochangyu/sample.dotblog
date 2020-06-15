@@ -2,6 +2,7 @@
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Tcp;
+using Lab.NetRemoting.Core;
 using Lab.NetRemoting.Implement;
 
 namespace Lab.NetRemoting.Server
@@ -17,9 +18,12 @@ namespace Lab.NetRemoting.Server
                
                 var tcpChannel = new TcpChannel(port);
                 ChannelServices.RegisterChannel(tcpChannel, false);
-                RemotingConfiguration.RegisterWellKnownServiceType(typeof(TrMessage)
-                                                                 , "RemotingTest", WellKnownObjectMode.Singleton);
-
+                //RemotingConfiguration.RegisterWellKnownServiceType(typeof(TrMessage), 
+                //                                                   "RemotingTest", 
+                //                                                   WellKnownObjectMode.Singleton);
+                RemotingConfiguration.RegisterWellKnownServiceType(typeof(TrMessageFactory),
+                                                                   "RemotingTest",
+                                                                   WellKnownObjectMode.Singleton);
                 RemotingConfiguration.ApplicationName = "RemotingTest";
                 RemotingConfiguration.RegisterActivatedServiceType(typeof(TrMessage));
 

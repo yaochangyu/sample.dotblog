@@ -48,6 +48,7 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TrMessage.cs" />
+    <Compile Include="TrMessageFactory.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Lab.NetRemoting.Core\Lab.NetRemoting.Core.csproj">
