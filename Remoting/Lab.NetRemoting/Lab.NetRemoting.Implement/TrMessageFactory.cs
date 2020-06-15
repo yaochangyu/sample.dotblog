@@ -5,6 +5,11 @@ namespace Lab.NetRemoting.Core
 {
     public class TrMessageFactory : MarshalByRefObject, ITrMessageFactory
     {
+        public override object InitializeLifetimeService()
+        {
+            return null;
+        }
+
         public string Url { get; set; }
 
         public ITrMessage CreateInstance()

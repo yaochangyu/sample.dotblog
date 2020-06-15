@@ -40,5 +40,9 @@ namespace Lab.NetRemoting.Implement
             };
             return person;
         }
+        public override object InitializeLifetimeService()
+        {
+            return null;
+        }
     }
 }
