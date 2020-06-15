@@ -21,9 +21,9 @@ namespace Lab.NetRemoting.Server
                 var tcpChannel = new TcpChannel(port);
                 ChannelServices.RegisterChannel(tcpChannel, false);
 
-                RemotingConfiguration.RegisterWellKnownServiceType(typeof(TrMessage),
-                                                                   "RemotingTest",
-                                                                   WellKnownObjectMode.Singleton);
+                //RemotingConfiguration.RegisterWellKnownServiceType(typeof(TrMessage),
+                //                                                   "RemotingTest",
+                //                                                   WellKnownObjectMode.Singleton);
                 RemotingConfiguration.RegisterWellKnownServiceType(typeof(TrMessageFactory),
                                                                    "RemotingTest",
                                                                    WellKnownObjectMode.Singleton);
