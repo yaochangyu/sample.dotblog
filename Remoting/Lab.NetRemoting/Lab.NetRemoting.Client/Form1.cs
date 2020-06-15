@@ -1,36 +1,61 @@
 ﻿using System;
+using System.Runtime.Remoting;
+using System.Runtime.Remoting.Activation;
 using System.Windows.Forms;
 using Lab.NetRemoting.Core;
+using Lab.NetRemoting.Implement;
 using Newtonsoft.Json;
 
 namespace Lab.NetRemoting.Client
 {
     public partial class Form1 : Form
     {
-        private readonly string _url = "tcp://127.0.0.1:9527/RemotingTest";
+        private readonly ITrMessage _trMessage;
+        private readonly string     _url = "tcp://127.0.0.1:9527/RemotingTest";
 
         public Form1()
         {
             this.InitializeComponent();
+
+            //WellKnown 啟用模式，在客戶端建立物件時，只能呼叫預設的建構函式
+            this._trMessage = (ITrMessage) Activator.GetObject(typeof(ITrMessage), this._url);
+            Console.WriteLine($"{DateTime.Now}, 已連接伺服器：{this._url}");
+
+            ////客戶端啟用模式
+            //RemotingConfiguration.RegisterActivatedClientType(typeof(ITrMessage), this._url);
+
+            ////直接實體化遠端物件
+            //this._trMessage = new TrMessage("余小章");
+
+            ////動態實體化遠端物件
+            //object[] attrs = {new UrlAttribute(this._url)};
+            //var      objs  = new object[1];
+            //objs[0]         = "余小章";
+            //this._trMessage = (ITrMessage) Activator.CreateInstance(typeof(TrMessage), objs, attrs);
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            var message = (ITrMessage) Activator.GetObject(typeof(ITrMessage), this._url);
             try
             {
-                var now  = message.GetNow();
-                var name = message.GetName();
-                var person = message.GetPerson();
-                var msg = $"Hi, my name is {name}\r\n" +
+                var now    = this._trMessage.GetNow();
+                var name   = this._trMessage.GetName();
+                var person = this._trMessage.GetPerson();
+                var msg = $"Hi, my name is {name}\r\n"         +
                           $"Now：{now:yyyy-MM-dd hh:mm:ss}\r\n" +
                           $"Data：{JsonConvert.SerializeObject(person)}";
-                MessageBox.Show(msg);
+
+                //MessageBox.Show(msg);
+                Console.WriteLine(msg);
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
             }
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
         }
     }
 }
