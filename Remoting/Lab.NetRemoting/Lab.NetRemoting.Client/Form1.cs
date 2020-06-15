@@ -14,7 +14,7 @@ namespace Lab.NetRemoting.Client
         {
             this.InitializeComponent();
 
-            //WellKnown 啟用模式，在客戶端建立物件時，只能呼叫預設的建構函式
+            ////WellKnown 啟用模式，在客戶端建立物件時，只能呼叫預設的建構函式
             //this._trMessage = (ITrMessage)Activator.GetObject(typeof(ITrMessage), this._url);
             //Console.WriteLine($"{DateTime.Now}, 已連接伺服器：{this._url}");
 

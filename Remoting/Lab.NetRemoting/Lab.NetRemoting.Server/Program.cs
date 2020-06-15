@@ -11,25 +11,36 @@ namespace Lab.NetRemoting.Server
     {
         private static void Main(string[] args)
         {
-            
             try
             {
                 var port = 9527;
-               
+
                 var tcpChannel = new TcpChannel(port);
                 ChannelServices.RegisterChannel(tcpChannel, false);
-                //RemotingConfiguration.RegisterWellKnownServiceType(typeof(TrMessage), 
-                //                                                   "RemotingTest", 
+
+                //RemotingConfiguration.RegisterWellKnownServiceType + WellKnownObjectMode
+                //RemotingConfiguration.RegisterWellKnownServiceType(typeof(TrMessage),
+                //                                                   "RemotingTest",
                 //                                                   WellKnownObjectMode.Singleton);
-                RemotingConfiguration.RegisterWellKnownServiceType(typeof(TrMessageFactory),
-                                                                   "RemotingTest",
-                                                                   WellKnownObjectMode.Singleton);
-                RemotingConfiguration.ApplicationName = "RemotingTest";
-                RemotingConfiguration.RegisterActivatedServiceType(typeof(TrMessage));
+                //RemotingConfiguration.RegisterWellKnownServiceType(typeof(TrMessageFactory),
+                //                                                   "RemotingTest",
+                //                                                   WellKnownObjectMode.Singleton);
+                //RemotingConfiguration.ApplicationName = "RemotingTest";
+                //RemotingConfiguration.RegisterActivatedServiceType(typeof(TrMessage));
+                //Console.WriteLine($"{DateTime.Now}, Server 已啟動");
+                //Console.WriteLine("按任意鍵離開!");
+                //Console.ReadLine();
+
+                //RemotingServices.Marshal，同等 Singleton 模式
+                var message = new TrMessageFactory();
+                var objRef  = RemotingServices.Marshal(message, "RemotingTest");
 
                 Console.WriteLine($"{DateTime.Now}, Server 已啟動");
                 Console.WriteLine("按任意鍵離開!");
                 Console.ReadLine();
+
+                RemotingServices.Disconnect(message);
+
                 CloseChannel();
             }
             catch (Exception e)
