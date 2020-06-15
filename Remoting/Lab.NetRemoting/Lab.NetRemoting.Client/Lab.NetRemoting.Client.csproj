@@ -84,10 +84,6 @@
       <Project>{b9f0226c-7f2e-4b08-b979-d3224fd802e2}</Project>
       <Name>Lab.NetRemoting.Core</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Lab.NetRemoting.Implement\Lab.NetRemoting.Implement.csproj">
-      <Project>{decc25a8-192d-483f-9dec-cf1a56e96a37}</Project>
-      <Name>Lab.NetRemoting.Implement</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

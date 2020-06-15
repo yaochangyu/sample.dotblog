@@ -3,7 +3,6 @@ using System.Runtime.Remoting;
 using System.Runtime.Remoting.Activation;
 using System.Windows.Forms;
 using Lab.NetRemoting.Core;
-using Lab.NetRemoting.Implement;
 using Newtonsoft.Json;
 
 namespace Lab.NetRemoting.Client
@@ -21,7 +20,7 @@ namespace Lab.NetRemoting.Client
             this._trMessage = (ITrMessage) Activator.GetObject(typeof(ITrMessage), this._url);
             Console.WriteLine($"{DateTime.Now}, 已連接伺服器：{this._url}");
 
-            ////客戶端啟用模式
+            ////客戶端啟用模式，主要是要傳參數給建構函數，需參考 Lab.NetRemoting.Implement，若 TrMessage 有異動，客戶端的部署難度會增加
             //RemotingConfiguration.RegisterActivatedClientType(typeof(ITrMessage), this._url);
 
             ////直接實體化遠端物件
