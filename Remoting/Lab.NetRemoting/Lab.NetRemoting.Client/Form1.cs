@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 using Lab.NetRemoting.Core;
+using Newtonsoft.Json;
 
 namespace Lab.NetRemoting.Client
 {
@@ -20,8 +21,10 @@ namespace Lab.NetRemoting.Client
             {
                 var now  = message.GetNow();
                 var name = message.GetName();
+                var person = message.GetPerson();
                 var msg = $"Hi, my name is {name}\r\n" +
-                          $"Now : {now:yyyy-MM-dd hh:mm:ss}";
+                          $"Now：{now:yyyy-MM-dd hh:mm:ss}\r\n" +
+                          $"Data：{JsonConvert.SerializeObject(person)}";
                 MessageBox.Show(msg);
             }
             catch (Exception ex)

@@ -7,5 +7,7 @@ namespace Lab.NetRemoting.Core
         string GetName();
 
         DateTime GetNow();
+
+        Person GetPerson();
     }
 }

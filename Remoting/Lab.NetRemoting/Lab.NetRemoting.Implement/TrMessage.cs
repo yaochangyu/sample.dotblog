@@ -29,5 +29,16 @@ namespace Lab.NetRemoting.Implement
             Console.WriteLine($"{DateTime.Now:yyyy/MM/dd hh:mm:ss}, Call GetNow Method");
             return DateTime.Now;
         }
+
+        public Person GetPerson()
+        {
+            var person = new Person
+            {
+                Name   = Faker.Name.FullName(),
+                Gender = Faker.Boolean.Random() ? "M" : "F",
+                Age    = Faker.RandomNumber.Next(1, 100)
+            };
+            return person;
+        }
     }
 }
