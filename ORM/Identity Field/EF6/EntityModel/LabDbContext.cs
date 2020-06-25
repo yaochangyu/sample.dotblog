@@ -12,12 +12,12 @@ namespace EF6.EntityModel
 
         }
         public LabDbContext(string connectionStringName)
-            : base("LabDbContext")
+            : base("DefaultConnection")
         {
             Migrate();
         }
 
-        public static LabDbContext Create(string connectionStringName = "LabDbContext")
+        public static LabDbContext Create(string connectionStringName = "DefaultConnection")
         {
             var dbContext = new LabDbContext(connectionStringName);
             dbContext.Configuration.LazyLoadingEnabled       = false;

@@ -20,7 +20,7 @@ namespace EF6
         }
 
         [TestMethod]
-        public void TestMethod1()
+        public void InsertViaEF6()
         {
             var toDb = new Member
             {
