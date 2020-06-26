@@ -24,9 +24,9 @@ namespace EF6
         {
             var toDb = new Member
             {
-                Id   = Guid.NewGuid(),
+                Id = Guid.NewGuid(),
                 Name = "yao",
-                Age  = 20
+                Age = 20
             };
 
             Console.WriteLine($"寫入資料庫之前 {nameof(toDb.SequenceId)} = {toDb.SequenceId}");

@@ -10,7 +10,6 @@
         public Configuration()
         {
             AutomaticMigrationsEnabled = false;
-            ContextKey = "EF6.EntityModel.LabDbContext";
         }
 
         protected override void Seed(EF6.EntityModel.LabDbContext context)

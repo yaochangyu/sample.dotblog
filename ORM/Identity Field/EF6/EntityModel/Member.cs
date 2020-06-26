@@ -18,7 +18,7 @@ namespace EF6.EntityModel
         public int Age { get; set; }
 
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        [Index("CLIX_SequenceId",IsClustered = true)] 
+        [Index("CLIX_Member_SequenceId",IsClustered = true)] 
         public long SequenceId { get; set; }
     }
 }
