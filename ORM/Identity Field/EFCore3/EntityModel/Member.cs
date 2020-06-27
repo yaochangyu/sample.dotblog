@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EFCore3.EntityModel
 {
-    [Table("Employee")]
+    [Table("Member")]
     public class Member
     {
         [Key]

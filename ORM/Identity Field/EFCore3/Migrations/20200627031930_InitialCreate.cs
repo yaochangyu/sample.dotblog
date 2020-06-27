@@ -8,7 +8,7 @@ namespace EFCore3.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "Employee",
+                name: "Member",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(nullable: false),
@@ -20,14 +20,22 @@ namespace EFCore3.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Employee", x => x.Id);
+                    table.PrimaryKey("PK_Member", x => x.Id)
+                        .Annotation("SqlServer:Clustered", false);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "CLIX_Member_SequenceId",
+                table: "Member",
+                column: "SequenceId",
+                unique: true)
+                .Annotation("SqlServer:Clustered", true);
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Employee");
+                name: "Member");
         }
     }
 }

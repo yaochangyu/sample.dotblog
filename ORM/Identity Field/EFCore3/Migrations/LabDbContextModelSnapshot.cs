@@ -4,16 +4,14 @@ using EFCore3.EntityModel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace EFCore3.Migrations
 {
-    [DbContext(typeof(LabContext))]
-    [Migration("20200626041858_InitialCreate")]
-    partial class InitialCreate
+    [DbContext(typeof(LabDbContext))]
+    partial class LabDbContextModelSnapshot : ModelSnapshot
     {
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -40,9 +38,16 @@ namespace EFCore3.Migrations
                         .HasColumnType("bigint")
                         .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("PK_Member")
+                        .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.ToTable("Employee");
+                    b.HasIndex("SequenceId")
+                        .IsUnique()
+                        .HasName("CLIX_Member_SequenceId")
+                        .HasAnnotation("SqlServer:Clustered", true);
+
+                    b.ToTable("Member");
                 });
 #pragma warning restore 612, 618
         }

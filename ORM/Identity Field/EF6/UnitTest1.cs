@@ -7,26 +7,14 @@ namespace EF6
     [TestClass]
     public class UnitTest1
     {
-        [TestCleanup]
-        public void TestCleanup()
-        {
-            this.DeleteAll();
-        }
-
-        [TestInitialize]
-        public void TestInitialize()
-        {
-            this.DeleteAll();
-        }
-
         [TestMethod]
         public void InsertViaEF6()
         {
             var toDb = new Member
             {
-                Id = Guid.NewGuid(),
+                Id   = Guid.NewGuid(),
                 Name = "yao",
-                Age = 20
+                Age  = 20
             };
 
             Console.WriteLine($"寫入資料庫之前 {nameof(toDb.SequenceId)} = {toDb.SequenceId}");
@@ -39,7 +27,18 @@ namespace EF6
             }
 
             Console.WriteLine($"寫入資料庫之後 {nameof(toDb.SequenceId)} = {toDb.SequenceId}");
+        }
 
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            this.DeleteAll();
+        }
+
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            this.DeleteAll();
         }
 
         private void DeleteAll()

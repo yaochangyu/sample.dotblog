@@ -2,19 +2,33 @@
 
 namespace EFCore3.EntityModel
 {
-    public class LabContext : DbContext
+    public class LabDbContext : DbContext
     {
         private static readonly bool[] s_migrated = {false};
 
         public virtual DbSet<Member> Members { get; set; }
 
 
-        public LabContext()
+        public LabDbContext()
         {
 
         }
 
-        public LabContext(DbContextOptions<LabContext> options)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Member>(p =>
+                                          {
+                                              p.HasKey(e => e.Id)
+                                               .HasName("PK_Member")
+                                               .IsClustered(false);
+                                              p.HasIndex(e => e.SequenceId)
+                                               .HasName("CLIX_Member_SequenceId")
+                                               .IsUnique()
+                                               .IsClustered();
+                                          });
+        }
+
+        public LabDbContext(DbContextOptions<LabDbContext> options)
             : base(options)
         {
             if (options == null)

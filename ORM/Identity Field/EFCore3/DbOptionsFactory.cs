@@ -7,7 +7,7 @@ namespace EFCore3
 {
     public class DbOptionsFactory
     {
-        public static DbContextOptions<LabContext> DbContextOptions { get; }
+        public static DbContextOptions<LabDbContext> DbContextOptions { get; }
 
         public static string ConnectionString { get; }
         public static readonly ILoggerFactory MyLoggerFactory
@@ -21,13 +21,12 @@ namespace EFCore3
             var loggerFactory = LoggerFactory.Create(builder =>
                                                      {
                                                          builder
-                                                             //.AddFilter("Microsoft",                 LogLevel.Warning)
-                                                             //.AddFilter("System",                    LogLevel.Warning)
-                                                             //.AddFilter("Lab.DAL", LogLevel.Debug)
+                                                             .AddFilter("Microsoft", LogLevel.Warning)
+                                                             .AddFilter("System", LogLevel.Warning)
                                                              .AddConsole()
                                                              ;
                                                      });
-            DbContextOptions = new DbContextOptionsBuilder<LabContext>()
+            DbContextOptions = new DbContextOptionsBuilder<LabDbContext>()
                                .UseSqlServer(ConnectionString)
                                .UseLoggerFactory(loggerFactory)
                                .Options;
