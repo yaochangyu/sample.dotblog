@@ -21,8 +21,8 @@ namespace EFCore3
             var loggerFactory = LoggerFactory.Create(builder =>
                                                      {
                                                          builder
-                                                             .AddFilter("Microsoft", LogLevel.Warning)
-                                                             .AddFilter("System", LogLevel.Warning)
+                                                             //.AddFilter("Microsoft", LogLevel.Warning)
+                                                             //.AddFilter("System", LogLevel.Warning)
                                                              .AddConsole()
                                                              ;
                                                      });
