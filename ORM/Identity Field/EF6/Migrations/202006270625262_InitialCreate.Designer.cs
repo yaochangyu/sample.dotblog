@@ -13,7 +13,7 @@ namespace EF6.Migrations
         
         string IMigrationMetadata.Id
         {
-            get { return "202006260555575_InitialCreate"; }
+            get { return "202006270625262_InitialCreate"; }
         }
         
         string IMigrationMetadata.Source

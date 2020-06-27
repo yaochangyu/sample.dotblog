@@ -59,9 +59,9 @@
   <ItemGroup>
     <Compile Include="EntityModel\LabDbContext.cs" />
     <Compile Include="EntityModel\Member.cs" />
-    <Compile Include="Migrations\202006260555575_InitialCreate.cs" />
-    <Compile Include="Migrations\202006260555575_InitialCreate.designer.cs">
-      <DependentUpon>202006260555575_InitialCreate.cs</DependentUpon>
+    <Compile Include="Migrations\202006270625262_InitialCreate.cs" />
+    <Compile Include="Migrations\202006270625262_InitialCreate.designer.cs">
+      <DependentUpon>202006270625262_InitialCreate.cs</DependentUpon>
     </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="UnitTest1.cs" />
@@ -73,8 +73,8 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Migrations\202006260555575_InitialCreate.resx">
-      <DependentUpon>202006260555575_InitialCreate.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\202006270625262_InitialCreate.resx">
+      <DependentUpon>202006270625262_InitialCreate.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />

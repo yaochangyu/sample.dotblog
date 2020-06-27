@@ -15,6 +15,7 @@
                         Name = c.String(nullable: false, maxLength: 200),
                         Age = c.Int(nullable: false),
                         SequenceId = c.Long(nullable: false, identity: true),
+                        Remark = c.String(),
                     })
                 .PrimaryKey(t => t.Id, clustered: false)
                 .Index(t => t.SequenceId, clustered: true, name: "CLIX_Member_SequenceId");

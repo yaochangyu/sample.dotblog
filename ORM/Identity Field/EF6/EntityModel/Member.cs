@@ -8,7 +8,6 @@ namespace EF6.EntityModel
     internal class Member
     {
         [Key]
-
         public Guid Id { get; set; }
 
         [Required]
@@ -20,5 +19,8 @@ namespace EF6.EntityModel
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         [Index("CLIX_Member_SequenceId",IsClustered = true)] 
         public long SequenceId { get; set; }
+
+        public string Remark { get; set; }
     }
+
 }
