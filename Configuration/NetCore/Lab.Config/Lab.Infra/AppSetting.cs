@@ -3,39 +3,43 @@ using Microsoft.Extensions.Configuration;
 
 namespace Lab.Infra
 {
-    public class AppOptions
+    public class AppSetting
     {
         private static readonly string MissSettingError = "Miss {0} at coifig's json file";
 
-        public string DefaultConnectionString { get; set; }
+        public ConnectionStrings ConnectionStrings { get; set; }
 
         public Player Player { get; set; }
 
+        public AppSetting()
+        {
+            
+        }
         private readonly IConfiguration _configruration;
 
-        public AppOptions(IConfiguration configuration)
+        public AppSetting(IConfiguration configuration)
         {
             this._configruration = configuration;
-            this.Player = new Player
-            {
-                AppId = configuration["Player:AppId"],
-                Key   = configuration["Player:Key"],
-            };
+            //    this.Player = new Player
+            //    {
+            //        AppId = configuration["Player:AppId"],
+            //        Key   = configuration["Player:Key"],
+            //    };
 
-            this.DefaultConnectionString = configuration.GetConnectionString("DefaultConnection");
+            //    this.DefaultConnectionString = configuration.GetConnectionString("DefaultConnection");
         }
 
-        public AppOptions GetIfNoSectionThrow()
+        public AppSetting GetIfNoSectionThrow()
         {
             var config = this._configruration;
-            var appSetting = new AppOptions(config)
+            var appSetting = new AppSetting(config)
             {
                 Player = new Player
                 {
                     AppId = this.Get(config, "Player:AppId"),
                     Key   = this.Get(config, "Player:Key"),
                 },
-                DefaultConnectionString = this.Get(config, "ConnectionStrings:DefaultConnection")
+                //DefaultConnectionString = this.Get(config, "ConnectionStrings:DefaultConnection")
             };
 
             return appSetting;
