@@ -38,21 +38,19 @@ namespace MsUnitTest
         }
 
         [TestMethod]
-        public void 綁定設定_Bind()
+        public void 綁定設定_擴充方法_Get()
         {
             var builder = new ConfigurationBuilder()
                           .SetBasePath(Directory.GetCurrentDirectory())
                           .AddJsonFile("appsettings.json");
             var config     = builder.Build();
-            var appSetting = new AppSetting();
-            config.GetSection("Player").Bind(appSetting);
-            Console.WriteLine($"AppId = {appSetting.Player.AppId}");
-            Console.WriteLine($"Key = {appSetting.Player.Key}");
-            Console.WriteLine($"Connection String = {appSetting.ConnectionStrings.DefaultConnectionString}");
+            var player = config.GetSection("Player").Get<Player>();
+            Console.WriteLine($"AppId = {player.AppId}");
+            Console.WriteLine($"Key = {player.Key}");
         }
 
         [TestMethod]
-        public void 綁定設定_ConfigurationBinder()
+        public void 綁定設定_擴充方法_Bind()
         {
             var builder = new ConfigurationBuilder()
                           .SetBasePath(Directory.GetCurrentDirectory())
@@ -86,7 +84,6 @@ namespace MsUnitTest
                           .SetBasePath(Directory.GetCurrentDirectory())
                           .AddJsonFile("appsettings.json");
             var config = builder.Build();
-
             var connectionString = config.GetConnectionString("DefaultConnection");
 
             //var dbContextOptions = new DbContextOptionsBuilder<LabEmployeeContext>()
