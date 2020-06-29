@@ -19,23 +19,33 @@ namespace AspNetCore3.Controllers
         };
 
         private readonly ILogger<WeatherForecastController> _logger;
-        private IConfiguration _config;
-        private AppSetting _appSetting;
-        private Player _player1;
-        private Player _player2;
+        private          AppSetting                         _appSetting;
+        private          IConfiguration                     _config;
+        private          Player                             _player1;
+        private          Player                             _player2;
 
         // TODO:依賴 IOptions<AppSetting> 
-        //public WeatherForecastController(IOptions<AppSetting> options)
-        //{
-        //    this._appSetting = options.Value;
-        //}
+        public WeatherForecastController(IOptions<AppSetting> options)
+        {
+            try
+            {
+                this._appSetting = options.Value;
+            }
+            catch (OptionsValidationException ex)
+            {
+                foreach (var failure in ex.Failures)
+                {
+                    Console.WriteLine(failure);
+                }
+            }
+        }
 
         // TODO:依賴 IOptionsSnapshot<Player> 
-        public WeatherForecastController(IOptionsSnapshot<Player> options)
-        {
-            this._player1 = options.Get("Player1");
-            this._player2 = options.Get("Player2");
-        }
+        //public WeatherForecastController(IOptionsSnapshot<Player> options)
+        //{
+        //    this._player1 = options.Get("Player1");
+        //    this._player2 = options.Get("Player2");
+        //}
 
         //// TODO:依賴 IOptionsMonitor<Player> 
         //public WeatherForecastController(IOptionsMonitor<Player> options)

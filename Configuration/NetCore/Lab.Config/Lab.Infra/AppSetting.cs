@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.Configuration;
 
 namespace Lab.Infra
@@ -10,6 +11,9 @@ namespace Lab.Infra
         public ConnectionStrings ConnectionStrings { get; set; }
 
         public Player Player { get; set; }
+
+        [Required]
+        public string AllowedHosts { get; set; }
 
         public static AppSetting Get(IConfiguration config)
         {
