@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30114.105
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Infra", "Lab.Infra\Lab.Infra.csproj", "{438294F7-7612-4190-A769-EFA5F34118DD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lab.Infra", "Lab.Infra\Lab.Infra.csproj", "{438294F7-7612-4190-A769-EFA5F34118DD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MsUnitTest", "MsUnitTest\MsUnitTest.csproj", "{623F3B3A-4C40-40C7-94C1-DBD7CD928CC4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MsUnitTest", "MsUnitTest\MsUnitTest.csproj", "{623F3B3A-4C40-40C7-94C1-DBD7CD928CC4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AspNetCore3", "AspNetCore3\AspNetCore3.csproj", "{2362CB3D-B69D-4C2D-B873-685F81140D1B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspNetCore3", "AspNetCore3\AspNetCore3.csproj", "{2362CB3D-B69D-4C2D-B873-685F81140D1B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

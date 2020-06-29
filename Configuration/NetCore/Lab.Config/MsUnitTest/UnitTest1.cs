@@ -10,6 +10,62 @@ namespace MsUnitTest
     public class UnitTest1
     {
         [TestMethod]
+        public void 透過AppSetting物件讀取設定檔()
+        {
+            var builder = new ConfigurationBuilder()
+                          .SetBasePath(Directory.GetCurrentDirectory())
+                          .AddJsonFile("appsettings.json");
+            var config = builder.Build();
+
+            var appSetting = AppSetting.Get(config);
+            Console.WriteLine($"AppId = {appSetting.Player.AppId}");
+            Console.WriteLine($"Key = {appSetting.Player.Key}");
+            Console.WriteLine($"Connection String = {appSetting.ConnectionStrings.DefaultConnectionString}");
+        }
+
+        [TestMethod]
+        public void 透過AppSetting物件讀取設定檔_區段不存在拋出例外()
+        {
+            var builder = new ConfigurationBuilder()
+                          .SetBasePath(Directory.GetCurrentDirectory())
+                          .AddJsonFile("appsettings.json");
+            var config = builder.Build();
+
+            var appSetting = AppSetting.GetIfNoSectionThrow(config);
+            Console.WriteLine($"AppId = {appSetting.Player.AppId}");
+            Console.WriteLine($"Key = {appSetting.Player.Key}");
+            Console.WriteLine($"Connection String = {appSetting.ConnectionStrings.DefaultConnectionString}");
+        }
+
+        [TestMethod]
+        public void 綁定設定_Bind()
+        {
+            var builder = new ConfigurationBuilder()
+                          .SetBasePath(Directory.GetCurrentDirectory())
+                          .AddJsonFile("appsettings.json");
+            var config     = builder.Build();
+            var appSetting = new AppSetting();
+            config.GetSection("Player").Bind(appSetting);
+            Console.WriteLine($"AppId = {appSetting.Player.AppId}");
+            Console.WriteLine($"Key = {appSetting.Player.Key}");
+            Console.WriteLine($"Connection String = {appSetting.ConnectionStrings.DefaultConnectionString}");
+        }
+
+        [TestMethod]
+        public void 綁定設定_ConfigurationBinder()
+        {
+            var builder = new ConfigurationBuilder()
+                          .SetBasePath(Directory.GetCurrentDirectory())
+                          .AddJsonFile("appsettings.json");
+            var config     = builder.Build();
+            var appSetting = new AppSetting();
+            config.Bind(appSetting);
+            Console.WriteLine($"AppId = {appSetting.Player.AppId}");
+            Console.WriteLine($"Key = {appSetting.Player.Key}");
+            Console.WriteLine($"Connection String = {appSetting.ConnectionStrings.DefaultConnectionString}");
+        }
+
+        [TestMethod]
         public void 讀取設定檔()
         {
             var builder = new ConfigurationBuilder()
@@ -52,48 +108,6 @@ namespace MsUnitTest
                 provider.TryGet("Player:AppId", out var value);
                 Console.WriteLine($"AppId = {value}");
             }
-        }
-
-        [TestMethod]
-        public void 透過AppOptions物件讀取設定檔()
-        {
-            var builder = new ConfigurationBuilder()
-                          .SetBasePath(Directory.GetCurrentDirectory())
-                          .AddJsonFile("appsettings.json");
-            var config = builder.Build();
-
-            var appSetting = new AppSetting(config);
-            Console.WriteLine($"AppId = {appSetting.Player.AppId}");
-            Console.WriteLine($"Key = {appSetting.Player.Key}");
-            Console.WriteLine($"Connection String = {appSetting.ConnectionStrings.DefaultConnectionString}");
-        }
-
-        [TestMethod]
-        public void 綁定設定_Bind()
-        {
-            var builder = new ConfigurationBuilder()
-                          .SetBasePath(Directory.GetCurrentDirectory())
-                          .AddJsonFile("appsettings.json");
-            var config     = builder.Build();
-            var appSetting = new AppSetting();
-            config.GetSection("Player").Bind(appSetting);
-            Console.WriteLine($"AppId = {appSetting.Player.AppId}");
-            Console.WriteLine($"Key = {appSetting.Player.Key}");
-            Console.WriteLine($"Connection String = {appSetting.ConnectionStrings.DefaultConnectionString}");
-        }
-
-        [TestMethod]
-        public void 綁定設定_ConfigurationBinder()
-        {
-            var builder = new ConfigurationBuilder()
-                          .SetBasePath(Directory.GetCurrentDirectory())
-                          .AddJsonFile("appsettings.json");
-            var config     = builder.Build();
-            var appSetting = new AppSetting();
-            config.Bind(appSetting);
-            Console.WriteLine($"AppId = {appSetting.Player.AppId}");
-            Console.WriteLine($"Key = {appSetting.Player.Key}");
-            Console.WriteLine($"Connection String = {appSetting.ConnectionStrings.DefaultConnectionString}");
         }
     }
 }

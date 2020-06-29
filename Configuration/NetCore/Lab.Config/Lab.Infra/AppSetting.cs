@@ -5,47 +5,49 @@ namespace Lab.Infra
 {
     public class AppSetting
     {
-        private static readonly string MissSettingError = "Miss {0} at coifig's json file";
+        private static readonly string MissSettingError = "Miss '{0}' section at config file";
 
         public ConnectionStrings ConnectionStrings { get; set; }
 
         public Player Player { get; set; }
 
-        public AppSetting()
+        public static AppSetting Get(IConfiguration config)
         {
-            
-        }
-        private readonly IConfiguration _configruration;
-
-        public AppSetting(IConfiguration configuration)
-        {
-            this._configruration = configuration;
-            //    this.Player = new Player
-            //    {
-            //        AppId = configuration["Player:AppId"],
-            //        Key   = configuration["Player:Key"],
-            //    };
-
-            //    this.DefaultConnectionString = configuration.GetConnectionString("DefaultConnection");
-        }
-
-        public AppSetting GetIfNoSectionThrow()
-        {
-            var config = this._configruration;
-            var appSetting = new AppSetting(config)
+            var appSetting = new AppSetting
             {
                 Player = new Player
                 {
-                    AppId = this.Get(config, "Player:AppId"),
-                    Key   = this.Get(config, "Player:Key"),
+                    AppId = config["Player:AppId"],
+                    Key   = config["Player:Key"],
                 },
-                //DefaultConnectionString = this.Get(config, "ConnectionStrings:DefaultConnection")
+                ConnectionStrings = new ConnectionStrings
+                {
+                    DefaultConnectionString = config["ConnectionStrings:DefaultConnection"]
+                }
             };
 
             return appSetting;
         }
 
-        private string Get(IConfiguration config, string sectionName)
+        public static AppSetting GetIfNoSectionThrow(IConfiguration config)
+        {
+            var appSetting = new AppSetting
+            {
+                Player = new Player
+                {
+                    AppId = Get(config, "Player:AppId"),
+                    Key   = Get(config, "Player:Key"),
+                },
+                ConnectionStrings = new ConnectionStrings
+                {
+                    DefaultConnectionString = Get(config, "ConnectionStrings:DefaultConnection")
+                }
+            };
+
+            return appSetting;
+        }
+
+        private static string Get(IConfiguration config, string sectionName)
         {
             var setting    = config[sectionName];
             var hasSetting = string.IsNullOrWhiteSpace(setting);
