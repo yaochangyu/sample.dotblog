@@ -37,16 +37,6 @@ namespace AspNetCore3
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
-
-            //ª`¤J IOptions
-            services.AddOptions();
-
-            //ª`¤J IConfiguration
-
-            services.Configure<AppSetting>(this.Configuration);
-            services.Configure<Player>("Player1",this.Configuration.GetSection("Player1"));
-            services.Configure<Player>("Player2",this.Configuration.GetSection("Player2"));
-            //services.AddSingleton<IConfiguration>(Configuration);
         }
     }
 }

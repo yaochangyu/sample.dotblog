@@ -31,18 +31,18 @@ namespace AspNetCore3.Controllers
         //}
 
         // TODO:依賴 IOptionsSnapshot<Player> 
-        //public WeatherForecastController(IOptionsSnapshot<Player> options)
-        //{
-        //    this._player1 = options.Get("Player1");
-        //    this._player2 = options.Get("Player2");
-        //}
-
-        // TODO:依賴 IOptionsMonitor<Player> 
-        public WeatherForecastController(IOptionsMonitor<Player> options)
+        public WeatherForecastController(IOptionsSnapshot<Player> options)
         {
             this._player1 = options.Get("Player1");
             this._player2 = options.Get("Player2");
         }
+
+        //// TODO:依賴 IOptionsMonitor<Player> 
+        //public WeatherForecastController(IOptionsMonitor<Player> options)
+        //{
+        //    this._player1 = options.Get("Player1");
+        //    this._player2 = options.Get("Player2");
+        //}
 
         // TODO:依賴 IConfiguration
         //public WeatherForecastController(IConfiguration config)
