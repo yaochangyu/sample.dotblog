@@ -22,7 +22,8 @@ namespace AspNetCore3
                 {
                     //webBuilder.UseStartup<Startup>();
                     //webBuilder.UseStartup<Startup_InjectionIOptions>();
-                    webBuilder.UseStartup<Startup_InjectionIOptionsSnapshot>();
+                    //webBuilder.UseStartup<Startup_InjectionIOptionsSnapshot>();
+                    webBuilder.UseStartup<Startup_InjectionIAppSetting>();
                 });
     }
 }
