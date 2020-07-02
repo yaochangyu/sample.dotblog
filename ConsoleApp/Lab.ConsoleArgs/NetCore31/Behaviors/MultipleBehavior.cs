@@ -14,8 +14,8 @@ namespace NetCore31.Behaviors
 
         [ArgActionMethod]
         [ArgDescription("複製")]
-        [ArgExample(@"NETApp Copy D:\Source D:\Target *.txt", "省略參數，需按照順序")]
-        [ArgExample(@"NETApp Copy /SourceFolder:D:\Source /TargetFolder:D:\Target /SearchPattern:*.txt",
+        [ArgExample(@"Net48 Copy D:\Source D:\Target *.txt", "省略參數，需按照順序")]
+        [ArgExample(@"Net48 Copy /SourceFolder:D:\Source /TargetFolder:D:\Target /SearchPattern:*.txt",
                     "完整參數或是縮寫參數，不需要按照順序")]
         public void Copy(CopyFileRequest args)
         {
@@ -24,12 +24,12 @@ namespace NetCore31.Behaviors
 
         [ArgActionMethod]
         [ArgDescription("刪除")]
-        [ArgExample(@"NETApp Delete D:\Target *.txt", "省略參數，需按照順序")]
-        [ArgExample(@"NETApp Delete /TargetFolder:D:\Target /SearchPattern:*.txt",
+        [ArgExample(@"Net48 Delete D:\Target *.txt", "省略參數，需按照順序")]
+        [ArgExample(@"Net48 Delete /TargetFolder:D:\Target /SearchPattern:*.txt",
                     "完整參數或是縮寫參數，不需要按照順序")]
         public void Delete(DeleteFileRequest args)
         {
-            Console.WriteLine($"Copy - {JsonConvert.SerializeObject(args)}");
+            Console.WriteLine($"Delete - {JsonConvert.SerializeObject(args)}");
         }
     }
 }

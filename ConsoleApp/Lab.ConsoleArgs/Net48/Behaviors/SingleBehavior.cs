@@ -7,6 +7,11 @@ namespace Net48.Behaviors
     [ArgExceptionBehavior(ArgExceptionPolicy.StandardExceptionHandling)]
     public class SingleBehavior
     {
+        [HelpHook]
+        [ArgShortcut("-?")]
+        [ArgDescription("Shows this help")]
+        public bool Help { get; set; }
+
         [ArgRequired(PromptIfMissing = true)]
         [ArgDescription("來源路徑")]
         [ArgShortcut("-S")]
@@ -27,7 +32,7 @@ namespace Net48.Behaviors
 
         public void Main()
         {
-            Console.WriteLine(JsonConvert.SerializeObject(this));
+            Console.WriteLine($"Main - {JsonConvert.SerializeObject(this)}");
         }
     }
 }
