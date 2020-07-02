@@ -5,7 +5,9 @@ VisualStudioVersion = 16.0.30114.105
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Net48", "Net48\Net48.csproj", "{F0DF5566-44D9-4BD6-853D-120F4E7C47EE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetCore31", "NetCore31\NetCore31.csproj", "{FEE92A83-3C55-412A-BFD1-94F01148BD69}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetCore31", "NetCore31\NetCore31.csproj", "{FEE92A83-3C55-412A-BFD1-94F01148BD69}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetApp48", "NetApp48\NetApp48.csproj", "{1944C978-47C5-46C8-BA65-90CCB400A546}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{FEE92A83-3C55-412A-BFD1-94F01148BD69}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FEE92A83-3C55-412A-BFD1-94F01148BD69}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FEE92A83-3C55-412A-BFD1-94F01148BD69}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1944C978-47C5-46C8-BA65-90CCB400A546}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1944C978-47C5-46C8-BA65-90CCB400A546}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1944C978-47C5-46C8-BA65-90CCB400A546}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1944C978-47C5-46C8-BA65-90CCB400A546}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

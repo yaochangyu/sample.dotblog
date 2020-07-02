@@ -261,3 +261,4 @@ __pycache__/
 *.pyc
 
 /WebAPI/NSwag/Lab.UploadFile
+/Configuration/NetCore/Lab.Config/AspNetCore3
