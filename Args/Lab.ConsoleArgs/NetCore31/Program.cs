@@ -1,5 +1,6 @@
 ﻿using System;
 using NetCore31.Behaviors;
+using NetCore31.ViewModel;
 using Newtonsoft.Json;
 using PowerArgs;
 
