@@ -1,5 +1,6 @@
 ﻿using System;
 using Net48.Behaviors;
+using Net48.ViewModel;
 using Newtonsoft.Json;
 using PowerArgs;
 

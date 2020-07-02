@@ -51,16 +51,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Behaviors\CopyFileRequest.cs" />
-    <Compile Include="Behaviors\DeleteFileRequest.cs" />
     <Compile Include="Behaviors\MultipleBehavior.cs" />
     <Compile Include="Behaviors\SingleBehavior.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ViewModel\CopyFileRequest.cs" />
+    <Compile Include="ViewModel\DeleteFileRequest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

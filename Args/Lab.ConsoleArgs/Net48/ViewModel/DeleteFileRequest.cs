@@ -1,6 +1,6 @@
 ﻿using PowerArgs;
 
-namespace Net48.Behaviors
+namespace Net48.ViewModel
 {
     public class DeleteFileRequest
     {
@@ -9,7 +9,7 @@ namespace Net48.Behaviors
         [ArgRequired(PromptIfMissing = true)]
         [ArgDescription("目標路徑")]
         [ArgPosition(1)]
-        [ArgShortcut("-T")]
+        [ArgShortcut("-D")]
         public string DestinationFolder { get; set; }
 
         [ArgRequired(PromptIfMissing = true)]

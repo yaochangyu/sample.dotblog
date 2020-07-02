@@ -1,6 +1,6 @@
 ﻿using PowerArgs;
 
-namespace NetCore31.Behaviors
+namespace Net48.ViewModel
 {
     public class CopyFileRequest
     {
@@ -15,7 +15,7 @@ namespace NetCore31.Behaviors
         [ArgRequired(PromptIfMissing = true)]
         [ArgDescription("目標路徑")]
         [ArgPosition(2)]
-        [ArgShortcut("-T")]
+        [ArgShortcut("-D")]
         public string DestinationFolder { get; set; }
 
         [ArgRequired(PromptIfMissing = true)]

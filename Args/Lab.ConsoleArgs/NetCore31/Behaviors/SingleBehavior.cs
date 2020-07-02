@@ -21,8 +21,8 @@ namespace NetCore31.Behaviors
         [ArgRequired(PromptIfMissing = true)]
         [ArgDescription("目標路徑")]
         [ArgPosition(2)]
-        [ArgShortcut("-T")]
-        public string TargetFolder { get; set; }
+        [ArgShortcut("-D")]
+        public string DestinationFolder { get; set; }
 
         [ArgRequired(PromptIfMissing = true)]
         [ArgDescription("搜尋模式")]
