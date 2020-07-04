@@ -16,10 +16,11 @@ namespace NetApp48
         [STAThread]
         internal static void Main(string[] args)
         {
-            //綁定多個行為
-            Args.InvokeAction<MultipleBehavior>(args);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+
+            //綁定多個行為
+            Args.InvokeAction<MultipleBehavior>(args);
             Application.Run(new Form1());
         }
     }
