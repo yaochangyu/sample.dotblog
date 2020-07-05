@@ -27,17 +27,16 @@ namespace Server
                                        new {id = RouteParameter.Optional}
                                       );
 
-            //app.UseErrorPage();
-
-            //app.UseWelcomePage("/Welcome");
-
-            //app.Use((ctx, next) =>
-            //        {
-            //            var msg = "故意引發例外";
-            //            Console.WriteLine(msg);
-            //            throw new Exception(msg);
-            //        })
-            //   .UseWebApi(config);
+            app.UseErrorPage()
+               .UseWelcomePage("/")
+               .Use((ctx, next) =>
+                    {
+                        var msg = "故意引發例外";
+                        Console.WriteLine(msg);
+                        throw new Exception(msg);
+                    })
+               .UseWebApi(config)
+                ;
 
             //app.Use(async (ctx, next) =>
             //        {
