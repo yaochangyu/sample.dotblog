@@ -65,14 +65,14 @@ namespace Server
             //        })
             //   .UseWebApi(config);
 
-            app.Use<ErrorHandler>()
-               .Use((ctx, next) =>
-                    {
-                        var msg = "故意引發例外";
-                        Console.WriteLine(msg);
-                        throw new Exception(msg);
-                    })
-               .UseWebApi(config);
+            //app.Use<ErrorHandler>()
+            //   .Use((ctx, next) =>
+            //        {
+            //            var msg = "故意引發例外";
+            //            Console.WriteLine(msg);
+            //            throw new Exception(msg);
+            //        })
+            //   .UseWebApi(config);
 
             //app.Use<ErrorHandlerOwinMiddleware>();
             //app.Use((ctx, next) =>
