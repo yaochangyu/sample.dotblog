@@ -27,10 +27,10 @@ namespace OWinHost.AspNet48.WebApi
                             Id   = Guid.NewGuid(),
                             Name = Name.FullName()
                         };
-                        
-                        owinContext.Set(member.GetType().FullName, member);
 
-                        //owinContext.Environment[member.GetType().FullName] = member;
+                        //owinContext.Set(member.GetType().FullName, member);
+
+                        owinContext.Environment[member.GetType().FullName] = member;
                         await next();
                     });
             app.UseErrorPage()
