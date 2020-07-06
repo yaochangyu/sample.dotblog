@@ -1,8 +1,7 @@
 ﻿using System.Net.Http;
-using System.Web;
 using System.Web.Http;
 
-namespace OWinHost.WebApi.Controllers
+namespace OWinHost.AspNet48.WebApi.Controllers
 {
     public class DefaultController : ApiController
     {

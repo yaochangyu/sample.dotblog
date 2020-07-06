@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 
-namespace OWinHost.WebApi
+namespace OWinHost.AspNet48.WebApi
 {
     public class Member
     {

@@ -3,7 +3,7 @@ using System.Web.Http;
 using Faker;
 using Owin;
 
-namespace OWinHost.WebApi
+namespace OWinHost.AspNet48.WebApi
 {
     public class Startup
     {
