@@ -14,8 +14,8 @@ namespace IISHost.AspNet48.WebForm
             }
 
             var httpContext = new HttpContextWrapper(HttpContext.Current);
-            var key            = typeof(Member).FullName;
-            var member         = httpContext.Items[key] as Member;
+            var key         = typeof(Member).FullName;
+            var member      = httpContext.Items[key] as Member;
             this.Id_Label.Text   = member.Id.ToString();
             this.Name_Label.Text = member.Name;
         }

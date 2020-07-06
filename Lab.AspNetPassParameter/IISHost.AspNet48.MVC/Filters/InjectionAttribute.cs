@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
 using System.Web.Mvc;
 using IISHost.AspNet48.MVC.Models;
 
@@ -12,7 +9,7 @@ namespace IISHost.AspNet48.MVC.Filters
         public override void OnActionExecuting(ActionExecutingContext filterContext)
         {
             //初始化物件
-            var member = new Member {Id = Guid.NewGuid(), Name =Faker.Name.FullName()};
+            var member = new Member {Id = Guid.NewGuid(), Name = Faker.Name.FullName()};
             var key    = member.GetType().FullName;
 
             //注入到 HttpContextBase

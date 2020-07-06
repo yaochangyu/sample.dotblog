@@ -1,5 +1,4 @@
-﻿using System.Web;
-using System.Web.Http;
+﻿using System.Web.Http;
 
 namespace AspNet48.WebApi.Controllers
 {

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Web.Mvc;
+﻿using System.Web.Mvc;
 using IISHost.AspNet48.MVC.Models;
 
 namespace IISHost.AspNet48.MVC.Controllers
@@ -12,9 +8,9 @@ namespace IISHost.AspNet48.MVC.Controllers
         // GET: Default
         public ActionResult Index()
         {
-            var key = typeof(Member).FullName;
-            var member = this.HttpContext.Items[key];   
-            return View(member);
+            var key    = typeof(Member).FullName;
+            var member = this.HttpContext.Items[key];
+            return this.View(member);
         }
     }
 }

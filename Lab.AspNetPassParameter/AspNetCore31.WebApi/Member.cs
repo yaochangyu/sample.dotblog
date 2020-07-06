@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace OWinHost.AspNet48.WebApi
+namespace AspNetCore31.WebApi
 {
     public class Member
     {

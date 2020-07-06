@@ -7,11 +7,11 @@
     <title></title>
 </head>
 <body>
-    <form id="form1" runat="server">
-        <div>
-            <asp:Label ID="Id_Label" runat="server" Text="Id"></asp:Label><br/>
-            <asp:Label ID="Name_Label" runat="server" Text="Name"></asp:Label>
-        </div>
-    </form>
+<form id="form1" runat="server">
+    <div>
+        <asp:Label ID="Id_Label" runat="server" Text="Id"></asp:Label><br/>
+        <asp:Label ID="Name_Label" runat="server" Text="Name"></asp:Label>
+    </div>
+</form>
 </body>
 </html>
