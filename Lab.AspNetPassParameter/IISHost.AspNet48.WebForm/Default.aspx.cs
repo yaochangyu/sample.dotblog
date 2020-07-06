@@ -2,7 +2,7 @@
 using System.Web;
 using System.Web.UI;
 
-namespace AspNet48.WebForm
+namespace IISHost.AspNet48.WebForm
 {
     public partial class Default : Page
     {

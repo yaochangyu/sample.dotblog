@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace AspNet48.WebForm
+namespace IISHost.AspNet48.WebForm
 {
 
 

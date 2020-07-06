@@ -2,7 +2,7 @@
 using System.Web;
 using Faker;
 
-namespace AspNet48.WebForm
+namespace IISHost.AspNet48.WebForm
 {
     public class Global : HttpApplication
     {
