@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30114.105
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.AspNet48.Mvc5", "Lab.AspNet48.Mvc5\Lab.AspNet48.Mvc5.csproj", "{3EA69341-4315-4A55-94D2-1AF0FA9234EB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.AspNet48.Mvc5.UnitTest", "Lab.AspNet48.Mvc5.UnitTest\Lab.AspNet48.Mvc5.UnitTest.csproj", "{7C455612-71FB-4BBF-9EDC-F34E8A6C9138}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3EA69341-4315-4A55-94D2-1AF0FA9234EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3EA69341-4315-4A55-94D2-1AF0FA9234EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3EA69341-4315-4A55-94D2-1AF0FA9234EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3EA69341-4315-4A55-94D2-1AF0FA9234EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C455612-71FB-4BBF-9EDC-F34E8A6C9138}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C455612-71FB-4BBF-9EDC-F34E8A6C9138}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C455612-71FB-4BBF-9EDC-F34E8A6C9138}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C455612-71FB-4BBF-9EDC-F34E8A6C9138}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {12D0E4F2-B35D-4E7B-AE2C-D7C76A7E1A44}
+	EndGlobalSection
+EndGlobal
