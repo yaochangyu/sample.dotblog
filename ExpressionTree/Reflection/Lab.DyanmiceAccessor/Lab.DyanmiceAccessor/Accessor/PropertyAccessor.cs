@@ -71,7 +71,7 @@ namespace Lab.DynamicAccessor
             setter(instance, targetValue);
         }
 
-        private static Func<object, object> GetOrCreateGetter(Type sourceType, PropertyInfo propertyInfo)
+        internal static Func<object, object> GetOrCreateGetter(Type sourceType, PropertyInfo propertyInfo)
         {
             Func<object, object> result;
             if (s_getters.TryGetValue(propertyInfo, out result) == false)
@@ -102,7 +102,7 @@ namespace Lab.DynamicAccessor
             return result;
         }
 
-        private static Action<object, object> GetOrCreateSetter(Type sourceType, PropertyInfo propertyInfo)
+        internal static Action<object, object> GetOrCreateSetter(Type sourceType, PropertyInfo propertyInfo)
         {
             Action<object, object> result;
             if (s_setters.TryGetValue(propertyInfo, out result) == false)

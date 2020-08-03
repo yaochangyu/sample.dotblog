@@ -60,6 +60,7 @@
   <ItemGroup>
     <Compile Include="PropertyAccessorUnitTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="DyanmiceAccessManagerUnitTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

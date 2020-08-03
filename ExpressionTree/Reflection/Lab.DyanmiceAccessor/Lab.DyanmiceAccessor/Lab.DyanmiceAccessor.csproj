@@ -41,6 +41,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Accessor\DyanmiceAccessManager.cs" />
+    <Compile Include="Accessor\PropertyAccessInfo.cs" />
     <Compile Include="DataTableExtensions.cs" />
     <Compile Include="MemberAccessor.cs" />
     <Compile Include="Accessor\PropertyAccessor.cs" />
