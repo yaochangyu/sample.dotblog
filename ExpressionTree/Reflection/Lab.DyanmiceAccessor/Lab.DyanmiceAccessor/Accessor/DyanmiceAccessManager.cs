@@ -6,20 +6,20 @@ namespace Lab.DynamicAccessor.Accessor
 {
     public class DyanmiceAccessManager
     {
-        private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyAccessInfo>> s_properties;
+        private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, PropertyAccessInfo>> s_properties;
 
         static DyanmiceAccessManager()
         {
-            s_properties = new ConcurrentDictionary<Type, Dictionary<string, PropertyAccessInfo>>();
+            s_properties = new ConcurrentDictionary<Type, ConcurrentDictionary<string, PropertyAccessInfo>>();
         }
 
-        public static Dictionary<string, PropertyAccessInfo> GetProperties<T>() where T : class, new()
+        public static ConcurrentDictionary<string, PropertyAccessInfo> GetProperties<T>() where T : class, new()
         {
             var type = typeof(T);
 
             if (s_properties.TryGetValue(type, out var results) == false)
             {
-                var infos = new Dictionary<string, PropertyAccessInfo>();
+                var infos = new ConcurrentDictionary<string, PropertyAccessInfo>();
                 foreach (var propertyInfo in type.GetProperties())
                 {
                     var info = new PropertyAccessInfo
@@ -29,7 +29,7 @@ namespace Lab.DynamicAccessor.Accessor
                         Getter       = PropertyAccessor.GetOrCreateGetter(type, propertyInfo),
                         Setter       = PropertyAccessor.GetOrCreateSetter(type, propertyInfo)
                     };
-                    infos.Add(propertyInfo.Name, info);
+                    infos.TryAdd(propertyInfo.Name, info);
                 }
 
                 s_properties.TryAdd(type, infos);
