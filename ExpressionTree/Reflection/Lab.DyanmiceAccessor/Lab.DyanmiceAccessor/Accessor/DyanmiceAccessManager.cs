@@ -1,22 +1,55 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
+using System.Reflection;
 
 namespace Lab.DynamicAccessor.Accessor
 {
     public class DyanmiceAccessManager
     {
-        private static readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, PropertyAccessInfo>> s_properties;
+        internal static readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, PropertyAccessInfo>>
+            s_properties;
 
         static DyanmiceAccessManager()
         {
             s_properties = new ConcurrentDictionary<Type, ConcurrentDictionary<string, PropertyAccessInfo>>();
         }
 
-        public static ConcurrentDictionary<string, PropertyAccessInfo> GetProperties<T>() where T : class, new()
+        public static ConcurrentDictionary<string, PropertyAccessInfo> GetProperties(PropertyInfo propertyInfo)
         {
-            var type = typeof(T);
+            if (propertyInfo == null)
+            {
+                throw new ArgumentNullException(nameof(propertyInfo));
+            }
 
+            var type = propertyInfo.DeclaringType;
+
+            if (s_properties.TryGetValue(type, out var infos) == false)
+            {
+                infos = new ConcurrentDictionary<string, PropertyAccessInfo>();
+                var info = CreatePropertyAccessInfo(type, propertyInfo);
+                if (info != null)
+                {
+                    infos.TryAdd(propertyInfo.Name, info);
+                    s_properties.TryAdd(type, infos);
+                }
+            }
+            else
+            {
+                if (infos.TryGetValue(propertyInfo.Name, out var info) == false)
+                {
+                    info = CreatePropertyAccessInfo(type, propertyInfo);
+                    if (info != null)
+                    {
+                        infos.TryAdd(propertyInfo.Name, info);
+                    }
+                }
+            }
+
+            return infos;
+        }
+
+        public static ConcurrentDictionary<string, PropertyAccessInfo> GetProperties(Type type)
+        {
             if (s_properties.TryGetValue(type, out var results) == false)
             {
                 var infos = new ConcurrentDictionary<string, PropertyAccessInfo>();
@@ -37,6 +70,27 @@ namespace Lab.DynamicAccessor.Accessor
             }
 
             return results;
+        }
+
+        public static ConcurrentDictionary<string, PropertyAccessInfo> GetProperties<T>()
+            where T : class, new()
+        {
+            return GetProperties(typeof(T));
+        }
+
+        public static ConcurrentDictionary<string, PropertyAccessInfo> GetProperties(object instance)
+        {
+            return GetProperties(instance.GetType());
+        }
+
+        private static PropertyAccessInfo CreatePropertyAccessInfo(Type type, PropertyInfo propertyInfo)
+        {
+            var info = new PropertyAccessInfo();
+            info.PropertyInfo = propertyInfo;
+            info.PropertyName = propertyInfo.Name;
+            info.Getter       = PropertyAccessor.GetOrCreateGetter(type, propertyInfo);
+            info.Setter       = PropertyAccessor.GetOrCreateSetter(type, propertyInfo);
+            return info;
         }
     }
 }

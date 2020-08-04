@@ -8,12 +8,23 @@ namespace UnitTestProject1
     public class DyanmiceAccessManagerUnitTest
     {
         [TestMethod]
-        public void 指定特定屬性()
+        public void 取得所有公開欄位()
         {
             var data       = new Data();
             var properties = DyanmiceAccessManager.GetProperties<Data>();
-            properties["Enum2"].Setter(data, DataLevel.Low);
-            Assert.AreEqual(DataLevel.Low, data.Enum2);
+            properties["Enum2"].SetValue(data, DataLevel.Low);
+            var value = properties["Enum2"].GetValue(data);
+            Assert.AreEqual(DataLevel.Low, value);
+        }
+
+        [TestMethod]
+        public void 設定取得特定欄位()
+        {
+            var data       = new Data();
+            var properties = DyanmiceAccessManager.GetProperties(data.GetType().GetProperty("Enum"));
+            properties["Enum"].SetValue(data, DataLevel.Low | DataLevel.Medium);
+            var value = properties["Enum2"].GetValue(data);
+            Assert.AreEqual(3, (int) value);
         }
 
         private class Data

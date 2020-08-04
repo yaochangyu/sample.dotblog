@@ -12,5 +12,15 @@ namespace Lab.DynamicAccessor.Accessor
         public Func<object, object> Getter { get; set; }
 
         public Action<object, object> Setter { get; set; }
+
+        public object GetValue(object instance)
+        {
+            return this.Getter(instance);
+        }
+
+        public void SetValue(object instance, object value)
+        {
+            this.Setter(instance, value);
+        }
     }
 }
