@@ -41,7 +41,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Accessor\DyanmiceAccessManager.cs" />
+    <Compile Include="Accessor2\PropertyAccessor.cs" />
+    <Compile Include="Accessor\MethodAccessor.cs" />
+    <Compile Include="Accessor\DynamicAccessManager.cs" />
     <Compile Include="Accessor\PropertyAccessInfo.cs" />
     <Compile Include="DataTableExtensions.cs" />
     <Compile Include="MemberAccessor.cs" />

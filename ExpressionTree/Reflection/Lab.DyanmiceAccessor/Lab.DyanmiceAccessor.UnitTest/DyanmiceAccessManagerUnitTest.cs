@@ -1,17 +1,16 @@
 ﻿using System;
-using Lab.DynamicAccessor.Accessor;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace UnitTestProject1
+namespace Lab.DynamicAccessor.UnitTest
 {
     [TestClass]
-    public class DyanmiceAccessManagerUnitTest
+    public class DynamicAccessManagerUnitTest
     {
         [TestMethod]
         public void 取得所有公開欄位()
         {
             var data       = new Data();
-            var properties = DyanmiceAccessManager.GetProperties<Data>();
+            var properties = DynamicAccessManager.GetProperties<Data>();
             properties["Enum2"].SetValue(data, DataLevel.Low);
             var value = properties["Enum2"].GetValue(data);
             Assert.AreEqual(DataLevel.Low, value);
@@ -21,9 +20,12 @@ namespace UnitTestProject1
         public void 設定取得特定欄位()
         {
             var data       = new Data();
-            var properties = DyanmiceAccessManager.GetProperties(data.GetType().GetProperty("Enum"));
+            var propertyInfo = data.GetType().GetProperty("Enum");
+            var properties = DynamicAccessManager.GetProperties(propertyInfo);
             properties["Enum"].SetValue(data, DataLevel.Low | DataLevel.Medium);
             var value = properties["Enum2"].GetValue(data);
+            var propertyAccessor = new PropertyAccessor();
+            var o = propertyAccessor.GetValue(data, propertyInfo);
             Assert.AreEqual(3, (int) value);
         }
 

@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Data;
 using FluentAssertions;
-using Lab.DynamicAccessor;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace UnitTestProject1
+namespace Lab.DynamicAccessor.UnitTest
 {
     [TestClass]
     public class PropertyAccessorUnitTest

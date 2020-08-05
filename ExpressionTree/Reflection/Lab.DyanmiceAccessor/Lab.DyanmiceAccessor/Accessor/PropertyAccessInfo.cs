@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 
-namespace Lab.DynamicAccessor.Accessor
+namespace Lab.DynamicAccessor
 {
     public class PropertyAccessInfo
     {

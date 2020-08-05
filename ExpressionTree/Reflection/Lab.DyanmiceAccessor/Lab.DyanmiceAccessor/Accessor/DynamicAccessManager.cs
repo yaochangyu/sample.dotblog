@@ -2,14 +2,14 @@
 using System.Collections.Concurrent;
 using System.Reflection;
 
-namespace Lab.DynamicAccessor.Accessor
+namespace Lab.DynamicAccessor
 {
-    public class DyanmiceAccessManager
+    public class DynamicAccessManager
     {
         internal static readonly ConcurrentDictionary<Type, ConcurrentDictionary<string, PropertyAccessInfo>>
             s_properties;
 
-        static DyanmiceAccessManager()
+        static DynamicAccessManager()
         {
             s_properties = new ConcurrentDictionary<Type, ConcurrentDictionary<string, PropertyAccessInfo>>();
         }
