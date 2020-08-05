@@ -15,24 +15,24 @@ namespace Lab.DynamicAccessor.Accessor2
     {
         public PropertyInfo PropertyInfo { get; }
 
-        private readonly Func<object, object>   _getters;
-        private readonly Action<object, object> _setters;
+        private readonly Func<object, object>   _getter;
+        private readonly Action<object, object> _setter;
 
         public PropertyAccessor(PropertyInfo propertyInfo)
         {
             this.PropertyInfo = propertyInfo;
-            this._setters     = this.CreateSetter(propertyInfo);
-            this._getters     = this.CreateGetter(propertyInfo);
+            this._setter     = this.CreateSetter(propertyInfo);
+            this._getter     = this.CreateGetter(propertyInfo);
         }
 
         public object GetValue(object instance)
         {
-            throw new NotImplementedException();
+            return this._getter(instance);
         }
 
         public void SetValue(object instance, object value)
         {
-            throw new NotImplementedException();
+            this._setter(instance,value);
         }
 
         internal Func<object, object> CreateGetter(PropertyInfo propertyInfo)
