@@ -14,7 +14,7 @@ namespace Lab.DynamicAccessor.Accessor2
     {
         public MethodInfo MethodInfo { get; set; }
 
-        private Func<object, object[], object> _executer;
+        private readonly Func<object, object[], object> _executer;
 
         public MethodAccessor(MethodInfo methodInfo)
         {
@@ -24,7 +24,7 @@ namespace Lab.DynamicAccessor.Accessor2
 
         public object Execute(object instance, params object[] parameters)
         {
-            throw new NotImplementedException();
+            return this._executer.Invoke(instance, parameters);
         }
 
         /// <summary>

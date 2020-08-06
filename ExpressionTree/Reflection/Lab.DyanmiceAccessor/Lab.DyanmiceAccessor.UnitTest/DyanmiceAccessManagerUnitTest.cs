@@ -20,12 +20,10 @@ namespace Lab.DynamicAccessor.UnitTest
         public void 設定取得特定欄位()
         {
             var data       = new Data();
-            var propertyInfo = data.GetType().GetProperty("Enum");
+            var propertyInfo = data.GetType().GetProperty("Enum2");
             var properties = DynamicAccessManager.GetProperties(propertyInfo);
-            properties["Enum"].SetValue(data, DataLevel.Low | DataLevel.Medium);
+            properties["Enum2"].SetValue(data, DataLevel.Low | DataLevel.Medium);
             var value = properties["Enum2"].GetValue(data);
-            var propertyAccessor = new PropertyAccessor();
-            var o = propertyAccessor.GetValue(data, propertyInfo);
             Assert.AreEqual(3, (int) value);
         }
 

@@ -30,7 +30,7 @@ namespace Lab.DynamicAccessor.UnitTest.Accessor2
             var instance   = new MyClass();
             var methodInfo = instance.GetType().GetMethod("Sum");
             var accessor   = DynamicMemberManager.Method.Get(methodInfo);
-            var result     = accessor.Execute(instance, methodInfo, 1, 1);
+            var result     = accessor.Execute(instance, 1, 1);
             Assert.AreEqual(2, result);
         }
 

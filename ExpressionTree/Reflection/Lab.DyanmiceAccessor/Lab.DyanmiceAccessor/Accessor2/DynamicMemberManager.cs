@@ -6,7 +6,7 @@ namespace Lab.DynamicAccessor.Accessor2
     {
         public static AccessorFactoryBase<PropertyInfo, IPropertyAccessor> Property { get; set; }
 
-        public static AccessorFactoryBase<MethodInfo, IMethodAccessor> Method { get; set; }
+        public static AccessorFactoryBase<MethodInfo, Lab.DynamicAccessor.Accessor2. IMethodAccessor> Method { get; set; }
 
         static DynamicMemberManager()
         {
