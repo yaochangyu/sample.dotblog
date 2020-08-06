@@ -42,8 +42,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Accessor2\AccessFactoryBase.cs" />
+    <Compile Include="Accessor2\ConstructorAccessor.cs" />
     <Compile Include="Accessor2\FieldAccessor.cs" />
     <Compile Include="Accessor2\DynamicMemberManager.cs" />
+    <Compile Include="Accessor2\ConstructorAccessorFactory.cs" />
+    <Compile Include="Accessor2\IConstructorAccessor.cs" />
+    <Compile Include="Accessor2\IMethodAccessor.cs" />
+    <Compile Include="Accessor2\IPropertyAccessor.cs" />
     <Compile Include="Accessor2\MethodAccessor.cs" />
     <Compile Include="Accessor2\FieldAccessorFactory.cs" />
     <Compile Include="Accessor2\MethodAccessorFactory.cs" />

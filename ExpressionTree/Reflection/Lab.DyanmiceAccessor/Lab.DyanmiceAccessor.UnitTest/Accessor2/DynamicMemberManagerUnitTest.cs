@@ -9,6 +9,20 @@ namespace Lab.DynamicAccessor.UnitTest.Accessor2
     public class DynamicMemberManagerUnitTest
     {
         [TestMethod]
+        public void 動態存取私有欄位()
+        {
+            var expected = DataLevel.Medium;
+            var instance = new Data();
+            var flags    = BindingFlags.NonPublic | BindingFlags.Instance;
+
+            var fieldInfo = instance.GetType().GetField("Field", flags);
+            var accessor  = DynamicMemberManager.Field.Get(fieldInfo);
+            accessor.SetValue(instance, expected);
+            var actual = (DataLevel) accessor.GetValue(instance);
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
         public void 動態存取屬性()
         {
             var expected      = DataLevel.Medium;
@@ -26,21 +40,17 @@ namespace Lab.DynamicAccessor.UnitTest.Accessor2
         }
 
         [TestMethod]
-        public void 動態存取欄位()
+        public void 動態建立私有建構子()
         {
-            var expected = DataLevel.Medium;
-            var instance = new Data();
-            var flags    = BindingFlags.NonPublic | BindingFlags.Instance;
-
-            var fieldInfo = instance.GetType().GetField("Field", flags);
-            var accessor  = DynamicMemberManager.Field.Get(fieldInfo);
-            accessor.SetValue(instance, expected);
-            var actual = (DataLevel) accessor.GetValue(instance);
-            Assert.AreEqual(expected, actual);
+            var type            = typeof(MyClass2);
+            var flags           = BindingFlags.NonPublic | BindingFlags.Instance;
+            var constructorInfo = type.GetConstructor(flags, null, new Type[0], null);
+            var accessor        = DynamicMemberManager.Construct.Get(constructorInfo);
+            accessor.Execute(null);
         }
 
         [TestMethod]
-        public void 執行Sum方法()
+        public void 執行私有Sum方法()
         {
             var instance   = new MyClass();
             var flags      = BindingFlags.NonPublic | BindingFlags.Instance;
@@ -172,6 +182,16 @@ namespace Lab.DynamicAccessor.UnitTest.Accessor2
             Low    = 1,
             Medium = 2,
             High   = 4
+        }
+
+        private class MyClass2
+        {
+            public string Data { get; }
+
+            private MyClass2()
+            {
+                this.Data = "private construct";
+            }
         }
 
         private class MyClass
