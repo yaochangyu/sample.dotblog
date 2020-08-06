@@ -1,4 +1,5 @@
 ﻿using System;
+using Lab.DynamicAccessor.Accessor2;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Lab.DynamicAccessor.UnitTest.Accessor2
@@ -18,6 +19,22 @@ namespace Lab.DynamicAccessor.UnitTest.Accessor2
             Assert.AreEqual(expected, actual);
         }
 
+        [TestMethod]
+        public void 動態存取屬性1()
+        {
+            var expected     = DataLevel.Medium;
+            var instance     = new Data();
+            var propertyInfo1 = instance.GetType().GetProperty("Enum1");
+            var propertyInfo2 = instance.GetType().GetProperty("Enum2");
+            var accessor1 = MemberAccessorManager.Property.Get(propertyInfo1);
+            var accessor2= MemberAccessorManager.Property.Get(propertyInfo2);
+            accessor1.SetValue(instance, expected);
+            accessor2.SetValue(instance, expected);
+            var actual1 = (DataLevel) accessor1.GetValue(instance);
+            var actual2 = (DataLevel) accessor2.GetValue(instance);
+            Assert.AreEqual(expected, actual1);
+            Assert.AreEqual(expected, actual2);
+        }
         private class Data
         {
             private static readonly string guid = "19ADC6C6-570C-40E5-84CD-C8425ECB81D2";
