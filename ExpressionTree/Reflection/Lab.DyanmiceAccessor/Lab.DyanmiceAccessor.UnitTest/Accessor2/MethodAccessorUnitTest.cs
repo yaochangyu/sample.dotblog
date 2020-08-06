@@ -1,6 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Lab.DynamicAccessor.UnitTest
+namespace Lab.DynamicAccessor.UnitTest.Accessor2
 {
     [TestClass]
     public class MethodAccessorUnitTest
@@ -9,11 +9,12 @@ namespace Lab.DynamicAccessor.UnitTest
         public void 執行Sum方法()
         {
             var instance   = new MyClass();
-            var accessor   = new MethodAccessor();
             var methodInfo = instance.GetType().GetMethod("Sum");
+            var accessor   = new DynamicAccessor.Accessor2.MethodAccessor(methodInfo);
             var result     = accessor.Execute(instance, methodInfo, 1, 1);
-            Assert.AreEqual(2, result);
+            Assert.AreEqual(2,result);
         }
+
 
         private class MyClass
         {

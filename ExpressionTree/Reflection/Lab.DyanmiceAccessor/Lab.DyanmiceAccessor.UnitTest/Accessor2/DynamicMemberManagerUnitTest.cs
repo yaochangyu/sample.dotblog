@@ -5,29 +5,17 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Lab.DynamicAccessor.UnitTest.Accessor2
 {
     [TestClass]
-    public class PropertyAccessorUnitTest
+    public class DynamicMemberManagerUnitTest
     {
         [TestMethod]
         public void 動態存取屬性()
         {
-            var expected     = DataLevel.Medium;
-            var instance     = new Data();
-            var propertyInfo = instance.GetType().GetProperty("Enum2");
-            var accessor     = new DynamicAccessor.Accessor2.PropertyAccessor(propertyInfo);
-            accessor.SetValue(instance, expected);
-            var actual = (DataLevel) accessor.GetValue(instance);
-            Assert.AreEqual(expected, actual);
-        }
-
-        [TestMethod]
-        public void 動態存取屬性1()
-        {
-            var expected     = DataLevel.Medium;
-            var instance     = new Data();
+            var expected      = DataLevel.Medium;
+            var instance      = new Data();
             var propertyInfo1 = instance.GetType().GetProperty("Enum1");
             var propertyInfo2 = instance.GetType().GetProperty("Enum2");
-            var accessor1 = DynamicMemberManager.Property.Get(propertyInfo1);
-            var accessor2= DynamicMemberManager.Property.Get(propertyInfo2);
+            var accessor1     = DynamicMemberManager.Property.Get(propertyInfo1);
+            var accessor2     = DynamicMemberManager.Property.Get(propertyInfo2);
             accessor1.SetValue(instance, expected);
             accessor2.SetValue(instance, expected);
             var actual1 = (DataLevel) accessor1.GetValue(instance);
@@ -35,6 +23,17 @@ namespace Lab.DynamicAccessor.UnitTest.Accessor2
             Assert.AreEqual(expected, actual1);
             Assert.AreEqual(expected, actual2);
         }
+
+        [TestMethod]
+        public void 執行Sum方法()
+        {
+            var instance   = new MyClass();
+            var methodInfo = instance.GetType().GetMethod("Sum");
+            var accessor   = DynamicMemberManager.Method.Get(methodInfo);
+            var result     = accessor.Execute(instance, methodInfo, 1, 1);
+            Assert.AreEqual(2, result);
+        }
+
         private class Data
         {
             private static readonly string guid = "19ADC6C6-570C-40E5-84CD-C8425ECB81D2";
@@ -155,6 +154,14 @@ namespace Lab.DynamicAccessor.UnitTest.Accessor2
             Low    = 1,
             Medium = 2,
             High   = 4
+        }
+
+        private class MyClass
+        {
+            public int Sum(int p1, int p2)
+            {
+                return p1 + p2;
+            }
         }
     }
 }
