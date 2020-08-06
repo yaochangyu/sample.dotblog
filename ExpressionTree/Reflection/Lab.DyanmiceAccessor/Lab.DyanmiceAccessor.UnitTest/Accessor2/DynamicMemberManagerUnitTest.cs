@@ -46,7 +46,9 @@ namespace Lab.DynamicAccessor.UnitTest.Accessor2
             var flags           = BindingFlags.NonPublic | BindingFlags.Instance;
             var constructorInfo = type.GetConstructor(flags, null, new Type[0], null);
             var accessor        = DynamicMemberManager.Construct.Get(constructorInfo);
-            accessor.Execute(null);
+            var instance        = accessor.Execute(null);
+            var myClass2        = (MyClass2) instance;
+            Assert.AreEqual("private construct", myClass2.Data);
         }
 
         [TestMethod]
