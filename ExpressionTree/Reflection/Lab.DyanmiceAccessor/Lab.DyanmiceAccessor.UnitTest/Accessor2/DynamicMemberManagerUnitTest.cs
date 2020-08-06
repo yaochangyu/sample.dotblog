@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection;
 using Lab.DynamicAccessor.Accessor2;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -25,10 +26,25 @@ namespace Lab.DynamicAccessor.UnitTest.Accessor2
         }
 
         [TestMethod]
+        public void 動態存取欄位()
+        {
+            var expected = DataLevel.Medium;
+            var instance = new Data();
+            var flags    = BindingFlags.NonPublic | BindingFlags.Instance;
+
+            var fieldInfo = instance.GetType().GetField("Field", flags);
+            var accessor  = DynamicMemberManager.Field.Get(fieldInfo);
+            accessor.SetValue(instance, expected);
+            var actual = (DataLevel) accessor.GetValue(instance);
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
         public void 執行Sum方法()
         {
             var instance   = new MyClass();
-            var methodInfo = instance.GetType().GetMethod("Sum");
+            var flags      = BindingFlags.NonPublic | BindingFlags.Instance;
+            var methodInfo = instance.GetType().GetMethod("Sum", flags);
             var accessor   = DynamicMemberManager.Method.Get(methodInfo);
             var result     = accessor.Execute(instance, 1, 1);
             Assert.AreEqual(2, result);
@@ -105,6 +121,8 @@ namespace Lab.DynamicAccessor.UnitTest.Accessor2
 
             public ushort? UShort2 { get; set; }
 
+            private DataLevel? Field;
+
             public static Data CreateDefaultData()
             {
                 var result = new Data
@@ -158,7 +176,7 @@ namespace Lab.DynamicAccessor.UnitTest.Accessor2
 
         private class MyClass
         {
-            public int Sum(int p1, int p2)
+            private int Sum(int p1, int p2)
             {
                 return p1 + p2;
             }
