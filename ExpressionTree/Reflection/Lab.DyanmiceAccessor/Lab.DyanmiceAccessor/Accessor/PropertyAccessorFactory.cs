@@ -1,21 +1,12 @@
 ﻿using System.Reflection;
 
-namespace Lab.DyanmiceAccessor
+namespace Lab.DynamicAccessor
 {
-    public class PropertyAccessorFactory : IFastReflectionFactory<PropertyInfo, IPropertyAccessor>
+    public class PropertyAccessorFactory : AccessorFactoryBase<PropertyInfo, IPropertyAccessor>
     {
-        public IPropertyAccessor Create(PropertyInfo key)
+        protected override IPropertyAccessor Create(PropertyInfo key)
         {
             return new PropertyAccessor(key);
         }
-
-        #region IFastReflectionFactory<PropertyInfo,IPropertyAccessor> Members
-
-        IPropertyAccessor IFastReflectionFactory<PropertyInfo, IPropertyAccessor>.Create(PropertyInfo key)
-        {
-            return this.Create(key);
-        }
-
-        #endregion
     }
 }

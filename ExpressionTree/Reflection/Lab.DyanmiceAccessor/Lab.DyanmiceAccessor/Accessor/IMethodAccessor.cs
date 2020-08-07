@@ -1,4 +1,4 @@
-﻿namespace Lab.DynamicAccessor.Accessor2
+﻿namespace Lab.DynamicAccessor
 {
     public interface IMethodAccessor
     {

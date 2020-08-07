@@ -1,29 +1,37 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Data;
+using System.Reflection;
 
 namespace Lab.DynamicAccessor
 {
     public static class DataTableExtensions
     {
-        private static readonly PropertyAccessor s_propertyAccessor;
+        private static readonly ConcurrentDictionary<Type, List<PropertyInfo>> s_propertyInfos;
 
         static DataTableExtensions()
         {
-            s_propertyAccessor = new PropertyAccessor();
+            if (s_propertyInfos == null)
+            {
+                s_propertyInfos = new ConcurrentDictionary<Type, List<PropertyInfo>>();
+            }
         }
 
         public static List<T> ToList<T>(this DataTable source) where T : class, new()
         {
-            var targets = new List<T>();
-            var columns = source.Columns;
+            var targets    = new List<T>();
+            var columns    = source.Columns;
+            var targetType = typeof(T);
+
+            var propertyInfos = GetPropertyInfos(targetType);
 
             foreach (var row in source.AsEnumerable())
             {
                 var targetInstance = new T();
 
                 //var targetInstance     = Activator.CreateInstance<T>();
-                var targetType = targetInstance.GetType();
-                foreach (var propertyInfo in targetType.GetProperties())
+                foreach (var propertyInfo in propertyInfos)
                 {
                     var propertyName = propertyInfo.Name;
                     var hasColumn    = columns.Contains(propertyName);
@@ -33,7 +41,8 @@ namespace Lab.DynamicAccessor
                     }
 
                     var sourceValue = row[propertyName];
-                    s_propertyAccessor.SetValue(targetInstance, propertyInfo, sourceValue);
+                    var accessor = DynamicMemberManager.Property.GetOrCreate(propertyInfo);
+                    accessor.SetValue(targetInstance, sourceValue);
                 }
 
                 targets.Add(targetInstance);
@@ -42,25 +51,21 @@ namespace Lab.DynamicAccessor
             return targets;
         }
 
-        //private static void NewMethod<T>(PropertyInfo propertyInfo, object sourceValue, T targetInstance, string propertyName)
-        //    where T : class, new()
-        //{
-        //    var    propertyType  = propertyInfo.PropertyType;
-        //    var    typeConverter = s_typeConverterFactory.GetTypeConverter(propertyType);
-        //    object targetValue;
+        private static List<PropertyInfo> GetPropertyInfos(Type type)
+        {
+            if (s_propertyInfos.TryGetValue(type, out var propertyInfos) == false)
+            {
+                propertyInfos = new List<PropertyInfo>();
+                foreach (var propertyInfo in type.GetProperties())
+                {
+                    DynamicMemberManager.Property.GetOrCreate(propertyInfo);
+                    propertyInfos.Add(propertyInfo);
+                }
 
-        //    if (propertyType.IsEnum)
-        //    {
-        //        var enumConverter = (EnumConverter) typeConverter;
-        //        targetValue = enumConverter.Convert(propertyType, sourceValue);
-        //    }
-        //    else
-        //    {
-        //        targetValue = typeConverter.Convert(sourceValue);
-        //    }
+                s_propertyInfos.TryAdd(type, propertyInfos);
+            }
 
-        //    //property.SetValue(targetInstance, targetValue);// 反射reflection
-        //    s_memberAccessor.SetValue(targetInstance, propertyName, targetValue); //Expression Tree
-        //}
+            return propertyInfos;
+        }
     }
 }

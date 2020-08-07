@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace Lab.DynamicAccessor.Accessor2
+namespace Lab.DynamicAccessor
 {
     public class ConstructorAccessorFactory : AccessorFactoryBase<ConstructorInfo, IConstructorAccessor>
     {

@@ -2,60 +2,98 @@
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace Lab.DyanmiceAccessor
+namespace Lab.DynamicAccessor
 {
     public interface IFieldAccessor
     {
         object GetValue(object instance);
+
+        void SetValue(object instance, object value);
     }
 
     public class FieldAccessor : IFieldAccessor
     {
-        private Func<object, object> m_getter;
+        public FieldInfo FieldInfo { get; }
 
-        public FieldInfo FieldInfo { get; private set; }
+        private readonly Func<object, object>   _getter;
+        private readonly Action<object, object> _setter;
 
         public FieldAccessor(FieldInfo fieldInfo)
         {
             this.FieldInfo = fieldInfo;
-            this.m_getter = this.GetDelegate(fieldInfo);
-        }
-
-        private Func<object, object> GetDelegate(FieldInfo fieldInfo)
-        {
-            // target: (object)(((TInstance)instance).Field)
-
-            // preparing parameter, object type
-            var instance = Expression.Parameter(typeof(object), "instance");
-
-            // non-instance for static method, or ((TInstance)instance)
-            var instanceCast = fieldInfo.IsStatic ? null :
-                Expression.Convert(instance, fieldInfo.ReflectedType);
-
-            // ((TInstance)instance).Property
-            var fieldAccess = Expression.Field(instanceCast, fieldInfo);
-
-            // (object)(((TInstance)instance).Property)
-            var castFieldValue = Expression.Convert(fieldAccess, typeof(object));
-
-            // Lambda expression
-            var lambda = Expression.Lambda<Func<object, object>>(castFieldValue, instance);
-
-            return lambda.Compile();
+            this._getter   = this.CreateGetter(fieldInfo);
+            this._setter   = this.CreateSetter(fieldInfo);
         }
 
         public object GetValue(object instance)
         {
-            return this.m_getter(instance);
+            return this._getter(instance);
         }
 
-        #region IFieldAccessor Members
+        public void SetValue(object instance, object value)
+        {
+            this._setter(instance, value);
+        }
 
         object IFieldAccessor.GetValue(object instance)
         {
             return this.GetValue(instance);
         }
 
-        #endregion
+        internal Func<object, object> CreateGetter(FieldInfo fieldInfo)
+        {
+            var              instance   = Expression.Parameter(typeof(object), "instance");
+            var              sourceType = fieldInfo.ReflectedType;
+            MemberExpression property;
+            if (fieldInfo.IsStatic)
+            {
+                property = Expression.Field(null, fieldInfo);
+            }
+            else
+            {
+                var instanceCast = Expression.Convert(instance, sourceType);
+
+                //property = Expression.Property(instanceCast, propertyInfo.Name);
+
+                property = Expression.Field(instanceCast, fieldInfo);
+            }
+
+            var propertyCast = Expression.Convert(property, typeof(object));
+
+            var lambda = Expression.Lambda<Func<object, object>>(propertyCast, instance);
+            var result = lambda.Compile();
+
+            return result;
+        }
+
+        internal Action<object, object> CreateSetter(FieldInfo fieldInfo)
+        {
+            var              instance   = Expression.Parameter(typeof(object), "instance");
+            var              value      = Expression.Parameter(typeof(object), "value");
+            var              sourceType = fieldInfo.DeclaringType;
+            MemberExpression property;
+            if (fieldInfo.IsStatic)
+            {
+                property = Expression.Field(null, fieldInfo);
+            }
+            else
+            {
+                var instanceCast = Expression.Convert(instance, sourceType);
+
+                //property = Expression.Property(instanceCast, propertyInfo.Name);
+
+                property = Expression.Field(instanceCast, fieldInfo);
+            }
+
+            var valueCast = Expression.Convert(value, property.Type);
+
+            var assign = Expression.Assign(property, valueCast);
+
+            //var lambda = Expression.Lambda(typeof(Action<object, object>), assign, instance, value);
+            var lambda = Expression.Lambda<Action<object, object>>(assign, instance, value);
+            var result = lambda.Compile();
+
+            return result;
+        }
     }
 }

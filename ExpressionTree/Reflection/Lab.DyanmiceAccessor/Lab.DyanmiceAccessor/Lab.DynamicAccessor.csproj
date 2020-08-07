@@ -41,25 +41,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Accessor2\AccessFactoryBase.cs" />
-    <Compile Include="Accessor2\ConstructorAccessor.cs" />
-    <Compile Include="Accessor2\FieldAccessor.cs" />
-    <Compile Include="Accessor2\DynamicMemberManager.cs" />
-    <Compile Include="Accessor2\ConstructorAccessorFactory.cs" />
-    <Compile Include="Accessor2\IConstructorAccessor.cs" />
-    <Compile Include="Accessor2\IMethodAccessor.cs" />
-    <Compile Include="Accessor2\IPropertyAccessor.cs" />
-    <Compile Include="Accessor2\MethodAccessor.cs" />
-    <Compile Include="Accessor2\FieldAccessorFactory.cs" />
-    <Compile Include="Accessor2\MethodAccessorFactory.cs" />
-    <Compile Include="Accessor2\PropertyAccessorFactory.cs" />
-    <Compile Include="Accessor2\PropertyAccessor.cs" />
+    <Compile Include="Accessor\AccessFactoryBase.cs" />
+    <Compile Include="Accessor\ConstructorAccessor.cs" />
+    <Compile Include="Accessor\FieldAccessor.cs" />
+    <Compile Include="Accessor\DynamicMemberManager.cs" />
+    <Compile Include="Accessor\ConstructorAccessorFactory.cs" />
+    <Compile Include="Accessor\IConstructorAccessor.cs" />
+    <Compile Include="Accessor\IMethodAccessor.cs" />
+    <Compile Include="Accessor\IPropertyAccessor.cs" />
     <Compile Include="Accessor\MethodAccessor.cs" />
-    <Compile Include="Accessor\DynamicAccessManager.cs" />
-    <Compile Include="Accessor\PropertyAccessInfo.cs" />
+    <Compile Include="Accessor\FieldAccessorFactory.cs" />
+    <Compile Include="Accessor\MethodAccessorFactory.cs" />
+    <Compile Include="Accessor\PropertyAccessorFactory.cs" />
+    <Compile Include="Accessor\PropertyAccessor.cs" />
     <Compile Include="DataTableExtensions.cs" />
     <Compile Include="MemberAccessor.cs" />
-    <Compile Include="Accessor\PropertyAccessor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TypeCheckExtensions.cs" />
     <Compile Include="TypeConverter\BooleanConverter.cs" />

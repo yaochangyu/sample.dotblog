@@ -1,29 +1,25 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Lab.DynamicAccessor
 {
-    public interface IMethodAccessor
-    {
-        object Execute(object instance, MethodInfo methodInfo, params object[] parameters);
-    }
-
     public class MethodAccessor : IMethodAccessor
     {
-        private static readonly ConcurrentDictionary<MethodInfo, Func<object, object[], object>> s_executer;
+        public MethodInfo MethodInfo { get; set; }
 
-        static MethodAccessor()
+        private readonly Func<object, object[], object> _executer;
+
+        public MethodAccessor(MethodInfo methodInfo)
         {
-            s_executer = new ConcurrentDictionary<MethodInfo, Func<object, object[], object>>();
+            this.MethodInfo = methodInfo;
+            this._executer  = CreateExecuter(methodInfo);
         }
 
-        public object Execute(object instance, MethodInfo methodInfo, params object[] parameters)
+        public object Execute(object instance, params object[] parameters)
         {
-            var invoker = GetOrCreateExecuter(methodInfo);
-            return invoker(instance, parameters);
+            return this._executer.Invoke(instance, parameters);
         }
 
         /// <summary>
@@ -31,60 +27,57 @@ namespace Lab.DynamicAccessor
         /// </summary>
         /// <param name="methodInfo"></param>
         /// <returns></returns>
-        private static Func<object, object[], object> GetOrCreateExecuter(MethodInfo methodInfo)
+        private static Func<object, object[], object> CreateExecuter(MethodInfo methodInfo)
         {
-            if (s_executer.TryGetValue(methodInfo, out var result) == false)
+            Func<object, object[], object> result;
+
+            // parameters to execute
+            var instanceParameter   = Expression.Parameter(typeof(object),   "instance");
+            var parametersParameter = Expression.Parameter(typeof(object[]), "parameters");
+
+            // build parameter list
+            var parameterExpressions = new List<Expression>();
+            var paramInfos           = methodInfo.GetParameters();
+            for (var i = 0; i < paramInfos.Length; i++)
             {
-                // parameters to execute
-                var instanceParameter   = Expression.Parameter(typeof(object),   "instance");
-                var parametersParameter = Expression.Parameter(typeof(object[]), "parameters");
+                // (Ti)parameters[i]
+                var valueObj  = Expression.ArrayIndex(parametersParameter, Expression.Constant(i));
+                var valueCast = Expression.Convert(valueObj, paramInfos[i].ParameterType);
+                parameterExpressions.Add(valueCast);
+            }
 
-                // build parameter list
-                var parameterExpressions = new List<Expression>();
-                var paramInfos           = methodInfo.GetParameters();
-                for (var i = 0; i < paramInfos.Length; i++)
-                {
-                    // (Ti)parameters[i]
-                    var valueObj  = Expression.ArrayIndex(parametersParameter, Expression.Constant(i));
-                    var valueCast = Expression.Convert(valueObj, paramInfos[i].ParameterType);
-                    parameterExpressions.Add(valueCast);
-                }
+            // non-instance for static method, or ((TInstance)instance)
+            Expression instanceCast = methodInfo.IsStatic
+                                          ? null
+                                          : Expression.Convert(instanceParameter, methodInfo.ReflectedType);
 
-                // non-instance for static method, or ((TInstance)instance)
-                Expression instanceCast = methodInfo.IsStatic
-                                              ? null
-                                              : Expression.Convert(instanceParameter, methodInfo.ReflectedType);
+            // static invoke or ((TInstance)instance).Method
+            var methodCall = Expression.Call(
+                                             instanceCast, methodInfo, parameterExpressions);
 
-                // static invoke or ((TInstance)instance).Method
-                var methodCall = Expression.Call(
-                                                 instanceCast, methodInfo, parameterExpressions);
+            // ((TInstance)instance).Method((T0)parameters[0], (T1)parameters[1], ...)
+            if (methodCall.Type == typeof(void))
+            {
+                var lambda =
+                    Expression.Lambda<Action<object, object[]>>(
+                                                                methodCall, instanceParameter, parametersParameter);
 
-                // ((TInstance)instance).Method((T0)parameters[0], (T1)parameters[1], ...)
-                if (methodCall.Type == typeof(void))
-                {
-                    var lambda =
-                        Expression.Lambda<Action<object, object[]>>(
-                                                                    methodCall, instanceParameter, parametersParameter);
+                var compile = lambda.Compile();
 
-                    var compile = lambda.Compile();
-
-                    result = (instance, parameters) =>
-                             {
-                                 compile(instance, parameters);
-                                 return null;
-                             };
-                }
-                else
-                {
-                    var castMethodCall = Expression.Convert(methodCall, typeof(object));
-                    var lambda =
-                        Expression.Lambda<Func<object, object[], object>>(
-                                                                          castMethodCall, instanceParameter,
-                                                                          parametersParameter);
-                    result = lambda.Compile();
-                }
-
-                s_executer.TryAdd(methodInfo, result);
+                result = (instance, parameters) =>
+                         {
+                             compile(instance, parameters);
+                             return null;
+                         };
+            }
+            else
+            {
+                var castMethodCall = Expression.Convert(methodCall, typeof(object));
+                var lambda =
+                    Expression.Lambda<Func<object, object[], object>>(
+                                                                      castMethodCall, instanceParameter,
+                                                                      parametersParameter);
+                result = lambda.Compile();
             }
 
             return result;

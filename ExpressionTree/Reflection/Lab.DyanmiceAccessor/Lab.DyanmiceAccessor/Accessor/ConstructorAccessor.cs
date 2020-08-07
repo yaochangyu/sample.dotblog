@@ -3,26 +3,26 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace Lab.DyanmiceAccessor
+namespace Lab.DynamicAccessor
 {
-    public interface IConstructorInvoker
+    public class ConstructorAccessor : IConstructorAccessor
     {
-        object Invoke(params object[] parameters);
-    }
+        public ConstructorInfo ConstructorInfo { get; set; }
 
-    public class ConstructorInvoker : IConstructorInvoker
-    {
-        private Func<object[], object> m_invoker;
+        private readonly Func<object[], object> _execute;
 
-        public ConstructorInfo ConstructorInfo { get; private set; }
-
-        public ConstructorInvoker(ConstructorInfo constructorInfo)
+        public ConstructorAccessor(ConstructorInfo constructorInfo)
         {
             this.ConstructorInfo = constructorInfo;
-            this.m_invoker = this.InitializeInvoker(constructorInfo);
+            this._execute        = this.CreateExecuter(constructorInfo);
         }
 
-        private Func<object[], object> InitializeInvoker(ConstructorInfo constructorInfo)
+        public object Execute(params object[] parameters)
+        {
+            return this._execute(parameters);
+        }
+
+        private Func<object[], object> CreateExecuter(ConstructorInfo constructorInfo)
         {
             // Target: (object)new T((T0)parameters[0], (T1)parameters[1], ...)
 
@@ -31,11 +31,11 @@ namespace Lab.DyanmiceAccessor
 
             // build parameter list
             var parameterExpressions = new List<Expression>();
-            var paramInfos = constructorInfo.GetParameters();
-            for (int i = 0; i < paramInfos.Length; i++)
+            var paramInfos           = constructorInfo.GetParameters();
+            for (var i = 0; i < paramInfos.Length; i++)
             {
                 // (Ti)parameters[i]
-                var valueObj = Expression.ArrayIndex(parametersParameter, Expression.Constant(i));
+                var valueObj  = Expression.ArrayIndex(parametersParameter, Expression.Constant(i));
                 var valueCast = Expression.Convert(valueObj, paramInfos[i].ParameterType);
 
                 parameterExpressions.Add(valueCast);
@@ -51,19 +51,5 @@ namespace Lab.DyanmiceAccessor
 
             return lambda.Compile();
         }
-
-        public object Invoke(params object[] parameters)
-        {
-            return this.m_invoker(parameters);
-        }
-
-        #region IConstructorInvoker Members
-
-        object IConstructorInvoker.Invoke(params object[] parameters)
-        {
-            return this.Invoke(parameters);
-        }
-
-        #endregion
     }
 }

@@ -1,13 +1,13 @@
 ﻿using System.Collections.Concurrent;
 
-namespace Lab.DynamicAccessor.Accessor2
+namespace Lab.DynamicAccessor
 {
-    public interface IAccessorCache<TKey, TValue>
+    public interface IAccessorFactory<TKey, TValue>
     {
-        TValue Get(TKey key);
+        TValue GetOrCreate(TKey key);
     }
 
-    public abstract class AccessorFactoryBase<TKey, TValue> : IAccessorCache<TKey, TValue>
+    public abstract class AccessorFactoryBase<TKey, TValue> : IAccessorFactory<TKey, TValue>
     {
         private readonly ConcurrentDictionary<TKey, TValue> _cache;
 
@@ -19,7 +19,7 @@ namespace Lab.DynamicAccessor.Accessor2
             }
         }
 
-        public TValue Get(TKey key)
+        public TValue GetOrCreate(TKey key)
         {
             if (this._cache.TryGetValue(key, out var result) == false)
             {

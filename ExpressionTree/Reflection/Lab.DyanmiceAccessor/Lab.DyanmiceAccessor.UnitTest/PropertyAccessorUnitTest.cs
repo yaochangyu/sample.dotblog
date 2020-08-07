@@ -10,6 +10,34 @@ namespace Lab.DynamicAccessor.UnitTest
     public class PropertyAccessorUnitTest
     {
         [TestMethod]
+        public void 動態存取屬性()
+        {
+            var expected     = DataLevel.Medium;
+            var instance     = new Data();
+            var propertyInfo = instance.GetType().GetProperty("Enum2");
+            var accessor     = new PropertyAccessor(propertyInfo);
+            accessor.SetValue(instance, expected);
+            var actual = (DataLevel) accessor.GetValue(instance);
+            Assert.AreEqual(expected, actual);
+        }
+
+        [TestMethod]
+        public void 動態存取屬性1()
+        {
+            var expected      = DataLevel.Medium;
+            var instance      = new Data();
+            var propertyInfo1 = instance.GetType().GetProperty("Enum1");
+            var propertyInfo2 = instance.GetType().GetProperty("Enum2");
+            var accessor1     = DynamicMemberManager.Property.GetOrCreate(propertyInfo1);
+            var accessor2     = DynamicMemberManager.Property.GetOrCreate(propertyInfo2);
+            accessor1.SetValue(instance, expected);
+            accessor2.SetValue(instance, expected);
+            var actual1 = (DataLevel) accessor1.GetValue(instance);
+            var actual2 = (DataLevel) accessor2.GetValue(instance);
+            Assert.AreEqual(expected, actual1);
+            Assert.AreEqual(expected, actual2);
+        }
+        [TestMethod]
         public void DataTable轉集合()
         {
             var expected = new List<Data> {Data.CreateDefaultData()};
@@ -23,11 +51,11 @@ namespace Lab.DynamicAccessor.UnitTest
         {
             var expected = Data.CreateDefaultData();
             var actual   = new Data();
-            var accessor = new PropertyAccessor();
             foreach (var propertyInfo in expected.GetType().GetProperties())
             {
-                var value = accessor.GetValue(expected, propertyInfo);
-                accessor.SetValue(actual, propertyInfo, value);
+                var accessor = new PropertyAccessor(propertyInfo);
+                var value    = accessor.GetValue(expected);
+                accessor.SetValue(actual, value);
             }
 
             actual.Should().BeEquivalentTo(expected);
