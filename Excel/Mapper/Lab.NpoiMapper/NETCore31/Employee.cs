@@ -27,7 +27,7 @@ namespace NETCore31
         public string DomainName { get; set; }
 
         [Column("ID")]
-        public string Id { get; set; }
+        public int Id { get; set; }
 
         public DateTime Birthdaty { get; set; }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -31,25 +32,46 @@ namespace NETCore31
         }
 
         [TestMethod]
-        public void 讀取特定工作表()
+        public void 匯出工作表()
         {
-            var mapper    = new Mapper("Input.xlsx");
-            var employees = mapper.Take<Employee>("sheet1");
-            foreach (var employee in employees)
+            var mapper = new Mapper();
+            var employees = new List<Employee>
             {
-                Console.WriteLine(employee.ErrorColumnIndex);
-                Console.WriteLine(employee.ErrorMessage);
-            }
+                new Employee
+                {
+                    Id             = 1,
+                    LocationId     = "A",
+                    DepartmentId   = "S000",
+                    DepartmentName = "廣告部",
+                    EmployeeId     = "S001",
+                    Name           = "余小章",
+                    DomainName     = "TEST",
+                    Birthdaty      = new DateTime(1988, 9, 11)
+                },
+                new Employee
+                {
+                    Id             = 2,
+                    LocationId     = "A",
+                    DepartmentId   = "A000",
+                    DepartmentName = "公關部",
+                    EmployeeId     = "A001",
+                    Name           = "小章魚",
+                    DomainName     = "TEST",
+                    Birthdaty      = new DateTime(1976, 8, 22)
+                },
+            };
+            mapper.Put(employees, "sheet1",overwrite:true);
+            mapper.Save("Output.xlsx");
         }
 
         [TestMethod]
-        public void 讀取檔案所有的工作表()
+        public void 讀取所有工作表()
         {
             var mapper         = new Mapper("Input.xlsx");
             var numberOfSheets = mapper.Workbook.NumberOfSheets;
             for (var i = 0; i < numberOfSheets; i++)
             {
-                var rowInfos = mapper.Take<Employee>().ToList();
+                var rowInfos = mapper.Take<Employee>(i).ToList();
                 foreach (var rowInfo in rowInfos)
                 {
                     if (string.IsNullOrWhiteSpace(rowInfo.ErrorMessage) == false)
@@ -67,12 +89,39 @@ namespace NETCore31
                 {
                     var rowIndex = rowInfo.Key;
                     var rowData  = rowInfo.Value as Employee;
+                    if (rowData == null)
+                    {
+                        continue;
+                    }
+
                     Console.WriteLine(JsonConvert.SerializeObject(new
                     {
-                        Index = rowIndex,
-                        Data  = rowData
+                        SheetName = sheetName,
+                        Index     = rowIndex,
+                        Data      = rowData
                     }));
                 }
+            }
+        }
+
+        [TestMethod]
+        public void 讀取特定工作表()
+        {
+            var mapper   = new Mapper("Input.xlsx");
+            var rowInfos = mapper.Take<Employee>("sheet1");
+            foreach (var rowInfo in rowInfos)
+            {
+                if (string.IsNullOrWhiteSpace(rowInfo.ErrorMessage) == false)
+                {
+                    Console.WriteLine(rowInfo.ErrorColumnIndex);
+                    Console.WriteLine(rowInfo.ErrorMessage);
+                }
+
+                Console.WriteLine(JsonConvert.SerializeObject(new
+                {
+                    Index = rowInfo.RowNumber,
+                    Data  = rowInfo.Value
+                }));
             }
         }
 
