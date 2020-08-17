@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using Npoi.Mapper.Attributes;
 
 namespace NETCore31
@@ -6,7 +7,7 @@ namespace NETCore31
     internal class Employee
     {
         [Column("LocationID")]
-        public string LocationID { get; set; }
+        public string LocationId { get; set; }
 
         //[Column("DeptID")]
         [Display(Name = "DeptID")]
@@ -27,5 +28,9 @@ namespace NETCore31
 
         [Column("ID")]
         public string Id { get; set; }
+
+        public DateTime Birthdaty { get; set; }
+
+        public string ErrorMessage { get; set; }
     }
 }
