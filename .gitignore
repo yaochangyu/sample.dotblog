@@ -262,3 +262,5 @@ __pycache__/
 
 /WebAPI/NSwag/Lab.UploadFile
 /Configuration/NetCore/Lab.Config/AspNetCore3
+/CEF/Lab.Startup
+/ExpressionTree/Reflection

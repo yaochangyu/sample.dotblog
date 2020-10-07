@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tako.Collections.Generic", "Tako.Collections.Generic\Tako.Collections.Generic.csproj", "{0483E289-40B9-47FA-A630-A72587BFC29C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tako.Collections.Generic.Demo", "Tako.Collections.Generic.Demo\Tako.Collections.Generic.Demo.csproj", "{115B0666-F7A2-4C25-8BB5-70FA5E1F5F16}"
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 3
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs15
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = Tako.Collections.Generic.Demo\\Tako.Collections.Generic.Demo.csproj
+		SccProjectName1 = Tako.Collections.Generic.Demo
+		SccLocalPath1 = Tako.Collections.Generic.Demo
+		SccProjectUniqueName2 = Tako.Collections.Generic\\Tako.Collections.Generic.csproj
+		SccProjectName2 = Tako.Collections.Generic
+		SccLocalPath2 = Tako.Collections.Generic
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0483E289-40B9-47FA-A630-A72587BFC29C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0483E289-40B9-47FA-A630-A72587BFC29C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0483E289-40B9-47FA-A630-A72587BFC29C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0483E289-40B9-47FA-A630-A72587BFC29C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{115B0666-F7A2-4C25-8BB5-70FA5E1F5F16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{115B0666-F7A2-4C25-8BB5-70FA5E1F5F16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{115B0666-F7A2-4C25-8BB5-70FA5E1F5F16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{115B0666-F7A2-4C25-8BB5-70FA5E1F5F16}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
