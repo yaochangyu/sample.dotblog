@@ -23,11 +23,10 @@ namespace WinFromNet48
             
             var factory = LoggerFactory.Create(builder =>
                                                {
-                                                   builder
-                                                       .AddFilter("Microsoft", LogLevel.Warning)
-                                                       .AddFilter("System", LogLevel.Warning)
-                                                       .AddFilter("WindowsFormsApp1", LogLevel.Debug)
-                                                       .AddConsole()
+                                                   builder.AddFilter("Microsoft", LogLevel.Warning)
+                                                          .AddFilter("System", LogLevel.Warning)
+                                                          .AddFilter("WindowsFormsApp1", LogLevel.Debug)
+                                                          .AddConsole()
                                                        ;
                                                });
             var logger = factory.CreateLogger<Form1>();

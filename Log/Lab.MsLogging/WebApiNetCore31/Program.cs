@@ -12,12 +12,11 @@ namespace WebApiNetCore31
                        .ConfigureWebHostDefaults(webBuilder => { webBuilder.UseStartup<Startup>(); })
                        .ConfigureLogging((context, builder) =>
                                          {
-                                             builder
-                                                 .AddFilter("Microsoft",        LogLevel.Warning)
-                                                 .AddFilter("System",           LogLevel.Warning)
-                                                 .AddFilter("WindowsFormsApp1", LogLevel.Debug)
-                                                 .AddConfiguration(context.Configuration.GetSection("Logging"))
-                                                 .AddConsole()
+                                             builder.AddFilter("Microsoft",        LogLevel.Warning)
+                                                    .AddFilter("System",           LogLevel.Warning)
+                                                    .AddFilter("WindowsFormsApp1", LogLevel.Debug)
+                                                    .AddConfiguration(context.Configuration.GetSection("Logging"))
+                                                    .AddConsole()
                                                  ;
                                          });
         }
