@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -11,7 +9,7 @@ namespace WebApiNetCore31.Controllers
     [Route("[controller]")]
     public class WeatherForecastController : ControllerBase
     {
-        private static readonly string[] Summaries = new[]
+        private static readonly string[] Summaries =
         {
             "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
         };
@@ -20,21 +18,31 @@ namespace WebApiNetCore31.Controllers
 
         public WeatherForecastController(ILogger<WeatherForecastController> logger)
         {
-            _logger = logger;
+            this._logger = logger;
         }
 
         [HttpGet]
-        public IEnumerable<WeatherForecast> Get()
+        public IActionResult Get()
         {
-            this._logger.LogInformation("get  WeatherForecast api");
-            var rng = new Random();
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            using (this._logger.BeginScope($"Scope Id:{Guid.NewGuid()}"))
+            //using (this._logger.BeginScope("Scope Id:{id}", Guid.NewGuid().ToString())
             {
-                Date = DateTime.Now.AddDays(index),
-                TemperatureC = rng.Next(-20, 55),
-                Summary = Summaries[rng.Next(Summaries.Length)]
-            })
-            .ToArray();
+                this._logger.LogInformation("開始，訪問 WeatherForecast api");
+                this._logger.LogInformation("執行流程");
+
+                var random = new Random();
+                var result = Enumerable.Range(1, 5).Select(index => new WeatherForecast
+                                       {
+                                           Date         = DateTime.Now.AddDays(index),
+                                           TemperatureC = random.Next(-20, 55),
+                                           Summary      = Summaries[random.Next(Summaries.Length)]
+                                       })
+                                       .ToArray();
+
+                this._logger.LogInformation("結束流程");
+
+                return this.Ok(result);
+            }
         }
     }
 }
