@@ -11,7 +11,7 @@ namespace WinFormViaDiContainerNet48
 {
     internal static class Program
     {
-        internal static ServiceProvider ServiceProvider { get; set; }
+        //internal static ServiceProvider ServiceProvider { get; set; }
 
         /// <summary>
         ///     The main entry point for the application.
@@ -19,18 +19,17 @@ namespace WinFormViaDiContainerNet48
         [STAThread]
         private static void Main()
         {
-            var logger = LogManager.GetCurrentClassLogger();
-
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
             //Application.Run(new Form1(service));
 
             var config = CreateConfig();
-            ServiceProvider = CreateServiceProvider(config);
-            Application.Run(ServiceProvider.GetService(typeof(Form1)) as Form);
-            ServiceProvider.Dispose();
-            
+            using (var serviceProvider = CreateServiceProvider(config))
+            {
+                var form = serviceProvider.GetService(typeof(Form1)) as Form;
+                Application.Run(form);
+            }
         }
 
         private static IConfiguration CreateConfig()

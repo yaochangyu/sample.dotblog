@@ -31,8 +31,7 @@ namespace WinFormViaDiContainerNet48
             this.Logger.LogInformation(LogEvent.GenerateItem, "{name} 按鈕被按了", name);
             this.Logger.LogInformation(LogEvent.UpdateItem,   "執行更新");
 
-            var runner = Program.ServiceProvider.GetRequiredService<Runner>();
-            runner.DoAction(name);
+            Runner.DoAction(name);
 
             this.Logger.LogInformation(LogEvent.GenerateItem, "完成");
         }
