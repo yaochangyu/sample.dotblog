@@ -24,11 +24,11 @@ namespace WebApiNetCore31.Controllers
         [HttpGet]
         public IActionResult Get()
         {
-            using (this._logger.BeginScope($"Scope Id:{Guid.NewGuid()}"))
-            //using (this._logger.BeginScope("Scope Id:{id}", Guid.NewGuid().ToString())
+            //using (this._logger.BeginScope($"Scope Id:{Guid.NewGuid()}"))
+            using (this._logger.BeginScope("Scope Id:{id}", Guid.NewGuid()))
             {
-                this._logger.LogInformation("開始，訪問 WeatherForecast api");
-                this._logger.LogInformation("執行流程");
+                this._logger.LogInformation(LogEvent.GenerateItem,"開始，訪問 WeatherForecast api");
+                this._logger.LogInformation(LogEvent.TestItem,"執行流程");
 
                 var random = new Random();
                 var result = Enumerable.Range(1, 5).Select(index => new WeatherForecast
@@ -39,7 +39,7 @@ namespace WebApiNetCore31.Controllers
                                        })
                                        .ToArray();
 
-                this._logger.LogInformation("結束流程");
+                this._logger.LogInformation(LogEvent.GenerateItem,"結束流程");
 
                 return this.Ok(result);
             }
