@@ -13,7 +13,7 @@ namespace WinFormViaDiContainerNet48
 
         public void DoAction(string name)
         {
-            this._logger.LogInformation(20, "Doing hard work! {Action}", name);
+            this._logger.LogInformation(LogEvent.UpdateItem, "Doing hard work! {Action}", name);
         }
     }
 }
