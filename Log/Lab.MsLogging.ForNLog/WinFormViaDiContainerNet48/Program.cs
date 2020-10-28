@@ -11,6 +11,8 @@ namespace WinFormViaDiContainerNet48
 {
     internal static class Program
     {
+        internal static ServiceProvider ServiceProvider { get; set; }
+
         /// <summary>
         ///     The main entry point for the application.
         /// </summary>
@@ -19,12 +21,16 @@ namespace WinFormViaDiContainerNet48
         {
             var logger = LogManager.GetCurrentClassLogger();
 
-            var config   = CreateConfig();
-            var provider = CreateServiceProvider(config);
-
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+
+            //Application.Run(new Form1(service));
+
+            var config = CreateConfig();
+            ServiceProvider = CreateServiceProvider(config);
+            Application.Run(ServiceProvider.GetService(typeof(Form1)) as Form);
+            ServiceProvider.Dispose();
+            
         }
 
         private static IConfiguration CreateConfig()
@@ -37,10 +43,11 @@ namespace WinFormViaDiContainerNet48
             return config;
         }
 
-        private static IServiceProvider CreateServiceProvider(IConfiguration config)
+        private static ServiceProvider CreateServiceProvider(IConfiguration config)
         {
             var serviceCollection = new ServiceCollection();
             return serviceCollection.AddTransient<Form1>() // Runner is the custom class
+                                    .AddTransient<Runner>()
                                     .AddLogging(loggingBuilder =>
                                                 {
                                                     // configure Logging with NLog

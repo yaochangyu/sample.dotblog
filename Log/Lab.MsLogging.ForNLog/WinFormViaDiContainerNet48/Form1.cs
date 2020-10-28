@@ -1,28 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace WinFormViaDiContainerNet48
 {
     public partial class Form1 : Form
     {
+        public ILogger<Form1> Logger { get; set; }
+
+        public Runner Runner { get; set; }
+
         public Form1()
         {
-            InitializeComponent();
+            this.InitializeComponent();
         }
 
-        private ILogger<Form1> _logger;
-        public Form1(ILogger<Form1>logger)
+        public Form1(ILogger<Form1> logger, Runner runner)
         {
-            InitializeComponent();
-            this._logger = logger;
+            this.InitializeComponent();
+            this.Logger = logger;
+            this.Runner = runner;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -30,9 +28,13 @@ namespace WinFormViaDiContainerNet48
             var button = (Button) sender;
             var name   = button.Name;
 
-            _logger.LogInformation(LogEvent.GenerateItem, "{name} 按鈕被按了", name);
-            _logger.LogInformation(LogEvent.UpdateItem,   "執行更新");
-            _logger.LogInformation(LogEvent.GenerateItem, "完成");
+            this.Logger.LogInformation(LogEvent.GenerateItem, "{name} 按鈕被按了", name);
+            this.Logger.LogInformation(LogEvent.UpdateItem,   "執行更新");
+
+            var runner = Program.ServiceProvider.GetRequiredService<Runner>();
+            runner.DoAction(name);
+
+            this.Logger.LogInformation(LogEvent.GenerateItem, "完成");
         }
     }
 }
