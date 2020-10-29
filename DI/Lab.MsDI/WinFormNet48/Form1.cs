@@ -12,9 +12,16 @@ namespace WinFormNet48
 {
     public partial class Form1 : Form
     {
-        public Form1()
+        public Worker Workflow1 { get; set; }
+        public Form1(Worker workflow1)
         {
             InitializeComponent();
+            Workflow1 = workflow1;
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            Console.WriteLine(this.Workflow1.Operation.OperationId);
         }
     }
 }
