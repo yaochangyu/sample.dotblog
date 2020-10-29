@@ -9,6 +9,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinFormViaDiContainerNet48"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AspNetCore31", "AspNetCore31\AspNetCore31.csproj", "{9E501C0F-5DF5-41C9-A1B4-170C0EED7465}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinFormNetCore31", "WinFormNetCore31\WinFormNetCore31.csproj", "{95513617-1F9E-4C59-ADB1-7982BD05CD7F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{9E501C0F-5DF5-41C9-A1B4-170C0EED7465}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9E501C0F-5DF5-41C9-A1B4-170C0EED7465}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9E501C0F-5DF5-41C9-A1B4-170C0EED7465}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95513617-1F9E-4C59-ADB1-7982BD05CD7F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95513617-1F9E-4C59-ADB1-7982BD05CD7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95513617-1F9E-4C59-ADB1-7982BD05CD7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95513617-1F9E-4C59-ADB1-7982BD05CD7F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
