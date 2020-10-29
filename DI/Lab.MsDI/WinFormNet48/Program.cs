@@ -26,7 +26,7 @@ namespace WinFormNet48
 
         private static ServiceProvider CreateServiceProvider()
         {
-            var services = new ServiceCollection();
+            IServiceCollection services = new ServiceCollection();
             return services.AddSingleton<Form1>()
                                     .AddTransient<Worker>()
                                     .AddTransient<ITransientMessager, MultiMessager>()
