@@ -1,40 +1,49 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace WinFormNet48
 {
-    static class Program
+    internal static class Program
     {
+        public static ServiceProvider ServiceProvider { get; set; }
+
         /// <summary>
-        /// The main entry point for the application.
+        ///     The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        private static void Main()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             using (var serviceProvider = CreateServiceProvider())
             {
+                ServiceProvider = serviceProvider;
                 var form = serviceProvider.GetService(typeof(Form1)) as Form;
                 Application.Run(form);
             }
         }
+
         private static ServiceProvider CreateServiceProvider()
         {
             var serviceCollection = new ServiceCollection();
-            return serviceCollection.AddTransient<Form1>()
+            return serviceCollection.AddSingleton<Form1>()
                                     .AddTransient<Worker>()
-                                    .AddTransient<LogMessager>()
-                                    .AddTransient<MachineMessager>()
-                                    .AddTransient<Worker>(provider =>
-                                                             {
-                                                                 var operation = provider.GetRequiredService<MachineMessager>();
-                                                                 return new Worker(operation);
-                                                             })
+                                    .AddTransient<ITransientMessager, MultiMessager>()
+                                    .AddSingleton<ISingleMessager, MultiMessager>()
+                                    .AddScoped<IScopeMessager, MultiMessager>()
+
+                                    //.AddTransient(provider =>
+                                    //              {
+                                    //                  var operation = provider.GetRequiredService<LogMessager>();
+                                    //                  return new Worker(operation);
+                                    //              })
+                                    //.AddTransient(provider =>
+                                    //              {
+                                    //                  var operation = provider.GetRequiredService<LogMessager>();
+                                    //                  return new Workflow(operation);
+                                    //              })
+
                                     //.AddTransient<IOperation,CarOperation>()
                                     //.AddTransient<IOperation,HourseOperation>()
                                     //.AddLogging(loggingBuilder =>
@@ -46,6 +55,7 @@ namespace WinFormNet48
                                     //            })
                                     .BuildServiceProvider();
         }
+
         //private static IConfiguration CreateConfig()
         //{
         //    var config = new ConfigurationBuilder()

@@ -1,19 +1,25 @@
-﻿using System;
-
-namespace WinFormNet48
+﻿namespace WinFormNet48
 {
     public class Worker
     {
-        public IMessager Operation { get; set; }
+        private IMessager Transient { get; }
 
-        public Worker(IMessager operation)
+        private IMessager Scope { get; }
+
+        private IMessager Single { get; }
+
+        public Worker(ITransientMessager transient, IScopeMessager scope, ISingleMessager single)
         {
-            this.Operation = operation;
+            this.Transient = transient;
+            this.Scope     = scope;
+            this.Single    = single;
         }
 
         public string Get()
         {
-            return this.Operation.OperationId;
+            return $"transient:{this.Transient.OperationId}\r\n" +
+                   $"scope:{this.Scope.OperationId}\r\n"         +
+                   $"single:{this.Single.OperationId}";
         }
     }
 }
