@@ -1,4 +1,4 @@
-﻿namespace WinFormNet48.Operations
+﻿namespace WinFormNet48
 {
     internal class LogMessager : IMessager
     {
