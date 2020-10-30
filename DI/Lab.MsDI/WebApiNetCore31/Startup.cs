@@ -36,6 +36,10 @@ namespace WebApiNetCore31
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+            
+            services.AddTransient(p => new Worker(new LogMessager()));
+            services.AddTransient(p => new Worker2(new MachineMessager()));
+
             services.AddTransient<ITransientMessager, MultiMessager>()
                     .AddSingleton<ISingleMessager, MultiMessager>()
                     .AddScoped<IScopeMessager, MultiMessager>()
