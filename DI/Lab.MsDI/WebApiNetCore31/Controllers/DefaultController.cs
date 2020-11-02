@@ -28,7 +28,6 @@ namespace WebApiNetCore31.Controllers
         }
 
         [HttpGet]
-        [LogFilter]
         public IActionResult Get()
         {
             var content = "我在 DefaultController.Get \r\n"               +
