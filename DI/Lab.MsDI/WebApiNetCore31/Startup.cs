@@ -22,7 +22,6 @@ namespace WebApiNetCore31
             {
                 app.UseDeveloperExceptionPage();
             }
-
             app.UseHttpsRedirection();
 
             app.UseRouting();

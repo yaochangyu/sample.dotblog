@@ -5,7 +5,7 @@ namespace WebApiNetCore31.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class DefaultController : ControllerBase
+    public class Default1Controller : ControllerBase
     {
         private IMessager Transient { get; }
 
@@ -15,7 +15,7 @@ namespace WebApiNetCore31.Controllers
 
         private readonly ILogger<DefaultController> _logger;
 
-        public DefaultController(ILogger<DefaultController> logger,
+        public Default1Controller(ILogger<DefaultController> logger,
                                  ITransientMessager         transient,
                                  IScopeMessager             scope,
                                  ISingleMessager            single)
@@ -28,17 +28,16 @@ namespace WebApiNetCore31.Controllers
         }
 
         [HttpGet]
-        [LogFilter]
         public IActionResult Get()
         {
-            var content = "我在 DefaultController.Get \r\n"               +
-                          $"transient:{this.Transient.OperationId}\r\n" +
+            var content = $"transient:{this.Transient.OperationId}\r\n" +
                           $"scope:{this.Scope.OperationId}\r\n"         +
                           $"single:{this.Single.OperationId}";
-            this._logger.LogInformation("我在 DefaultController.Get ,transient = {transient},scope = {scope},single = {single}",
+            this._logger.LogInformation("transient = {transient},scope = {scope},single = {single}",
                                         this.Transient.OperationId,
                                         this.Scope.OperationId,
                                         this.Single.OperationId);
+            return this.RedirectToAction("Get", "Default");
             return this.Ok(content);
         }
     }
