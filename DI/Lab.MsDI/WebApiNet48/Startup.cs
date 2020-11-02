@@ -13,14 +13,14 @@ namespace WebApiNet48
         public static void Bootstrapper(HttpConfiguration config)
         {
             var provider = ConfigureServices().BuildServiceProvider();
-            ServiceScopeModule.SetServiceProvider(provider);
 
             var resolver = new DefaultDependencyResolver(provider);
 
-            var resolver1 = new ServiceProviderDependencyResolver(provider);
+            //ServiceScopeModule.SetServiceProvider(provider);
+            //var resolver1 = new ServiceProviderDependencyResolver(provider);
 
             config.DependencyResolver = resolver;
-            ServiceProvider = provider;
+            ServiceProvider           = provider;
         }
 
         private static ServiceCollection ConfigureServices()
