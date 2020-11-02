@@ -119,6 +119,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="ServiceCollectionExtensions.cs" />
     <Compile Include="Controllers\DefaultController.cs" />
     <Compile Include="Message\IMessager.cs" />
     <Compile Include="Message\LogMessager.cs" />

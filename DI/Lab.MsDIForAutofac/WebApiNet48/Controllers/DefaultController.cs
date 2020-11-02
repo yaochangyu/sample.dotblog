@@ -7,9 +7,9 @@ namespace WebApiNet48.Controllers
     {
         private IMessager Messager { get; set; }
 
-        public DefaultController()
-        {
-        } 
+        //public DefaultController()
+        //{
+        //} 
         public DefaultController(IMessager messager)
         {
             this.Messager = messager;
@@ -18,11 +18,12 @@ namespace WebApiNet48.Controllers
         [HttpGet]
         public IHttpActionResult Get()
         {
-            if (this.Messager==null)
+            if (this.Messager == null)
             {
                 var dependencyScope = this.Request.GetDependencyScope();
-                Messager = dependencyScope.GetService(typeof(IMessager)) as IMessager;
+                this.Messager = dependencyScope.GetService(typeof(IMessager)) as IMessager;
             }
+
             var content = $"Messager:{this.Messager.OperationId}";
             return this.Ok(content);
         }
