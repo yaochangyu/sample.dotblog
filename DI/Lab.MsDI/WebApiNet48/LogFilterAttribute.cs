@@ -23,7 +23,6 @@ namespace WebApiNet48
                           $"single:{single.OperationId}";
             Console.WriteLine(content);
             logger.Info(content);
-            base.OnActionExecuting(actionContext);
         }
     }
 }

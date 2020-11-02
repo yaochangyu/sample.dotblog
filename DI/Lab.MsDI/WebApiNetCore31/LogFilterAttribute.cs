@@ -6,6 +6,10 @@ namespace WebApiNetCore31
 {
     public class LogFilterAttribute : ActionFilterAttribute
     {
+        public LogFilterAttribute()
+        {
+            
+        }
         public override void OnActionExecuting(ActionExecutingContext context)
         {
             var transient = context.HttpContext.RequestServices.GetService<ITransientMessager>();
