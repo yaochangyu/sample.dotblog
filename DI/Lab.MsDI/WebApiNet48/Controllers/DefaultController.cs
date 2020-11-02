@@ -1,4 +1,6 @@
-﻿using System.Web.Http;
+﻿using System;
+using System.Web.Http;
+using NLog;
 
 namespace WebApiNet48.Controllers
 {
@@ -22,9 +24,14 @@ namespace WebApiNet48.Controllers
         [HttpGet]
         public IHttpActionResult Get()
         {
-            var content = $"transient:{this.Transient.OperationId}\r\n" +
+            var logger = LogManager.GetCurrentClassLogger();
+
+            var content = "我在 Controller.Get Action\r\n"                +
+                          $"transient:{this.Transient.OperationId}\r\n" +
                           $"scope:{this.Scope.OperationId}\r\n"         +
                           $"single:{this.Single.OperationId}";
+            Console.WriteLine(content);
+            logger.Info(content);
 
             //this._logger.LogInformation("transient = {transient},scope = {scope},single = {single}",
             //                            this.Transient.OperationId,
@@ -32,5 +39,7 @@ namespace WebApiNet48.Controllers
             //                            this.Single.OperationId);
             return this.Ok(content);
         }
-    }
+
+        
+      }
 }

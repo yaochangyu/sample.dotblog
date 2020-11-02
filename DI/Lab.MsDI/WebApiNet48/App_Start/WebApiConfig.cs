@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Web.Http;
 
 namespace WebApiNet48
@@ -11,7 +9,9 @@ namespace WebApiNet48
         {
             // using Microsoft.Extension.DependencyInjection here.
             Startup.Bootstrapper(config);
+
             // Web API configuration and services
+            config.Filters.Add(new LogFilterAttribute());
 
             // Web API routes
             config.MapHttpAttributeRoutes();
