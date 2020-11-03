@@ -8,25 +8,25 @@ namespace WebApiNet48
 {
     public class Startup
     {
-        public static IServiceProvider ServiceProvider { get; set; }
-
         public static void Bootstrapper(HttpConfiguration config)
         {
-            var provider = ConfigureServices().BuildServiceProvider();
+            var services = ConfigureServices();
+
+            var provider = services.BuildServiceProvider();
 
             var resolver = new DefaultDependencyResolver(provider);
-
-            //ServiceScopeModule.SetServiceProvider(provider);
-            //var resolver1 = new ServiceProviderDependencyResolver(provider);
-
             config.DependencyResolver = resolver;
-            ServiceProvider           = provider;
         }
 
+        /// <summary>
+        ///     使用 MS DI 註冊
+        /// </summary>
+        /// <returns></returns>
         private static ServiceCollection ConfigureServices()
         {
             var services = new ServiceCollection();
 
+            //使用 Microsoft.Extensions.DependencyInjection 註冊
             services.AddControllersAsServices(typeof(Startup)
                                               .Assembly
                                               .GetExportedTypes()
@@ -35,9 +35,11 @@ namespace WebApiNet48
                                                           || t.Name.EndsWith("Controller",
                                                                              StringComparison.OrdinalIgnoreCase)));
 
-            services.AddTransient<ITransientMessager, MultiMessager>()
-                    .AddSingleton<ISingleMessager, MultiMessager>()
-                    .AddScoped<IScopeMessager, MultiMessager>();
+            //services.AddScoped<IMessager, LogMessager>();
+
+            //services.AddTransient<ITransientMessager, MultiMessager>()
+            //        .AddSingleton<ISingleMessager, MultiMessager>()
+            //        .AddScoped<IScopeMessager, MultiMessager>();
             return services;
         }
     }
