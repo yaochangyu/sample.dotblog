@@ -26,6 +26,11 @@ namespace WebApiNet48
             ServiceProvider           = provider;
         }
 
+        /// <summary>
+        ///     使用 Autofac 註冊
+        /// </summary>
+        /// <param name="services"></param>
+        /// <returns></returns>
         private static ContainerBuilder ConfigureContainerBuilder(IServiceCollection services)
         {
             var builder = new ContainerBuilder();
@@ -38,6 +43,10 @@ namespace WebApiNet48
             return builder;
         }
 
+        /// <summary>
+        ///     使用 MS DI 註冊
+        /// </summary>
+        /// <returns></returns>
         private static ServiceCollection ConfigureServices()
         {
             var services = new ServiceCollection();

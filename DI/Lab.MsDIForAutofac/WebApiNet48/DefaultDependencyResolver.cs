@@ -33,7 +33,7 @@ namespace WebApiNet48
         {
             // you can implement this interface just when you use .net core 2.0
             // this.ServiceProvider.Dispose();
-            //((ServiceProvider) this.ServiceProvider).Dispose();
+            ((ServiceProvider)this.ServiceProvider).Dispose();
         }
     }
 }
