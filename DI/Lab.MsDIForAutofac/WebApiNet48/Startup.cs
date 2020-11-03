@@ -11,8 +11,6 @@ namespace WebApiNet48
 {
     public class Startup
     {
-        public static IServiceProvider ServiceProvider { get; set; }
-
         public static void Bootstrapper(HttpConfiguration config)
         {
             var services = ConfigureServices();
@@ -23,7 +21,6 @@ namespace WebApiNet48
 
             var resolver = new DefaultDependencyResolver(provider);
             config.DependencyResolver = resolver;
-            ServiceProvider           = provider;
         }
 
         /// <summary>
@@ -36,7 +33,6 @@ namespace WebApiNet48
             var builder = new ContainerBuilder();
             builder.Populate(services);
 
-            //使用 Autofac 註冊
             var assembly = Assembly.GetExecutingAssembly();
             builder.RegisterAssemblyTypes(assembly).AsImplementedInterfaces();
 

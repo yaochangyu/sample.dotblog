@@ -7,9 +7,6 @@ namespace WebApiNet48.Controllers
     {
         private IMessager Messager { get; set; }
 
-        //public DefaultController()
-        //{
-        //} 
         public DefaultController(IMessager messager)
         {
             this.Messager = messager;
