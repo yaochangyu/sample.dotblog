@@ -5,6 +5,8 @@ VisualStudioVersion = 16.0.30717.126
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server.WebApi2NET48", "Server.WebApi2NET48\Server.WebApi2NET48.csproj", "{C145E008-FA4D-4C09-A344-D13C49D28587}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client.WinFormsNet48", "Client.WinFormsNet48\Client.WinFormsNet48.csproj", "{35411D29-9D5B-4836-A902-29E64F4E2F85}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{C145E008-FA4D-4C09-A344-D13C49D28587}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C145E008-FA4D-4C09-A344-D13C49D28587}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C145E008-FA4D-4C09-A344-D13C49D28587}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35411D29-9D5B-4836-A902-29E64F4E2F85}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35411D29-9D5B-4836-A902-29E64F4E2F85}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35411D29-9D5B-4836-A902-29E64F4E2F85}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35411D29-9D5B-4836-A902-29E64F4E2F85}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
