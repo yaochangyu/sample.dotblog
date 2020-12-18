@@ -6,8 +6,6 @@ namespace Client.WinFormsNet48
 {
     internal static class Program
     {
-        public static ServiceProvider ServiceProvider;
-
         /// <summary>
         ///     The main entry point for the application.
         /// </summary>
@@ -19,7 +17,7 @@ namespace Client.WinFormsNet48
             var services = Startup.ConfigureServices();
             using (var serviceProvider = services.BuildServiceProvider())
             {
-                ServiceProvider = serviceProvider;
+                MainForm.ServiceProvider = serviceProvider;//只有主要表單能使用 Service Locator
                 var form = serviceProvider.GetService(typeof(MainForm)) as Form;
                 Application.Run(form);
             }

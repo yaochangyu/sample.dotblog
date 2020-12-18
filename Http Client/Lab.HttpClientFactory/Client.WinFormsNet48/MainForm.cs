@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Windows.Forms;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Client.WinFormsNet48
 {
     public partial class MainForm : Form
     {
+        internal static ServiceProvider ServiceProvider { get; set; }
+
         public MainForm()
         {
             this.InitializeComponent();
@@ -12,13 +15,13 @@ namespace Client.WinFormsNet48
 
         private void button1_Click(object sender, EventArgs e)
         {
-            var form = Program.ServiceProvider.GetService(typeof(Form1)) as Form1;
+            var form = ServiceProvider.GetService(typeof(Form1)) as Form1;
             form.ShowDialog(this);
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            var form = Program.ServiceProvider.GetService(typeof(Form2)) as Form2;
+            var form = ServiceProvider.GetService(typeof(Form2)) as Form2;
             form.ShowDialog(this);
         }
 
