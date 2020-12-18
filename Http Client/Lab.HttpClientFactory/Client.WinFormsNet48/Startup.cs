@@ -9,18 +9,22 @@ namespace Client.WinFormsNet48
 
         public static IServiceCollection ConfigureServices()
         {
-            IServiceCollection services = new ServiceCollection();
-            services.AddHttpClient("localhost",
-                                   p =>
-                                   {
-                                       p.BaseAddress = new Uri(BaseAddress);
-                                   });
+            var services = new ServiceCollection();
 
-            services.AddHttpClient<ILabService,LabService>(client =>
-                                                           {
-                                                               client.BaseAddress = new Uri(BaseAddress);
-                                                           });
-            return services.AddSingleton<Form1>();
+            //注入 HttpClientFactory
+            services.AddHttpClient("lab",
+                                   p => { p.BaseAddress = new Uri(BaseAddress); });
+            services.AddSingleton<LabService2>();
+            services.AddSingleton<Form2>();
+
+            // LabService 注入 HttpClient
+            services.AddHttpClient<LabService>(client =>
+                                               {
+                                                   client.BaseAddress = new Uri(BaseAddress);
+                                               });
+            services.AddSingleton<Form1>();
+            services.AddSingleton<MainForm>();
+            return services;
         }
     }
 }

@@ -4,11 +4,11 @@ using Newtonsoft.Json;
 
 namespace Client.WinFormsNet48
 {
-    public partial class Form1 : Form
+    public partial class Form2 : Form
     {
         private readonly ILabService _service;
 
-        public Form1(LabService service)
+        public Form2(LabService2 service)
         {
             this.InitializeComponent();
 
