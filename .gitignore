@@ -264,3 +264,6 @@ __pycache__/
 /Configuration/NetCore/Lab.Config/AspNetCore3
 /CEF/Lab.Startup
 /ExpressionTree/Reflection
+/ORM/Linq2Db/Lab.As400.CRUD1/UnitTestProject1/LinqToDB.Templates
+/ORM/Linq2Db/Lab.As400.CRUD1/UnitTestProject1
+/DI/Lab.MsDIForAutofac

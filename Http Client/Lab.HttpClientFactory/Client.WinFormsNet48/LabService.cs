@@ -4,7 +4,12 @@ using Newtonsoft.Json;
 
 namespace Client.WinFormsNet48
 {
-    public class LabService
+    public interface ILabService
+    {
+        IEnumerable<string> Get();
+    }
+
+    public class LabService : ILabService
     {
         private readonly HttpClient _client;
 

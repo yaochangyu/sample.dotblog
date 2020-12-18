@@ -14,20 +14,20 @@ namespace Client.WinFormsNet48
 {
     public partial class Form1 : Form
     {
-        public Form1()
-        {
-            InitializeComponent();
-        }
+        //public Form1()
+        //{
+        //    InitializeComponent();
+        //}
 
         private IHttpClientFactory _clientFactory;
-        private LabService         _service;
+        private ILabService         _service;
 
         //public Form1(IHttpClientFactory clientFactory)
         //{
         //    this._clientFactory = clientFactory;
         //}
 
-        public Form1(LabService service)
+        public Form1(ILabService service)
         {
             InitializeComponent();
 

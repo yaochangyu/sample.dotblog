@@ -16,10 +16,10 @@ namespace Client.WinFormsNet48
                                        p.BaseAddress = new Uri(BaseAddress);
                                    });
 
-            services.AddHttpClient<LabService>(client =>
-                                               {
-                                                   client.BaseAddress = new Uri(BaseAddress);
-                                               });
+            services.AddHttpClient<ILabService,LabService>(client =>
+                                                           {
+                                                               client.BaseAddress = new Uri(BaseAddress);
+                                                           });
             return services.AddSingleton<Form1>();
         }
     }
