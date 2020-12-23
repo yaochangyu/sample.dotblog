@@ -10,9 +10,12 @@ namespace Lab.WinFormNet48
 {
     public partial class Form1 : Form
     {
+        private static AsyncPolicy s_circuitBreakerPolicy;
+
         public Form1()
         {
             this.InitializeComponent();
+            s_circuitBreakerPolicy = CreateCircuitBreakerPolicyAsync();
         }
 
         private static void _01_標準用法()
@@ -42,10 +45,14 @@ namespace Lab.WinFormNet48
                                   var exception = reponse.Exception;
                                   Console.WriteLine($"標準用法，發生錯誤：{exception.Message}，第 {retryCount} 次重試");
                               }
+
+                              Thread.Sleep(3000);
                           })
 
                 // 3. 執行內容
-                .Execute(FakeRequest);
+                .Execute(FailResponse);
+
+            Console.WriteLine("標準用法，完成");
         }
 
         /// <summary>
@@ -69,7 +76,8 @@ namespace Lab.WinFormNet48
                                                                              .GetResult();
                                                       Console.WriteLine($"延遲重試，發生錯誤：{errorMsg}，延遲 {retryTime} 後重試");
                                                   });
-            retryPolicy.Execute(FakeRequest);
+            retryPolicy.Execute(FailResponse);
+            Console.WriteLine("延遲重試，完成");
         }
 
         private static void _02_延遲重試_計算週期_Jitter()
@@ -77,21 +85,30 @@ namespace Lab.WinFormNet48
             //抖動演算法
             var jitterer = new Random();
 
-            var retryPolicy = Policy.HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.BadGateway)
+            var retryPolicy = Policy.Handle<Exception>()
+                                    .OrResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.BadGateway)
                                     .WaitAndRetry(6,
                                                   retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))
                                                                   + TimeSpan.FromMilliseconds(jitterer.Next(0, 100)),
                                                   (response, retryTime, context) =>
                                                   {
-                                                      var errorMsg = response.Result
-                                                                             .Content
-                                                                             .ReadAsStringAsync()
-                                                                             .GetAwaiter()
-                                                                             .GetResult();
-                                                      Console.WriteLine($"延遲重試，發生錯誤：{errorMsg}，延遲 {retryTime} 後重試");
+                                                      WaitAndRetryAction(response, retryTime);
                                                   })
                 ;
-            retryPolicy.Execute(FakeRequest);
+            try
+            {
+                var httpResponse = retryPolicy.Execute(RandomFailResponseOrException);
+                var content = httpResponse.Content
+                                          .ReadAsStringAsync()
+                                          .GetAwaiter()
+                                          .GetResult()
+                    ;
+                Console.WriteLine(content);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
         }
 
         private static void _02_延遲重試_計算週期_次方()
@@ -109,9 +126,8 @@ namespace Lab.WinFormNet48
                                                       Console.WriteLine($"延遲重試，發生錯誤：{errorMsg}，延遲 {retryTime} 後重試");
                                                   })
                 ;
-            retryPolicy.Execute(FakeRequest);
-
-        
+            retryPolicy.Execute(FailResponse);
+            Console.WriteLine("延遲重試，完成");
         }
 
         /// <summary>
@@ -130,173 +146,31 @@ namespace Lab.WinFormNet48
                                                       Console.WriteLine($"永不放棄，發生錯誤：{errorMsg}，第 {retryCount} 次重試");
                                                   })
                 ;
-            retryPolicy.Execute(FakeRequest);
+            retryPolicy.Execute(FailResponse);
+            Console.WriteLine("永不放棄，完成");
         }
 
-        private static void _04_AdvancedCircuitBreakerAsync()
+        private static void _04_斷路器()
         {
-            Action<DelegateResult<HttpResponseMessage>, TimeSpan> onBreak = (response, retryTime) =>
-                                                                            {
-                                                                                Console.WriteLine("OnBreak");
-                                                                            };
-            Action onReset    = () => { Console.WriteLine("OnReset"); };
-            Action onHalfOpen = () => { Console.WriteLine("OnHalfOpen"); };
-            var policy = Policy.HandleResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
-                               .AdvancedCircuitBreakerAsync(0.25,
-                                                            TimeSpan.FromSeconds(5),
-                                                            2,
-                                                            TimeSpan.FromSeconds(5),
-                                                            onBreak,
-                                                            onReset,
-                                                            onHalfOpen);
-            policy.Reset();
+            //var response = s_circuitBreakerPolicy.ExecuteAsync(RandomFailResponseOrExceptionAsync).GetAwaiter().GetResult();
+            var response = s_circuitBreakerPolicy.ExecuteAsync(ThrowExceptionAsync);
 
-            //policy.ExecuteAndCaptureAsync(ThrowAsync);
-            var execute = policy.ExecuteAsync(ThrowAsync);
-            try
-            {
-                var messageResponse = execute.GetAwaiter()
-                                             .GetResult();
-                var content = messageResponse.Content
-                                             .ReadAsStringAsync()
-                                             .GetAwaiter()
-                                             .GetResult();
-                Console.WriteLine($"content:{content}\r\nstate:{policy.CircuitState}");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"error:{e.Message}\r\nstate:{policy.CircuitState}");
-            }
-        }
-
-        private async Task<string> _04_CircuitBreaker1()
-        {
-            try
-            {
-                //Console.WriteLine($"Circuit State: {PollyCircuitBreakerRegistry.GetCircuitBreaker(2).Circ}")
-                var policy = GetCircuitBreaker(2);
-
-                return await policy.ExecuteAsync(async () => await this.GetGoodbyeMessage());
-            }
-            catch (Exception ex)
-            {
-                return ex.Message;
-            }
-        }
-
-        private static void _04_CircuitBreakerAsync()
-        {
-            var policy = Policy
-                         .HandleResult<HttpResponseMessage>(r => !r.IsSuccessStatusCode)
-                         .CircuitBreakerAsync(2, TimeSpan.FromSeconds(1000));
-            Task.Factory
-                .StartNew(() =>
-                          {
-                              while (true)
-                              {
-                                  policy.ExecuteAsync(ThrowAsync);
-
-                                  SpinWait.SpinUntil(() => !true, 1000);
-                              }
-                          });
-        }
-
-        private static void _04_CircuitBreakerAsync1()
-        {
-            //var breaker = Policy.Handle<HttpRequestException>()
-            //                    .CircuitBreaker(20, TimeSpan.FromMinutes(1));
-            //breaker.Execute(Throw);
-
-            Action<Exception, TimeSpan, Context> onBreak = (exception, retryTime, context) =>
-                                                           {
-                                                               Console.WriteLine("OnBreak");
-                                                           };
-
-            Action<Context> onReset = context => { Console.WriteLine("OnReset"); };
-
-            Action onHalfOpen = () => { Console.WriteLine("OnHalfOpen"); };
-
-            var policy = Policy.Handle<Exception>()
-                               .CircuitBreakerAsync(5, TimeSpan.FromSeconds(3), onBreak, onReset, onHalfOpen);
-
-            try
-            {
-                Console.WriteLine($"{policy.CircuitState}");
-                var task = policy.ExecuteAsync(ThrowAsync);
-                Console.WriteLine($"{policy.CircuitState}");
-
-                //var response = task.GetAwaiter().GetResult();
-                //var result   = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-                //Console.WriteLine(result);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
-            //var state = policy.CircuitState;
-            //policy.Reset();
-            //policy.Isolate();
-
-            //var basicCircuitBreakerPolicy = Policy.Handle<HttpRequestException>()
-            //                                      .OrResult<HttpResponseMessage>(p => p.IsSuccessStatusCode == false)
-            //                                      .CircuitBreaker(2, TimeSpan.FromSeconds(1),
-            //                                                      (result, circuitState, arg3, arg4) =>
-            //                                                      {
-            //                                                          Console.WriteLine("OnBreak");
-            //                                                      },
-            //                                                      context =>
-            //                                                      {
-            //                                                          Console.WriteLine("OnReset");
-            //                                                      },
-            //                                                      () =>
-            //                                                      {
-            //                                                          Console.WriteLine("OnHalfOpen");
-            //                                                      })
-            //    ;
-            //basicCircuitBreakerPolicy.Execute(FakeRequest);
-
-            //policy.Execute(Throw);
-
-            //Policy.Handle<HttpRequestException>()
-            //      .OrResult<HttpResponseMessage>(p => p.StatusCode == HttpStatusCode.BadGateway)
-            //      .CircuitBreaker(2,              TimeSpan.FromMinutes(2), 
-            //                      (response, state, arg3, arg4) => { },
-            //                      context => { }, () => {})
-
-            //      .Execute(FakeRequest);
-
-            //Policy.Handle<HttpRequestException>()
-
-            //      //.OrResult<HttpResponseMessage>(p => p.StatusCode == HttpStatusCode.BadGateway)
-            //      .CircuitBreaker(2,
-            //                      TimeSpan.FromSeconds(10),
-            //                      (reponse, retryTime, Context) =>
-            //                      {
-
-            //                          //var errorMsg = reponse.Result
-            //                          //                      .Content
-            //                          //                      .ReadAsStringAsync()
-            //                          //                      .GetAwaiter()
-            //                          //                      .GetResult();
-
-            //                          //Console.WriteLine($"延遲重試，發生錯誤：{errorMsg}，延遲 {retryTime} 後重試");
-            //                      },
-            //                      context =>
-            //                      {
-            //                          var b = context.Count == 1;
-            //                      },
-            //                      () => { })
-            //      .Execute(Throw)
-            //    ;
-
-            //var retryPolicy = Policy.HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.BadGateway)
-            //                        .CircuitBreaker(2, TimeSpan.FromMinutes(2), (reponse, state, retryTime, context) =>
-            //                                        {
-
-            //                                        })
-            //    ;
-            //breaker.Execute(FakeRequest);
+            //try
+            //{
+            //    var response = s_circuitBreakerPolicy.ExecuteAsync(CreateRandomRequestAsync)
+            //                                         .GetAwaiter()
+            //                                         .GetResult();
+            //    //var content = response.Content;
+            //    //if (content != null)
+            //    //{
+            //    //    var result = content.ReadAsStringAsync().GetAwaiter().GetResult();
+            //    //    Console.WriteLine(result);
+            //    //}
+            //}
+            //catch (Exception e)
+            //{
+            //    Console.WriteLine(e.Message);
+            //}
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -304,48 +178,84 @@ namespace Lab.WinFormNet48
             //_01_標準用法();
 
             //_02_延遲重試_固定周期();
+
             //_02_延遲重試_計算週期_次方();
             //_02_延遲重試_計算週期_Jitter();
 
             //_03_永不放棄();
-            _04_CircuitBreakerAsync();
-
-            //_04_AdvancedCircuitBreakerAsync();
+            _04_斷路器();
         }
 
-        private static Task<HttpRequestException> CallRatesApi()
+        private static AsyncPolicy CreateCircuitBreakerPolicyAsync()
         {
-            //call the A5PI, parse the results
-            return Task.FromResult(new HttpRequestException("網路設備噴掉了"));
+            Action<Exception, TimeSpan, Context> onBreak = (exception, retryTime, context) =>
+                                                           {
+                                                               Console.WriteLine($"超過失敗上限了，先等等，過了 {retryTime} 再過來~");
+                                                           };
+
+            Action<Context> onReset = context =>
+                                      {
+                                          Console.WriteLine("OnReset");
+                                      };
+
+            Action onHalfOpen = () =>
+                                {
+                                    Console.WriteLine("OnHalfOpen");
+                                };
+
+            var policy = Policy.Handle<Exception>()
+                               .CircuitBreakerAsync(2, TimeSpan.FromSeconds(10), onBreak, onReset, onHalfOpen);
+
+            return policy;
         }
 
-        private static HttpResponseMessage FakeRequest()
+        private static HttpResponseMessage FailResponse()
         {
             Console.WriteLine("請求網路資源中...");
-            Thread.Sleep(3000);
 
-            throw new HttpRequestException("網路設備噴掉了");
+            //Thread.Sleep(3000);
+
+            //throw new HttpRequestException("網路設備噴掉了");
 
             return new HttpResponseMessage(HttpStatusCode.BadGateway) {Content = new StringContent("網路設備燒掉了")};
         }
 
-        private static AsyncPolicy GetCircuitBreaker(int exceptionsAllowed)
+        private static Task<HttpResponseMessage> FailResponseAsync()
         {
-            return Policy
-                   .Handle<Exception>()
-                   .CircuitBreakerAsync(exceptionsAllowed, TimeSpan.FromSeconds(1),
-                                        (ex, t) => { Console.WriteLine("Circuit broken .. !"); },
-                                        () => { Console.WriteLine("Circuit reset .. !"); });
+            var response = FailResponse();
+            return Task.FromResult(response);
         }
 
-        private async Task<string> GetGoodbyeMessage()
+        private static HttpResponseMessage RandomFailResponseOrException()
         {
-            Console.WriteLine("MessageRepository GetGoodbyeMessage running..");
+            Console.WriteLine("請求網路資源中...");
 
-            //throw new HttpRequestException("網路設備噴掉了");
+            var random = new Random().Next(0, 10);
 
-            ThrowRandomException();
-            return "AAA";
+            if (random <= 1)
+            {
+                throw new HttpRequestException("請求出現未知異常~");
+            }
+
+            var response = new HttpResponseMessage();
+            if (random > 2 & random <= 6)
+            {
+                response.StatusCode = HttpStatusCode.OK;
+                response.Content    = new StringContent("對了，媽，我在這裡~!");
+            }
+            else if (random > 6)
+            {
+                response.StatusCode = HttpStatusCode.BadGateway;
+                response.Content    = new StringContent("網路設備噴掉了啦!!!");
+            }
+
+            return response;
+        }
+
+        private static Task<HttpResponseMessage> RandomFailResponseOrExceptionAsync()
+        {
+            var response = RandomFailResponseOrException();
+            return Task.FromResult(response);
         }
 
         private static void Retry(Action action, int retryCount = 3, int waitSecond = 10)
@@ -371,42 +281,31 @@ namespace Lab.WinFormNet48
             }
         }
 
-        private static HttpResponseMessage Throw()
+        private static Task<HttpResponseMessage> ThrowExceptionAsync()
         {
-            Console.WriteLine("請求網路資源中...");
-            Thread.Sleep(3000);
-            ThrowRandomException();
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent("OOOK~")
-            };
+            throw new HttpRequestException("請求出現未知異常~");
 
-            //throw new Exception("網路設備噴掉了");
+            //var response = new HttpResponseMessage();
+            //return Task.FromResult(response);
         }
 
-        private static Task<HttpResponseMessage> ThrowAsync()
+        private static void WaitAndRetryAction(DelegateResult<HttpResponseMessage> response, TimeSpan retryTime)
         {
-            Console.WriteLine("請求網路資源中...");
-
-            //Thread.Sleep(3000);
-            ThrowRandomException();
-            var message = new HttpResponseMessage(HttpStatusCode.OK)
+            var ex = response.Exception;
+            if (ex != null)
             {
-                Content = new StringContent("OOOK~")
-            };
-            return Task.FromResult(message);
+                Console.WriteLine($"重試，發生錯誤：{ex.Message}，延遲 {retryTime} 後重試");
+                return;
+            }
 
-            //throw new Exception("網路設備噴掉了");
-        }
-
-        private static void ThrowRandomException()
-        {
-            var random = new Random().Next(0, 10);
-
-            if (random > 5)
+            var result = response.Result;
+            if (result != null)
             {
-                Console.WriteLine("Error! Throwing Exception");
-                throw new Exception("Exception in MessageRepository");
+                var errorMsg = result.Content
+                                     .ReadAsStringAsync()
+                                     .GetAwaiter()
+                                     .GetResult();
+                Console.WriteLine($"重試，發生錯誤：{errorMsg}，延遲 {retryTime} 後重試");
             }
         }
     }
