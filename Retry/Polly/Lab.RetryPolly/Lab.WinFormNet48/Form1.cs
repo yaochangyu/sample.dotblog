@@ -5,17 +5,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Polly;
+using Polly.CircuitBreaker;
 
 namespace Lab.WinFormNet48
 {
     public partial class Form1 : Form
     {
-        private static AsyncPolicy s_circuitBreakerPolicy;
+        private static AsyncPolicy                                    s_asyncPolicy;
+        private static AsyncCircuitBreakerPolicy<HttpResponseMessage> s_asyncCircuitBreakerPolicy;
 
         public Form1()
         {
             this.InitializeComponent();
-            s_circuitBreakerPolicy = CreateCircuitBreakerPolicyAsync();
+            s_asyncCircuitBreakerPolicy = CreateAsyncCircuitBreakerPolicy();
+            s_asyncPolicy               = CreateAsyncPolicy();
         }
 
         private static void _01_標準用法()
@@ -104,6 +107,7 @@ namespace Lab.WinFormNet48
                                           .GetResult()
                     ;
                 Console.WriteLine(content);
+                Console.WriteLine("延遲重試，完成");
             }
             catch (Exception e)
             {
@@ -152,8 +156,59 @@ namespace Lab.WinFormNet48
 
         private static void _04_斷路器()
         {
+            var state = s_asyncCircuitBreakerPolicy.CircuitState;
+            try
+            {
+                Console.WriteLine($"呼叫任務前的狀態:{state}");
+
+                var response = s_asyncCircuitBreakerPolicy.ExecuteAsync(RandomFailResponseOrExceptionAsync)
+                                                          .GetAwaiter()
+                                                          .GetResult();
+                var content = response.Content;
+                if (content != null)
+                {
+                    var result = content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    Console.WriteLine($"取得服務內容:{result}\r\n"
+                                      + $"斷路器狀態:{state}");
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Console.WriteLine("斷路器，正常完成");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                //state = s_asyncCircuitBreakerPolicy.CircuitState;
+                Console.WriteLine($"錯誤:{e.Message}\r\n"
+                                  + $"斷路器狀態:{state}");
+            }
+            finally
+            {
+                Console.WriteLine("");
+            }
+        }
+
+        private static void _04_斷路器_只處理例外()
+        {
             //var response = s_circuitBreakerPolicy.ExecuteAsync(RandomFailResponseOrExceptionAsync).GetAwaiter().GetResult();
-            var response = s_circuitBreakerPolicy.ExecuteAsync(ThrowExceptionAsync);
+            try
+            {
+                //var state = s_asyncPolicy..CircuitState;
+                //Console.WriteLine($"呼叫任務前的狀態:{state}");
+                var response = s_asyncPolicy.ExecuteAsync(ThrowExceptionAsync).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"錯誤:{e.Message}"
+
+                                  //+ $"斷路器狀態:{state}"
+                                 )
+                    ;
+            }
+            finally
+            {
+                Console.WriteLine("斷路器，完成");
+            }
 
             //try
             //{
@@ -186,22 +241,71 @@ namespace Lab.WinFormNet48
             _04_斷路器();
         }
 
-        private static AsyncPolicy CreateCircuitBreakerPolicyAsync()
+        private static AsyncCircuitBreakerPolicy<HttpResponseMessage> CreateAsyncCircuitBreakerPolicy()
         {
-            Action<Exception, TimeSpan, Context> onBreak = (exception, retryTime, context) =>
-                                                           {
-                                                               Console.WriteLine($"超過失敗上限了，先等等，過了 {retryTime} 再過來~");
-                                                           };
+            Action<DelegateResult<HttpResponseMessage>, CircuitState, TimeSpan, Context> onBreak =
+                    (response, state, retryTime, context) =>
+                    {
+                        var    ex  = response.Exception;
+                        string msg = null;
+                        if (ex != null)
+                        {
+                            msg = $"錯誤:{ex.Message}\r\n"
+                                  + $"超過失敗上限了，先等等，過了 {retryTime} 再過來\r\n"
+                                  + $"斷路器狀態:{state}"
+                                ;
+                        }
+                        else
+                        {
+                            var content = response.Result
+                                                  .Content
+                                                  .ReadAsStringAsync()
+                                                  .GetAwaiter()
+                                                  .GetResult();
+                            msg = $"錯誤:{content}\r\n"
+                                  + $"超過失敗上限了，先等等，過了 {retryTime} 再過來\r\n"
+                                  + $"斷路器狀態:{state}"
+                                ;
+                        }
 
+                        Console.WriteLine(msg);
+                        Console.WriteLine();
+                    }
+                ;
             Action<Context> onReset = context =>
                                       {
-                                          Console.WriteLine("OnReset");
+                                          var state = s_asyncCircuitBreakerPolicy.CircuitState;
+                                          Console.WriteLine($"斷路器狀態:{state}");
                                       };
 
             Action onHalfOpen = () =>
                                 {
-                                    Console.WriteLine("OnHalfOpen");
+                                    var state = s_asyncCircuitBreakerPolicy.CircuitState;
+                                    Console.WriteLine($"斷路器狀態:{state}");
                                 };
+
+            var policy = Policy.Handle<Exception>()
+                               .OrResult<HttpResponseMessage>(p => p.IsSuccessStatusCode == false)
+                               .CircuitBreakerAsync(2, TimeSpan.FromSeconds(30), onBreak, onReset, onHalfOpen);
+
+            return policy;
+        }
+
+        private static AsyncPolicy CreateAsyncPolicy()
+        {
+            Action<Exception, CircuitState, TimeSpan, Context> onBreak =
+                (exception, state, retryTime, context) =>
+                {
+                    var msg = $"錯誤:{exception.Message}\r\n" +
+                              "超過失敗上限了，先等等，"                +
+                              $"過了 {retryTime} 再過來\r\n"     +
+                              $"狀態:{state}";
+                    Console.WriteLine(msg);
+                };
+
+            Action<Context> onReset = context => { Console.WriteLine("OnReset"); };
+
+            Action onHalfOpen = () => { Console.WriteLine("OnHalfOpen"); };
 
             var policy = Policy.Handle<Exception>()
                                .CircuitBreakerAsync(2, TimeSpan.FromSeconds(10), onBreak, onReset, onHalfOpen);
