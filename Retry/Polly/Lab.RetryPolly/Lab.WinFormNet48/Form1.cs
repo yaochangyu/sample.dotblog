@@ -193,87 +193,22 @@ namespace Lab.WinFormNet48
 
         private static void _05_超時()
         {
-            var timeoutPolicy = Policy
-                .Timeout(TimeSpan.FromMilliseconds(1),
-                         (context, timespan, task) =>
-                         {
-                             Console.WriteLine($"{context.PolicyKey} : execution timed out after {timespan} seconds.");
-                         });
-            timeoutPolicy.Execute(doTimeOutHTTPRequest);
+            var timeoutPolicy = Policy.Timeout(TimeSpan.FromMilliseconds(1),
+                                               (context, timespan, task, ex) =>
+                                               {
+                                                   var errorMsg = $"錯誤訊息:{ex.Message}"
+                                                                  + $"錯誤目標:{ex.TargetSite}";
+                                                   Console.WriteLine($"逾時時間:{timespan},錯誤:{errorMsg}");
+                                               });
 
-            ////Execute(doTimeOutHTTPRequest);
-            //if (s_timeout == null)
-            //{
-            //    s_timeout = Policy.Timeout(TimeSpan.FromSeconds(10),
-            //                               (context, timespan, task) =>
-            //                               {
-            //                                   var s =
-            //                                       $"{context.PolicyKey} at {context.OperationKey}: execution timed out after {timespan.TotalSeconds} seconds.";
-            //                               });
-            //}
-
-            //try
-            //{
-            //    s_timeout.Execute(() =>
-            //                      {
-            //                          Thread.Sleep(TimeSpan.FromSeconds(15));
-            //                          throw new Exception("GG~");
-            //                      });
-            //}
-            //catch (Exception e)
-            //{
-            //    Console.WriteLine(e);
-            //}
-
-            //var timeoutPolicy = Policy.Timeout(TimeSpan.FromSeconds(1));
-            //timeoutPolicy.Execute(() => { Thread.Sleep(TimeSpan.FromMinutes(1)); });
-            //if (s_asyncTimeoutPolicy == null)
-            //{
-            //    s_asyncTimeoutPolicy = Policy.TimeoutAsync(TimeSpan.FromSeconds(1),
-            //                                               (context, retryCount, task) =>
-            //                                               {
-            //                                                   Console.WriteLine($"重試次數:{retryCount}");
-            //                                                   var subTask =
-            //                                                       task.ContinueWith(p =>
-            //                                                       {
-            //                                                           Console.WriteLine("New Task");
-            //                                                       });
-            //                                                   return subTask;
-            //                                               });
-            //}
-
-            //if (s_timeoutPolicy == null)
-            //{
-            //    s_timeoutPolicy =
-            //        Policy.Timeout(1, (context, retryCount, task) => { Console.WriteLine($"重試次數:{retryCount}"); });
-            //}
-
-            //var timeoutPolicy2 = Policy.Timeout(1,
-            //                                    TimeoutStrategy.Optimistic,
-            //                                    (context, retryCount, arg3) =>
-            //                                    {
-            //                                        Console.WriteLine($"重試次數:{retryCount}");
-            //                                    });
-
-            //try
-            //{
-            //    //s_timeoutPolicy.Execute(() =>
-            //    //                        {
-            //    //                            Console.WriteLine("開始執行任務...");
-            //    //                            Thread.Sleep(5000);
-            //    //                        });
-            //    s_asyncTimeoutPolicy.ExecuteAsync(() =>
-            //                                      {
-            //                                          Console.WriteLine("開始執行任務...");
-            //                                          Thread.Sleep(5000);
-            //                                          return Task.FromResult(true);
-            //                                      }).GetAwaiter().GetResult();
-            //    Console.WriteLine("超時，完成");
-            //}
-            //catch (Exception e)
-            //{
-            //    Console.WriteLine(e.Message);
-            //}
+            try
+            {
+                timeoutPolicy.Execute(TimeoutRequest);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"錯誤:{e.Message}");
+            }
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -362,37 +297,6 @@ namespace Lab.WinFormNet48
             return policy;
         }
 
-        private static string doTimeOutHTTPRequest()
-        {
-            Console.WriteLine("開始發送 Request");
-         
-            Thread.Sleep(TimeSpan.FromSeconds(1));
-            HttpResponseMessage response = null;
-            using (var client = new HttpClient())
-            {
-                try
-                {
-                client.Timeout = TimeSpan.FromMilliseconds(3);
-                response = client.GetAsync("http://www.mocky.io/v2/5cfed9a23200004f0045f284")
-                                 .GetAwaiter()
-                                 .GetResult();
-
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    throw;
-                }
-            }
-
-            if (response == null)
-            {
-                return null;
-            }
-
-            return response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
-        }
-
         private static HttpResponseMessage FailResponse()
         {
             Console.WriteLine("請求網路資源中...");
@@ -478,6 +382,29 @@ namespace Lab.WinFormNet48
 
             //var response = new HttpResponseMessage();
             //return Task.FromResult(response);
+        }
+
+        private static string TimeoutRequest()
+        {
+            Console.WriteLine("請求網路資源中...");
+            var baseAddress = "http://localhost:9527";
+
+            // 釋放掉 HttpClient 是不對的作法，這裡只是為了模擬超時所而產生的代碼
+            using (var client = new HttpClient {BaseAddress = new Uri(baseAddress)})
+            {
+                client.BaseAddress = new Uri(baseAddress);
+                client.Timeout     = TimeSpan.FromMilliseconds(1);
+                var response = client.GetAsync("api/value")
+                                     .GetAwaiter()
+                                     .GetResult();
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = response.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+                    return result;
+                }
+            }
+
+            return null;
         }
 
         private static void WaitAndRetryAction(DelegateResult<HttpResponseMessage> response, TimeSpan retryTime)
