@@ -7,37 +7,28 @@ namespace WebApiNetCore31.Controllers
     [Route("[controller]")]
     public class Default1Controller : ControllerBase
     {
-        private IMessager Transient { get; }
-
-        private IMessager Scope { get; }
-
-        private IMessager Single { get; }
-
         private readonly ILogger<DefaultController> _logger;
 
-        public Default1Controller(ILogger<DefaultController> logger,
-                                 ITransientMessager         transient,
-                                 IScopeMessager             scope,
-                                 ISingleMessager            single)
+        public Default1Controller(ILogger<DefaultController> logger)
         {
             this._logger = logger;
-
-            this.Transient = transient;
-            this.Scope     = scope;
-            this.Single    = single;
         }
 
         [HttpGet]
         public IActionResult Get()
         {
-            var content = $"transient:{this.Transient.OperationId}\r\n" +
-                          $"scope:{this.Scope.OperationId}\r\n"         +
-                          $"single:{this.Single.OperationId}";
+            var serviceProvider = this.HttpContext.RequestServices;
+            var transient       = serviceProvider.GetService(typeof(ITransientMessager)) as ITransientMessager;
+            var scope           = serviceProvider.GetService(typeof(IScopeMessager)) as IScopeMessager;
+            var single          = serviceProvider.GetService(typeof(ISingleMessager)) as ISingleMessager;
+            var content = $"transient:{transient.OperationId}\r\n" +
+                          $"scope:{scope.OperationId}\r\n"         +
+                          $"single:{single.OperationId}";
+
             this._logger.LogInformation("transient = {transient},scope = {scope},single = {single}",
-                                        this.Transient.OperationId,
-                                        this.Scope.OperationId,
-                                        this.Single.OperationId);
-            return this.RedirectToAction("Get", "Default");
+                                        transient.OperationId,
+                                        scope.OperationId,
+                                        single.OperationId);
             return this.Ok(content);
         }
     }
