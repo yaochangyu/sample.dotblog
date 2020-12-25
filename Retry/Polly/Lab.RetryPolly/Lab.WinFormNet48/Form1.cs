@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Polly;
+using Polly.Bulkhead;
 using Polly.CircuitBreaker;
 using Polly.Timeout;
 
@@ -17,12 +18,114 @@ namespace Lab.WinFormNet48
         private static TimeoutPolicy                                  s_timeoutPolicy;
         private static AsyncTimeoutPolicy                             s_asyncTimeoutPolicy;
         private static TimeoutPolicy                                  s_timeout;
+        private static AsyncBulkheadPolicy                            s_asyncBulkheadPolicy;
+        private static BulkheadPolicy                                 s_bulkheadPolicy;
 
         public Form1()
         {
             this.InitializeComponent();
             s_asyncCircuitBreakerPolicy = CreateAsyncCircuitBreakerPolicy();
             s_asyncPolicy               = CreateAsyncPolicy();
+        }
+
+        /// <summary>
+        ///     https://github.com/App-vNext/Polly#retry-forever-until-succeeds
+        /// </summary>
+        private static void _01_永不放棄()
+        {
+            var retryPolicy = Policy.HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.BadGateway)
+                                    .RetryForever((response, retryCount, context) =>
+                                                  {
+                                                      var errorMsg = response.Result
+                                                                             .Content
+                                                                             .ReadAsStringAsync()
+                                                                             .GetAwaiter()
+                                                                             .GetResult();
+                                                      Console.WriteLine($"永不放棄，發生錯誤：{errorMsg}，第 {retryCount} 次重試");
+                                                      Thread.Sleep(5000);
+                                                  })
+                ;
+            retryPolicy.Execute(FailResponse);
+            Console.WriteLine("永不放棄，完成");
+        }
+
+        /// <summary>
+        ///     https://github.com/App-vNext/Polly#wait-and-retry
+        /// </summary>
+        private static void _01_延遲重試_固定周期()
+        {
+            var retryPolicy = Policy.HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.BadGateway)
+                                    .WaitAndRetry(new[]
+                                                  {
+                                                      TimeSpan.FromSeconds(5),
+                                                      TimeSpan.FromSeconds(10),
+                                                      TimeSpan.FromSeconds(15)
+                                                  },
+                                                  (response, retryTime, context) =>
+                                                  {
+                                                      var errorMsg = response.Result
+                                                                             .Content
+                                                                             .ReadAsStringAsync()
+                                                                             .GetAwaiter()
+                                                                             .GetResult();
+                                                      Console.WriteLine($"延遲重試，發生錯誤：{errorMsg}，延遲 {retryTime} 後重試");
+                                                  });
+            retryPolicy.Execute(FailResponse);
+            Console.WriteLine("延遲重試，完成");
+        }
+
+        /// <summary>
+        ///     https://docs.microsoft.com/zh-tw/dotnet/architecture/microservices/implement-resilient-applications/implement-http-call-retries-exponential-backoff-polly
+        /// </summary>
+        private static void _01_延遲重試_計算週期_Jitter()
+        {
+            //抖動演算法
+            var jitterer = new Random();
+
+            var retryPolicy = Policy.Handle<Exception>()
+                                    .OrResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.BadGateway)
+                                    .WaitAndRetry(6,
+                                                  retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))
+                                                                  + TimeSpan.FromMilliseconds(jitterer.Next(0, 100)),
+                                                  (response, retryTime, context) =>
+                                                  {
+                                                      WaitAndRetryAction(response, retryTime);
+                                                  })
+                ;
+            try
+            {
+                var httpResponse = retryPolicy.Execute(RandomFailResponseOrException);
+                var content = httpResponse.Content
+                                          .ReadAsStringAsync()
+                                          .GetAwaiter()
+                                          .GetResult()
+                    ;
+                Console.WriteLine(content);
+                Console.WriteLine("延遲重試，完成");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+            }
+        }
+
+        private static void _01_延遲重試_計算週期_次方()
+        {
+            var retryPolicy = Policy.HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.BadGateway)
+                                    .WaitAndRetry(6,
+                                                  retryAttempt => TimeSpan.FromSeconds(Math.Pow(6, retryAttempt)),
+                                                  (response, retryTime, context) =>
+                                                  {
+                                                      var errorMsg = response.Result
+                                                                             .Content
+                                                                             .ReadAsStringAsync()
+                                                                             .GetAwaiter()
+                                                                             .GetResult();
+                                                      Console.WriteLine($"延遲重試，發生錯誤：{errorMsg}，延遲 {retryTime} 後重試");
+                                                  })
+                ;
+            retryPolicy.Execute(FailResponse);
+            Console.WriteLine("延遲重試，完成");
         }
 
         private static void _01_標準用法()
@@ -62,103 +165,7 @@ namespace Lab.WinFormNet48
             Console.WriteLine("標準用法，完成");
         }
 
-        /// <summary>
-        ///     https://github.com/App-vNext/Polly#wait-and-retry
-        /// </summary>
-        private static void _02_延遲重試_固定周期()
-        {
-            var retryPolicy = Policy.HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.BadGateway)
-                                    .WaitAndRetry(new[]
-                                                  {
-                                                      TimeSpan.FromSeconds(5),
-                                                      TimeSpan.FromSeconds(10),
-                                                      TimeSpan.FromSeconds(15)
-                                                  },
-                                                  (response, retryTime, context) =>
-                                                  {
-                                                      var errorMsg = response.Result
-                                                                             .Content
-                                                                             .ReadAsStringAsync()
-                                                                             .GetAwaiter()
-                                                                             .GetResult();
-                                                      Console.WriteLine($"延遲重試，發生錯誤：{errorMsg}，延遲 {retryTime} 後重試");
-                                                  });
-            retryPolicy.Execute(FailResponse);
-            Console.WriteLine("延遲重試，完成");
-        }
-
-        private static void _02_延遲重試_計算週期_Jitter()
-        {
-            //抖動演算法
-            var jitterer = new Random();
-
-            var retryPolicy = Policy.Handle<Exception>()
-                                    .OrResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.BadGateway)
-                                    .WaitAndRetry(6,
-                                                  retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))
-                                                                  + TimeSpan.FromMilliseconds(jitterer.Next(0, 100)),
-                                                  (response, retryTime, context) =>
-                                                  {
-                                                      WaitAndRetryAction(response, retryTime);
-                                                  })
-                ;
-            try
-            {
-                var httpResponse = retryPolicy.Execute(RandomFailResponseOrException);
-                var content = httpResponse.Content
-                                          .ReadAsStringAsync()
-                                          .GetAwaiter()
-                                          .GetResult()
-                    ;
-                Console.WriteLine(content);
-                Console.WriteLine("延遲重試，完成");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message);
-            }
-        }
-
-        private static void _02_延遲重試_計算週期_次方()
-        {
-            var retryPolicy = Policy.HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.BadGateway)
-                                    .WaitAndRetry(6,
-                                                  retryAttempt => TimeSpan.FromSeconds(Math.Pow(6, retryAttempt)),
-                                                  (response, retryTime, context) =>
-                                                  {
-                                                      var errorMsg = response.Result
-                                                                             .Content
-                                                                             .ReadAsStringAsync()
-                                                                             .GetAwaiter()
-                                                                             .GetResult();
-                                                      Console.WriteLine($"延遲重試，發生錯誤：{errorMsg}，延遲 {retryTime} 後重試");
-                                                  })
-                ;
-            retryPolicy.Execute(FailResponse);
-            Console.WriteLine("延遲重試，完成");
-        }
-
-        /// <summary>
-        ///     https://github.com/App-vNext/Polly#retry-forever-until-succeeds
-        /// </summary>
-        private static void _03_永不放棄()
-        {
-            var retryPolicy = Policy.HandleResult<HttpResponseMessage>(r => r.StatusCode == HttpStatusCode.BadGateway)
-                                    .RetryForever((reponse, retryCount, context) =>
-                                                  {
-                                                      var errorMsg = reponse.Result
-                                                                            .Content
-                                                                            .ReadAsStringAsync()
-                                                                            .GetAwaiter()
-                                                                            .GetResult();
-                                                      Console.WriteLine($"永不放棄，發生錯誤：{errorMsg}，第 {retryCount} 次重試");
-                                                  })
-                ;
-            retryPolicy.Execute(FailResponse);
-            Console.WriteLine("永不放棄，完成");
-        }
-
-        private static void _04_斷路器()
+        private static void _02_斷路器()
         {
             var state = s_asyncCircuitBreakerPolicy.CircuitState;
             try
@@ -191,7 +198,43 @@ namespace Lab.WinFormNet48
             }
         }
 
-        private static void _05_超時()
+        private static void _03_悲觀超時()
+        {
+            var timeoutPolicy = Policy.Timeout(TimeSpan.FromSeconds(3),
+                                               TimeoutStrategy.Pessimistic,
+                                               (context, time, task, ex) =>
+                                               {
+                                                   var errorMsg = $"錯誤訊息:{ex.Message}"
+                                                                  + $"錯誤目標:{ex.TargetSite}";
+                                                   Console.WriteLine($"逾時時間:{time}\r\n錯誤:{errorMsg}");
+                                               });
+            try
+            {
+                timeoutPolicy.Execute(() =>
+                                      {
+                                          Console.WriteLine("請求網路資源中...");
+
+                                          var cancelSource = new CancellationTokenSource();
+                                          cancelSource.Cancel();
+                                          var ex = new OperationCanceledException(cancelSource.Token);
+                                          throw ex;
+                                      });
+
+                timeoutPolicy.Execute(() =>
+                                      {
+                                          Console.WriteLine("請求網路資源中...");
+                                          Thread.Sleep(TimeSpan.FromSeconds(5));
+                                      });
+
+                Console.WriteLine("沒有超時，完成");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"超時錯誤:{e.Message}");
+            }
+        }
+
+        private static void _03_樂觀超時()
         {
             var timeoutPolicy = Policy.Timeout(TimeSpan.FromMilliseconds(1),
                                                (context, timespan, task, ex) =>
@@ -203,26 +246,142 @@ namespace Lab.WinFormNet48
 
             try
             {
+                // timeoutPolicy.Execute(() =>
+                //                       {
+                // Console.WriteLine("請求網路資源中...");
+
+                //                           var cancelSource = new CancellationTokenSource();
+                //                           cancelSource.Cancel();
+                //                           var ex = new OperationCanceledException(cancelSource.Token);
+                //                           throw ex;
+                //                       });
+                //
+                // timeoutPolicy.Execute(() =>
+                // {
+                // Console.WriteLine("請求網路資源中...");
+                //     var cancelSource = new CancellationTokenSource();
+                //     var task = new Task(() => { Console.WriteLine("模擬超時例外"); },
+                //                         cancelSource.Token);
+                //     cancelSource.Cancel();
+                //     var ex = new TaskCanceledException(task);
+                //     throw ex;
+                // });
+
                 timeoutPolicy.Execute(TimeoutRequest);
+                Console.WriteLine("沒有超時，完成");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"錯誤:{e.Message}");
+                Console.WriteLine($"超時錯誤:{e.Message}");
             }
+        }
+
+        private static void _04_隔離()
+        {
+            if (s_bulkheadPolicy == null)
+            {
+                s_bulkheadPolicy = Policy.Bulkhead(1, 1, context =>
+                                                         {
+                                                             var msg = $"Reject:{context.PolicyKey}";
+                                                             Console.WriteLine(msg);
+                                                         });
+            }
+
+            Console.WriteLine("請求網路資源中...");
+
+            s_bulkheadPolicy.Execute(() =>
+                                     {
+                                         for (var i = 0; i < 10; i++)
+                                         {
+                                             var thread = new Thread(() => { Thread.Sleep(10000); });
+                                             thread.Name = $"thread name:{i}";
+                                             Console.WriteLine($"{thread.Name} start");
+                                             thread.Start();
+                                         }
+                                     });
+            s_bulkheadPolicy.Execute(() =>
+                                     {
+                                         Console.WriteLine("請求網路資源中...");
+
+                                         for (var i = 0; i < 10; i++)
+                                         {
+                                             var thread = new Thread(() => { });
+                                             thread.Name = $"thread name:{i}";
+                                             Console.WriteLine($"{thread.Name} start");
+                                             thread.Start();
+                                         }
+                                     });
+            s_bulkheadPolicy.Execute(() =>
+                                     {
+                                         Console.WriteLine("請求網路資源中...");
+
+                                         for (var i = 0; i < 10; i++)
+                                         {
+                                             var thread = new Thread(() => { });
+                                             thread.Name = $"thread name:{i}";
+                                             Console.WriteLine($"{thread.Name} start");
+                                             thread.Start();
+                                         }
+                                     });
+
+            Console.WriteLine("隔離，完成");
+        }
+
+        private static void _04_隔離__()
+        {
+            if (s_asyncBulkheadPolicy == null)
+            {
+                s_asyncBulkheadPolicy = Policy
+                    .BulkheadAsync(1, 1, context =>
+                                         {
+                                             var msg = $"Reject:{context.PolicyKey}";
+                                             Console.WriteLine(msg);
+                                             var task = Task.Run(() => { Console.WriteLine("Reject after new task"); });
+                                             Console.WriteLine($"Reject after new task id:{task.Id}");
+                                             return task;
+                                         });
+            }
+
+            s_asyncBulkheadPolicy.ExecuteAsync(() =>
+                                               {
+                                                   var task = Task.Run(() =>
+                                                                       {
+                                                                           Console.WriteLine("1.Execute Task");
+                                                                           Thread.Sleep(TimeSpan.FromSeconds(10));
+                                                                           throw new Exception("AAA");
+                                                                       });
+                                                   Console.WriteLine($"1.Execute task id:{task.Id}");
+                                                   return task;
+                                               });
+
+            s_asyncBulkheadPolicy.ExecuteAsync(() =>
+                                               {
+                                                   Console.WriteLine("2.Execute Task，休息一下");
+                                                   Thread.Sleep(1000);
+                                                   var task = Task.Run(() => { Console.WriteLine("2.Execute Task"); });
+                                                   Console.WriteLine($"2.Execute task id:{task.Id}");
+                                                   return task;
+                                               });
+            s_asyncBulkheadPolicy.ExecuteAsync(() =>
+                                               {
+                                                   var task = Task.Run(() => { Console.WriteLine("3.Execute Task"); });
+                                                   Console.WriteLine($"3.Execute task id:{task.Id}");
+                                                   return task;
+                                               });
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            //_01_標準用法();
+            // _01_標準用法();
+            // _01_延遲重試_固定周期();
+            // _01_延遲重試_計算週期_次方();
+            // _01_延遲重試_計算週期_Jitter();
+            // _01_永不放棄();
+            // _02_斷路器();
+            // _03_樂觀超時();
+            // _03_悲觀超時();
 
-            //_02_延遲重試_固定周期();
-
-            //_02_延遲重試_計算週期_次方();
-            //_02_延遲重試_計算週期_Jitter();
-
-            //_03_永不放棄();
-            //_04_斷路器();
-            _05_超時();
+            _04_隔離();
         }
 
         private static AsyncCircuitBreakerPolicy<HttpResponseMessage> CreateAsyncCircuitBreakerPolicy()
