@@ -8,7 +8,7 @@ namespace WebApiNet48
         public static void Register(HttpConfiguration config)
         {
             // using Microsoft.Extension.DependencyInjection here.
-            Startup.Bootstrapper(config);
+            DependencyInjectionConfig.Register(config);
 
             // Web API configuration and services
             config.Filters.Add(new LogFilterAttribute());

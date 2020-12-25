@@ -6,9 +6,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace WebApiNet48
 {
-    public class Startup
+    public class DependencyInjectionConfig
     {
-        public static void Bootstrapper(HttpConfiguration config)
+        public static void Register(HttpConfiguration config)
         {
             var services = ConfigureServices();
 
@@ -27,7 +27,7 @@ namespace WebApiNet48
             var services = new ServiceCollection();
 
             //使用 Microsoft.Extensions.DependencyInjection 註冊
-            services.AddControllersAsServices(typeof(Startup)
+            services.AddControllersAsServices(typeof(DependencyInjectionConfig)
                                               .Assembly
                                               .GetExportedTypes()
                                               .Where(t => !t.IsAbstract && !t.IsGenericTypeDefinition)
