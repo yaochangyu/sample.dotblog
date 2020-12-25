@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Web.Mvc;
 using Mvc5Net48.Message;
+using NLog;
 
 namespace Mvc5Net48.Controllers
 {
@@ -27,13 +28,15 @@ namespace Mvc5Net48.Controllers
             var single    = this.Single;
             var scope     = this.Scope;
             var transient = this.Transient;
-            var content = "我在 Controller.Get Action<br>"
-                          + $"transient:{transient.OperationId}<br>"
-                          + $"scope:{scope.OperationId}<br>"
-                          + $"single:{single.OperationId}"
+            var content = "我在 Controller.Get Action\r\n"
+                          + $"transient:{transient.OperationId}\r\n"
+                          + $"scope:{scope.OperationId}\r\n"
+                          + $"single:{single.OperationId}\r\n"
                 ;
             Console.WriteLine(content);
             this.ViewBag.Message = content;
+            var logger = LogManager.GetCurrentClassLogger();
+            logger.Trace(content);
             return this.View();
         }
     }
