@@ -15,16 +15,9 @@ namespace Mvc5Net48
             this._serviceProvider = serviceProvider as ServiceProvider;
         }
 
-        //public IDependencyScope BeginScope()
-        //{
-        //    return new DefaultDependencyResolver(this.ServiceProvider.CreateScope().ServiceProvider);
-        //}
-
         public void Dispose()
         {
             this._serviceProvider?.Dispose();
-
-            //throw new NotImplementedException();
         }
 
         public object GetService(Type serviceType)
@@ -36,7 +29,7 @@ namespace Mvc5Net48
 
             return this._serviceProvider.GetService(serviceType);
 
-            throw new InvalidOperationException("IServiceScope not provided");
+            // throw new InvalidOperationException("IServiceScope not provided");
         }
 
         public IEnumerable<object> GetServices(Type serviceType)
@@ -48,7 +41,7 @@ namespace Mvc5Net48
 
             return this._serviceProvider.GetServices(serviceType);
 
-            throw new InvalidOperationException("IServiceScope not provided");
+            // throw new InvalidOperationException("IServiceScope not provided");
         }
     }
 }

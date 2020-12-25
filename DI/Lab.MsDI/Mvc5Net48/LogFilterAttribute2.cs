@@ -11,15 +11,11 @@ namespace Mvc5Net48
     {
         public override void OnActionExecuting(ActionExecutingContext filterContext)
         {
-            var serviceScope = filterContext.HttpContext?.Items[typeof(IServiceScope)] as IServiceScope;
-            if (serviceScope == null)
-            {
-                return;
-            }
+            // var transientMessager = filterContext.HttpContext.GetService<ITransientMessager>();//失敗
 
-            var transient = DependencyResolver.Current.GetService<ITransientMessager>();
-            var single    = DependencyResolver.Current.GetService<ISingleMessager>();
-            var scope    = DependencyResolver.Current.GetService<IScopeMessager>();
+            var transient         = DependencyResolver.Current.GetService<ITransientMessager>();
+            var single            = DependencyResolver.Current.GetService<ISingleMessager>();
+            var scope             = DependencyResolver.Current.GetService<IScopeMessager>();
 
             var logger = LogManager.GetCurrentClassLogger();
             var content = "我在 LogFilterAttribute.OnActionExecuting\r\n" +

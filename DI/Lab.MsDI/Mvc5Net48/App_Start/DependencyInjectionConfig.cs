@@ -14,7 +14,7 @@ namespace Mvc5Net48
 
             var provider = services.BuildServiceProvider();
 
-            var resolver = new DefaultDependencyResolver2(provider);
+            var resolver = new DefaultDependencyResolver(provider);
             ServiceScopeModule.SetServiceProvider(provider);
             DependencyResolver.SetResolver(resolver);
 

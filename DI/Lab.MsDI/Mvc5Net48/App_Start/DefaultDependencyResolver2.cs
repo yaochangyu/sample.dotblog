@@ -5,6 +5,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Mvc5Net48
 {
+    /// <summary>
+    /// Scope 的生命週期錯誤
+    /// </summary>
     public class DefaultDependencyResolver2 : IDependencyResolver
     {
         private readonly ServiceProvider _serviceProvider;
