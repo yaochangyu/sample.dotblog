@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiNet48", "WebApiNet48\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mvc5Net48", "Mvc5Net48\Mvc5Net48.csproj", "{F2A54284-B12E-4BB8-B57D-72196461E7E3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mvc5Net48_1", "Mvc5Net48_1\Mvc5Net48_1.csproj", "{91B2AC8D-1516-4D84-AF08-D72A50854607}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{F2A54284-B12E-4BB8-B57D-72196461E7E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F2A54284-B12E-4BB8-B57D-72196461E7E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F2A54284-B12E-4BB8-B57D-72196461E7E3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91B2AC8D-1516-4D84-AF08-D72A50854607}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91B2AC8D-1516-4D84-AF08-D72A50854607}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91B2AC8D-1516-4D84-AF08-D72A50854607}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91B2AC8D-1516-4D84-AF08-D72A50854607}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
