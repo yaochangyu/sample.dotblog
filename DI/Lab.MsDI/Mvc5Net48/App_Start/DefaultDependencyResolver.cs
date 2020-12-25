@@ -8,11 +8,23 @@ namespace Mvc5Net48
 {
     internal class DefaultDependencyResolver : IDependencyResolver
     {
-        private ServiceProvider _serviceProvider;
+        private readonly ServiceProvider _serviceProvider;
 
         public DefaultDependencyResolver(IServiceProvider serviceProvider)
         {
             this._serviceProvider = serviceProvider as ServiceProvider;
+        }
+
+        //public IDependencyScope BeginScope()
+        //{
+        //    return new DefaultDependencyResolver(this.ServiceProvider.CreateScope().ServiceProvider);
+        //}
+
+        public void Dispose()
+        {
+            this._serviceProvider?.Dispose();
+
+            //throw new NotImplementedException();
         }
 
         public object GetService(Type serviceType)
@@ -23,6 +35,7 @@ namespace Mvc5Net48
             }
 
             return this._serviceProvider.GetService(serviceType);
+
             throw new InvalidOperationException("IServiceScope not provided");
         }
 
@@ -34,18 +47,8 @@ namespace Mvc5Net48
             }
 
             return this._serviceProvider.GetServices(serviceType);
+
             throw new InvalidOperationException("IServiceScope not provided");
-        }
-
-        //public IDependencyScope BeginScope()
-        //{
-        //    return new DefaultDependencyResolver(this.ServiceProvider.CreateScope().ServiceProvider);
-        //}
-
-        public void Dispose()
-        {
-            this._serviceProvider?.Dispose();
-            //throw new NotImplementedException();
         }
     }
 }

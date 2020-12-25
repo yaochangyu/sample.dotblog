@@ -7,6 +7,9 @@ namespace Mvc5Net48
         public static void RegisterGlobalFilters(GlobalFilterCollection filters)
         {
             filters.Add(new HandleErrorAttribute());
-            filters.Add(new LogFilterAttribute());
+
+            // filters.Add(new LogFilterAttribute());
+            filters.Add(new LogFilterAttribute2());
         }
-    }}
+    }
+}

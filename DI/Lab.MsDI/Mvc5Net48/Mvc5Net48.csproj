@@ -126,6 +126,7 @@
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="LogFilterAttribute.cs" />
+    <Compile Include="LogFilterAttribute2.cs" />
     <Compile Include="Message\IMessager.cs" />
     <Compile Include="Message\IScopeMessager.cs" />
     <Compile Include="Message\ISingleMessager.cs" />
