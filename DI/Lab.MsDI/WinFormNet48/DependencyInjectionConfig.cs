@@ -2,7 +2,7 @@
 
 namespace WinFormNet48
 {
-    public class Startup
+    public class DependencyInjectionConfig
     {
         public static IServiceCollection ConfigureServices()
         {

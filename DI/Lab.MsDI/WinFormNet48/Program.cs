@@ -16,7 +16,7 @@ namespace WinFormNet48
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            var services = Startup.ConfigureServices();
+            var services = DependencyInjectionConfig.ConfigureServices();
             using (var serviceProvider = services.BuildServiceProvider())
             {
                 ServiceProvider = serviceProvider;

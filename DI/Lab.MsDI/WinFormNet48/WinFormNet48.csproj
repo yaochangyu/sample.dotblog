@@ -64,7 +64,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Startup.cs" />
+    <Compile Include="DependencyInjectionConfig.cs" />
     <Compile Include="Message\ISingleMessager.cs" />
     <Compile Include="Message\IScopeMessager.cs" />
     <Compile Include="Message\ITransientMessager.cs" />
