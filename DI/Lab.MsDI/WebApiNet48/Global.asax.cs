@@ -15,6 +15,8 @@ namespace WebApiNet48
         protected void Application_Start()
         {
             GlobalConfiguration.Configure(WebApiConfig.Register);
+            // using Microsoft.Extension.DependencyInjection here.
+            GlobalConfiguration.Configure(DependencyInjectionConfig.Register);
         }
     }
 }
