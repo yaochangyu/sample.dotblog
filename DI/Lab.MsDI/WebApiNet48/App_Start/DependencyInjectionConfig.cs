@@ -35,11 +35,11 @@ namespace WebApiNet48
                                                           || t.Name.EndsWith("Controller",
                                                                              StringComparison.OrdinalIgnoreCase)));
 
-            //services.AddScoped<IMessager, LogMessager>();
+            services.AddScoped<IMessager, LogMessager>();
 
-            //services.AddTransient<ITransientMessager, MultiMessager>()
-            //        .AddSingleton<ISingleMessager, MultiMessager>()
-            //        .AddScoped<IScopeMessager, MultiMessager>();
+            services.AddTransient<ITransientMessager, MultiMessager>()
+                    .AddSingleton<ISingleMessager, MultiMessager>()
+                    .AddScoped<IScopeMessager, MultiMessager>();
             return services;
         }
     }
