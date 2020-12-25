@@ -1,7 +1,11 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Linq;
+using System.Reflection;
 using System.Web.Http;
 using System.Web.Http.Controllers;
+using System.Web.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using Mvc5Net48.Message;
 
 namespace Mvc5Net48
 {
@@ -14,7 +18,8 @@ namespace Mvc5Net48
             var provider = services.BuildServiceProvider();
 
             var resolver = new DefaultDependencyResolver(provider);
-            config.DependencyResolver = resolver;
+            DependencyResolver.SetResolver(resolver);
+            //config.DependencyResolver = resolver;
         }
 
         /// <summary>
@@ -26,54 +31,20 @@ namespace Mvc5Net48
             var services = new ServiceCollection();
 
             //使用 Microsoft.Extensions.DependencyInjection 註冊
+            services.AddControllersAsServices(typeof(DependencyInjectionConfig)
+                                              .Assembly
+                                              .GetExportedTypes()
+                                              .Where(t => !t.IsAbstract && !t.IsGenericTypeDefinition)
+                                              .Where(t => typeof(IHttpController).IsAssignableFrom(t)
+                                                          || t.Name.EndsWith("Controller",
+                                                                             StringComparison.OrdinalIgnoreCase)));
 
-            //var assemblies = new[]
-            //{
-            //    Assembly.Load("THS.MES.MQC2.BLL"),
-            //    Assembly.Load("THS.MES.MQC2.DAL"),
-            //};
+            services.AddScoped<IMessager, LogMessager>();
 
-            ////對應 Controller
-            //services.Scan(p => p.FromAssemblies(Assembly.Load("THS.MES.MQC2.WebService"))
-            //                    .AddClasses(c => c.AssignableTo<IHttpController>())
-            //                    .AsSelf()
-            //                    .WithScopedLifetime()
-            //             );
-
-            ////對應 BLL、DAL
-            ////排除 EntityModel、ViewModel
-            //var excludeNames = new[]
-            //{
-            //    "EntityModel",
-            //    "ViewModel",
-
-            //    //"Swagger"
-            //};
-
-            //services.Scan(scan => scan.FromAssemblies(assemblies)
-            //                          .AddClasses(p => p.Where(type => IsExclude(type.Namespace, excludeNames)))
-
-            //                          //.AsImplementedInterfaces()
-            //                          .AsSelfWithInterfaces()
-            //                          .WithSingletonLifetime()
-            //             );
-
+            services.AddTransient<ITransientMessager, MultiMessager>()
+                    .AddSingleton<ISingleMessager, MultiMessager>()
+                    .AddScoped<IScopeMessager, MultiMessager>();
             return services;
-        }
-
-        private static bool IsExclude(string source, string[] exculdes)
-        {
-            var isExist = false;
-            foreach (var item in exculdes)
-            {
-                isExist = source.Contains(item);
-                if (isExist)
-                {
-                    break;
-                }
-            }
-
-            return !isExist;
         }
     }
 }

@@ -12,7 +12,7 @@
 </head>
 <body>
 <div>
-      
+    @Html.Raw(HttpUtility.HtmlDecode(@ViewBag.Message))
 </div>
 </body>
 </html>

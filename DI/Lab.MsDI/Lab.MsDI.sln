@@ -5,9 +5,11 @@ VisualStudioVersion = 16.0.30503.244
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WinFormNet48", "WinFormNet48\WinFormNet48.csproj", "{FC5AA11A-0879-43D8-8E79-DFC37DE75FB8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiNetCore31", "WebApiNetCore31\WebApiNetCore31.csproj", "{08C0CD22-F32B-4E54-BC60-AB6912C8D84F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebApiNetCore31", "WebApiNetCore31\WebApiNetCore31.csproj", "{08C0CD22-F32B-4E54-BC60-AB6912C8D84F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiNet48", "WebApiNet48\WebApiNet48.csproj", "{429D865C-EDE7-4EA1-BC51-9A5BCAB26BB8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mvc5Net48", "Mvc5Net48\Mvc5Net48.csproj", "{F2A54284-B12E-4BB8-B57D-72196461E7E3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{429D865C-EDE7-4EA1-BC51-9A5BCAB26BB8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{429D865C-EDE7-4EA1-BC51-9A5BCAB26BB8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{429D865C-EDE7-4EA1-BC51-9A5BCAB26BB8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F2A54284-B12E-4BB8-B57D-72196461E7E3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2A54284-B12E-4BB8-B57D-72196461E7E3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2A54284-B12E-4BB8-B57D-72196461E7E3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2A54284-B12E-4BB8-B57D-72196461E7E3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
