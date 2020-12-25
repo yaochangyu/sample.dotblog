@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Web.Mvc;
-using Mvc5Net48_1.Message;
+using Mvc5Net48.Message;
 using NLog;
 
-namespace Mvc5Net48_1.Controllers
+namespace Mvc5Net48.Controllers
 {
     public class DefaultController : Controller
     {

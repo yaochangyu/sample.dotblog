@@ -2,10 +2,10 @@
 using System.Diagnostics;
 using System.Web.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Mvc5Net48_1.Message;
+using Mvc5Net48.Message;
 using NLog;
 
-namespace Mvc5Net48_1
+namespace Mvc5Net48
 {
     public class LogFilterAttribute : ActionFilterAttribute
     {

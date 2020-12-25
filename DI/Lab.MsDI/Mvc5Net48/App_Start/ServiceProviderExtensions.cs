@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Mvc5Net48_1
+namespace Mvc5Net48
 {
     public static class ServiceProviderExtensions
     {

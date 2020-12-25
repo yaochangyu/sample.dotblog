@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Web.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Mvc5Net48_1
+namespace Mvc5Net48
 {
     public class DefaultDependencyResolver2 : IDependencyResolver
     {

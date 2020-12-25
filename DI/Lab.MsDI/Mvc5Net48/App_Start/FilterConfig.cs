@@ -1,6 +1,6 @@
 ﻿using System.Web.Mvc;
 
-namespace Mvc5Net48_1
+namespace Mvc5Net48
 {
     public class FilterConfig
     {

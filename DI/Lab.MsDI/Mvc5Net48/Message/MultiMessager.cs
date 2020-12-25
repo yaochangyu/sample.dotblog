@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Mvc5Net48_1.Message
+namespace Mvc5Net48.Message
 {
     public class MultiMessager : IScopeMessager, ISingleMessager, ITransientMessager
     {

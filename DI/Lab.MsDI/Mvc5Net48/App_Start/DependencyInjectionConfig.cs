@@ -2,9 +2,9 @@
 using System.Linq;
 using System.Web.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Mvc5Net48_1.Message;
+using Mvc5Net48.Message;
 
-namespace Mvc5Net48_1
+namespace Mvc5Net48
 {
     public class DependencyInjectionConfig
     {
@@ -14,7 +14,7 @@ namespace Mvc5Net48_1
 
             var provider = services.BuildServiceProvider();
 
-            var resolver = new DefaultDependencyResolver2(provider);
+            var resolver = new DefaultDependencyResolver(provider);
             ServiceScopeModule.SetServiceProvider(provider);
             DependencyResolver.SetResolver(resolver);
 

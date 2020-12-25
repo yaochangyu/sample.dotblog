@@ -2,19 +2,20 @@
 using System.Web;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Mvc5Net48_1
+namespace Mvc5Net48
 {
     internal class ServiceScopeModule : IHttpModule
     {
         private static ServiceProvider s_serviceProvider;
 
-        public static void SetServiceProvider(ServiceProvider serviceProvider)
+        public static void SetServiceProvider(IServiceProvider serviceProvider)
         {
-            s_serviceProvider = serviceProvider;
+            s_serviceProvider = serviceProvider as ServiceProvider;
         }
 
         public void Dispose()
         {
+            s_serviceProvider?.Dispose();
         }
 
         public void Init(HttpApplication context)

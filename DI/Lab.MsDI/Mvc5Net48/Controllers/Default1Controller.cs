@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Web.Mvc;
-using Mvc5Net48_1.Message;
+using Mvc5Net48.Message;
 
-namespace Mvc5Net48_1.Controllers
+namespace Mvc5Net48.Controllers
 {
     public class Default1Controller : Controller
     {

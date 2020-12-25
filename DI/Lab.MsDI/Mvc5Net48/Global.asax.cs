@@ -1,10 +1,10 @@
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Routing;
-using Mvc5Net48_1;
+using Mvc5Net48;
 
 [assembly: PreApplicationStartMethod(typeof(MvcApplication), "InitModule")]
-namespace Mvc5Net48_1
+namespace Mvc5Net48
 {
     public class MvcApplication : HttpApplication
     {
