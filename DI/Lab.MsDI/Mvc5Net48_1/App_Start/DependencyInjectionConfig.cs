@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Web.Mvc;
 using Microsoft.Extensions.DependencyInjection;
-using Mvc5Net48.Message;
+using Mvc5Net48_1.Message;
 
 namespace Mvc5Net48_1
 {

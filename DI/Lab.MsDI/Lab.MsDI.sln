@@ -9,7 +9,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebApiNetCore31", "WebApiNe
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApiNet48", "WebApiNet48\WebApiNet48.csproj", "{429D865C-EDE7-4EA1-BC51-9A5BCAB26BB8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mvc5Net48_1", "Mvc5Net48_1\Mvc5Net48_1.csproj", "{91B2AC8D-1516-4D84-AF08-D72A50854607}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mvc5Net48", "Mvc5Net48_1\Mvc5Net48.csproj", "{91B2AC8D-1516-4D84-AF08-D72A50854607}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
