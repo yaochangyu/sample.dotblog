@@ -1,12 +1,25 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace WinFormNet48
 {
-    public class DependencyInjectionConfig
+    internal class DependencyInjectionConfig
     {
-        public static IServiceCollection ConfigureServices()
+        public static IServiceProvider ServiceProvider { get; set; }
+
+        public static IServiceProvider Register()
         {
-            IServiceCollection services = new ServiceCollection();
+            var services = new ServiceCollection();
+            ConfigureServices(services);
+            ServiceProvider = services.BuildServiceProvider();
+            return ServiceProvider;
+        }
+
+        /// <summary>
+        ///     使用 MS DI 註冊
+        /// </summary>
+        private static IServiceCollection ConfigureServices(IServiceCollection services)
+        {
             return services.AddSingleton<Form1>()
                            .AddTransient<Worker>()
                            .AddTransient<ITransientMessager, MultiMessager>()

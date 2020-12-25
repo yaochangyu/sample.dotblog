@@ -6,8 +6,6 @@ namespace WinFormNet48
 {
     internal static class Program
     {
-        public static ServiceProvider ServiceProvider { get; set; }
-
         /// <summary>
         ///     The main entry point for the application.
         /// </summary>
@@ -16,10 +14,10 @@ namespace WinFormNet48
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            var services = DependencyInjectionConfig.ConfigureServices();
-            using (var serviceProvider = services.BuildServiceProvider())
+            var serviceProvider = DependencyInjectionConfig.Register() as ServiceProvider;
+
+            using (serviceProvider)
             {
-                ServiceProvider = serviceProvider;
                 var form = serviceProvider.GetService(typeof(Form1)) as Form;
                 Application.Run(form);
             }
