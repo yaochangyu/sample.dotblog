@@ -27,13 +27,7 @@ namespace WebApiNet48
             var services = new ServiceCollection();
 
             //使用 Microsoft.Extensions.DependencyInjection 註冊
-            services.AddControllersAsServices(typeof(DependencyInjectionConfig)
-                                              .Assembly
-                                              .GetExportedTypes()
-                                              .Where(t => !t.IsAbstract && !t.IsGenericTypeDefinition)
-                                              .Where(t => typeof(IHttpController).IsAssignableFrom(t)
-                                                          || t.Name.EndsWith("Controller",
-                                                                             StringComparison.OrdinalIgnoreCase)));
+            services.AddControllersAsServices(typeof(DependencyInjectionConfig).Assembly.GetExportedTypes());
 
             services.AddScoped<IMessager, LogMessager>();
 

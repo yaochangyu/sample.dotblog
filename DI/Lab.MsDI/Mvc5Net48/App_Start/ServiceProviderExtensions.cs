@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Web.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Mvc5Net48
@@ -9,7 +11,12 @@ namespace Mvc5Net48
         public static IServiceCollection AddControllersAsServices(this IServiceCollection services,
                                                                   IEnumerable<Type>       controllerTypes)
         {
-            foreach (var type in controllerTypes)
+            var filter = controllerTypes.Where(t => !t.IsAbstract 
+                                                    && !t.IsGenericTypeDefinition)
+                                        .Where(t => typeof(ControllerBase).IsAssignableFrom(t)
+                                                    || t.Name.EndsWith("Controller", StringComparison.OrdinalIgnoreCase));
+
+            foreach (var type in filter)
             {
                 services.AddTransient(type);
             }
