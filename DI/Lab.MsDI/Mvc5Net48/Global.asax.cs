@@ -11,7 +11,7 @@ namespace Mvc5Net48
         public static void InitModule()
         {
             // 不需要有 ServiceScopeModule DI 也可以正確地取出 Scope 生命週期的物件
-            RegisterModule(typeof(ServiceScopeModule));
+            RegisterModule(typeof(ServiceScopeHttpModule));
         }
 
         protected void Application_Start()

@@ -135,7 +135,7 @@
     <Compile Include="Message\MachineMessager.cs" />
     <Compile Include="Message\MultiMessager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServiceScopeModule.cs" />
+    <Compile Include="ServiceScopeHttpModule.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Views\web.config" />

@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Mvc5Net48
 {
-    internal class ServiceScopeModule : IHttpModule
+    internal class ServiceScopeHttpModule : IHttpModule
     {
         private static ServiceProvider s_serviceProvider;
 
