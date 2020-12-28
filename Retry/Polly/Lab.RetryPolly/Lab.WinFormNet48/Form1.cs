@@ -12,17 +12,12 @@ namespace Lab.WinFormNet48
 {
     public partial class Form1 : Form
     {
-        private static AsyncPolicy                                    s_asyncPolicy;
         private static AsyncCircuitBreakerPolicy<HttpResponseMessage> s_asyncCircuitBreakerPolicy;
-        private static TimeoutPolicy                                  s_timeoutPolicy;
-        private static AsyncTimeoutPolicy                             s_asyncTimeoutPolicy;
-        private static TimeoutPolicy                                  s_timeout;
 
         public Form1()
         {
             this.InitializeComponent();
             s_asyncCircuitBreakerPolicy = CreateAsyncCircuitBreakerPolicy();
-            s_asyncPolicy               = CreateAsyncPolicy();
         }
 
         /// <summary>
