@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Polly;
-using Polly.Bulkhead;
 using Polly.CircuitBreaker;
 using Polly.Timeout;
 
@@ -18,8 +17,6 @@ namespace Lab.WinFormNet48
         private static TimeoutPolicy                                  s_timeoutPolicy;
         private static AsyncTimeoutPolicy                             s_asyncTimeoutPolicy;
         private static TimeoutPolicy                                  s_timeout;
-        private static AsyncBulkheadPolicy                            s_asyncBulkheadPolicy;
-        private static BulkheadPolicy                                 s_bulkheadPolicy;
 
         public Form1()
         {
@@ -278,96 +275,84 @@ namespace Lab.WinFormNet48
 
         private static void _04_隔離()
         {
-            if (s_bulkheadPolicy == null)
-            {
-                s_bulkheadPolicy = Policy.Bulkhead(1, 1, context =>
-                                                         {
-                                                             var msg = $"Reject:{context.PolicyKey}";
-                                                             Console.WriteLine(msg);
-                                                         });
-            }
+            var bulkheadPolicy = Policy.Bulkhead(1, 1, context =>
+                                                       {
+                                                           var msg = $"Reject:{context.PolicyKey}";
+                                                           Console.WriteLine(msg);
+                                                       });
 
             Console.WriteLine("請求網路資源中...");
+            
+            Task.Factory
+                .StartNew(() =>
+                          {
+                              bulkheadPolicy.Execute(() =>
+                                                     {
+                                                         Console.WriteLine("1.Execute Task，休息一下");
+                                                         Thread.Sleep(TimeSpan.FromSeconds(5));
+                                                     });
+                          });
 
-            s_bulkheadPolicy.Execute(() =>
-                                     {
-                                         for (var i = 0; i < 10; i++)
-                                         {
-                                             var thread = new Thread(() => { Thread.Sleep(10000); });
-                                             thread.Name = $"thread name:{i}";
-                                             Console.WriteLine($"{thread.Name} start");
-                                             thread.Start();
-                                         }
-                                     });
-            s_bulkheadPolicy.Execute(() =>
-                                     {
-                                         Console.WriteLine("請求網路資源中...");
+            Task.Factory
+                .StartNew(() =>
+                          {
+                              bulkheadPolicy.Execute(() =>
+                                                     {
+                                                         Console.WriteLine("2.Execute Task");
+                                                     });
+                          });
 
-                                         for (var i = 0; i < 10; i++)
-                                         {
-                                             var thread = new Thread(() => { });
-                                             thread.Name = $"thread name:{i}";
-                                             Console.WriteLine($"{thread.Name} start");
-                                             thread.Start();
-                                         }
-                                     });
-            s_bulkheadPolicy.Execute(() =>
-                                     {
-                                         Console.WriteLine("請求網路資源中...");
-
-                                         for (var i = 0; i < 10; i++)
-                                         {
-                                             var thread = new Thread(() => { });
-                                             thread.Name = $"thread name:{i}";
-                                             Console.WriteLine($"{thread.Name} start");
-                                             thread.Start();
-                                         }
-                                     });
+            Task.Factory
+                .StartNew(() =>
+                          {
+                              bulkheadPolicy.Execute(() =>
+                                                     {
+                                                         Console.WriteLine("3.Execute Task");
+                                                     });
+                          });
 
             Console.WriteLine("隔離，完成");
         }
 
-        private static void _04_隔離__()
+        private static void _04_隔離Async()
         {
-            if (s_asyncBulkheadPolicy == null)
-            {
-                s_asyncBulkheadPolicy = Policy
-                    .BulkheadAsync(1, 1, context =>
-                                         {
-                                             var msg = $"Reject:{context.PolicyKey}";
-                                             Console.WriteLine(msg);
-                                             var task = Task.Run(() => { Console.WriteLine("Reject after new task"); });
-                                             Console.WriteLine($"Reject after new task id:{task.Id}");
-                                             return task;
-                                         });
-            }
+            var asyncBulkheadPolicy = Policy
+                .BulkheadAsync(1, 1, context =>
+                                     {
+                                         var msg = $"Reject:{context.PolicyKey}";
+                                         Console.WriteLine(msg);
+                                         var task = new Task(() => { Console.WriteLine("Reject after new task"); });
+                                         Console.WriteLine($"Reject after new task id:{task.Id}");
+                                         return task;
+                                     });
 
-            s_asyncBulkheadPolicy.ExecuteAsync(() =>
-                                               {
-                                                   var task = Task.Run(() =>
-                                                                       {
-                                                                           Console.WriteLine("1.Execute Task");
-                                                                           Thread.Sleep(TimeSpan.FromSeconds(10));
-                                                                           throw new Exception("AAA");
-                                                                       });
-                                                   Console.WriteLine($"1.Execute task id:{task.Id}");
-                                                   return task;
-                                               });
+            Console.WriteLine("請求網路資源中...");
 
-            s_asyncBulkheadPolicy.ExecuteAsync(() =>
-                                               {
-                                                   Console.WriteLine("2.Execute Task，休息一下");
-                                                   Thread.Sleep(1000);
-                                                   var task = Task.Run(() => { Console.WriteLine("2.Execute Task"); });
-                                                   Console.WriteLine($"2.Execute task id:{task.Id}");
-                                                   return task;
-                                               });
-            s_asyncBulkheadPolicy.ExecuteAsync(() =>
-                                               {
-                                                   var task = Task.Run(() => { Console.WriteLine("3.Execute Task"); });
-                                                   Console.WriteLine($"3.Execute task id:{task.Id}");
-                                                   return task;
-                                               });
+            asyncBulkheadPolicy.ExecuteAsync(() =>
+                                             {
+                                                 Console.WriteLine("1.Execute Task，休息一下");
+                                                 var task = Task.Run(() =>
+                                                                     {
+                                                                         Thread.Sleep(10000);
+                                                                         Console.WriteLine("1.Sub Execute Task");
+                                                                     });
+                                                 Console.WriteLine($"1.Execute task id:{task.Id}");
+                                                 return task;
+                                             });
+            asyncBulkheadPolicy.ExecuteAsync(() =>
+                                             {
+                                                 var task = Task.Run(() => { Console.WriteLine("2.Execute Task"); });
+                                                 Console.WriteLine($"2.Execute task id:{task.Id}");
+                                                 return task;
+                                             });
+
+            asyncBulkheadPolicy.ExecuteAsync(() =>
+                                             {
+                                                 var task = Task.Run(() => { Console.WriteLine("3.Execute Task"); });
+                                                 Console.WriteLine($"3.Execute task id:{task.Id}");
+                                                 return task;
+                                             });
+            Console.WriteLine("隔離，完成");
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -382,6 +367,7 @@ namespace Lab.WinFormNet48
             // _03_悲觀超時();
 
             _04_隔離();
+            // _04_隔離Async();
         }
 
         private static AsyncCircuitBreakerPolicy<HttpResponseMessage> CreateAsyncCircuitBreakerPolicy()
