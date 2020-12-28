@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Extensions.Caching.Memory;
+using Newtonsoft.Json;
 using Polly;
+using Polly.Caching;
+using Polly.Caching.Memory;
 using Polly.CircuitBreaker;
 using Polly.Timeout;
 
@@ -13,6 +18,7 @@ namespace Lab.WinFormNet48
     public partial class Form1 : Form
     {
         private static AsyncCircuitBreakerPolicy<HttpResponseMessage> s_asyncCircuitBreakerPolicy;
+        private static CachePolicy                                    s_cachePolicy;
 
         public Form1()
         {
@@ -355,7 +361,31 @@ namespace Lab.WinFormNet48
             Console.WriteLine("回退策略，完成");
 
         }
+        private static void _06_緩存()
+        {
+            var memoryCache         = new MemoryCache(new MemoryCacheOptions());
+            var memoryCacheProvider = new MemoryCacheProvider(memoryCache);
+            if (s_cachePolicy == null)
+            {
+                s_cachePolicy = Policy.Cache(memoryCacheProvider, TimeSpan.FromSeconds(5));
+            }
 
+            var result = s_cachePolicy.Execute(context =>
+                                               {
+                                                   Console.WriteLine("快取過期，更新快取內容");
+                                                   var names  = new List<string>();
+                                                   var number = FakeData.NumberData.GetNumber(1, 10);
+                                                   for (var i = 0; i < number; i++)
+                                                   {
+                                                       names.Add(FakeData.NameData.GetFullName());
+                                                   }
+
+                                                   return names;
+                                               }, new Context("datakey"));
+            var json = JsonConvert.SerializeObject(result);
+            Console.WriteLine($"取得資料:{json}");
+            Console.WriteLine("隔離策略，完成");
+        }
         private void button1_Click(object sender, EventArgs e)
         {
             // _01_標準用法();
