@@ -277,7 +277,7 @@ namespace Lab.WinFormNet48
                                                        });
 
             Console.WriteLine("請求網路資源中...");
-            
+
             Task.Factory
                 .StartNew(() =>
                           {
@@ -289,22 +289,10 @@ namespace Lab.WinFormNet48
                           });
 
             Task.Factory
-                .StartNew(() =>
-                          {
-                              bulkheadPolicy.Execute(() =>
-                                                     {
-                                                         Console.WriteLine("2.Execute Task");
-                                                     });
-                          });
+                .StartNew(() => { bulkheadPolicy.Execute(() => { Console.WriteLine("2.Execute Task"); }); });
 
             Task.Factory
-                .StartNew(() =>
-                          {
-                              bulkheadPolicy.Execute(() =>
-                                                     {
-                                                         Console.WriteLine("3.Execute Task");
-                                                     });
-                          });
+                .StartNew(() => { bulkheadPolicy.Execute(() => { Console.WriteLine("3.Execute Task"); }); });
 
             Console.WriteLine("隔離，完成");
         }
@@ -350,6 +338,24 @@ namespace Lab.WinFormNet48
             Console.WriteLine("隔離，完成");
         }
 
+        private static void _05_回退()
+        {
+            
+            var policy = Policy.Handle<HttpRequestException>()
+                               .Fallback(() =>
+                                         {
+                                             Console.WriteLine("回退策略，執行解決方案，請求另一個備援服務位置");
+                                             Console.WriteLine("請求網路資源 http://localhost:9528");
+                                         });
+            policy.Execute(() =>
+                           {
+                               Console.WriteLine("請求網路資源 http://localhost:9527，出現異常...");
+                               throw new HttpRequestException("機房發生火災");
+                           });
+            Console.WriteLine("回退策略，完成");
+
+        }
+
         private void button1_Click(object sender, EventArgs e)
         {
             // _01_標準用法();
@@ -360,9 +366,10 @@ namespace Lab.WinFormNet48
             // _02_斷路器();
             // _03_樂觀超時();
             // _03_悲觀超時();
-
-            _04_隔離();
+            // _04_隔離();
             // _04_隔離Async();
+
+            _05_回退();
         }
 
         private static AsyncCircuitBreakerPolicy<HttpResponseMessage> CreateAsyncCircuitBreakerPolicy()
