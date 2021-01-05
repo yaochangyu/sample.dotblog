@@ -9,7 +9,7 @@ namespace WebApiNet48
     {
         public static void Register(HttpConfiguration config)
         {
-            Startup.Bootstrapper(config);
+            DependencyInjectionConfig.Register(config);
             // Web API configuration and services
 
             // Web API routes
