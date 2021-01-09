@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Extensions.Logging;
 
 namespace Server.Controllers
@@ -24,7 +27,7 @@ namespace Server.Controllers
         }
 
         [HttpGet]
-        public IEnumerable<WeatherForecast> Get(int lessTemperature)
+        public IActionResult Get(int lessTemperature)
         {
             var rng = new Random();
             var sources = Enumerable.Range(1, 5).Select(index => new WeatherForecast
@@ -34,7 +37,16 @@ namespace Server.Controllers
                                                  Summary      = Summaries[rng.Next(Summaries.Length)]
                                              })
                                              .ToArray();
-            return sources.Where(p => p.TemperatureC < lessTemperature).ToList();
+            var content       = sources.Where(p => p.TemperatureC < lessTemperature).ToList();
+            
+            var result = new ObjectResult(content)
+            {
+                StatusCode = 500,
+            };
+            return result;
+            // return response;
+            throw new Exception("gg");
+            
         }
     }
 }

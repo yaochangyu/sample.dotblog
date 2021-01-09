@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Net.Http;
 using System.Windows.Forms;
+using Flurl;
+using Flurl.Http;
 
-namespace Client
+namespace Client.NET5
 {
     public partial class Form1 : Form
     {
@@ -26,14 +28,23 @@ namespace Client
         {
             var url      = "WeatherForecast?lessTemperature=11";
             var response = await Client.GetAsync(url);
-            response.EnsureSuccessStatusCode();
+
+            // response.EnsureSuccessStatusCode();
             var content = await response.Content.ReadAsStringAsync();
             MessageBox.Show(content);
         }
 
-        private void button2_Click(object sender, EventArgs e)
+        private async void button2_Click(object sender, EventArgs e)
         {
-            throw new System.NotImplementedException();
+            var url = "WeatherForecast";
+            var requestUrl = BasicUrl.AppendPathSegment(url)
+                                     .SetQueryParam("lessTemperature", 11);
+            // var response       = requestUrl.GetAsync();
+            // var responseResult = response.Result.ResponseMessage;
+            // var content        = responseResult.Content.ReadAsStringAsync().Result;
+
+            var content           = await requestUrl.GetAsync().ReceiveString();
+            MessageBox.Show(content);
         }
     }
 }
