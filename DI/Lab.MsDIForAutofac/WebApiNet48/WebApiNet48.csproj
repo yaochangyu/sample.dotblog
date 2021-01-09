@@ -118,17 +118,17 @@
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="App_Start\DefaultDependencyResolver.cs" />
+    <Compile Include="App_Start\DependencyInjectionConfig.cs" />
+    <Compile Include="App_Start\ServiceProviderExtensions.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
     <Compile Include="Controllers\DefaultController.cs" />
     <Compile Include="Message\IMessager.cs" />
     <Compile Include="Message\LogMessager.cs" />
-    <Compile Include="Startup.cs" />
-    <Compile Include="DefaultDependencyResolver.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServiceProviderExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
