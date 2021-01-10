@@ -41,7 +41,7 @@ namespace Server.Controllers
             
             var result = new ObjectResult(content)
             {
-                StatusCode = 500,
+                StatusCode = 200,
             };
             return result;
             // return response;

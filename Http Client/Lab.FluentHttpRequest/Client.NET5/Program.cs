@@ -1,23 +1,27 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Client.NET5
 {
-    static class Program
+    internal static class Program
     {
         /// <summary>
-        ///  The main entry point for the application.
+        ///     The main entry point for the application.
         /// </summary>
         [STAThread]
-        static void Main()
+        private static void Main()
         {
             Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+            var services = new ServiceCollection();
+            DependencyInjectionConfig.Register(services);
+            using (var provider = services.BuildServiceProvider())
+            {
+                var mainForm = provider.GetService<Form1>();
+                Application.Run(mainForm);
+            }
         }
     }
 }

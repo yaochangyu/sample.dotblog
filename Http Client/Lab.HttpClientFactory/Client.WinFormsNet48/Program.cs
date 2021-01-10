@@ -14,7 +14,8 @@ namespace Client.WinFormsNet48
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            var services = Startup.ConfigureServices();
+            var services = new ServiceCollection();
+            DependencyInjectionConfig.Register(services);
             using (var serviceProvider = services.BuildServiceProvider())
             {
                 MainForm.ServiceProvider = serviceProvider;//只有主要表單能使用 Service Locator

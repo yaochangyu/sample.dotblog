@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Http;
 using System.Windows.Forms;
 using Flurl;
@@ -10,7 +11,6 @@ namespace Client.NET5
     {
         private static readonly string     BasicUrl = "https://localhost:44333/";
         private static readonly HttpClient Client;
-
         static Form1()
         {
             Client = new HttpClient
@@ -39,11 +39,25 @@ namespace Client.NET5
             var url = "WeatherForecast";
             var requestUrl = BasicUrl.AppendPathSegment(url)
                                      .SetQueryParam("lessTemperature", 11);
-            // var response       = requestUrl.GetAsync();
-            // var responseResult = response.Result.ResponseMessage;
-            // var content        = responseResult.Content.ReadAsStringAsync().Result;
+            try
+            {
+                var content = await requestUrl.GetAsync().ReceiveString();
+                MessageBox.Show(content);
+            }
+            catch (Exception exception)
+            {
+                Console.WriteLine(exception);
+            }
+        }
 
-            var content           = await requestUrl.GetAsync().ReceiveString();
+        private async void Get()
+        {
+            var url = "WeatherForecast";
+            var content = await BasicUrl.AppendPathSegment(url)
+                                        .SetQueryParam("lessTemperature", 11)
+                                        .GetAsync()
+                                        .ReceiveString()
+                ;
             MessageBox.Show(content);
         }
     }
