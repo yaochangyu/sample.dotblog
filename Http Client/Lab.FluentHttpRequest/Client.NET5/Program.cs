@@ -1,5 +1,8 @@
 using System;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Windows.Forms;
+using Flurl.Http;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Client.NET5
@@ -17,6 +20,8 @@ namespace Client.NET5
             Application.SetCompatibleTextRenderingDefault(false);
             var services = new ServiceCollection();
             DependencyInjectionConfig.Register(services);
+            // FlurlHttp.Configure(settings => settings.ConnectionLeaseTimeout = TimeSpan.FromMinutes(2));
+            FlurlHttp.Configure(settings => settings.HttpClientFactory = new ConnectionLifetimeHttpClientFactory());
             using (var provider = services.BuildServiceProvider())
             {
                 var mainForm = provider.GetService<Form1>();

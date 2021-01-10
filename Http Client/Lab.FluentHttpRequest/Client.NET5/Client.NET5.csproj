@@ -18,4 +18,9 @@
       <PackageReference Include="Microsoft.Extensions.Http" Version="5.0.0" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="D:\Lab\Flurl\src\Flurl.Http\Flurl.Http.csproj" />
+      <ProjectReference Include="D:\Lab\Flurl\src\Flurl\Flurl.csproj" />
+    </ItemGroup>
+
 </Project>
