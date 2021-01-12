@@ -42,7 +42,8 @@ namespace Client.NET48
 
         private async void button2_Click(object sender, EventArgs e)
         {
-            var url = "WeatherForecast";
+            var httpClient = new HttpClient();
+            var url        = "WeatherForecast";
             var requestUrl = BasicUrl.AppendPathSegment(url)
                                      .SetQueryParam("lessTemperature", 11);
             try

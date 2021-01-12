@@ -15,6 +15,8 @@ namespace Client.NET5
         [STAThread]
         private static void Main()
         {
+            AppContext.SetSwitch("System.Net.Http.UseSocketsHttpHandler", false);
+            
             Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
@@ -24,6 +26,8 @@ namespace Client.NET5
             FlurlHttp.Configure(settings => settings.HttpClientFactory = new ConnectionLifetimeHttpClientFactory());
             using (var provider = services.BuildServiceProvider())
             {
+                var client = provider.GetService<HttpClient>();
+
                 var mainForm = provider.GetService<Form1>();
                 Application.Run(mainForm);
             }
