@@ -147,14 +147,6 @@ namespace Lab.FileSystem.TestProject
             Console.WriteLine("建立資料夾");
             filesystem.CreateDirectory("dir1/dir2/dir3/");
             filesystem.PrintTo(Console.Out);
-
-            var results          = new List<string>();
-            var directoryContent = filesystem.Browse("dir1/");
-            foreach (var entry in directoryContent)
-            {
-                var path = entry.Path;
-                results.Add(path);
-            }
         }
 
         [TestMethod]
