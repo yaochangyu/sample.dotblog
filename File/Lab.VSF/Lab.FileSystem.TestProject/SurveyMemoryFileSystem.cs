@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -150,7 +149,7 @@ namespace Lab.FileSystem.TestProject
         }
 
         [TestMethod]
-        public void 修改檔案日期()
+        public void 修改真實檔案日期()
         {
             var executingAssembly = Assembly.GetExecutingAssembly();
             var rootFolderPath    = Path.GetDirectoryName(executingAssembly.Location);
@@ -182,6 +181,36 @@ namespace Lab.FileSystem.TestProject
             //刪除檔案
             var fileSystem = new Lexical.FileSystem.FileSystem(rootFolderPath);
             fileSystem.Delete(Path.Combine(subFolder), true);
+        }
+
+        [TestMethod]
+        public void 修改檔案日期()
+        {
+            IFileSystem filesystem = new MemoryFileSystem();
+            Console.WriteLine("建立資料夾");
+            filesystem.CreateDirectory("dir1/dir2/dir3/");
+            filesystem.PrintTo(Console.Out);
+            var content      = "This is test string";
+            var contentBytes = Encoding.UTF8.GetBytes($"{content}");
+
+            Console.WriteLine("dir2 底下建立檔案");
+            filesystem.CreateFile("dir1/dir2/2.txt", contentBytes);
+
+            var entry = filesystem.GetEntry("dir1/dir2/2.txt");
+            Console.WriteLine("檔案修改前的日期");
+            Console.WriteLine($"LastAccess:{entry.LastAccess}");
+            Console.WriteLine($"LastModified:{entry.LastModified}");
+            
+            var type                     = entry.GetType();
+            var now                      = new DateTimeOffset(DateTime.UtcNow.AddDays(-30));
+            var lastAccessPropertyInfo   = type.GetProperty("LastAccess");
+            var lastModifiedPropertyInfo = type.GetProperty("LastModified");
+            lastAccessPropertyInfo.SetValue(entry, now);
+            lastModifiedPropertyInfo.SetValue(entry, now);
+
+            Console.WriteLine("檔案修改後的日期");
+            Console.WriteLine($"LastAccess:{entry.LastAccess}");
+            Console.WriteLine($"LastModified:{entry.LastModified}");
         }
 
         private static MemoryFileSystem CreateTestMemoryFile(string folderPath, string content)
