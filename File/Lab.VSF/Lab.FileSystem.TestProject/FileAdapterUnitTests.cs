@@ -120,11 +120,10 @@ namespace Lab.FileSystem.TestProject
 
         private static MemoryFileSystem CreateTestMemoryFile(string folderPath, string content)
         {
-            var memoryFileSystem = new MemoryFileSystem();
+            var fileSystem = new MemoryFileSystem();
 
-            memoryFileSystem.CreateDirectory(folderPath);
-            var directory = memoryFileSystem.Browse(folderPath);
-            var folder    = directory.FileSystem;
+            fileSystem.CreateDirectory(folderPath);
+            var directory = fileSystem.Browse(folderPath);
 
             for (var i = 0; i < 5; i++)
             {
@@ -134,19 +133,19 @@ namespace Lab.FileSystem.TestProject
 
                 // via stream
                 using (var outputStream =
-                    folder.Open(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+                    fileSystem.Open(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
                 {
                     Write(outputStream, $"{i}.{content}");
                 }
 
                 // via IFileSystem.Create
                 var contentBytes = Encoding.UTF8.GetBytes($"{i}.{content}");
-                folder.CreateFile(filePath, contentBytes);
+                fileSystem.CreateFile(filePath, contentBytes);
             }
 
             var type   = typeof(FileEntry);
             var offset = new DateTimeOffset(DateTime.UtcNow.AddDays(-3));
-            foreach (var entry in memoryFileSystem.Browse(folderPath))
+            foreach (var entry in fileSystem.Browse(folderPath))
             {
                 var lastAccessPropertyInfo   = type.GetProperty("LastAccess");
                 var lastModifiedPropertyInfo = type.GetProperty("LastModified");
@@ -154,12 +153,12 @@ namespace Lab.FileSystem.TestProject
                 lastModifiedPropertyInfo.SetValue(entry, offset);
             }
 
-            foreach (var entry in memoryFileSystem.Browse(folderPath))
+            foreach (var entry in fileSystem.Browse(folderPath))
             {
                 var path = entry.Path;
             }
 
-            return memoryFileSystem;
+            return fileSystem;
         }
 
         private static VirtualFileSystem CreateTestVirtualFile(string folderPath, string content)
