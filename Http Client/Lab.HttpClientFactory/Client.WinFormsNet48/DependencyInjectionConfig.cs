@@ -6,14 +6,17 @@ using Polly.Extensions.Http;
 
 namespace Client.WinFormsNet48
 {
-    public class Startup
+    public class DependencyInjectionConfig
     {
         private static readonly string BaseAddress = "https://localhost:44319/";
 
-        public static IServiceCollection ConfigureServices()
+        public static void Register(IServiceCollection services)
         {
-            var services = new ServiceCollection();
+            ConfigureServices(services);
+        }
 
+        private static IServiceCollection ConfigureServices(IServiceCollection services)
+        {
             //注入 HttpClientFactory
             services.AddHttpClient("lab",
                                    p => { p.BaseAddress = new Uri(BaseAddress); });
