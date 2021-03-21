@@ -12,6 +12,20 @@ namespace Lab.FileSystem.TestProject
     public class FileAdapterUnitTests
     {
         [TestMethod]
+        public void FileSystem_DeleteAgo()
+        {
+            var executingAssembly = Assembly.GetExecutingAssembly();
+            var rootFolder        = Path.GetDirectoryName(executingAssembly.Location);
+            var targetFolder      = "TestFolder";
+            var content           = "This is test string";
+            var fileSystem        = CreateTestFile(rootFolder, targetFolder, content);
+
+            var adapter = new FileAdapter(fileSystem);
+            adapter.DeleteAgo(rootFolder, 2);
+            fileSystem.PrintTo(Console.Out);
+        }
+
+        [TestMethod]
         public void FileSystem_GetContents()
         {
             var executingAssembly = Assembly.GetExecutingAssembly();
@@ -86,7 +100,13 @@ namespace Lab.FileSystem.TestProject
                 var contentBytes = Encoding.UTF8.GetBytes($"{i}.{content}");
                 fileSystem.CreateFile(filePath, contentBytes);
             }
+            for (var i = 0; i < 5; i++)
+            {
+                var filePath = Path.Combine(rootFolder, subFolder, $"{i}.txt");
 
+                var contentBytes = Encoding.UTF8.GetBytes($"{i}.{content}");
+                fileSystem.CreateFile(filePath, contentBytes);
+            }
             fileSystem.PrintTo(Console.Out);
             return fileSystem;
         }
@@ -151,11 +171,6 @@ namespace Lab.FileSystem.TestProject
                 var lastModifiedPropertyInfo = type.GetProperty("LastModified");
                 lastAccessPropertyInfo.SetValue(entry, offset);
                 lastModifiedPropertyInfo.SetValue(entry, offset);
-            }
-
-            foreach (var entry in fileSystem.Browse(folderPath))
-            {
-                var path = entry.Path;
             }
 
             return fileSystem;
