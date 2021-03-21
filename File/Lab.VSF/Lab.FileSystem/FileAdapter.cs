@@ -79,22 +79,23 @@ namespace Lab.FileSystem
             return results;
         }
 
-        public void DeleteAgo(string folderPath, int day)
+        public void DeleteAgo(string folderName, int day)
         {
             var fileSystem = this._fileSystem;
-            var now = this.Now;
+            var now        = this.Now;
 
-            if (fileSystem.Exists(folderPath) == false)
+            if (fileSystem.Exists(folderName) == false)
             {
                 return;
             }
 
-            foreach (var entry in fileSystem.Browse(folderPath))
+            foreach (var entry in fileSystem.Browse(folderName))
             {
                 var diff = now - entry.LastModified.Date;
-                if (diff.Days > 2)
+                if (diff.Days > day)
                 {
                     fileSystem.Delete(entry.Path);
+                    Console.WriteLine($"Delete:{entry.Path}");
                 }
             }
         }

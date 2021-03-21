@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using Lexical.FileSystem;
@@ -14,74 +15,131 @@ namespace Lab.FileSystem.TestProject
         [TestMethod]
         public void FileSystem_DeleteAgo()
         {
+            //arrange
             var executingAssembly = Assembly.GetExecutingAssembly();
-            var rootFolder        = Path.GetDirectoryName(executingAssembly.Location);
-            var targetFolder      = "TestFolder";
+            var rootFolderPath    = Path.GetDirectoryName(executingAssembly.Location);
+            var targetFolderName  = "TestFolder";
             var content           = "This is test string";
-            var fileSystem        = CreateTestFile(rootFolder, targetFolder, content);
 
-            var adapter = new FileAdapter(fileSystem);
-            adapter.DeleteAgo(rootFolder, 2);
-            fileSystem.PrintTo(Console.Out);
+            using (var fileSystem = CreateTestFile(rootFolderPath, targetFolderName, content))
+            {
+                var adapter = new FileAdapter(fileSystem);
+
+                //act
+                adapter.DeleteAgo(targetFolderName, 2);
+
+                //assert
+                var directoryContent = fileSystem.Browse("targetFolder");
+                Assert.AreEqual(true, directoryContent.Any() == false);
+
+                //restore
+                fileSystem.Delete(targetFolderName, true);
+            }
         }
 
         [TestMethod]
         public void FileSystem_GetContents()
         {
+            //arrange
             var executingAssembly = Assembly.GetExecutingAssembly();
-            var rootFolder        = Path.GetDirectoryName(executingAssembly.Location);
+            var rootFolderPath    = Path.GetDirectoryName(executingAssembly.Location);
 
-            var targetFolder = "TestFolder";
-            var content      = "This is test string";
+            var targetFolderName = "TestFolder";
+            var content          = "This is test string";
 
-            var fileSystem = CreateTestFile(rootFolder, targetFolder, content);
-            var adapter    = new FileAdapter(fileSystem);
-            var actual     = adapter.GetContents(targetFolder);
-            Assert.IsTrue(actual.Count > 0);
+            using (var fileSystem = CreateTestFile(rootFolderPath, targetFolderName, content))
+            {
+                var adapter = new FileAdapter(fileSystem);
 
-            fileSystem.Delete(targetFolder, true);
+                //act
+                var actual = adapter.GetContents(targetFolderName);
+
+                //assert
+                Assert.IsTrue(actual.Count > 0);
+
+                //restore
+                fileSystem.Delete(targetFolderName, true);
+            }
         }
 
         [TestMethod]
         public void FileSystem_GetFileNames()
         {
+            //arrange
             var executingAssembly = Assembly.GetExecutingAssembly();
-            var rootFolder        = Path.GetDirectoryName(executingAssembly.Location);
-            var targetFolder      = "TestFolder";
+            var rootFolderPath    = Path.GetDirectoryName(executingAssembly.Location);
+            var targetFolderName  = "TestFolder";
             var content           = "This is test string";
-            var fileSystem        = CreateTestFile(rootFolder, targetFolder, content);
 
-            var adapter = new FileAdapter(fileSystem);
-            var actual  = adapter.GetFileNames(targetFolder);
+            using (var fileSystem = CreateTestFile(rootFolderPath, targetFolderName, content))
+            {
+                var adapter = new FileAdapter(fileSystem);
 
-            Assert.IsTrue(actual.Count > 0);
+                //act
+                var actual = adapter.GetFileNames(targetFolderName);
 
-            fileSystem.Delete(targetFolder, true);
+                //assert
+                Assert.IsTrue(actual.Count > 0);
+
+                //restore
+                fileSystem.Delete(targetFolderName, true);
+            }
         }
 
         [TestMethod]
         public void MemoryFileSystem_DeleteAgo()
         {
-            var rootFolder = "A:\\TestFolder\\Test";
-            var content    = "This is test string";
-            var fileSystem = CreateTestMemoryFile(rootFolder, content);
+            //arrange
+            var rootFolderPath = "A:\\TestFolder\\Test";
+            var content        = "This is test string";
+            using (var fileSystem = CreateTestMemoryFile(rootFolderPath, content))
+            {
+                var adapter = new FileAdapter(fileSystem);
 
-            var adapter = new FileAdapter(fileSystem);
-            adapter.DeleteAgo(rootFolder, 2);
-            fileSystem.PrintTo(Console.Out);
+                //act
+                adapter.DeleteAgo(rootFolderPath, 2);
+
+                //assert
+                var directoryContent = fileSystem.Browse(rootFolderPath);
+                Assert.AreEqual(true, directoryContent.Any() == false);
+            }
         }
 
         [TestMethod]
         public void MemoryFileSystem_GetContents()
         {
-            var rootFolder = "A:\\TestFolder\\Test";
-            var content    = "This is test string";
+            //arrange
+            var rootFolderPath = "A:\\TestFolder\\Test";
+            var content        = "This is test string";
 
-            var fileSystem = CreateTestMemoryFile(rootFolder, content);
-            fileSystem.PrintTo(Console.Out);
-            var adapter = new FileAdapter(fileSystem);
-            var actual  = adapter.GetContents(rootFolder);
-            Assert.IsTrue(actual.Count > 0);
+            using (var fileSystem = CreateTestMemoryFile(rootFolderPath, content))
+            {
+                var adapter = new FileAdapter(fileSystem);
+
+                //act
+                var actual = adapter.GetContents(rootFolderPath);
+
+                //assert
+                Assert.IsTrue(actual.Count > 0);
+            }
+        }
+        [TestMethod]
+        public void MemoryFileSystem_GetFileNames()
+        {
+            //arrange
+            var rootFolderPath = "A:\\TestFolder\\Test";
+            var content        = "This is test string";
+
+            using (var fileSystem = CreateTestMemoryFile(rootFolderPath, content))
+            {
+                var adapter = new FileAdapter(fileSystem);
+
+                //act
+                var actual = adapter.GetFileNames(rootFolderPath);
+
+                //assert
+                Assert.IsTrue(actual.Count > 0);
+            }
         }
 
         private static Lexical.FileSystem.FileSystem CreateTestFile(string rootFolder, string subFolder, string content)
@@ -95,19 +153,20 @@ namespace Lab.FileSystem.TestProject
 
             for (var i = 0; i < 5; i++)
             {
-                var filePath = Path.Combine(rootFolder, subFolder, $"{i}.txt");
-
+                var filePath     = Path.Combine(rootFolder, subFolder, $"{i}.txt");
                 var contentBytes = Encoding.UTF8.GetBytes($"{i}.{content}");
                 fileSystem.CreateFile(filePath, contentBytes);
             }
+
+            var now = DateTime.UtcNow.AddDays(-30);
             for (var i = 0; i < 5; i++)
             {
                 var filePath = Path.Combine(rootFolder, subFolder, $"{i}.txt");
-
-                var contentBytes = Encoding.UTF8.GetBytes($"{i}.{content}");
-                fileSystem.CreateFile(filePath, contentBytes);
+                File.SetLastWriteTime(filePath, now);
+                File.SetLastAccessTime(filePath, now);
+                File.SetCreationTime(filePath, now);
             }
-            fileSystem.PrintTo(Console.Out);
+
             return fileSystem;
         }
 
@@ -143,13 +202,10 @@ namespace Lab.FileSystem.TestProject
             var fileSystem = new MemoryFileSystem();
 
             fileSystem.CreateDirectory(folderPath);
-            var directory = fileSystem.Browse(folderPath);
 
             for (var i = 0; i < 5; i++)
             {
                 var filePath = $"{folderPath}/{i}.txt";
-
-                // var filePath =  $"{folderPath}\\{i}.txt";
 
                 // via stream
                 using (var outputStream =
@@ -159,8 +215,8 @@ namespace Lab.FileSystem.TestProject
                 }
 
                 // via IFileSystem.Create
-                var contentBytes = Encoding.UTF8.GetBytes($"{i}.{content}");
-                fileSystem.CreateFile(filePath, contentBytes);
+                // var contentBytes = Encoding.UTF8.GetBytes($"{i}.{content}");
+                // fileSystem.CreateFile(filePath, contentBytes);
             }
 
             var type   = typeof(FileEntry);

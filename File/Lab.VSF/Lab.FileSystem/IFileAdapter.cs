@@ -4,10 +4,10 @@ namespace Lab.FileSystem
 {
     public interface IFileAdapter
     {
-        void DeleteAgo(string folderPath, int day);
+        void DeleteAgo(string folderName, int day);
 
-        Dictionary<string, string> GetContents(string folderPath);
+        Dictionary<string, string> GetContents(string folderName);
 
-        ICollection<string> GetFileNames(string folderPath);
+        ICollection<string> GetFileNames(string folderName);
     }
 }
