@@ -75,7 +75,7 @@ namespace Lab.FileSystem.TestProject
         }
 
         [TestMethod]
-        public void 列舉資料夾內的檔案()
+        public void 列舉根路徑內的子資料夾()
         {
             IFileSystem filesystem = new MemoryFileSystem();
             Console.WriteLine("建立資料夾");
