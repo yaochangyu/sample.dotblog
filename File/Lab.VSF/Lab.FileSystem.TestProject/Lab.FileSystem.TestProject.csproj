@@ -9,7 +9,9 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="Lexical.FileProvider" Version="0.14.1" />
         <PackageReference Include="Lexical.FileSystem" Version="0.21.3" />
+        <PackageReference Include="Microsoft.Extensions.FileProviders.Physical" Version="5.0.0" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.7.1" />
         <PackageReference Include="MSTest.TestAdapter" Version="2.1.1" />
         <PackageReference Include="MSTest.TestFramework" Version="2.1.1" />
