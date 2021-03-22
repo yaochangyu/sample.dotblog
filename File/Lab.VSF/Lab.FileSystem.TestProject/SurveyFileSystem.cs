@@ -61,8 +61,12 @@ namespace Lab.FileSystem.TestProject
             }
             finally
             {
-                //還原 
-                fileSystem.Delete(subPath, true);
+                if (fileSystem != null)
+                {
+                    //還原 
+                    fileSystem.Delete(subPath, true);
+                    fileSystem.Dispose();
+                }
             }
         }
 
@@ -117,8 +121,12 @@ namespace Lab.FileSystem.TestProject
             }
             finally
             {
-                //還原 
-                fileSystem.Delete(subPath, true);
+                if (fileSystem != null)
+                {
+                    //還原 
+                    fileSystem.Delete(subPath, true);
+                    fileSystem.Dispose();
+                }
             }
         }
 
@@ -167,8 +175,12 @@ namespace Lab.FileSystem.TestProject
             }
             finally
             {
-                //還原 
-                fileSystem.Delete(subPath, true);
+                if (fileSystem != null)
+                {
+                    //還原 
+                    fileSystem.Delete(subPath, true);
+                    fileSystem.Dispose();
+                }
             }
         }
 
@@ -212,8 +224,12 @@ namespace Lab.FileSystem.TestProject
             }
             finally
             {
-                //還原 
-                fileSystem.Delete(subPath, true);
+                if (fileSystem != null)
+                {
+                    //還原 
+                    fileSystem.Delete(subPath, true);
+                    fileSystem.Dispose();
+                }
             }
         }
     }
