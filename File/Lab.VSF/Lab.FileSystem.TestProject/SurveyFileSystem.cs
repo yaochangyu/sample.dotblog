@@ -11,7 +11,7 @@ namespace Lab.FileSystem.TestProject
     public class SurveyFileSystem
     {
         [TestMethod]
-        public void 列舉資料夾內的檔案()
+        public void 列舉根路徑內的子資料夾()
         {
             var executingAssembly = Assembly.GetExecutingAssembly();
             var rootPath          = Path.GetDirectoryName(executingAssembly.Location);
