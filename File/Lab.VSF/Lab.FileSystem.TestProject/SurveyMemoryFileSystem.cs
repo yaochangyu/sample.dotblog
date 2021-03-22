@@ -16,7 +16,7 @@ namespace Lab.FileSystem.TestProject
             var folderPath = "A:\\TestFolder\\Test";
             var content    = "This is test string";
 
-            var fileSystem = CreateTestMemoryFile(folderPath, content);
+            using var fileSystem = CreateTestMemoryFile(folderPath, content);
             fileSystem.PrintTo(Console.Out);
             var adapter = new FileAdapter(fileSystem);
             var actual  = adapter.GetFileNames(folderPath);
@@ -47,26 +47,26 @@ namespace Lab.FileSystem.TestProject
         }
 
         [TestMethod]
-        public void 列舉所有結構()
+        public void 列舉根路徑底下所有結構()
         {
-            IFileSystem filesystem = new MemoryFileSystem();
+            using var fileSystem = new MemoryFileSystem();
             Console.WriteLine("建立資料夾");
-            filesystem.CreateDirectory("dir1/dir2/dir3/");
-            filesystem.PrintTo(Console.Out);
+            fileSystem.CreateDirectory("dir1/dir2/dir3/");
+            fileSystem.PrintTo(Console.Out);
             var content      = "This is test string";
             var contentBytes = Encoding.UTF8.GetBytes($"{content}");
 
             Console.WriteLine("dir1 底下建立檔案");
             using (var outputStream =
-                filesystem.Open("dir1/1.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+                fileSystem.Open("dir1/1.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
             {
                 var bytes = Encoding.UTF8.GetBytes(content);
                 outputStream.Write(bytes, 0, bytes.Length);
             }
 
             Console.WriteLine("dir2 底下建立檔案");
-            filesystem.CreateFile("dir1/dir2/2.txt", contentBytes);
-            var tree = filesystem.VisitTree();
+            fileSystem.CreateFile("dir1/dir2/2.txt", contentBytes);
+            var tree = fileSystem.VisitTree();
 
             foreach (var line in tree)
             {
@@ -77,25 +77,25 @@ namespace Lab.FileSystem.TestProject
         [TestMethod]
         public void 列舉根路徑內的子資料夾()
         {
-            IFileSystem filesystem = new MemoryFileSystem();
+            using var fileSystem = new MemoryFileSystem();
             Console.WriteLine("建立資料夾");
-            filesystem.CreateDirectory("dir1/dir2/dir3/");
-            filesystem.PrintTo(Console.Out);
+            fileSystem.CreateDirectory("dir1/dir2/dir3/");
+            fileSystem.PrintTo(Console.Out);
             var content      = "This is test string";
             var contentBytes = Encoding.UTF8.GetBytes($"{content}");
 
             Console.WriteLine("dir1 底下建立檔案");
             using (var outputStream =
-                filesystem.Open("dir1/1.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+                fileSystem.Open("dir1/1.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
             {
                 var bytes = Encoding.UTF8.GetBytes(content);
                 outputStream.Write(bytes, 0, bytes.Length);
             }
 
             Console.WriteLine("dir2 底下建立檔案");
-            filesystem.CreateFile("dir1/dir2/2.txt", contentBytes);
+            fileSystem.CreateFile("dir1/dir2/2.txt", contentBytes);
 
-            foreach (var entry in filesystem.Browse(""))
+            foreach (var entry in fileSystem.Browse(""))
             {
                 var path = entry.Path;
                 Console.WriteLine(path);
@@ -105,47 +105,47 @@ namespace Lab.FileSystem.TestProject
         [TestMethod]
         public void 在資料夾內建立檔案()
         {
-            IFileSystem filesystem = new MemoryFileSystem();
+            using var fileSystem = new MemoryFileSystem();
             Console.WriteLine("建立資料夾");
-            filesystem.CreateDirectory("dir1/dir2/dir3/");
-            filesystem.PrintTo(Console.Out);
+            fileSystem.CreateDirectory("dir1/dir2/dir3/");
+            fileSystem.PrintTo(Console.Out);
             var content      = "This is test string";
             var contentBytes = Encoding.UTF8.GetBytes($"{content}");
 
             Console.WriteLine("dir1 底下建立檔案");
             using (var outputStream =
-                filesystem.Open("dir1/1.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+                fileSystem.Open("dir1/1.txt", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
             {
                 var bytes = Encoding.UTF8.GetBytes(content);
                 outputStream.Write(bytes, 0, bytes.Length);
             }
 
             Console.WriteLine("dir2 底下建立檔案");
-            filesystem.CreateFile("dir1/dir2/2.txt", contentBytes);
+            fileSystem.CreateFile("dir1/dir2/2.txt", contentBytes);
 
-            filesystem.PrintTo(Console.Out);
+            fileSystem.PrintTo(Console.Out);
         }
 
         [TestMethod]
         public void 刪除資料夾()
         {
-            IFileSystem filesystem = new MemoryFileSystem();
+            using var fileSystem = new MemoryFileSystem();
             Console.WriteLine("建立資料夾");
-            filesystem.CreateDirectory("dir1/dir2/dir3/");
-            filesystem.PrintTo(Console.Out);
+            fileSystem.CreateDirectory("dir1/dir2/dir3/");
+            fileSystem.PrintTo(Console.Out);
 
             Console.WriteLine("刪除 dir2 資料夾");
-            filesystem.Delete("dir1/dir2/", true);
-            filesystem.PrintTo(Console.Out);
+            fileSystem.Delete("dir1/dir2/", true);
+            fileSystem.PrintTo(Console.Out);
         }
 
         [TestMethod]
         public void 建立資料夾()
         {
-            IFileSystem filesystem = new MemoryFileSystem();
+            using var fileSystem = new MemoryFileSystem();
             Console.WriteLine("建立資料夾");
-            filesystem.CreateDirectory("dir1/dir2/dir3/");
-            filesystem.PrintTo(Console.Out);
+            fileSystem.CreateDirectory("dir1/dir2/dir3/");
+            fileSystem.PrintTo(Console.Out);
         }
 
         [TestMethod]
@@ -179,28 +179,28 @@ namespace Lab.FileSystem.TestProject
             }
 
             //刪除檔案
-            var fileSystem = new Lexical.FileSystem.FileSystem(rootFolderPath);
+            using var fileSystem = new Lexical.FileSystem.FileSystem(rootFolderPath);
             fileSystem.Delete(Path.Combine(subFolder), true);
         }
 
         [TestMethod]
         public void 修改檔案日期()
         {
-            IFileSystem filesystem = new MemoryFileSystem();
+            using var fileSystem = new MemoryFileSystem();
             Console.WriteLine("建立資料夾");
-            filesystem.CreateDirectory("dir1/dir2/dir3/");
-            filesystem.PrintTo(Console.Out);
+            fileSystem.CreateDirectory("dir1/dir2/dir3/");
+            fileSystem.PrintTo(Console.Out);
             var content      = "This is test string";
             var contentBytes = Encoding.UTF8.GetBytes($"{content}");
 
             Console.WriteLine("dir2 底下建立檔案");
-            filesystem.CreateFile("dir1/dir2/2.txt", contentBytes);
+            fileSystem.CreateFile("dir1/dir2/2.txt", contentBytes);
 
-            var entry = filesystem.GetEntry("dir1/dir2/2.txt");
+            var entry = fileSystem.GetEntry("dir1/dir2/2.txt");
             Console.WriteLine("檔案修改前的日期");
             Console.WriteLine($"LastAccess:{entry.LastAccess}");
             Console.WriteLine($"LastModified:{entry.LastModified}");
-            
+
             var type                     = entry.GetType();
             var now                      = new DateTimeOffset(DateTime.UtcNow.AddDays(-30));
             var lastAccessPropertyInfo   = type.GetProperty("LastAccess");
