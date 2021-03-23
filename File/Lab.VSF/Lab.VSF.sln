@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.FileSystem.TestProject"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.ServiceStack.FVS.TestProject", "Lab.ServiceStack.FVS.TestProject\Lab.ServiceStack.FVS.TestProject.csproj", "{338CAECF-3379-4EB8-B824-FE0E20B6F0FD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.ZIO.TestProject", "Lab.ZIO.TestProject\Lab.ZIO.TestProject.csproj", "{B0A52BD4-1710-47E8-86F7-9B4A2B460248}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{338CAECF-3379-4EB8-B824-FE0E20B6F0FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{338CAECF-3379-4EB8-B824-FE0E20B6F0FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{338CAECF-3379-4EB8-B824-FE0E20B6F0FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B0A52BD4-1710-47E8-86F7-9B4A2B460248}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B0A52BD4-1710-47E8-86F7-9B4A2B460248}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B0A52BD4-1710-47E8-86F7-9B4A2B460248}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B0A52BD4-1710-47E8-86F7-9B4A2B460248}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
