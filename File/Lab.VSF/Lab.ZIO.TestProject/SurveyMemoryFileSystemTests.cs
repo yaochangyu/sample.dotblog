@@ -12,11 +12,57 @@ namespace Lab.ZIO.TestProject
     public class SurveyMemoryFileSystemTests
     {
         [TestMethod]
+        public void UPathCombine()
+        {
+            var rootPath = "/mnt/c/Temp/Test";
+            var uPath1   = UPath.Combine(rootPath, "../1");
+            var uPath2   = UPath.Combine(rootPath, "./2/");
+            var uPath3   = UPath.Combine(rootPath, "..");
+            var uPath4   = UPath.Combine(rootPath, @"..\..\3\");
+            var uPath5   = (UPath) "/this/is/a/path/to/a/directory";
+            var uPath6   = (UPath) @"/this\is/wow/../an/absolute/./pat/h/";
+ 
+            Console.WriteLine(uPath1);
+            Console.WriteLine(uPath2);
+            Console.WriteLine(uPath3);
+            Console.WriteLine(uPath4);
+            Console.WriteLine(uPath5);
+            Console.WriteLine(uPath6);
+        }
+        [TestMethod]
+        public void UPathTo()
+        {
+            var rootPath = "/mnt/c/Temp/Test";
+            var path1    = (UPath) "/this/is/a/path/to/a/directory";
+            var path2    = (UPath) @"/this\is/wow/../an/absolute/./pat/h/";
+            var path3    = (UPath) @"this\is/wow/../an/absolute/./pat/h/";
+
+            Console.WriteLine(path1);
+            Console.WriteLine(path2);
+            Console.WriteLine(path3);
+        }
+ 
+        [TestMethod]
+        public void PathCombine()
+        {
+            var rootPath = @"E:\src\sample.dotblog\File";
+            var path1    = Path.Combine(rootPath, "../1");
+            var path2    = Path.Combine(rootPath, "./2/");
+            var path3    = Path.Combine(rootPath, "..");
+            var path4    = Path.Combine(rootPath, @"..\..\3\");
+        
+            Console.WriteLine(new DirectoryInfo(path1).FullName);
+            Console.WriteLine(new DirectoryInfo(path2).FullName);
+            Console.WriteLine(new DirectoryInfo(path3).FullName);
+            Console.WriteLine(new DirectoryInfo(path4).FullName);
+        }
+
+        [TestMethod]
         public void 列舉根路徑內的子資料夾()
         {
             var       rootUPath  = CreateRootPath();
             using var fileSystem = new MemoryFileSystem();
-            var       subName    = "TestFolder";
+            var       subName    = "../../path";
 
             var subPath      = $"{rootUPath}/{subName}";
             var subPath1     = $"{subPath}/1";
@@ -25,6 +71,9 @@ namespace Lab.ZIO.TestProject
             var subFile1_1   = $"{subPath}/1/1_1/1_1.txt";
             var subPath1_1_1 = $"{subPath}/1/1_1/1_1_1";
             var subPath2     = $"{subPath}/2";
+            
+            var uPath        = UPath.Combine(rootUPath, "..");
+            
             var content      = "This is test string";
             var contentBytes = Encoding.UTF8.GetBytes(content);
 
