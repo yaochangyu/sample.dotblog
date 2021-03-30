@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -51,6 +52,27 @@ namespace NetFx48
             Console.WriteLine($"AppId = {config["Player:AppId"]}");
             Console.WriteLine($"Key = {config["Player:Key"]}");
             Console.WriteLine($"Connection String = {config["ConnectionStrings:DefaultConnectionString"]}");
+        }
+
+        [TestMethod]
+        public void 注入Configuration()
+        {
+            var builder = Host.CreateDefaultBuilder(null)
+                              .ConfigureAppConfiguration(config =>
+                                                         {
+                                                             config.Sources.Clear();
+                                                             config.AddJsonFile("appsettings.json", true, true);
+                                                         })
+                              .ConfigureServices(service =>
+                                                 {
+                                                     //DI  
+                                                     service.AddScoped(typeof(AppService));
+                                                 });
+            var host = builder.Build();
+
+            var appService = host.Services.GetService<AppService>();
+            var playerId   = appService.GetPlayerId();
+            Console.WriteLine($"AppId = {playerId}");
         }
 
         [TestMethod]
