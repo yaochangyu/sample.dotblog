@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -9,6 +10,54 @@ namespace NetFx48
     [TestClass]
     public class SurveyJsonConfigurationTests
     {
+        [TestMethod]
+        public void 記憶體組態()
+        {
+            var configBuilder = new ConfigurationBuilder()
+                                .SetBasePath(Directory.GetCurrentDirectory())
+                                .AddInMemoryCollection(new Dictionary<string, string>()
+                                {
+                                    {"Player:AppId","player1"},
+                                    {"Player:Key","1234567890"},
+                                    {"ConnectionStrings:DefaultConnectionString","Server=(localdb)\\mssqllocaldb;Database=EFGetStarted.ConsoleApp.NewDb;Trusted_Connection=True;"},
+                                })
+                ;
+            var configRoot = configBuilder.Build();
+
+            //讀取組態
+
+            Console.WriteLine($"AppId = {configRoot["AppId"]}");
+            Console.WriteLine($"AppId = {configRoot["Player:AppId"]}");
+            Console.WriteLine($"Key = {configRoot["Player:Key"]}");
+            Console.WriteLine($"Connection String = {configRoot["ConnectionStrings:DefaultConnectionString"]}");
+        }
+
+        [TestMethod]
+        public void 切換組態()
+        {
+            string environmentName;
+#if DEBUG
+    environmentName = "Development";
+#elif QA
+            environmentName = "QA";
+#elif STAGING
+    environmentName = "Staging";
+#elif RELEASE
+            environmentName = "Production";
+#endif
+            var configBuilder = new ConfigurationBuilder()
+                                .SetBasePath(Directory.GetCurrentDirectory())
+                                .AddJsonFile("appsettings.json",                    false, true)
+                                .AddJsonFile($"appsettings.{environmentName}.json", true,  true)
+                ;
+            var configRoot = configBuilder.Build();
+
+            //讀取組態
+            Console.WriteLine($"AppId = {configRoot["Player:AppId"]}");
+            Console.WriteLine($"Key = {configRoot["Player:Key"]}");
+            Console.WriteLine($"Connection String = {configRoot["ConnectionStrings:DefaultConnectionString"]}");
+        }
+
         [TestMethod]
         public void 手動實例化ConfigurationBuilder()
         {
@@ -66,7 +115,7 @@ namespace NetFx48
         private static IHostBuilder CreateHostBuilder(string[] args)
         {
             return Host.CreateDefaultBuilder(args)
-                       .ConfigureAppConfiguration(config =>
+                       .ConfigureAppConfiguration(( config) =>
                                                   {
                                                       config.Sources.Clear();
                                                       config.AddJsonFile("appsettings.json", true, true);
