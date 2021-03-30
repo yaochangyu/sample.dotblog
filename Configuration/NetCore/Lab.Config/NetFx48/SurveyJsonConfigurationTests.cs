@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -16,11 +17,11 @@ namespace NetFx48
         {
             string environmentName;
 #if DEBUG
-    environmentName = "Development";
+        environmentName = "Development";
 #elif QA
-            environmentName = "QA";
+                environmentName = "QA";
 #elif STAGING
-    environmentName = "Staging";
+        environmentName = "Staging";
 #elif RELEASE
             environmentName = "Production";
 #endif
@@ -105,6 +106,20 @@ namespace NetFx48
         public void 通過Host()
         {
             using var host = CreateHostBuilder(null).Build();
+        }
+
+        [TestMethod]
+        public void 實例化JsonConfigurationProvider()
+        {
+            var configProvider = new JsonConfigurationProvider(new JsonConfigurationSource
+            {
+                Optional       = false,
+                Path           = "appsettings.json",
+                ReloadOnChange = true
+            });
+            configProvider.Load();
+            configProvider.TryGet("Player:AppId", out var appId);
+            Console.WriteLine($"AppId = {appId}");
         }
 
         [TestMethod]
