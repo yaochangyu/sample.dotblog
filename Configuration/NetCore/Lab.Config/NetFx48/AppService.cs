@@ -2,7 +2,12 @@
 
 namespace NetFx48
 {
-    public class AppService
+    public interface IAppService
+    {
+        string GetPlayerId();
+    }
+
+    public class AppService : IAppService
     {
         private readonly IConfiguration _config;
 
