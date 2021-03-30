@@ -1,6 +1,6 @@
 ﻿namespace NetFx48
 {
-    public class Player
+    public struct Player
     {
         public string AppId { get; set; }
 

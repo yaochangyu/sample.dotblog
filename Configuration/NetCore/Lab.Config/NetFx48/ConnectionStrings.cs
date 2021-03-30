@@ -1,7 +1,9 @@
 ﻿namespace NetFx48
 {
-    public class ConnectionStrings
+    public struct ConnectionStrings
     {
         public string DefaultConnectionString { get; set; }
+
+        public string AuthenticationConnectionString { get; set; }
     }
 }

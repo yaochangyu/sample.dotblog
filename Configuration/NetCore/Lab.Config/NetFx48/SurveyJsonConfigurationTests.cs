@@ -14,7 +14,8 @@ namespace NetFx48
         {
             var configBuilder = new ConfigurationBuilder()
                                 .SetBasePath(Directory.GetCurrentDirectory())
-                                .AddJsonFile("appsettings.json");
+                                .AddJsonFile("appsettings.json", true, true)
+                ;
             var configRoot = configBuilder.Build();
 
             //讀取組態
@@ -47,24 +48,41 @@ namespace NetFx48
             }
         }
 
-        private static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .ConfigureAppConfiguration(config =>
-                                           {
-                                               config.Sources.Clear();
-                                               config.AddJsonFile("appsettings.json", true, true);
-                                               var configRoot = config.Build();
+        [TestMethod]
+        public void 讀取設定檔_綁定()
+        {
+            var builder = new ConfigurationBuilder()
+                          .SetBasePath(Directory.GetCurrentDirectory())
+                          .AddJsonFile("appsettings.json");
+            var config = builder.Build();
 
-                                               //讀取組態
-                                               Console.WriteLine($"AppId = {configRoot["AppId"]}");
-                                               Console.WriteLine($"AppId = {configRoot["Player:AppId"]}");
-                                               Console.WriteLine($"Key = {configRoot["Player:Key"]}");
-                                               Console
-                                                   .WriteLine($"Connection String = {configRoot["ConnectionStrings:DefaultConnectionString"]}");
-                                           })
-                .ConfigureServices(service =>
-                                   {
-                                       //DI  
-                                   });
+            var appSetting = new AppSetting();
+            config.Bind(appSetting);
+            Console.WriteLine($"AppId = {appSetting.Player.AppId}");
+            Console.WriteLine($"Key = {appSetting.Player.Key}");
+            Console.WriteLine($"Connection String = {appSetting.ConnectionStrings.DefaultConnectionString}");
+        }
+
+        private static IHostBuilder CreateHostBuilder(string[] args)
+        {
+            return Host.CreateDefaultBuilder(args)
+                       .ConfigureAppConfiguration(config =>
+                                                  {
+                                                      config.Sources.Clear();
+                                                      config.AddJsonFile("appsettings.json", true, true);
+                                                      var configRoot = config.Build();
+
+                                                      //讀取組態
+                                                      Console.WriteLine($"AppId = {configRoot["AppId"]}");
+                                                      Console.WriteLine($"AppId = {configRoot["Player:AppId"]}");
+                                                      Console.WriteLine($"Key = {configRoot["Player:Key"]}");
+                                                      Console
+                                                          .WriteLine($"Connection String = {configRoot["ConnectionStrings:DefaultConnectionString"]}");
+                                                  })
+                       .ConfigureServices(service =>
+                                          {
+                                              //DI  
+                                          });
+        }
     }
 }

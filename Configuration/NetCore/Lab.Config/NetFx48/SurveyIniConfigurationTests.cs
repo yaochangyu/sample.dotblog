@@ -1,19 +1,20 @@
 using System;
 using System.IO;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace NetFx48
 {
     [TestClass]
-    public class SurveyXmlConfigurationTests
+    public class SurveyIniConfigurationTests
     {
         [TestMethod]
         public void 手動實例化ConfigurationBuilder()
         {
             var configBuilder = new ConfigurationBuilder()
                                 .SetBasePath(Directory.GetCurrentDirectory())
-                                .AddXmlFile("appsettings.xml", false, true);
+                                .AddIniFile("appsettings.ini", optional: false, reloadOnChange: true);
             var configRoot = configBuilder.Build();
 
             //讀取組態
