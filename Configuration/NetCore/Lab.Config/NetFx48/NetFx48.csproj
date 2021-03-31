@@ -28,6 +28,7 @@
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="5.0.0" />
         <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="5.0.0" />
         <PackageReference Include="Microsoft.Extensions.Configuration.KeyPerFile" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Options" Version="5.0.0" />
         <PackageReference Include="Microsoft.Extensions.Hosting " Version="5.0.0" />
     </ItemGroup>
 
