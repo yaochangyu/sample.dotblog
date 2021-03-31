@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -15,40 +16,51 @@ namespace NetFx48
         public void 命令對應()
         {
             string[] args = {"-i=1234567890", "-c=app.json"};
-
+        
             var map = new Dictionary<string, string>
             {
-                {"-i", "--AppId"},
-                {"-c", "--Config"}
+                {"-i", "AppId"},
+                {"-c", "Config"}
             };
-
+        
             var provider = new CommandLineConfigurationProvider(args, map);
             provider.Load();
-
+        
             provider.TryGet("AppId", out var appId);
+            provider.TryGet("Config", out var configPath);
             Console.WriteLine($"{args.First()}\r\n" +
-                              $"AppId:{appId}");
+                              $"AppId:{appId}\r\n"  +
+                              $"ConfigPath:{configPath}");
         }
 
         [TestMethod]
-        public void 傳參數給應用程式_使用Host()
+        [DataRow(new[] {"-i=1234567890", "-c=app.json"})]
+        public void 命令對應_Host(string[] args)
         {
-            // string[] args = {"/appId 1234567890"};
-            string[] args = {"/AppId=1234567890"};
-            var builder = Host.CreateDefaultBuilder(args)
+            var map = new Dictionary<string, string>
+            {
+                {"-i", "AppId"},
+                {"-c", "Config"}
+            };
+            var builder = Host.CreateDefaultBuilder()
                               .ConfigureAppConfiguration(config =>
                                                          {
                                                              // config.Sources.Clear();
-                                                             // config.AddJsonFile("appsettings.json", true, true);
-                                                             // config.AddCommandLine(args);
+                                                             config.AddCommandLine(args, map);
                                                              var configRoot = config.Build();
-                                                             Console.WriteLine($"AppId = {configRoot["AppId"]}");
+
+                                                             var appId      = configRoot["AppId"];
+                                                             var configPath = configRoot["Config"];
+                                                             Console.WriteLine($"{args.First()}\r\n" +
+                                                                               $"AppId:{appId}\r\n"  +
+                                                                               $"ConfigPath:{configPath}");
                                                          })
                               .ConfigureServices(service =>
                                                  {
                                                      //DI  
                                                      service.AddScoped(typeof(AppService));
-                                                 });
+                                                 })
+                ;
             var host = builder.Build();
         }
 
