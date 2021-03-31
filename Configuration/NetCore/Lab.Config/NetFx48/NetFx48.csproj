@@ -27,6 +27,7 @@
         <PackageReference Include="Microsoft.Extensions.Configuration.Ini" Version="5.0.0" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="5.0.0" />
         <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="5.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.KeyPerFile" Version="5.0.0" />
         <PackageReference Include="Microsoft.Extensions.Hosting " Version="5.0.0" />
     </ItemGroup>
 
@@ -46,6 +47,9 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
       <None Update="appsettings.QA.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="keys\aws\web\NewFile1.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>
