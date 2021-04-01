@@ -38,10 +38,7 @@ namespace AspNetCore3
         {
             services.AddControllers();
 
-            //注入 IOptions
-            services.AddOptions();
-
-            //注入 IConfiguration
+            //注入 Options 和 IConfiguration
             services.Configure<AppSetting>(this.Configuration);
             services.Configure<Player>("Player1",  this.Configuration.GetSection("Player1"));
             services.Configure<Player>("Player2", this.Configuration.GetSection("Player2"));
