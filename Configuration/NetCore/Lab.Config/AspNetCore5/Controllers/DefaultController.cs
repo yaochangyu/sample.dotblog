@@ -1,6 +1,7 @@
 using System;
 using Lab.Infra;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -16,6 +17,17 @@ namespace AspNetCore5.Controllers
         {
             var serviceProvider = this.HttpContext.RequestServices;
             var content         = serviceProvider.GetService<IOptions<AppSetting>>()?.Value;
+            return this.Ok(content);
+        }
+
+        [HttpGet]
+        [Route("config/appsettings")]
+        public IActionResult GetConfig()
+        {
+            var serviceProvider = this.HttpContext.RequestServices;
+            var config          = serviceProvider.GetService<IConfiguration>();
+            var content         = new AppSetting();
+            config.Bind(content);
             return this.Ok(content);
         }
 
