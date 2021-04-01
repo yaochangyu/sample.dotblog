@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
 
-namespace AspNetCore3
+namespace AspNetCore5
 {
     public class Startup
     {
@@ -22,6 +23,8 @@ namespace AspNetCore3
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseSwagger();
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "AspNetCore5 v1"));
             }
 
             app.UseHttpsRedirection();
@@ -37,6 +40,10 @@ namespace AspNetCore3
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+            services.AddSwaggerGen(c =>
+                                   {
+                                       c.SwaggerDoc("v1", new OpenApiInfo {Title = "AspNetCore5", Version = "v1"});
+                                   });
 
             //ÅçÃÒ AppSetting
             services.AddOptions<AppSetting>()
@@ -55,10 +62,10 @@ namespace AspNetCore3
             services.Configure<AppSetting>(this.Configuration);
             
             //ª`¤J Options ©M Configuration Section Name
-            // services.Configure<Player>("Player1", this.Configuration.GetSection("Player1"));
-            // services.Configure<Player>("Player2", this.Configuration.GetSection("Player2"));
-            // services.Configure<Player>("Player3", this.Configuration.GetSection("Player3"));
-            // services.Configure<Player>("ConnectionStrings", this.Configuration.GetSection("ConnectionStrings"));
+            services.Configure<Player>("Player1",           this.Configuration.GetSection("Player1"));
+            services.Configure<Player>("Player2",           this.Configuration.GetSection("Player2"));
+            services.Configure<Player>("Player3",           this.Configuration.GetSection("Player3"));
+            services.Configure<Player>("ConnectionStrings", this.Configuration.GetSection("ConnectionStrings"));
         }
     }
 }
