@@ -66,6 +66,14 @@ namespace AspNetCore5
             services.Configure<Player>("Player2",           this.Configuration.GetSection("Player2"));
             services.Configure<Player>("Player3",           this.Configuration.GetSection("Player3"));
             services.Configure<Player>("ConnectionStrings", this.Configuration.GetSection("ConnectionStrings"));
+            // services.PostConfigure<Player>("Player1", config =>
+            //                                          {
+            //                                              config.AppId = "post_configured_option1_value";
+            //                                          });
+            // services.PostConfigureAll<AppSetting>(config =>
+            //                                       {
+            //                                           config.Player.AppId = "post_configured_option1_value";
+            //                                       });
         }
     }
 }
