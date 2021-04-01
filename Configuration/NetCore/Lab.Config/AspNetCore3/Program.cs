@@ -20,10 +20,11 @@ namespace AspNetCore3
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    //webBuilder.UseStartup<Startup>();
-                    //webBuilder.UseStartup<Startup_InjectionIOptions>();
-                    //webBuilder.UseStartup<Startup_InjectionIOptionsSnapshot>();
-                    webBuilder.UseStartup<Startup_InjectionIAppSetting>();
+                    // webBuilder.UseStartup<Startup>();
+                    // webBuilder.UseStartup<StartupInjectionOptions>();
+                    // webBuilder.UseStartup<StartupInjectionOptionsSnapshot>();
+                    webBuilder.UseStartup<StartupInjectionOptionsMonitor>();
+                    // webBuilder.UseStartup<StartupInjectionAppSetting>();
                 });
     }
 }

@@ -7,11 +7,11 @@ using Microsoft.Extensions.Hosting;
 
 namespace AspNetCore3
 {
-    public class Startup_InjectionIOptionsSnapshot
+    public class StartupInjectionAppSetting
     {
         public IConfiguration Configuration { get; }
 
-        public Startup_InjectionIOptionsSnapshot(IConfiguration configuration)
+        public StartupInjectionAppSetting(IConfiguration configuration)
         {
             this.Configuration = configuration;
         }
@@ -38,28 +38,12 @@ namespace AspNetCore3
         {
             services.AddControllers();
 
-            //ª`¤J IOptions
-            //services.AddOptions();
-            services.AddOptions<AppSetting>()
-                    .ValidateDataAnnotations()
-                    .Validate(p =>
-                              {
-                                  if (p.AllowedHosts ==null)
-                                  {
-                                      return false;
-                                  }
-
-                                  return true;
-                              }, "AllowedHosts must be value"); // Failure message.
-            ;
-
-            //ª`¤J IConfiguration
-
+            //var appSetting = new AppSetting();
+            //this.Configuration.Bind(appSetting);
+            
+            ////ª`¤J AppSetting
+            //services.AddSingleton(appSetting);
             services.Configure<AppSetting>(this.Configuration);
-            services.Configure<Player>("Player1", this.Configuration.GetSection("Player1"));
-            services.Configure<Player>("Player2", this.Configuration.GetSection("Player2"));
-
-            //services.AddSingleton<IConfiguration>(Configuration);
         }
     }
 }
