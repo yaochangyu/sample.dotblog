@@ -16,10 +16,10 @@ namespace NetFx48
             var configBuilder = new ConfigurationBuilder()
                                 .SetBasePath(Directory.GetCurrentDirectory())
                                 .AddKeyPerFile(folderPath,false);
-            var config = configBuilder.Build();
+            var configRoot = configBuilder.Build();
 
             //讀取組態
-            var actual = config["NewFile1.txt"];
+            var actual = configRoot["NewFile1.txt"];
             Console.WriteLine($"NewFile1.txt = {actual}");
             Assert.AreEqual(expected,actual);
         }
