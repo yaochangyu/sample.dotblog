@@ -31,14 +31,7 @@ namespace NetFx48
         {
             this._appSetting = options.Value;
         }
-        public AppServiceWithOption(IOptionsSnapshot<AppSetting1> options)
-        {
-            this._appSetting = options.Value;
-        }
-        public AppServiceWithOption(IOptionsMonitor<AppSetting1> options)
-        {
-            this._appSetting = options.CurrentValue;
-        } 
+    
         public string GetPlayerId()
         {
             return this._appSetting.Player.AppId;
