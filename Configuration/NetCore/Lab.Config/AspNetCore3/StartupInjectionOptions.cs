@@ -7,11 +7,11 @@ using Microsoft.Extensions.Hosting;
 
 namespace AspNetCore3
 {
-    public class Startup_InjectionIOptions
+    public class StartupInjectionOptions
     {
         public IConfiguration Configuration { get; }
 
-        public Startup_InjectionIOptions(IConfiguration configuration)
+        public StartupInjectionOptions(IConfiguration configuration)
         {
             this.Configuration = configuration;
         }
