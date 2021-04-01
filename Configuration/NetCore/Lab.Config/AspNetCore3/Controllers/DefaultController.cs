@@ -10,11 +10,22 @@ namespace AspNetCore3.Controllers
     [Route("[controller]")]
     public class DefaultController : ControllerBase
     {
+        // [Route("controller/appsettings")]
+        [Route("appsettings")]
         public IActionResult Get()
         {
             // var setting = this.GetAppSetting();
             var setting = this.GetAppSettingMonitor();
             return this.Ok(setting);
+        }
+
+        [Route("players/{id}")]
+        public IActionResult GetPlayer(int id)
+        {
+            var serviceProvider = this.HttpContext.RequestServices;
+            var playerOption    = serviceProvider.GetService<IOptionsMonitor<Player>>();
+            var player          = playerOption.Get($"Player{id}");
+            return this.Ok(player);
         }
 
         private AppSetting GetAppSetting()
@@ -35,9 +46,7 @@ namespace AspNetCore3.Controllers
             Console.WriteLine($"player2={player2.AppId}");
 
             // var appSetting      = options.Get("Player1");
-            // return options?.CurrentValue;
-
-            return null;
+            return appsSettingOptions?.CurrentValue;
         }
     }
 }
