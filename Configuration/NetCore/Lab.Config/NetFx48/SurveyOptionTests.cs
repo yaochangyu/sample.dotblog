@@ -25,10 +25,7 @@ namespace NetFx48
                                                          })
                               .ConfigureServices((hosting, services) =>
                                                  {
-                                                     // 2.注入 Options
-                                                     services.AddOptions();
-
-                                                     // 3. 注入 IConfiguration
+                                                     // 2. 注入 Option 和 Configuration
                                                      services.Configure<AppSetting1>(hosting.Configuration);
 
                                                      //注入其他服務
