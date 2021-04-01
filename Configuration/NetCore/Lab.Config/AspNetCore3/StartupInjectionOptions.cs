@@ -38,7 +38,7 @@ namespace AspNetCore3
         {
             services.AddControllers();
 
-            //注入 Options 和 IConfiguration
+            //注入 Options 和完整 IConfiguration
             services.Configure<AppSetting>(this.Configuration);
         }
     }
