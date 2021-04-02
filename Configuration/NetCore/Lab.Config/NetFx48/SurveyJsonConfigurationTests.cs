@@ -67,11 +67,11 @@ namespace NetFx48
                               .ConfigureServices(service =>
                                                  {
                                                      //DI  
-                                                     service.AddScoped(typeof(AppService));
+                                                     service.AddScoped(typeof(AppWorkFlow));
                                                  });
             var host = builder.Build();
 
-            var appService = host.Services.GetService<AppService>();
+            var appService = host.Services.GetService<AppWorkFlow>();
             var playerId   = appService.GetPlayerId();
             Console.WriteLine($"AppId = {playerId}");
         }
