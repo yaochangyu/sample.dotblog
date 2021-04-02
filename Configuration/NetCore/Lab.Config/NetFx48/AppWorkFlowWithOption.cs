@@ -21,7 +21,7 @@ namespace NetFx48
                 }
             }
         }
-    
+
         public string GetPlayerId()
         {
             return this._appSetting.Player.AppId;

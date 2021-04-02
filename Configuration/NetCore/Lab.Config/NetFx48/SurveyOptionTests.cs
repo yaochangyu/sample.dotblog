@@ -103,7 +103,7 @@ namespace NetFx48
             Console.WriteLine($"PlayerId = {playerId}");
         }
 
-        [TestMethod]
+[TestMethod]
         public void 驗證()
         {
             var builder = Host.CreateDefaultBuilder()
@@ -146,5 +146,35 @@ namespace NetFx48
             var playerId = service.GetPlayerId();
             Console.WriteLine($"PlayerId = {playerId}");
         }
+       
+        [TestMethod]
+        public void 直接注入組態物件()
+        {
+            var builder = Host.CreateDefaultBuilder()
+                              .ConfigureAppConfiguration((hosting, configBuilder) =>
+                                                         {
+                                                             // 1.讀組態檔 
+                                                             var environmentName =
+                                                                 hosting.Configuration["ENVIRONMENT2"];
+                                                             configBuilder.AddJsonFile("appsettings.json", false, true);
+                                                             configBuilder
+                                                                 .AddJsonFile($"appsettings.{environmentName}.json",
+                                                                              true, true);
+                                                         })
+                              .ConfigureServices((hosting, services) =>
+                                                 {
+                                                     var appSetting = hosting.Configuration.Get<AppSetting>();
+                                                     services.AddSingleton(typeof(AppSetting), appSetting);
+                                                     
+                                                     //注入其他服務
+                                                     services.AddSingleton<AppWorkFlow1>();
+                                                 })
+                ;
+            var host     = builder.Build();
+            var service  = host.Services.GetService<AppWorkFlow1>();
+            var playerId = service.GetPlayerId();
+            Console.WriteLine($"PlayerId = {playerId}");
+        }
+        
     }
 }
