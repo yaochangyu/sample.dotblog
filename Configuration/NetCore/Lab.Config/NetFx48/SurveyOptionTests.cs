@@ -102,5 +102,49 @@ namespace NetFx48
             var playerId = service.GetPlayerId();
             Console.WriteLine($"PlayerId = {playerId}");
         }
+
+        [TestMethod]
+        public void 驗證()
+        {
+            var builder = Host.CreateDefaultBuilder()
+                              .ConfigureAppConfiguration((hosting, configBuilder) =>
+                                                         {
+                                                             // 1.讀組態檔 
+                                                             var environmentName =
+                                                                 hosting.Configuration["ENVIRONMENT2"];
+                                                             configBuilder.AddJsonFile("appsettings.json", false, true);
+                                                             configBuilder
+                                                                 .AddJsonFile($"appsettings.{environmentName}.json",
+                                                                              true, true);
+                                                         })
+                              .ConfigureServices((hosting, services) =>
+                                                 {
+                                                     // 2. 注入 Option 和 Configuration
+                                                     services.Configure<AppSetting1>(hosting.Configuration);
+                                                     //驗證
+                                                     services.AddOptions<AppSetting1>()
+                                                             .ValidateDataAnnotations()
+                                                             .Validate(p =>
+                                                                       {
+                                                                           if (p.ConnectionStrings
+                                                                                   .DefaultConnectionString == null)
+                                                                           {
+                                                                               return false;
+                                                                           }
+
+                                                                           return true;
+                                                                       },
+                                                                       "DefaultConnectionString must be value"); // Failure message.
+                                                     ;
+
+                                                     //注入其他服務
+                                                     services.AddSingleton<AppWorkFlowWithOption>();
+                                                 })
+                ;
+            var host     = builder.Build();
+            var service  = host.Services.GetService<AppWorkFlowWithOption>();
+            var playerId = service.GetPlayerId();
+            Console.WriteLine($"PlayerId = {playerId}");
+        }
     }
 }
