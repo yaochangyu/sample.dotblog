@@ -58,7 +58,7 @@ namespace NetFx48
                               .ConfigureServices(service =>
                                                  {
                                                      //DI  
-                                                     service.AddScoped(typeof(AppService));
+                                                     service.AddScoped(typeof(AppWorkFlow));
                                                  })
                 ;
             var host = builder.Build();

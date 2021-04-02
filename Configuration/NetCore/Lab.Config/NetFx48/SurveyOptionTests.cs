@@ -29,11 +29,11 @@ namespace NetFx48
                                                      services.Configure<AppSetting1>(hosting.Configuration);
 
                                                      //注入其他服務
-                                                     services.AddSingleton<AppServiceWithOption>();
+                                                     services.AddSingleton<AppWorkFlowWithOption>();
                                                  })
                 ;
             var host     = builder.Build();
-            var service  = host.Services.GetService<AppServiceWithOption>();
+            var service  = host.Services.GetService<AppWorkFlowWithOption>();
             var playerId = service.GetPlayerId();
             Console.WriteLine($"PlayerId = {playerId}");
         }
@@ -62,11 +62,11 @@ namespace NetFx48
                                                          hosting.Configuration.GetSection("Player"));
 
                                                      //注入其他服務
-                                                     services.AddScoped<AppServiceWithOptionsMonitor>();
+                                                     services.AddScoped<AppWorkFlowWithOptionsMonitor>();
                                                  })
                 ;
             var host     = builder.Build();
-            var service  = host.Services.GetService<AppServiceWithOptionsMonitor>();
+            var service  = host.Services.GetService<AppWorkFlowWithOptionsMonitor>();
             var playerId = service.GetPlayerId();
             Console.WriteLine($"PlayerId = {playerId}");
         }
@@ -94,11 +94,11 @@ namespace NetFx48
                                                          .GetSection("Player"));
 
                                                      //注入其他服務
-                                                     services.AddScoped<AppServiceWithOptionsSnapshot>();
+                                                     services.AddScoped<AppWorkFlowWithOptionsSnapshot>();
                                                  })
                 ;
             var host     = builder.Build();
-            var service  = host.Services.GetService<AppServiceWithOptionsSnapshot>();
+            var service  = host.Services.GetService<AppWorkFlowWithOptionsSnapshot>();
             var playerId = service.GetPlayerId();
             Console.WriteLine($"PlayerId = {playerId}");
         }
