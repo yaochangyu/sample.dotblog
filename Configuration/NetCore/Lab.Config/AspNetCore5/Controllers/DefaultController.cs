@@ -43,6 +43,10 @@ namespace AspNetCore5.Controllers
                 App    = appSettingOptions?.CurrentValue,
                 Player = playerOptions?.Get($"Player{id}")
             };
+            appSettingOptions.OnChange(p =>
+                                       {
+                                           Console.WriteLine("節點已變更");
+                                       });
             return this.Ok(content);
         }
 
