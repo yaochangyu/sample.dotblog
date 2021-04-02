@@ -3,12 +3,12 @@ using Microsoft.Extensions.Options;
 
 namespace NetFx48
 {
-    public class AppServiceWithOptionsSnapshot : IAppService
+    public class AppWorkFlowWithOptionsSnapshot : IAppWorkFlow
     {
         private readonly AppSetting1 _appSetting;
         private readonly Player1     _player;
 
-        public AppServiceWithOptionsSnapshot(IOptionsSnapshot<AppSetting1> appSettingOption,
+        public AppWorkFlowWithOptionsSnapshot(IOptionsSnapshot<AppSetting1> appSettingOption,
                                              IOptionsSnapshot<Player1>     playerOption)
         {
             this._player     = playerOption?.Value;
