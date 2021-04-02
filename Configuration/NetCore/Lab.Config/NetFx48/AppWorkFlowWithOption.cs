@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using System;
+using Microsoft.Extensions.Options;
 
 namespace NetFx48
 {
@@ -8,7 +9,17 @@ namespace NetFx48
 
         public AppWorkFlowWithOption(IOptions<AppSetting1> options)
         {
-            this._appSetting = options.Value;
+            try
+            {
+                this._appSetting = options.Value;
+            }
+            catch (OptionsValidationException ex)
+            {
+                foreach (var failure in ex.Failures)
+                {
+                    Console.WriteLine(failure);
+                }
+            }
         }
     
         public string GetPlayerId()

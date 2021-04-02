@@ -126,8 +126,8 @@ namespace NetFx48
                                                              .ValidateDataAnnotations()
                                                              .Validate(p =>
                                                                        {
-                                                                           if (p.ConnectionStrings
-                                                                                   .DefaultConnectionString == null)
+                                                                           var hasContent = string.IsNullOrWhiteSpace(p.ConnectionStrings.DefaultConnectionString);
+                                                                           if (hasContent == false)
                                                                            {
                                                                                return false;
                                                                            }
