@@ -77,5 +77,20 @@ namespace NetFx48
             //讀取組態
             Console.WriteLine($"ENVIRONMENT = {configRoot["ENVIRONMENT"]}");
         }
+
+        [TestMethod]
+        public void 設定主機組態()
+        {
+            var builder = Host.CreateDefaultBuilder()
+                              .ConfigureHostConfiguration(config =>
+                                                          {
+                                                              config.AddJsonFile("appsettings.json", false, true);
+                                                          })
+                ;
+
+            var host        = builder.Build();
+            var environment = host.Services.GetRequiredService<IHostEnvironment>();
+            Console.WriteLine($"EnvironmentName={environment.EnvironmentName}");
+        }
     }
 }
