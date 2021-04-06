@@ -13,7 +13,7 @@ namespace NetFx48
                                 IHostApplicationLifetime  lifetime)
         {
             this._logger = logger;
-            
+
             lifetime.ApplicationStarted.Register(this.OnStarted);
             lifetime.ApplicationStopping.Register(this.OnStopping);
             lifetime.ApplicationStopped.Register(this.OnStopped);

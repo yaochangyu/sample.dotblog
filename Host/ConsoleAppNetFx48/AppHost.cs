@@ -8,8 +8,8 @@ namespace ConsoleAppNetFx48
 {
     public class AppHost : IHostedService
     {
-        private readonly ILogger<AppHost>         logger;
         private readonly IHostApplicationLifetime appLifetime;
+        private readonly ILogger<AppHost>         logger;
 
         public AppHost(ILogger<AppHost> logger, IHostApplicationLifetime appLifetime)
         {
