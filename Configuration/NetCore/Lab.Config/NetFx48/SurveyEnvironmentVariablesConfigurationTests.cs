@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -16,7 +17,8 @@ namespace NetFx48
                               .ConfigureAppConfiguration((hosting, configBuilder) =>
                                                          {
                                                              // config.Sources.Clear();
-
+                                                             var hostingEnvironmentEnvironmentName =
+                                                                 hosting.HostingEnvironment.EnvironmentName;
                                                              configBuilder.AddEnvironmentVariables("Custom_");
                                                              var configRoot = configBuilder.Build();
 
@@ -24,14 +26,16 @@ namespace NetFx48
                                                              Console
                                                                  .WriteLine($"ASPNETCORE_ENVIRONMENT = {configRoot["ASPNETCORE_ENVIRONMENT"]}");
                                                              Console
-                                                                 .WriteLine($"DOTNET_ENVIRONMENT2 = {configRoot["DOTNET_ENVIRONMENT2"]}");
+                                                                 .WriteLine($"DOTNET_ENVIRONMENT = {configRoot["DOTNET_ENVIRONMENT"]}");
                                                              Console
-                                                                 .WriteLine($"CUSTOM_ENVIRONMENT1 = {configRoot["CUSTOM_ENVIRONMENT1"]}");
+                                                                 .WriteLine($"CUSTOM_ENVIRONMENT = {configRoot["CUSTOM_ENVIRONMENT"]}");
                                                              Console
                                                                  .WriteLine($"ENVIRONMENT1 = {configRoot["ENVIRONMENT1"]}");
                                                          })
                 ;
-            builder.Build();
+            var host        = builder.Build();
+            var environment = host.Services.GetRequiredService<IHostEnvironment>();
+            Console.WriteLine($"EnvironmentName={environment.EnvironmentName}");
         }
 
         [TestMethod]
@@ -41,16 +45,20 @@ namespace NetFx48
                               .ConfigureAppConfiguration((hosting, configBuilder) =>
                                                          {
                                                              // config.Sources.Clear();
-                                                             var environmentName = hosting.Configuration["ENVIRONMENT2"];
-                                                             configBuilder.AddJsonFile("appsettings.json",false,true);
-                                                             configBuilder.AddJsonFile($"appsettings.{environmentName}.json",true,true);
+                                                             var environmentName =
+                                                                 hosting.Configuration["ENVIRONMENT2"];
+                                                             configBuilder.AddJsonFile("appsettings.json", false, true);
+                                                             configBuilder
+                                                                 .AddJsonFile($"appsettings.{environmentName}.json",
+                                                                              true, true);
 
                                                              var configRoot = configBuilder.Build();
-                                                             
+
                                                              //讀取組態
                                                              Console.WriteLine($"AppId = {configRoot["Player:AppId"]}");
                                                              Console.WriteLine($"Key = {configRoot["Player:Key"]}");
-                                                             Console.WriteLine($"Connection String = {configRoot["ConnectionStrings:DefaultConnectionString"]}");
+                                                             Console
+                                                                 .WriteLine($"Connection String = {configRoot["ConnectionStrings:DefaultConnectionString"]}");
                                                          })
                 ;
             builder.Build();
