@@ -10,42 +10,44 @@ namespace ConsoleAppNetFx48
         private readonly ILogger _logger;
 
         public LabHostedService(ILogger<LabHostedService> logger,
-                                IHostApplicationLifetime  lifetime)
+                                IHostApplicationLifetime  appLifetime,
+                                IHostLifetime             hostLifetime,
+                                IHostEnvironment          hostEnvironment)
         {
             this._logger = logger;
-            
-            lifetime.ApplicationStarted.Register(this.OnStarted);
-            lifetime.ApplicationStopping.Register(this.OnStopping);
-            lifetime.ApplicationStopped.Register(this.OnStopped);
+            appLifetime.ApplicationStarted.Register(this.OnStarted);
+            appLifetime.ApplicationStopping.Register(this.OnStopping);
+            appLifetime.ApplicationStopped.Register(this.OnStopped);
+            this._logger.LogInformation($"主機環境："                                           +
+                                        $"ApplicationName = {hostEnvironment.ApplicationName}\r\n" +
+                                        $"EnvironmentName = {hostEnvironment.EnvironmentName}\r\n" +
+                                        $"RootPath = {hostEnvironment.ContentRootPath}\r\n"        +
+                                        $"Root File Provider = {hostEnvironment.ContentRootFileProvider}\r\n");
         }
-
+     
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            this._logger.LogInformation("1. StartAsync has been called.");
-
+            this._logger.LogInformation("1. 調用 Host.StartAsync ");
             return Task.CompletedTask;
+        }
+        private void OnStarted()
+        {
+            this._logger.LogInformation("2. 調用 OnStarted");
+        }
+        private void OnStopping()
+        {
+            this._logger.LogInformation("3. 調用 OnStopping");
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            this._logger.LogInformation("4. StopAsync has been called.");
-
+            this._logger.LogInformation("4. 調用 Host.StopAsync");
             return Task.CompletedTask;
         }
-
-        private void OnStarted()
-        {
-            this._logger.LogInformation("2. OnStarted has been called.");
-        }
-
+     
         private void OnStopped()
         {
-            this._logger.LogInformation("5. OnStopped has been called.");
-        }
-
-        private void OnStopping()
-        {
-            this._logger.LogInformation("3. OnStopping has been called.");
+            this._logger.LogInformation("5. 調用 OnStopped");
         }
     }
 }
