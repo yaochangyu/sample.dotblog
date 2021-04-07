@@ -28,6 +28,7 @@ namespace ConsoleAppNetFx48
         {
             var host = CreateHostBuilder(args).Build();
             var task = host.RunAsync();
+            host.WaitForShutdownAsync();
             Console.WriteLine($"{nameof(LabHostedService)} 應用程式已啟動");
 
             return task;

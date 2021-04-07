@@ -23,6 +23,7 @@ namespace ConsoleAppNetFx48
                                         $"EnvironmentName = {hostEnvironment.EnvironmentName}\r\n" +
                                         $"RootPath = {hostEnvironment.ContentRootPath}\r\n"        +
                                         $"Root File Provider = {hostEnvironment.ContentRootFileProvider}\r\n");
+            
         }
      
         public Task StartAsync(CancellationToken cancellationToken)
