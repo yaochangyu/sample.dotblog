@@ -5,7 +5,7 @@ set serviceDisplayName=ConsoleAppNetFx48
 set serviceDescription="ด๚ธี"
 set serviceLaunchPath=%batchFolder%bin\ConsoleAppNetFx48.exe
 set serviceLogonId=.\setup
-set serviceLogonPassword=pass@w0rd1~
+set serviceLogonPassword=password
 ::set serverName=\\Computer Name
 set serverName=
 Call SafeStopService %serviceName% %serverName%
