@@ -1,10 +1,10 @@
 ﻿using System;
 
-namespace ConsoleAppNet5
+namespace ConsoleApp1
 {
-    internal class Program
+    class Program
     {
-        private static void Main(string[] args)
+        static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
         }
