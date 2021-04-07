@@ -14,4 +14,22 @@
 <!--        <PackageReference Include="Topshelf.NLog" Version="4.3.0" />-->
 <!--        <PackageReference Include="Topshelf" Version="4.3.0" />-->
     </ItemGroup>
+
+    <ItemGroup>
+      <None Update="SafeCreateService.bat">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="SafeDeleteService.bat">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="SafeStartService.bat">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="SafeStopService.bat">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="CallSafeCreateService.bat">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
 </Project>
