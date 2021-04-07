@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "NetFx48": {
+      "commandName": "Project",
+      "commandLineArgs": "--AppId=1234567890"
+    }
+  }
+}

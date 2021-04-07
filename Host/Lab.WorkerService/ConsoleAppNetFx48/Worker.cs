@@ -1,16 +1,16 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace NetFx48
+namespace ConsoleAppNetFx48
 {
-    public class LabBackgroundService : BackgroundService
+    public class Worker : BackgroundService
     {
-        private readonly ILogger<LabBackgroundService> _logger;
+        private readonly ILogger<Worker> _logger;
 
-        public LabBackgroundService(ILogger<LabBackgroundService> logger)
+        public Worker(ILogger<Worker> logger)
         {
             this._logger = logger;
         }
