@@ -1,9 +1,5 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleAppNet5", "ConsoleAppNet5\ConsoleAppNet5.csproj", "{1CE278B8-A6DB-422C-B3CD-151A1C5D3B4E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetFx48", "NetFx48\NetFx48.csproj", "{B565ABD2-BC7D-44B4-8202-EDD30B2FB260}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleAppNetFx48", "ConsoleAppNetFx48\ConsoleAppNetFx48.csproj", "{45E650BE-BBBF-4060-B2CB-049C45B6830D}"
 EndProject
 Global
@@ -12,14 +8,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{1CE278B8-A6DB-422C-B3CD-151A1C5D3B4E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1CE278B8-A6DB-422C-B3CD-151A1C5D3B4E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1CE278B8-A6DB-422C-B3CD-151A1C5D3B4E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1CE278B8-A6DB-422C-B3CD-151A1C5D3B4E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B565ABD2-BC7D-44B4-8202-EDD30B2FB260}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B565ABD2-BC7D-44B4-8202-EDD30B2FB260}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B565ABD2-BC7D-44B4-8202-EDD30B2FB260}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B565ABD2-BC7D-44B4-8202-EDD30B2FB260}.Release|Any CPU.Build.0 = Release|Any CPU
 		{45E650BE-BBBF-4060-B2CB-049C45B6830D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{45E650BE-BBBF-4060-B2CB-049C45B6830D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{45E650BE-BBBF-4060-B2CB-049C45B6830D}.Release|Any CPU.ActiveCfg = Release|Any CPU
