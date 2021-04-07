@@ -2,12 +2,12 @@
 set batchFolder=%~dp0
 set serviceName=ConsoleAppNetFx48
 set serviceDisplayName=ConsoleAppNetFx48
-set serviceDescription="æ¸¬è©¦"
+set serviceDescription="´ú¸Õ"
 set serviceLaunchPath=%batchFolder%ConsoleAppNetFx48.exe
 set serviceLogonId=.\setup
-set serviceLogonPassword=pass@w0rd1~
+set serviceLogonPassword=password
 ::set serverName=\\YAO-S658RF
-set serverName=
+set serverName=""
 Call SafeStopService %serviceName% %serverName%
 Call SafeDeleteService %serviceName% %serverName%
 Call SafeCreateService %serviceName% %serviceDisplayName% %serviceDescription% %serviceLaunchPath% %serviceLogonId% %serviceLogonPassword% %serverName%
