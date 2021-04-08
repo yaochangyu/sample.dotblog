@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
@@ -11,7 +10,10 @@ namespace ConsoleAppNetFx48
     {
         private readonly ILogger<Worker> _logger;
 
-        public Worker(ILogger<Worker> logger)
+        public Worker(ILogger<Worker>          logger,
+                      IHostApplicationLifetime appLifetime,
+                      IHostLifetime            hostLifetime,
+                      IHostEnvironment         hostEnvironment)
         {
             this._logger = logger;
         }

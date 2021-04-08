@@ -9,8 +9,8 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="5.0.0" />
-<!--        <PackageReference Include="Topshelf.Extensions.Hosting" Version="0.4.0" />-->
+<!--        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="5.0.0" />-->
+        <PackageReference Include="Topshelf.Extensions.Hosting" Version="0.4.0" />
 <!--        <PackageReference Include="Topshelf.NLog" Version="4.3.0" />-->
 <!--        <PackageReference Include="Topshelf" Version="4.3.0" />-->
     </ItemGroup>
