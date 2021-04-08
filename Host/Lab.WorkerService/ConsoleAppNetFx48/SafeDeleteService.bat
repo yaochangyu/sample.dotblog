@@ -75,4 +75,3 @@ echo Example: %0 MyService (for local PC)
 echo.
 
 :End
-::pause
