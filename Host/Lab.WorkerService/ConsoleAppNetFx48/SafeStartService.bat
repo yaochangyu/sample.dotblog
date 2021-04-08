@@ -63,4 +63,3 @@ echo.
 
 ::GOTO:eof
 :End
-::pause
