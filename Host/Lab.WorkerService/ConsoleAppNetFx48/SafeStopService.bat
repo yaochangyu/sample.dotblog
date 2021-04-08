@@ -62,4 +62,3 @@ echo For reason codes, run "sc stop"
 
 ::GOTO:eof
 :End
-::pause
