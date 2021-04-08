@@ -11,7 +11,8 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
 <!--        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="5.0.0" />-->
         <PackageReference Include="Topshelf.Extensions.Hosting" Version="0.4.0" />
-<!--        <PackageReference Include="Topshelf.NLog" Version="4.3.0" />-->
+        <PackageReference Include="Topshelf.Extensions.Logging" Version="4.3.0" />
+        <PackageReference Include="Topshelf.Extensions.Configuration" Version="4.3.0" />
 <!--        <PackageReference Include="Topshelf" Version="4.3.0" />-->
     </ItemGroup>
 
@@ -31,5 +32,18 @@
       <None Update="CallSafeCreateService.bat">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Update="appsettings.json">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
+      <Content Update="appsettings.Development.json">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
     </ItemGroup>
 </Project>
