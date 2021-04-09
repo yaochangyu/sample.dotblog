@@ -1,7 +1,10 @@
 using System;
 using System.Linq;
+using Lab.DAL.DomainModel.Employee;
 using Lab.DAL.EntityModel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Lab.DAL.UnitTest
@@ -12,7 +15,7 @@ namespace Lab.DAL.UnitTest
         [TestMethod]
         public void TestMethod1()
         {
-            var options = DbContextOptionManager.CreateEmployeeDbContextOptions();
+            var options = DefaultDbContextManager.CreateEmployeeDbContextOptions();
             using (var dbContext = new EmployeeContext(options))
             {
                 var employees = dbContext.Employees.AsNoTracking().ToList();
@@ -22,7 +25,7 @@ namespace Lab.DAL.UnitTest
         [TestMethod]
         public void TestMethod2()
         {
-            var options = DbContextOptionManager.CreateEmployeeDbContextOptions();
+            var options = DefaultDbContextManager.CreateEmployeeDbContextOptions();
 
             using (var dbContext = new EmployeeContext(options))
             {
@@ -38,6 +41,23 @@ namespace Lab.DAL.UnitTest
                 Assert.AreEqual(true, count           != 0);
                 Assert.AreEqual(true, toDb.SequenceId != 0);
             }
+        }
+
+        [TestMethod]
+        public void 注入DbContextFactor操作真實資料庫()
+        {
+            var builder = Host.CreateDefaultBuilder()
+                              .ConfigureServices(service =>
+                                                 {
+                                                     service
+                                                         .AddDbContextFactory<EmployeeContext>(DefaultDbContextManager
+                                                             .ApplyConfigurePhysical);
+                                                     service.AddSingleton<EmployeeRepository>();
+                                                 });
+            var host       = builder.Build();
+            var repository = host.Services.GetService<EmployeeRepository>();
+            var count      = repository.InsertAsync(new InsertRequest(), "").Result;
+            Assert.AreEqual(1, count);
         }
     }
 }

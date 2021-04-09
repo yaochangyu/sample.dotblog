@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.SqlServer.Infrastructure.Internal;
 
 namespace Lab.DAL.EntityModel
 {
@@ -12,14 +13,36 @@ namespace Lab.DAL.EntityModel
 
         public virtual DbSet<Order> Orders { get; set; }
 
-        public EmployeeContext()
-        {
-            
-        }
+        // public EmployeeContext()
+        // {
+        //     
+        // }
+        // public EmployeeContext(string connectionString)
+        // {
+        //     this._connectionString = connectionString;
+        //     if (!s_migrated[0])
+        //     {
+        //         lock (s_migrated)
+        //         {
+        //             if (!s_migrated[0])
+        //             {
+        //                 this.Database.Migrate();
+        //                 s_migrated[0] = true;
+        //             }
+        //         }
+        //     }
+        // }
+        public string ConnectionString { get; }
 
         public EmployeeContext(DbContextOptions<EmployeeContext> options)
             : base(options)
         {
+            var sqlServerOptionsExtension = options.FindExtension<SqlServerOptionsExtension>();
+            if (sqlServerOptionsExtension != null)
+            {
+                this.ConnectionString = sqlServerOptionsExtension.ConnectionString;
+            }
+
             if (!s_migrated[0])
             {
                 lock (s_migrated)
@@ -33,16 +56,17 @@ namespace Lab.DAL.EntityModel
             }
         }
 
+        // 建構函數配置失敗才需要以下處理
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-//             //var connectionString = "Server=(localdb)\\mssqllocaldb;Database=LabEmployee.DAL;Trusted_Connection=True;";
-//             var connectionString = DbOptionsFactory.ConnectionString;
-//             if (!optionsBuilder.IsConfigured)
-//             {
-// #warning To protect potentially sensitive information in your connection string, you should move it out of source code. See http://go.microsoft.com/fwlink/?LinkId=723263 for guidance on storing connection strings.
-//                 optionsBuilder
-//                     .UseSqlServer(connectionString);
-//             }
+            // var connectionString =
+            //     "Server=(localdb)\\mssqllocaldb;Database=Lab.DAL.UnitTest;Trusted_Connection=True;MultipleActiveResultSets=true";
+            //
+            // // var connectionString = this._connectionString;
+            // if (optionsBuilder.IsConfigured == false)
+            // {
+            //     optionsBuilder.UseSqlServer(connectionString);
+            // }
         }
     }
 }
