@@ -37,6 +37,28 @@ namespace AspNetCore3
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
+
+            //驗證 AppSetting
+            services.AddOptions<AppSetting>()
+                    .ValidateDataAnnotations()
+                    .Validate(p =>
+                              {
+                                  if (p.AllowedHosts == null)
+                                  {
+                                      return false;
+                                  }
+
+                                  return true;
+                              }, "AllowedHosts must be value"); // Failure message.
+
+            //注入 Options 和完整 IConfiguration
+            services.Configure<AppSetting>(this.Configuration);
+            
+            //注入 Options 和 Configuration Section Name
+            // services.Configure<Player>("Player1", this.Configuration.GetSection("Player1"));
+            // services.Configure<Player>("Player2", this.Configuration.GetSection("Player2"));
+            // services.Configure<Player>("Player3", this.Configuration.GetSection("Player3"));
+            // services.Configure<Player>("ConnectionStrings", this.Configuration.GetSection("ConnectionStrings"));
         }
     }
 }

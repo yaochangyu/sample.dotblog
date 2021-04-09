@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+    <PropertyGroup>
+        <TargetFramework>net48</TargetFramework>
+        <OutDir>bin</OutDir>
+        <DocumentationFile>bin\ConsoleAppNetFx48.xml</DocumentationFile>
+        <UserSecretsId>dotnet-ConsoleAppNetFx48-525DDA0C-18EF-4AE3-A405-A9653AA2D910</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="5.0.0" />
+<!--        <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="5.0.0" />-->
+        <PackageReference Include="Topshelf.Extensions.Hosting" Version="0.4.0" />
+        <PackageReference Include="Topshelf.Extensions.Logging" Version="4.3.0" />
+        <PackageReference Include="Topshelf.Extensions.Configuration" Version="4.3.0" />
+<!--        <PackageReference Include="Topshelf" Version="4.3.0" />-->
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="SafeCreateService.bat">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="SafeDeleteService.bat">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="SafeStartService.bat">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="SafeStopService.bat">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="CallSafeCreateService.bat">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Update="appsettings.json">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
+      <Content Update="appsettings.Development.json">
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </Content>
+    </ItemGroup>
+</Project>

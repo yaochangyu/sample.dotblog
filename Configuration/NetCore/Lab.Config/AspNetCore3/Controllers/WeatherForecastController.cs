@@ -4,6 +4,7 @@ using System.Linq;
 using Lab.Infra;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -25,26 +26,27 @@ namespace AspNetCore3.Controllers
         private          Player                             _player2;
 
         // TODO:依賴 AppSetting
-        public WeatherForecastController(AppSetting appSetting)
-        {
-            this._appSetting = appSetting;
-        }
+        // public WeatherForecastController(AppSetting appSetting)
+        // {
+        //     this._appSetting = appSetting;
+        // }
 
         // TODO:依賴 IOptions<AppSetting> 
-        //public WeatherForecastController(IOptions<AppSetting> options)
-        //{
-        //    try
-        //    {
-        //        this._appSetting = options.Value;
-        //    }
-        //    catch (OptionsValidationException ex)
-        //    {
-        //        foreach (var failure in ex.Failures)
-        //        {
-        //            Console.WriteLine(failure);
-        //        }
-        //    }
-        //}
+        public WeatherForecastController(IOptions<AppSetting> options)
+        {
+           
+            try
+            {
+                this._appSetting = options.Value;
+            }
+            catch (OptionsValidationException ex)
+            {
+                foreach (var failure in ex.Failures)
+                {
+                    Console.WriteLine(failure);
+                }
+            }
+        }
 
         // TODO:依賴 IOptionsSnapshot<Player> 
         //public WeatherForecastController(IOptionsSnapshot<Player> options)
@@ -66,11 +68,13 @@ namespace AspNetCore3.Controllers
         //    this._config = config;
         //}
 
-        //public WeatherForecastController(IOptions<AppSetting> options, IConfiguration config)
-        //{
-        //    this._config = config;
-        //    this._appSetting = options.Value;
-        //}
+        // public WeatherForecastController(IOptions<AppSetting> options, IConfiguration config)
+        // {
+        //     this._config = config;
+        //     var appSetting = new AppSetting();
+        //     config.Bind(appSetting);
+        //     this._appSetting = options.Value;
+        // }
 
         //public WeatherForecastController(ILogger<WeatherForecastController> logger)
         //{
@@ -79,8 +83,8 @@ namespace AspNetCore3.Controllers
 
         [HttpGet]
         public IEnumerable<WeatherForecast> Get()
-        {
-            var rng = new Random();
+        { 
+            var rng     = new Random();
             return Enumerable.Range(1, 5).Select(index => new WeatherForecast
                              {
                                  Date         = DateTime.Now.AddDays(index),
