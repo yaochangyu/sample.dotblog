@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.DAL", "Lab.DAL\Lab.DAL.csproj", "{0258C7C6-B9DE-4050-BE38-D3BE0750BA9D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.DAL.TestProject", "Lab.DAL.TestProject\Lab.DAL.TestProject.csproj", "{3DAC8D3D-E494-459B-BEAD-AD306034E441}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0258C7C6-B9DE-4050-BE38-D3BE0750BA9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0258C7C6-B9DE-4050-BE38-D3BE0750BA9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0258C7C6-B9DE-4050-BE38-D3BE0750BA9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0258C7C6-B9DE-4050-BE38-D3BE0750BA9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3DAC8D3D-E494-459B-BEAD-AD306034E441}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3DAC8D3D-E494-459B-BEAD-AD306034E441}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3DAC8D3D-E494-459B-BEAD-AD306034E441}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3DAC8D3D-E494-459B-BEAD-AD306034E441}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
