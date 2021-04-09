@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleAppNetFx48", "ConsoleAppNetFx48\ConsoleAppNetFx48.csproj", "{6E527E3E-6180-4250-B61D-0B69208737C8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6E527E3E-6180-4250-B61D-0B69208737C8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E527E3E-6180-4250-B61D-0B69208737C8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E527E3E-6180-4250-B61D-0B69208737C8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E527E3E-6180-4250-B61D-0B69208737C8}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

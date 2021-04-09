@@ -19,11 +19,16 @@ namespace AspNetCore3
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    //webBuilder.UseStartup<Startup>();
-                    //webBuilder.UseStartup<Startup_InjectionIOptions>();
-                    //webBuilder.UseStartup<Startup_InjectionIOptionsSnapshot>();
-                    webBuilder.UseStartup<Startup_InjectionIAppSetting>();
+                                          {
+                                              webBuilder.ConfigureAppConfiguration(p =>
+                                              {
+                                                  p.AddJsonFile("appsettings.json", false, false);
+                                              });
+                    webBuilder.UseStartup<Startup>();
+                    // webBuilder.UseStartup<StartupInjectionOptions>();
+                    // webBuilder.UseStartup<StartupInjectionOptionsSnapshot>();
+                    // webBuilder.UseStartup<StartupInjectionOptionsMonitor>();
+                    // webBuilder.UseStartup<StartupInjectionAppSetting>();
                 });
     }
 }
