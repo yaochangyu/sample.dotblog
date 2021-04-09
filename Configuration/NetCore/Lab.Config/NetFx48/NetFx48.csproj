@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <TargetFramework>net48</TargetFramework>
@@ -10,7 +10,8 @@
         <Configurations>Debug;Release;QA</Configurations>
 
         <Platforms>AnyCPU</Platforms>
-    </PropertyGroup>
+      <UserSecretsId>659be13b-676e-4c9e-a0b9-0df2ffd75cfc</UserSecretsId>
+  </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'QA' ">
       <DebugSymbols Condition=" '$(DebugSymbols)' == '' ">true</DebugSymbols>
