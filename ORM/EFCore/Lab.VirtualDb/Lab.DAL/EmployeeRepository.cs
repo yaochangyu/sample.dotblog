@@ -11,14 +11,13 @@ namespace Lab.DAL
     {
         private readonly IDbContextFactory<EmployeeContext> _factory;
 
-        public EmployeeRepository(IDbContextFactory<EmployeeContext> factory)
-        {
-            this._factory = factory;
-        }
-
-        // public EmployeeRepository(EmployeeContext factory)
+        // public EmployeeRepository(IDbContextFactory<EmployeeContext> factory)
         // {
+        //     this._factory = factory;
         // }
+        public EmployeeRepository(EmployeeContext factory)
+        {
+        } 
         public async Task<int> InsertAsync(InsertRequest request, 
                                            string accessId,
                                            CancellationToken cancel = default)
@@ -27,7 +26,7 @@ namespace Lab.DAL
             var       id        = Guid.NewGuid();
             var toDb = new Employee
             {
-                Id   = id,
+            Id   = id,
                 Name = "yao",
                 Age  = 18,
             };

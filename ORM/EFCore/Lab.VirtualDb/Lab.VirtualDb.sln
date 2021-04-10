@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.DAL", "Lab.DAL\Lab.DAL.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.DAL.TestProject", "Lab.DAL.TestProject\Lab.DAL.TestProject.csproj", "{3DAC8D3D-E494-459B-BEAD-AD306034E441}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Biz", "Lab.Biz\Lab.Biz.csproj", "{0056BEF7-8B47-4387-9110-788A3B73E452}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{3DAC8D3D-E494-459B-BEAD-AD306034E441}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3DAC8D3D-E494-459B-BEAD-AD306034E441}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3DAC8D3D-E494-459B-BEAD-AD306034E441}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0056BEF7-8B47-4387-9110-788A3B73E452}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0056BEF7-8B47-4387-9110-788A3B73E452}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0056BEF7-8B47-4387-9110-788A3B73E452}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0056BEF7-8B47-4387-9110-788A3B73E452}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
