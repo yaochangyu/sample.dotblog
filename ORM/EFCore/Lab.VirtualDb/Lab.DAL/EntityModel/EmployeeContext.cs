@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.SqlServer.Infrastructure.Internal;
+using Microsoft.EntityFrameworkCore.InMemory.Infrastructure.Internal;
 
 namespace Lab.DAL.EntityModel
 {
@@ -13,43 +13,23 @@ namespace Lab.DAL.EntityModel
 
         public virtual DbSet<Order> Orders { get; set; }
 
-        // public EmployeeContext()
-        // {
-        //     
-        // }
-        // public EmployeeContext(string connectionString)
-        // {
-        //     this._connectionString = connectionString;
-        //     if (!s_migrated[0])
-        //     {
-        //         lock (s_migrated)
-        //         {
-        //             if (!s_migrated[0])
-        //             {
-        //                 this.Database.Migrate();
-        //                 s_migrated[0] = true;
-        //             }
-        //         }
-        //     }
-        // }
         public string ConnectionString { get; }
 
         public EmployeeContext(DbContextOptions<EmployeeContext> options)
             : base(options)
         {
-            var sqlServerOptionsExtension = options.FindExtension<SqlServerOptionsExtension>();
-            if (sqlServerOptionsExtension != null)
-            {
-                this.ConnectionString = sqlServerOptionsExtension.ConnectionString;
-            }
-
-            if (!s_migrated[0])
+            if (s_migrated[0] == false)
             {
                 lock (s_migrated)
                 {
-                    if (!s_migrated[0])
+                    if (s_migrated[0] == false)
                     {
-                        this.Database.Migrate();
+                        var memoryOptions = options.FindExtension<InMemoryOptionsExtension>();
+                        if (memoryOptions == null)
+                        {
+                            this.Database.Migrate();
+                        }
+
                         s_migrated[0] = true;
                     }
                 }
