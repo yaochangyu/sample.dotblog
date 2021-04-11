@@ -3,6 +3,7 @@ using System.Linq;
 using Lab.DAL.DomainModel.Employee;
 using Lab.DAL.EntityModel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -15,7 +16,7 @@ namespace Lab.DAL.UnitTest
         [TestMethod]
         public void TestMethod1()
         {
-            var options = DefaultDbContextBuilder.CreateEmployeeDbContextOptions();
+            var options = DefaultDbContextFactory.CreateEmployeeDbContextOptions();
             using (var dbContext = new EmployeeContext(options))
             {
                 var employees = dbContext.Employees.AsNoTracking().ToList();
@@ -25,7 +26,7 @@ namespace Lab.DAL.UnitTest
         [TestMethod]
         public void TestMethod2()
         {
-            var options = DefaultDbContextBuilder.CreateEmployeeDbContextOptions();
+            var options = DefaultDbContextFactory.CreateEmployeeDbContextOptions();
 
             using (var dbContext = new EmployeeContext(options))
             {
@@ -43,15 +44,14 @@ namespace Lab.DAL.UnitTest
             }
         }
 
+        
+        
         [TestMethod]
-        public void 注入DbContextFactor操作真實資料庫()
+        public void 注入DbContextFactory操作真實資料庫()
         {
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureServices(services =>
                                                  {
-                                                     services
-                                                         .AddDbContextFactory<EmployeeContext>
-                                                             (DefaultDbContextBuilder.ApplyConfigurePhysical);
                                                      services.AddSingleton<EmployeeRepository>();
                                                  });
             var host       = builder.Build();
@@ -61,16 +61,17 @@ namespace Lab.DAL.UnitTest
         }
 
         [TestMethod]
-        public void 注入DbContextFactor操作記憶體()
+        public void 注入DbContextFactory操作記憶體()
         {
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureServices(services =>
                                                  {
-                                                     services.AddDbContextFactory<EmployeeContext>
-                                                         (DefaultDbContextBuilder.ApplyConfigureMemory);
                                                      services.AddSingleton<EmployeeRepository>();
                                                  });
             var host       = builder.Build();
+            
+            DefaultDbContextFactory.UseMemory();
+            
             var repository = host.Services.GetService<EmployeeRepository>();
             var count      = repository.InsertAsync(new InsertRequest(), "").Result;
             Assert.AreEqual(1, count);
