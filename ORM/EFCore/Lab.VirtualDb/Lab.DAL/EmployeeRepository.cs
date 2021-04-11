@@ -4,29 +4,37 @@ using System.Threading.Tasks;
 using Lab.DAL.DomainModel.Employee;
 using Lab.DAL.EntityModel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Lab.DAL
 {
     public class EmployeeRepository
     {
-        private readonly IDbContextFactory<EmployeeContext> _factory;
-
-        // public EmployeeRepository(IDbContextFactory<EmployeeContext> factory)
-        // {
-        //     this._factory = factory;
-        // }
-        public EmployeeRepository(EmployeeContext factory)
+        internal IDbContextFactory<EmployeeContext> DbContextFactory
         {
-        } 
-        public async Task<int> InsertAsync(InsertRequest request, 
-                                           string accessId,
+            get
+            {
+                if (this._dbContextFactory == null)
+                {
+                    this._dbContextFactory = DefaultDbContextFactory.GetInstance<IDbContextFactory<EmployeeContext>>();
+                }
+
+                return this._dbContextFactory;
+            }
+            set => this._dbContextFactory = value;
+        }
+
+        private IDbContextFactory<EmployeeContext> _dbContextFactory;
+
+        public async Task<int> InsertAsync(InsertRequest     request,
+                                           string            accessId,
                                            CancellationToken cancel = default)
         {
-            using var dbContext = this._factory.CreateDbContext();
+            using var dbContext = this.DbContextFactory.CreateDbContext();
             var       id        = Guid.NewGuid();
             var toDb = new Employee
             {
-            Id   = id,
+                Id   = id,
                 Name = "yao",
                 Age  = 18,
             };

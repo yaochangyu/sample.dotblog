@@ -17,5 +17,9 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>
-
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+            <_Parameter1>Lab.DAL.TestProject</_Parameter1>
+        </AssemblyAttribute>
+    </ItemGroup>
 </Project>
