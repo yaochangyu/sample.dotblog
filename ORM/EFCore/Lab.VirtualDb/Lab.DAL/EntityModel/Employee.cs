@@ -1,14 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Lab.DAL.EntityModel
 {
+    [Table("Employee")]
     public class Employee
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        [DatabaseGenerated(DatabaseGeneratedOption.None)]
         public Guid Id { get; set; }
 
         public string Name { get; set; }
@@ -23,6 +23,5 @@ namespace Lab.DAL.EntityModel
         public virtual Identity Identity { get; set; }
 
         // public virtual ICollection<Order> Order { get; set; }
-
     }
 }

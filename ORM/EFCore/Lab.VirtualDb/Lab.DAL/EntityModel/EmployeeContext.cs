@@ -13,6 +13,33 @@ namespace Lab.DAL.EntityModel
 
         public virtual DbSet<Order> Orders { get; set; }
 
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Employee>(p =>
+                                          {
+                                              p.HasKey(e => e.Id)
+                                               .IsClustered(false);
+                                          });
+
+            modelBuilder.Entity<Employee>(p =>
+                                          {
+                                              p.HasIndex(e => e.SequenceId)
+                                               .IsUnique()
+                                               .IsClustered();
+                                          });
+            modelBuilder.Entity<Identity>(p =>
+                                          {
+                                              p.HasKey(e => e.Employee_Id)
+                                               .IsClustered(false);
+                                          });
+            modelBuilder.Entity<Identity>(p =>
+                                          {
+                                              p.HasIndex(e => e.SequenceId)
+                                               .IsUnique()
+                                               .IsClustered();
+                                          });
+        }
+
         public EmployeeContext(DbContextOptions<EmployeeContext> options)
             : base(options)
         {
