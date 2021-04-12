@@ -8,7 +8,7 @@ namespace Lab.DAL.EntityModel
     public class Identity
     {
         [Key]
-        // [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        [DatabaseGenerated(DatabaseGeneratedOption.None)]
         public Guid Employee_Id { get; set; }
 
         [Required]

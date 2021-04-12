@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lab.DAL.Migrations
 {
     [DbContext(typeof(EmployeeContext))]
-    [Migration("20210412020922_InitialCreate")]
+    [Migration("20210412024817_InitialCreate")]
     partial class InitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,7 +24,6 @@ namespace Lab.DAL.Migrations
             modelBuilder.Entity("Lab.DAL.EntityModel.Employee", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int?>("Age")
@@ -41,9 +40,14 @@ namespace Lab.DAL.Migrations
                         .HasColumnType("bigint")
                         .UseIdentityColumn();
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .IsClustered(false);
 
-                    b.ToTable("Employees");
+                    b.HasIndex("SequenceId")
+                        .IsUnique()
+                        .IsClustered();
+
+                    b.ToTable("Employee");
                 });
 
             modelBuilder.Entity("Lab.DAL.EntityModel.Identity", b =>
@@ -67,7 +71,12 @@ namespace Lab.DAL.Migrations
                         .HasColumnType("bigint")
                         .UseIdentityColumn();
 
-                    b.HasKey("Employee_Id");
+                    b.HasKey("Employee_Id")
+                        .IsClustered(false);
+
+                    b.HasIndex("SequenceId")
+                        .IsUnique()
+                        .IsClustered();
 
                     b.ToTable("Identity");
                 });
