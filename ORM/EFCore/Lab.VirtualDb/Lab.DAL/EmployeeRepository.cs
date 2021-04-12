@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Lab.DAL.DomainModel.Employee;
 using Lab.DAL.EntityModel;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Lab.DAL
 {
@@ -16,7 +15,7 @@ namespace Lab.DAL
             {
                 if (this._dbContextFactory == null)
                 {
-                    this._dbContextFactory = DefaultDbContextFactory.GetInstance<IDbContextFactory<EmployeeContext>>();
+                    this._dbContextFactory = DefaultDbContextManager.GetInstance<IDbContextFactory<EmployeeContext>>();
                 }
 
                 return this._dbContextFactory;
@@ -30,16 +29,34 @@ namespace Lab.DAL
                                            string            accessId,
                                            CancellationToken cancel = default)
         {
-            using var dbContext = this.DbContextFactory.CreateDbContext();
-            var       id        = Guid.NewGuid();
-            var toDb = new Employee
+            await using var dbContext = this.DbContextFactory.CreateDbContext();
+
+            var id = Guid.NewGuid();
+            var toDbEmployee = new Employee
             {
-                Id   = id,
-                Name = "yao",
-                Age  = 18,
+                Id     = id,
+                Name   = request.Name,
+                Age    = request.Age,
+                Remark = request.Remark,
             };
-            await dbContext.Employees.AddAsync(toDb, cancel);
-            return await dbContext.SaveChangesAsync(cancel);
+            var toDbIdentity = new Identity
+            {
+                Account  = request.Account,
+                Password = request.Password,
+                Remark   = request.Remark,
+                Employee = toDbEmployee
+            };
+            toDbEmployee.Identity = toDbIdentity;
+            await dbContext.Employees.AddAsync(toDbEmployee, cancel);
+            try
+            {
+                return await dbContext.SaveChangesAsync(cancel);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
     }
 }
