@@ -8,7 +8,11 @@ using Microsoft.Extensions.Logging;
 
 namespace Lab.DAL
 {
+<<<<<<< HEAD
     internal static class DefaultDbContextFactory
+=======
+    public static class DefaultDbContextFactory
+>>>>>>> origin/master
     {
         private static readonly Lazy<ServiceProvider> s_serviceProviderLazy;
         private static readonly Lazy<IConfiguration>  s_configurationLazy;
@@ -50,6 +54,10 @@ namespace Lab.DAL
                                           {
                                               var services = new ServiceCollection();
                                               services.AddDbContextFactory<EmployeeContext>(ApplyConfigurePhysical);
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/master
                                               return services.BuildServiceProvider();
                                           });
             s_configurationLazy
@@ -105,6 +113,14 @@ namespace Lab.DAL
                 ;
         }
 
+<<<<<<< HEAD
+=======
+        public static DbContextOptions<EmployeeContext> CreateEmployeeDbContextOptions()
+        {
+            return CreateEmployeeDbContextOptionsBuilder().Options;
+        }
+
+>>>>>>> origin/master
         public static DbContextOptionsBuilder<EmployeeContext> CreateEmployeeDbContextOptionsBuilder()
         {
             var configuration = new ConfigurationBuilder()
@@ -132,7 +148,11 @@ namespace Lab.DAL
             return ServiceProvider.GetService<T>();
         }
 
+<<<<<<< HEAD
         public static void SetUseMemoryDatabase()
+=======
+        public static void UseMemory()
+>>>>>>> origin/master
         {
             var services = new ServiceCollection();
             services.AddDbContextFactory<EmployeeContext>(ApplyConfigureMemory);
