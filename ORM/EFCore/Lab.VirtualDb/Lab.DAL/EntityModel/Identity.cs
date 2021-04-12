@@ -19,7 +19,14 @@ namespace Lab.DAL.EntityModel
 
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long SequenceId { get; set; }
-        public string Remark { get;   set; }
+
+        public string Remark { get; set; }
+
+        [Required]
+        public DateTime CreateAt { get; set; }
+
+        [Required]
+        public string CreateBy { get; set; }
 
         [ForeignKey("Employee_Id")]
         public virtual Employee Employee { get; set; }

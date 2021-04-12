@@ -8,13 +8,28 @@ using Microsoft.Extensions.Logging;
 
 namespace Lab.DAL
 {
-    internal static class DefaultDbContextManager
+    internal class DefaultDbContextManager
     {
         private static readonly Lazy<ServiceProvider> s_serviceProviderLazy;
         private static readonly Lazy<IConfiguration>  s_configurationLazy;
+        private static readonly ILoggerFactory        s_loggerFactory;
         private static          ServiceProvider       s_serviceProvider;
         private static          IConfiguration        s_configuration;
-        private static readonly ILoggerFactory        s_loggerFactory;
+        private static          DateTime?             s_now;
+
+        public static DateTime Now
+        {
+            get
+            {
+                if (s_now == null)
+                {
+                    return DateTime.UtcNow;
+                }
+
+                return s_now.Value;
+            }
+            set => s_now = value;
+        }
 
         public static ServiceProvider ServiceProvider
         {
@@ -85,13 +100,13 @@ namespace Lab.DAL
         public static void ApplyConfigurePhysical(IServiceProvider        provider,
                                                   DbContextOptionsBuilder optionsBuilder)
         {
-            var configuration = provider.GetService<IConfiguration>();
-            if (configuration == null)
+            var config = provider.GetService<IConfiguration>();
+            if (config == null)
             {
-                configuration = Configuration;
+                config = Configuration;
             }
 
-            var connectionString = configuration.GetConnectionString("DefaultConnection");
+            var connectionString = config.GetConnectionString("DefaultConnection");
             optionsBuilder.UseSqlServer(connectionString)
                           .UseLoggerFactory(s_loggerFactory)
                 ;
@@ -100,6 +115,13 @@ namespace Lab.DAL
         public static T GetInstance<T>()
         {
             return ServiceProvider.GetService<T>();
+        }
+
+        public static void SetUseDefaultDatabase<TContext>() where TContext : DbContext
+        {
+            var services = new ServiceCollection();
+            services.AddDbContextFactory<TContext>(ApplyConfigurePhysical);
+            ServiceProvider = services.BuildServiceProvider();
         }
 
         public static void SetUseMemoryDatabase<TContext>() where TContext : DbContext
