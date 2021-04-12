@@ -8,12 +8,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Lab.DAL
 {
-    internal static class DefaultDbContextFactory
+    internal static class DefaultDbContextManager
     {
         private static readonly Lazy<ServiceProvider> s_serviceProviderLazy;
         private static readonly Lazy<IConfiguration>  s_configurationLazy;
         private static          ServiceProvider       s_serviceProvider;
         private static          IConfiguration        s_configuration;
+        private static readonly ILoggerFactory        s_loggerFactory;
 
         public static ServiceProvider ServiceProvider
         {
@@ -43,7 +44,7 @@ namespace Lab.DAL
             set => s_configuration = value;
         }
 
-        static DefaultDbContextFactory()
+        static DefaultDbContextManager()
         {
             s_serviceProviderLazy =
                 new Lazy<ServiceProvider>(() =>
@@ -61,23 +62,23 @@ namespace Lab.DAL
                                                                    .AddJsonFile("appsettings.json");
                                                return configBuilder.Build();
                                            });
+            s_loggerFactory = LoggerFactory.Create(builder =>
+                                                   {
+                                                       builder
+
+                                                           //.AddFilter("Microsoft",                 LogLevel.Warning)
+                                                           //.AddFilter("System",                    LogLevel.Warning)
+                                                           .AddFilter("Lab.DAL", LogLevel.Debug)
+                                                           .AddConsole()
+                                                           ;
+                                                   });
         }
 
         public static void ApplyConfigureMemory(IServiceProvider        provider,
                                                 DbContextOptionsBuilder optionsBuilder)
         {
-            var loggerFactory = LoggerFactory.Create(builder =>
-                                                     {
-                                                         builder
-
-                                                             //.AddFilter("Microsoft",                 LogLevel.Warning)
-                                                             //.AddFilter("System",                    LogLevel.Warning)
-                                                             .AddFilter("Lab.DAL", LogLevel.Debug)
-                                                             .AddConsole()
-                                                             ;
-                                                     });
             optionsBuilder.UseInMemoryDatabase("Demo")
-                          .UseLoggerFactory(loggerFactory)
+                          .UseLoggerFactory(s_loggerFactory)
                 ;
         }
 
@@ -91,18 +92,8 @@ namespace Lab.DAL
             }
 
             var connectionString = configuration.GetConnectionString("DefaultConnection");
-            var loggerFactory = LoggerFactory.Create(builder =>
-                                                     {
-                                                         builder
-
-                                                             //.AddFilter("Microsoft",                 LogLevel.Warning)
-                                                             //.AddFilter("System",                    LogLevel.Warning)
-                                                             .AddFilter("Lab.DAL", LogLevel.Debug)
-                                                             .AddConsole()
-                                                             ;
-                                                     });
             optionsBuilder.UseSqlServer(connectionString)
-                          .UseLoggerFactory(loggerFactory)
+                          .UseLoggerFactory(s_loggerFactory)
                 ;
         }
 
@@ -111,10 +102,10 @@ namespace Lab.DAL
             return ServiceProvider.GetService<T>();
         }
 
-        public static void SetUseMemoryDatabase()
+        public static void SetUseMemoryDatabase<TContext>() where TContext : DbContext
         {
             var services = new ServiceCollection();
-            services.AddDbContextFactory<EmployeeContext>(ApplyConfigureMemory);
+            services.AddDbContextFactory<TContext>(ApplyConfigureMemory);
             ServiceProvider = services.BuildServiceProvider();
         }
     }

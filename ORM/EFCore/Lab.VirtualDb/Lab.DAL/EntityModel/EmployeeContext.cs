@@ -13,8 +13,6 @@ namespace Lab.DAL.EntityModel
 
         public virtual DbSet<Order> Orders { get; set; }
 
-        public string ConnectionString { get; }
-
         public EmployeeContext(DbContextOptions<EmployeeContext> options)
             : base(options)
         {
@@ -36,6 +34,7 @@ namespace Lab.DAL.EntityModel
             }
         }
 
+        // 給 Migration CLI 使用
         // 建構函數配置失敗才需要以下處理
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {

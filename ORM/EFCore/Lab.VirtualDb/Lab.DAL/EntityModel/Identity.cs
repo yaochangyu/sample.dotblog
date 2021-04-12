@@ -8,8 +8,8 @@ namespace Lab.DAL.EntityModel
     public class Identity
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public Guid EmployeeId { get; set; }
+        // [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public Guid Employee_Id { get; set; }
 
         [Required]
         public string Account { get; set; }
@@ -17,10 +17,11 @@ namespace Lab.DAL.EntityModel
         [Required]
         public string Password { get; set; }
 
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long SequenceId { get; set; }
+        public string Remark { get;   set; }
 
-        public string Remark { get; set; }
-
+        [ForeignKey("Employee_Id")]
         public virtual Employee Employee { get; set; }
     }
 }
