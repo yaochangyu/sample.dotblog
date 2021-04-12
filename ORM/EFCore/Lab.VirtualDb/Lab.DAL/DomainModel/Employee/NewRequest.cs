@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Lab.DAL.DomainModel.Employee
 {
-    public class InsertRequest
+    public class NewRequest
     {
         [Key]
         public Guid Id { get; set; }
