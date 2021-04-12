@@ -11,7 +11,7 @@ namespace Lab.DAL.EntityModel
 
         public virtual DbSet<Identity> Identities { get; set; }
 
-        public virtual DbSet<Order> Orders { get; set; }
+        public virtual DbSet<OrderHistory> OrderHistories {get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -23,40 +23,71 @@ namespace Lab.DAL
             set => this._dbContextFactory = value;
         }
 
-        private IDbContextFactory<EmployeeContext> _dbContextFactory;
+        internal DateTime Now
+        {
+            get
+            {
+                if (this._now == null)
+                {
+                    return DefaultDbContextManager.Now;
+                }
 
-        public async Task<int> InsertAsync(InsertRequest     request,
-                                           string            accessId,
-                                           CancellationToken cancel = default)
+                return this._now.Value;
+            }
+            set => this._now = value;
+        }
+
+        private IDbContextFactory<EmployeeContext> _dbContextFactory;
+        private DateTime?                          _now;
+
+        public async Task<int> InsertLogAsync(InsertOrderRequest request,
+                                              string             accessId,
+                                              CancellationToken  cancel = default)
+        {
+            await using var dbContext = this.DbContextFactory.CreateDbContext();
+
+            var toDbOrderHistory = new OrderHistory
+            {
+                Employee_Id  = request.Employee_Id,
+                Product_Id   = request.Product_Id,
+                Product_Name = request.Product_Id,
+                CreateAt     = this.Now,
+                CreateBy     = accessId,
+                Remark       = request.Remark,
+            };
+
+            await dbContext.OrderHistories.AddAsync(toDbOrderHistory, cancel);
+            return await dbContext.SaveChangesAsync(cancel);
+        }
+
+        public async Task<int> NewAsync(NewRequest        request,
+                                        string            accessId,
+                                        CancellationToken cancel = default)
         {
             await using var dbContext = this.DbContextFactory.CreateDbContext();
 
             var id = Guid.NewGuid();
-            var toDbEmployee = new Employee
+            var employeeToDb = new Employee
             {
-                Id     = id,
-                Name   = request.Name,
-                Age    = request.Age,
-                Remark = request.Remark,
+                Id       = id,
+                Name     = request.Name,
+                Age      = request.Age,
+                Remark   = request.Remark,
+                CreateAt = this.Now,
+                CreateBy = accessId
             };
-            var toDbIdentity = new Identity
+            var identityToDb = new Identity
             {
                 Account  = request.Account,
                 Password = request.Password,
                 Remark   = request.Remark,
-                Employee = toDbEmployee
+                Employee = employeeToDb,
+                CreateAt = this.Now,
+                CreateBy = accessId
             };
-            toDbEmployee.Identity = toDbIdentity;
-            await dbContext.Employees.AddAsync(toDbEmployee, cancel);
-            try
-            {
-                return await dbContext.SaveChangesAsync(cancel);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                throw;
-            }
+            employeeToDb.Identity = identityToDb;
+            await dbContext.Employees.AddAsync(employeeToDb, cancel);
+            return await dbContext.SaveChangesAsync(cancel);
         }
     }
 }

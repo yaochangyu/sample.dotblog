@@ -27,7 +27,15 @@ namespace Lab.DAL.Migrations
                     b.Property<int?>("Age")
                         .HasColumnType("int");
 
+                    b.Property<DateTime>("CreateAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreateBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Remark")
@@ -57,6 +65,13 @@ namespace Lab.DAL.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<DateTime>("CreateAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CreateBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Password")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -79,28 +94,39 @@ namespace Lab.DAL.Migrations
                     b.ToTable("Identity");
                 });
 
-            modelBuilder.Entity("Lab.DAL.EntityModel.Order", b =>
+            modelBuilder.Entity("Lab.DAL.EntityModel.OrderHistory", b =>
                 {
                     b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("EmployeeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("OrderTime")
+                    b.Property<DateTime>("CreateAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("CreateBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("Employee_Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Product_Id")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Product_Name")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Remark")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("SequenceId")
-                        .HasColumnType("bigint");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .UseIdentityColumn();
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EmployeeId");
-
-                    b.ToTable("Order");
+                    b.ToTable("OrderHistory");
                 });
 
             modelBuilder.Entity("Lab.DAL.EntityModel.Identity", b =>
@@ -110,15 +136,6 @@ namespace Lab.DAL.Migrations
                         .HasForeignKey("Lab.DAL.EntityModel.Identity", "Employee_Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Employee");
-                });
-
-            modelBuilder.Entity("Lab.DAL.EntityModel.Order", b =>
-                {
-                    b.HasOne("Lab.DAL.EntityModel.Employee", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId");
 
                     b.Navigation("Employee");
                 });
