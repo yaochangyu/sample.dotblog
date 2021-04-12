@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace Lab.DAL.DomainModel.Employee
@@ -21,11 +20,5 @@ namespace Lab.DAL.DomainModel.Employee
         public string Password { get; set; }
 
         public string Remark { get; set; }
-=======
-﻿namespace Lab.DAL.DomainModel.Employee
-{
-    public class InsertRequest
-    {
->>>>>>> origin/master
     }
 }
