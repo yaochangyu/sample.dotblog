@@ -76,6 +76,7 @@ namespace Lab.DAL
                 CreateAt = this.Now,
                 CreateBy = accessId
             };
+            
             var identityToDb = new Identity
             {
                 Account  = request.Account,
@@ -85,6 +86,7 @@ namespace Lab.DAL
                 CreateAt = this.Now,
                 CreateBy = accessId
             };
+            
             employeeToDb.Identity = identityToDb;
             await dbContext.Employees.AddAsync(employeeToDb, cancel);
             return await dbContext.SaveChangesAsync(cancel);
