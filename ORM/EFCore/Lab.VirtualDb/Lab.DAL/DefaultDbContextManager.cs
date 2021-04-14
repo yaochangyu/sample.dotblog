@@ -10,6 +10,7 @@ namespace Lab.DAL
 {
     internal class DefaultDbContextManager
     {
+        public static readonly  bool[]                Migrated = {false};
         private static readonly Lazy<ServiceProvider> s_serviceProviderLazy;
         private static readonly Lazy<IConfiguration>  s_configurationLazy;
         private static readonly ILoggerFactory        s_loggerFactory;
@@ -116,7 +117,7 @@ namespace Lab.DAL
         {
             return ServiceProvider.GetService<T>();
         }
-
+   
         public static void SetUseDefaultDatabase<TContext>() where TContext : DbContext
         {
             var services = new ServiceCollection();
