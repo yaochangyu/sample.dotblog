@@ -7,7 +7,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Lab.DAL
 {
-    public class EmployeeRepository
+    public interface IEmployeeRepository
+    {
+        Task<int> InsertLogAsync(InsertOrderRequest request,
+                                 string             accessId,
+                                 CancellationToken  cancel = default);
+
+        Task<int> NewAsync(NewRequest        request,
+                           string            accessId,
+                           CancellationToken cancel = default);
+    }
+
+    public class EmployeeRepository : IEmployeeRepository
     {
         internal IDbContextFactory<EmployeeDbContext> DbContextFactory
         {
