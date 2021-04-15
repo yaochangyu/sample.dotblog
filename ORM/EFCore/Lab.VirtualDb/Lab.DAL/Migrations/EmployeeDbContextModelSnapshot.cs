@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Lab.DAL.Migrations
 {
     [DbContext(typeof(EmployeeDbContext))]
-    partial class EmployeeContextModelSnapshot : ModelSnapshot
+    partial class EmployeeDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
