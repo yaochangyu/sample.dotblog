@@ -95,6 +95,7 @@ namespace Lab.DAL.UnitTest
         {
             //arrange
             DefaultDbContextManager.Now = new DateTime(1900, 1, 1);
+            DefaultDbContextManager.SetPhysicalDatabase<EmployeeDbContext>();
 
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureServices(services => { services.AddSingleton<EmployeeRepository>(); });
@@ -133,7 +134,7 @@ namespace Lab.DAL.UnitTest
         public void 操作記憶體()
         {
             DefaultDbContextManager.Now = new DateTime(1900, 1, 1);
-            DefaultDbContextManager.SetUseMemoryDatabase<EmployeeDbContext>();
+            DefaultDbContextManager.SetMemoryDatabase<EmployeeDbContext>();
 
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureServices(services => { services.AddSingleton<EmployeeRepository>(); });
