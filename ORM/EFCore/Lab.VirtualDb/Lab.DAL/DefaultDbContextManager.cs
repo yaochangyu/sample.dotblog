@@ -14,9 +14,11 @@ namespace Lab.DAL
         private static readonly Lazy<ServiceProvider> s_serviceProviderLazy;
         private static readonly Lazy<IConfiguration>  s_configurationLazy;
         private static readonly ILoggerFactory        s_loggerFactory;
-        private static          ServiceProvider       s_serviceProvider;
-        private static          IConfiguration        s_configuration;
-        private static          DateTime?             s_now;
+
+        private static readonly ServiceCollection s_services;
+        private static          ServiceProvider   s_serviceProvider;
+        private static          IConfiguration    s_configuration;
+        private static          DateTime?         s_now;
 
         public static DateTime Now
         {
@@ -60,16 +62,18 @@ namespace Lab.DAL
             set => s_configuration = value;
         }
 
-        private static ServiceCollection s_services;
         static DefaultDbContextManager()
         {
             s_services = new ServiceCollection();
-            
+
             s_serviceProviderLazy =
                 new Lazy<ServiceProvider>(() =>
                                           {
                                               var services = s_services;
                                               services.AddDbContextFactory<EmployeeDbContext>(ApplyConfigurePhysical);
+
+                                              //services.AddDbContextFactory<EmployeeDbContext>(ApplyConfigurePhysical);
+                                              // services.AddDbContextFactory<EmployeeDbContext>(ApplyConfigureMemory);
                                               return services.BuildServiceProvider();
                                           });
             s_configurationLazy
@@ -92,10 +96,33 @@ namespace Lab.DAL
                                                    });
         }
 
+        public static T GetInstance<T>()
+        {
+            return ServiceProvider.GetService<T>();
+        }
+
+        public static void SetMemoryDatabase<TContext>() where TContext : DbContext
+        {
+            var services = s_services;
+
+            services.Clear();
+            services.AddDbContextFactory<TContext>(ApplyConfigureMemory);
+            ServiceProvider = services.BuildServiceProvider();
+        }
+
+        public static void SetPhysicalDatabase<TContext>() where TContext : DbContext
+        {
+            var services = s_services;
+
+            services.Clear();
+            services.AddDbContextFactory<TContext>(ApplyConfigurePhysical);
+            ServiceProvider = services.BuildServiceProvider();
+        }
+
         private static void ApplyConfigureMemory(IServiceProvider        provider,
                                                  DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseInMemoryDatabase("Demo")
+            optionsBuilder.UseInMemoryDatabase("Lab.DAL")
                           .UseLoggerFactory(s_loggerFactory)
                 ;
         }
@@ -113,25 +140,6 @@ namespace Lab.DAL
             optionsBuilder.UseSqlServer(connectionString)
                           .UseLoggerFactory(s_loggerFactory)
                 ;
-        }
-
-        public static T GetInstance<T>()
-        {
-            return ServiceProvider.GetService<T>();
-        }
-   
-        public static void SetPhysicalDatabase<TContext>() where TContext : DbContext
-        {
-            var services = s_services;
-            services.AddDbContextFactory<TContext>(ApplyConfigurePhysical);
-            ServiceProvider = services.BuildServiceProvider();
-        }
-
-        public static void SetMemoryDatabase<TContext>() where TContext : DbContext
-        {
-            var services = s_services;
-            services.AddDbContextFactory<TContext>(ApplyConfigureMemory);
-            ServiceProvider = services.BuildServiceProvider();
         }
     }
 }
