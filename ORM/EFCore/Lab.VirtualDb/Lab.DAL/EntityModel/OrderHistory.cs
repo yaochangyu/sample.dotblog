@@ -4,29 +4,28 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Lab.DAL.EntityModel
 {
-    [Table("Employee")]
-    public class Employee
+    [Table("OrderHistory")]
+    public class OrderHistory
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public Guid Id { get; set; }
 
-        [Required]
-        public string Name { get; set; }
+        public Guid? Employee_Id { get; set; }
 
-        public int? Age { get; set; }
+        public string Remark { get; set; }
 
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long SequenceId { get; set; }
 
-        public string Remark { get; set; }
+        public string Product_Id { get; set; }
+
+        public string Product_Name { get; set; }
 
         [Required]
         public DateTime CreateAt { get; set; }
 
         [Required]
         public string CreateBy { get; set; }
-
-        public virtual Identity Identity { get; set; }
     }
 }
