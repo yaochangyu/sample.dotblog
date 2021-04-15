@@ -66,7 +66,7 @@ namespace Lab.DAL
                 new Lazy<ServiceProvider>(() =>
                                           {
                                               var services = new ServiceCollection();
-                                              services.AddDbContextFactory<EmployeeContext>(ApplyConfigurePhysical);
+                                              services.AddDbContextFactory<EmployeeDbContext>(ApplyConfigurePhysical);
 
                                               return services.BuildServiceProvider();
                                           });

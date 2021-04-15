@@ -8,9 +8,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Lab.DAL
 {
-    public class EmployeeContextFactory : IDesignTimeDbContextFactory<EmployeeContext>
+    public class EmployeeContextFactory : IDesignTimeDbContextFactory<EmployeeDbContext>
     {
-        public EmployeeContext CreateDbContext(string[] args)
+        public EmployeeDbContext CreateDbContext(string[] args)
         {
             Console.WriteLine("由設計工具產生 Database，初始化 DbContextOptionsBuilder");
 
@@ -19,11 +19,11 @@ namespace Lab.DAL
             
             Console.WriteLine($"由 appsettings.json 讀取連線字串為：{connectionString}");
         
-            var optionsBuilder = new DbContextOptionsBuilder<EmployeeContext>();
+            var optionsBuilder = new DbContextOptionsBuilder<EmployeeDbContext>();
             optionsBuilder.UseSqlServer(connectionString);
             Console.WriteLine($"DbContextOptionsBuilder 設定完成");
 
-            return new EmployeeContext(optionsBuilder.Options);
+            return new EmployeeDbContext(optionsBuilder.Options);
         }
     }
 }

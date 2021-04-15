@@ -15,7 +15,7 @@ namespace Lab.DAL.UnitTest
     [TestClass]
     public class EmployeeRepositoryUnitTests
     {
-        private static readonly DbContextOptions<EmployeeContext> s_employeeContextOptions;
+        private static readonly DbContextOptions<EmployeeDbContext> s_employeeContextOptions;
 
         static EmployeeRepositoryUnitTests()
         {
@@ -28,7 +28,7 @@ namespace Lab.DAL.UnitTest
             //刪除測試資料庫
             Console.WriteLine("AssemblyCleanup");
 
-            using var db = new EmployeeContext(s_employeeContextOptions);
+            using var db = new EmployeeDbContext(s_employeeContextOptions);
             db.Database.EnsureDeleted();
         }
 
@@ -37,7 +37,7 @@ namespace Lab.DAL.UnitTest
         {
             //刪除測試資料庫
             Console.WriteLine("AssemblyInitialize");
-            using var db = new EmployeeContext(s_employeeContextOptions);
+            using var db = new EmployeeDbContext(s_employeeContextOptions);
             db.Database.EnsureDeleted();
 
             //建立測試資料庫
@@ -115,7 +115,7 @@ namespace Lab.DAL.UnitTest
 
             //assert
             Assert.AreEqual(2, count);
-            var db = new EmployeeContext(s_employeeContextOptions);
+            var db = new EmployeeDbContext(s_employeeContextOptions);
 
             // var actual         = db.Employees.FirstOrDefault();
             var actual = db.Employees
@@ -133,7 +133,7 @@ namespace Lab.DAL.UnitTest
         public void 操作記憶體()
         {
             DefaultDbContextManager.Now = new DateTime(1900, 1, 1);
-            DefaultDbContextManager.SetUseMemoryDatabase<EmployeeContext>();
+            DefaultDbContextManager.SetUseMemoryDatabase<EmployeeDbContext>();
 
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureServices(services => { services.AddSingleton<EmployeeRepository>(); });
@@ -144,7 +144,7 @@ namespace Lab.DAL.UnitTest
             Assert.AreEqual(2, count);
         }
 
-        private static DbContextOptions<EmployeeContext> CreateDbContextOptions()
+        private static DbContextOptions<EmployeeDbContext> CreateDbContextOptions()
         {
             var configBuilder = new ConfigurationBuilder()
                                 .SetBasePath(Directory.GetCurrentDirectory())
@@ -163,7 +163,7 @@ namespace Lab.DAL.UnitTest
                                                              .AddConsole()
                                                              ;
                                                      });
-            return new DbContextOptionsBuilder<EmployeeContext>()
+            return new DbContextOptionsBuilder<EmployeeDbContext>()
                    .UseSqlServer(connectionString)
                    .UseLoggerFactory(loggerFactory)
                    .Options;
@@ -172,7 +172,7 @@ namespace Lab.DAL.UnitTest
         private static void DeleteTestDataRow()
         {
             var       dbContextOptions = s_employeeContextOptions;
-            using var db               = new EmployeeContext(dbContextOptions);
+            using var db               = new EmployeeDbContext(dbContextOptions);
             var       deleteCommand    = GetDeleteAllRecordCommand();
             db.Database.ExecuteSqlRaw(deleteCommand);
         }
