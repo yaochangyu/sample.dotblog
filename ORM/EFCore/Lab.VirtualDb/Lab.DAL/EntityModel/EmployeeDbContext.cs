@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.InMemory.Infrastructure.Internal;
 
 namespace Lab.DAL.EntityModel
 {
-    public class EmployeeContext : DbContext
+    public class EmployeeDbContext : DbContext
     {
         public virtual DbSet<Employee> Employees { get; set; }
 
@@ -11,7 +11,7 @@ namespace Lab.DAL.EntityModel
 
         public virtual DbSet<OrderHistory> OrderHistories { get; set; }
 
-        public EmployeeContext(DbContextOptions<EmployeeContext> options)
+        public EmployeeDbContext(DbContextOptions<EmployeeDbContext> options)
             : base(options)
         {
             if (DefaultDbContextManager.Migrated[0])

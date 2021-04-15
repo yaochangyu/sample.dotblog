@@ -9,13 +9,13 @@ namespace Lab.DAL
 {
     public class EmployeeRepository
     {
-        internal IDbContextFactory<EmployeeContext> DbContextFactory
+        internal IDbContextFactory<EmployeeDbContext> DbContextFactory
         {
             get
             {
                 if (this._dbContextFactory == null)
                 {
-                    this._dbContextFactory = DefaultDbContextManager.GetInstance<IDbContextFactory<EmployeeContext>>();
+                    this._dbContextFactory = DefaultDbContextManager.GetInstance<IDbContextFactory<EmployeeDbContext>>();
                 }
 
                 return this._dbContextFactory;
@@ -37,7 +37,7 @@ namespace Lab.DAL
             set => this._now = value;
         }
 
-        private IDbContextFactory<EmployeeContext> _dbContextFactory;
+        private IDbContextFactory<EmployeeDbContext> _dbContextFactory;
         private DateTime?                          _now;
 
         public async Task<int> InsertLogAsync(InsertOrderRequest request,
