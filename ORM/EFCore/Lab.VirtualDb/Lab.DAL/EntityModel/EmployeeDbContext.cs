@@ -11,17 +11,19 @@ namespace Lab.DAL.EntityModel
 
         public virtual DbSet<OrderHistory> OrderHistories { get; set; }
 
+        private static bool[] s_migrated;
+
         public EmployeeDbContext(DbContextOptions<EmployeeDbContext> options)
             : base(options)
         {
-            if (DefaultDbContextManager.Migrated[0])
+            if (s_migrated[0])
             {
                 return;
             }
 
-            lock (DefaultDbContextManager.Migrated)
+            lock (s_migrated)
             {
-                if (DefaultDbContextManager.Migrated[0] == false)
+                if (s_migrated[0] == false)
                 {
                     var memoryOptions = options.FindExtension<InMemoryOptionsExtension>();
                     if (memoryOptions == null)
@@ -29,7 +31,7 @@ namespace Lab.DAL.EntityModel
                         this.Database.Migrate();
                     }
 
-                    DefaultDbContextManager.Migrated[0] = true;
+                    s_migrated[0] = true;
                 }
             }
         }
