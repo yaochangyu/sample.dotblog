@@ -15,7 +15,7 @@ namespace Lab.DAL
             {
                 if (this._dbContextFactory == null)
                 {
-                    this._dbContextFactory = DefaultDbContextManager.GetInstance<IDbContextFactory<EmployeeDbContext>>();
+                    return DefaultDbContextManager.GetInstance<IDbContextFactory<EmployeeDbContext>>();
                 }
 
                 return this._dbContextFactory;
@@ -38,7 +38,7 @@ namespace Lab.DAL
         }
 
         private IDbContextFactory<EmployeeDbContext> _dbContextFactory;
-        private DateTime?                          _now;
+        private DateTime?                            _now;
 
         public async Task<int> InsertLogAsync(InsertOrderRequest request,
                                               string             accessId,
@@ -76,7 +76,7 @@ namespace Lab.DAL
                 CreateAt = this.Now,
                 CreateBy = accessId
             };
-            
+
             var identityToDb = new Identity
             {
                 Account  = request.Account,
@@ -86,7 +86,7 @@ namespace Lab.DAL
                 CreateAt = this.Now,
                 CreateBy = accessId
             };
-            
+
             employeeToDb.Identity = identityToDb;
             await dbContext.Employees.AddAsync(employeeToDb, cancel);
             return await dbContext.SaveChangesAsync(cancel);

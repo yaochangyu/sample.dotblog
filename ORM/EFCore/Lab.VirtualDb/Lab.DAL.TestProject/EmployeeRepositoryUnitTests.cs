@@ -65,6 +65,8 @@ namespace Lab.DAL.UnitTest
         {
             //arrange
             DefaultDbContextManager.Now = new DateTime(1900, 1, 1);
+            DefaultDbContextManager.SetPhysicalDatabase<EmployeeDbContext>();
+
             var repository = new EmployeeRepository();
             var id         = Guid.NewGuid();
             repository.NewAsync(new NewRequest
