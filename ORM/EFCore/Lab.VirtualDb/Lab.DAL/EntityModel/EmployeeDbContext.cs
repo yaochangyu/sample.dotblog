@@ -48,6 +48,7 @@ namespace Lab.DAL.EntityModel
             // }
         }
 
+        //管理索引
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Employee>(p =>
