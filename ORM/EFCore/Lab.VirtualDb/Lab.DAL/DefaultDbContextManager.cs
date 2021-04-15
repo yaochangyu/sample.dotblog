@@ -60,14 +60,16 @@ namespace Lab.DAL
             set => s_configuration = value;
         }
 
+        private static ServiceCollection s_services;
         static DefaultDbContextManager()
         {
+            s_services = new ServiceCollection();
+            
             s_serviceProviderLazy =
                 new Lazy<ServiceProvider>(() =>
                                           {
-                                              var services = new ServiceCollection();
+                                              var services = s_services;
                                               services.AddDbContextFactory<EmployeeDbContext>(ApplyConfigurePhysical);
-
                                               return services.BuildServiceProvider();
                                           });
             s_configurationLazy
@@ -90,16 +92,16 @@ namespace Lab.DAL
                                                    });
         }
 
-        public static void ApplyConfigureMemory(IServiceProvider        provider,
-                                                DbContextOptionsBuilder optionsBuilder)
+        private static void ApplyConfigureMemory(IServiceProvider        provider,
+                                                 DbContextOptionsBuilder optionsBuilder)
         {
             optionsBuilder.UseInMemoryDatabase("Demo")
                           .UseLoggerFactory(s_loggerFactory)
                 ;
         }
 
-        public static void ApplyConfigurePhysical(IServiceProvider        provider,
-                                                  DbContextOptionsBuilder optionsBuilder)
+        private static void ApplyConfigurePhysical(IServiceProvider        provider,
+                                                   DbContextOptionsBuilder optionsBuilder)
         {
             var config = provider.GetService<IConfiguration>();
             if (config == null)
@@ -118,16 +120,16 @@ namespace Lab.DAL
             return ServiceProvider.GetService<T>();
         }
    
-        public static void SetUseDefaultDatabase<TContext>() where TContext : DbContext
+        public static void SetPhysicalDatabase<TContext>() where TContext : DbContext
         {
-            var services = new ServiceCollection();
+            var services = s_services;
             services.AddDbContextFactory<TContext>(ApplyConfigurePhysical);
             ServiceProvider = services.BuildServiceProvider();
         }
 
-        public static void SetUseMemoryDatabase<TContext>() where TContext : DbContext
+        public static void SetMemoryDatabase<TContext>() where TContext : DbContext
         {
-            var services = new ServiceCollection();
+            var services = s_services;
             services.AddDbContextFactory<TContext>(ApplyConfigureMemory);
             ServiceProvider = services.BuildServiceProvider();
         }
