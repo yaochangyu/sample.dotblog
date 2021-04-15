@@ -23,6 +23,20 @@ namespace Lab.DAL
             set => this._dbContextFactory = value;
         }
 
+        internal EmployeeDbContext EmployeeDbContext
+        {
+            get
+            {
+                if (this._employeeDbContext == null)
+                {
+                    return this.DbContextFactory.CreateDbContext();
+                }
+
+                return this._employeeDbContext;
+            }
+            set => this._employeeDbContext = value;
+        }
+
         internal DateTime Now
         {
             get
@@ -38,13 +52,14 @@ namespace Lab.DAL
         }
 
         private IDbContextFactory<EmployeeDbContext> _dbContextFactory;
+        private EmployeeDbContext                    _employeeDbContext;
         private DateTime?                            _now;
 
         public async Task<int> InsertLogAsync(InsertOrderRequest request,
                                               string             accessId,
                                               CancellationToken  cancel = default)
         {
-            await using var dbContext = this.DbContextFactory.CreateDbContext();
+            await using var dbContext = this.EmployeeDbContext;
 
             var toDbOrderHistory = new OrderHistory
             {
@@ -64,7 +79,7 @@ namespace Lab.DAL
                                         string            accessId,
                                         CancellationToken cancel = default)
         {
-            await using var dbContext = this.DbContextFactory.CreateDbContext();
+            await using var dbContext = this.EmployeeDbContext;
 
             var id = Guid.NewGuid();
             var employeeToDb = new Employee

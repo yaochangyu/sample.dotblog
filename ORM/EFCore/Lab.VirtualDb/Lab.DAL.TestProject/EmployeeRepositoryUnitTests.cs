@@ -93,6 +93,62 @@ namespace Lab.DAL.UnitTest
         }
 
         [TestMethod]
+        public void 操作真實資料庫_從容器取得Repository和EmployeeDbContext執行個體()
+        {
+            //arrange
+            DefaultDbContextManager.Now = new DateTime(1900, 1, 1);
+
+            var connectionString =
+                "Server=(localdb)\\mssqllocaldb;Database=Lab.DAL.Injection;Trusted_Connection=True;MultipleActiveResultSets=true";
+
+            var builder = Host.CreateDefaultBuilder()
+                              .ConfigureServices(services =>
+                                                 {
+                                                     services.AddSingleton<EmployeeRepository>();
+                                                     services.AddDbContext<EmployeeDbContext>(builder =>
+                                                     {
+                                                         builder.UseSqlServer(connectionString);
+                                                     });
+                                                 });
+            var host = builder.Build();
+
+            var dbContextOptions  = host.Services.GetService<DbContextOptions<EmployeeDbContext>>();
+            var repository        = host.Services.GetService<EmployeeRepository>();
+            var employeeDbContext = host.Services.GetService<EmployeeDbContext>();
+            employeeDbContext.Database.EnsureCreated();
+
+            repository.EmployeeDbContext = employeeDbContext;
+
+            var id = Guid.NewGuid();
+
+            //act
+            var count = repository.NewAsync(new NewRequest
+            {
+                Id       = id,
+                Account  = "yao",
+                Password = "123456",
+                Name     = "余小章",
+                Age      = 18,
+            }, "TestUser").Result;
+
+            //assert
+            Assert.AreEqual(2, count);
+            var db = new EmployeeDbContext(dbContextOptions);
+
+            // var actual         = db.Employees.FirstOrDefault();
+            var actual = db.Employees
+                           .Include(p => p.Identity)
+                           .AsNoTracking()
+                           .FirstOrDefault();
+
+            Assert.AreEqual(actual.Name,              "余小章");
+            Assert.AreEqual(actual.Age,               18);
+            Assert.AreEqual(actual.Identity.Account,  "yao");
+            Assert.AreEqual(actual.Identity.Password, "123456");
+            db.Database.EnsureDeleted();
+        }
+
+        [TestMethod]
         public void 操作真實資料庫_從容器取得Repository執行個體()
         {
             //arrange
