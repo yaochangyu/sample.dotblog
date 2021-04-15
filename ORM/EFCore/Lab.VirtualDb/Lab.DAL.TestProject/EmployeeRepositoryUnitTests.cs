@@ -61,7 +61,7 @@ namespace Lab.DAL.UnitTest
         }
 
         [TestMethod]
-        public void 操作真實資料庫_手動取得執行個體()
+        public void 操作真實資料庫_手動取得Repository執行個體()
         {
             //arrange
             DefaultDbContextManager.Now = new DateTime(1900, 1, 1);
@@ -91,7 +91,7 @@ namespace Lab.DAL.UnitTest
         }
 
         [TestMethod]
-        public void 操作真實資料庫_從容器取得執行個體()
+        public void 操作真實資料庫_從容器取得Repository執行個體()
         {
             //arrange
             DefaultDbContextManager.Now = new DateTime(1900, 1, 1);
