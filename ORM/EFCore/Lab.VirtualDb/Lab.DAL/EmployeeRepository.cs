@@ -76,7 +76,7 @@ namespace Lab.DAL
             {
                 Employee_Id  = request.Employee_Id,
                 Product_Id   = request.Product_Id,
-                Product_Name = request.Product_Id,
+                Product_Name = request.Product_Name,
                 CreateAt     = this.Now,
                 CreateBy     = accessId,
                 Remark       = request.Remark,

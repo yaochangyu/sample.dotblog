@@ -10,16 +10,24 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Lab.DAL.UnitTest
+namespace Lab.DAL.TestProject
 {
     [TestClass]
     public class EmployeeRepositoryUnitTests
     {
         private static readonly DbContextOptions<EmployeeDbContext> s_employeeContextOptions;
+        public static           string                              TestDbConnectionString;
 
         static EmployeeRepositoryUnitTests()
         {
             s_employeeContextOptions = CreateDbContextOptions();
+
+            var configBuilder = new ConfigurationBuilder()
+                                .SetBasePath(Directory.GetCurrentDirectory())
+                                .AddJsonFile("appsettings.json");
+
+            var configRoot = configBuilder.Build();
+            TestDbConnectionString = configRoot.GetConnectionString("DefaultConnection");
         }
 
         [AssemblyCleanup]
@@ -28,7 +36,7 @@ namespace Lab.DAL.UnitTest
             //刪除測試資料庫
             Console.WriteLine("AssemblyCleanup");
 
-            using var db = new EmployeeDbContext(s_employeeContextOptions);
+            using var db = new TestEmployeeDbContext(TestDbConnectionString);
             db.Database.EnsureDeleted();
         }
 
@@ -37,11 +45,8 @@ namespace Lab.DAL.UnitTest
         {
             //刪除測試資料庫
             Console.WriteLine("AssemblyInitialize");
-            using var db = new EmployeeDbContext(s_employeeContextOptions);
+            using var db = new TestEmployeeDbContext(TestDbConnectionString);
             db.Database.EnsureDeleted();
-
-            //建立測試資料庫
-            db.Database.EnsureCreated();
         }
 
         [ClassCleanup]
@@ -92,6 +97,15 @@ namespace Lab.DAL.UnitTest
 
             //assert
             Assert.AreEqual(1, count);
+
+            using var db1 = new TestEmployeeDbContext(TestDbConnectionString);
+
+            var actual = db1.OrderHistories
+                            .AsNoTracking()
+                            .FirstOrDefault();
+
+            Assert.AreEqual("A001", actual.Product_Id);
+            Assert.AreEqual("羅技滑鼠", actual.Product_Name);
         }
 
         [TestMethod]
@@ -120,8 +134,6 @@ namespace Lab.DAL.UnitTest
             employeeDbContext.Database.EnsureCreated();
 
             repository.EmployeeDbContext = employeeDbContext;
-
-            var id = Guid.NewGuid();
 
             //act
             var count = repository.NewAsync(new NewRequest
@@ -172,7 +184,8 @@ namespace Lab.DAL.UnitTest
 
             //assert
             Assert.AreEqual(2, count);
-            using var db = new EmployeeDbContext(s_employeeContextOptions);
+
+            using var db = new TestEmployeeDbContext(TestDbConnectionString);
 
             var actual = db.Employees
                            .Include(p => p.Identity)
@@ -227,9 +240,13 @@ namespace Lab.DAL.UnitTest
 
         private static void DeleteTestDataRow()
         {
-            var       dbContextOptions = s_employeeContextOptions;
-            using var db               = new EmployeeDbContext(dbContextOptions);
-            var       deleteCommand    = GetDeleteAllRecordCommand();
+            using var db = new TestEmployeeDbContext(TestDbConnectionString);
+            if (db.Database.CanConnect() == false)
+            {
+                return;
+            }
+
+            var deleteCommand = GetDeleteAllRecordCommand();
             db.Database.ExecuteSqlRaw(deleteCommand);
         }
 
