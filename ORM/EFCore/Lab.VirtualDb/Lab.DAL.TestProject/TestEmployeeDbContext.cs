@@ -1,26 +1,23 @@
 ﻿using Lab.DAL.EntityModel;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.InMemory.Infrastructure.Internal;
 
 namespace Lab.DAL.TestProject
 {
     public class TestEmployeeDbContext : DbContext
     {
-        private readonly        string _connectionString;
-
         public virtual DbSet<Employee> Employees { get; set; }
 
         public virtual DbSet<Identity> Identities { get; set; }
 
         public virtual DbSet<OrderHistory> OrderHistories { get; set; }
 
+        private readonly string _connectionString;
+
         public TestEmployeeDbContext(string connectionString)
         {
             this._connectionString = connectionString;
         }
 
-        // 給 Migration CLI 使用
-        // 建構函數配置失敗才需要以下處理
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
             var connectionString = this._connectionString;
