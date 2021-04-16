@@ -16,7 +16,8 @@ namespace Lab.DAL.TestProject
     public class EmployeeRepositoryUnitTests
     {
         private static readonly DbContextOptions<EmployeeDbContext> s_employeeContextOptions;
-        private static readonly string TestDbConnectionString = "Data Source=Lab.DAL.TestProject.db";
+        private static readonly string TestDbConnectionString1 = "Data Source=Lab.DAL.TestProject.db";
+        private static readonly string TestDbConnectionString2 = "Data Source=Lab.DAL.Injection.db";
 
         static EmployeeRepositoryUnitTests()
         {
@@ -29,8 +30,11 @@ namespace Lab.DAL.TestProject
             //刪除測試資料庫
             Console.WriteLine("AssemblyCleanup");
 
-            using var db = new TestEmployeeDbContext(TestDbConnectionString);
-            db.Database.EnsureDeleted();
+            using var db1 = new TestEmployeeDbContext(TestDbConnectionString1);
+            db1.Database.EnsureDeleted();
+
+            using var db2 = new TestEmployeeDbContext(TestDbConnectionString2);
+            db2.Database.EnsureDeleted();
         }
 
         [AssemblyInitialize]
@@ -38,8 +42,11 @@ namespace Lab.DAL.TestProject
         {
             //刪除測試資料庫
             Console.WriteLine("AssemblyInitialize");
-            using var db = new TestEmployeeDbContext(TestDbConnectionString);
-            db.Database.EnsureDeleted();
+            using var db1 = new TestEmployeeDbContext(TestDbConnectionString1);
+            db1.Database.EnsureDeleted();
+
+            using var db2 = new TestEmployeeDbContext(TestDbConnectionString2);
+            db2.Database.EnsureDeleted();
 
             // //建立測試資料庫
             // db.Database.Migrate();
@@ -72,7 +79,6 @@ namespace Lab.DAL.TestProject
 
             var repository = new EmployeeRepository();
 
-            // var id         = Guid.NewGuid();
             repository.NewAsync(new NewRequest
             {
                 Account  = "yao",
@@ -81,7 +87,8 @@ namespace Lab.DAL.TestProject
                 Age      = 18,
                 Remark   = "測試案例，持續航向偉大航道"
             }, "TestUser").Wait();
-            using var db = new TestEmployeeDbContext(TestDbConnectionString);
+
+            using var db = new TestEmployeeDbContext(TestDbConnectionString1);
             var       id = db.Employees.FirstOrDefault(p => p.Name == "余小章").Id;
 
             //act
@@ -119,7 +126,11 @@ namespace Lab.DAL.TestProject
             var dbContextOptions  = host.Services.GetService<DbContextOptions<EmployeeDbContext>>();
             var repository        = host.Services.GetService<EmployeeRepository>();
             var employeeDbContext = host.Services.GetService<EmployeeDbContext>();
-            // employeeDbContext.Database.Migrate();
+
+            if (employeeDbContext.Database.CanConnect() == false)
+            {
+                employeeDbContext.Database.Migrate();
+            }
 
             repository.EmployeeDbContext = employeeDbContext;
 
@@ -134,6 +145,7 @@ namespace Lab.DAL.TestProject
 
             //assert
             Assert.AreEqual(2, count);
+
             using var db = new EmployeeDbContext(dbContextOptions);
 
             var actual = db.Employees
@@ -145,7 +157,6 @@ namespace Lab.DAL.TestProject
             Assert.AreEqual(actual.Age,               18);
             Assert.AreEqual(actual.Identity.Account,  "yao");
             Assert.AreEqual(actual.Identity.Password, "123456");
-            db.Database.EnsureDeleted();
         }
 
         [TestMethod]
@@ -156,7 +167,10 @@ namespace Lab.DAL.TestProject
             DefaultDbContextManager.SetPhysicalDatabase<EmployeeDbContext>();
 
             var builder = Host.CreateDefaultBuilder()
-                              .ConfigureServices(services => { services.AddSingleton<EmployeeRepository>(); });
+                              .ConfigureServices(services =>
+                                                 {
+                                                     services.AddSingleton<EmployeeRepository>();
+                                                 });
             var host = builder.Build();
 
             var repository = host.Services.GetService<EmployeeRepository>();
@@ -172,7 +186,7 @@ namespace Lab.DAL.TestProject
 
             //assert
             Assert.AreEqual(2, count);
-            using var db = new TestEmployeeDbContext(TestDbConnectionString);
+            using var db = new TestEmployeeDbContext(TestDbConnectionString1);
 
             var actual = db.Employees
                            .Include(p => p.Identity)
