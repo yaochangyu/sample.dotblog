@@ -1,7 +1,6 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace Lab.SQLite.DomainModel.Employee
+namespace Lab.DAL.DomainModel.Employee
 {
     public class NewRequest
     {

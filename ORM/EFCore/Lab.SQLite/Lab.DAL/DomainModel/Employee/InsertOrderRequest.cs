@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Lab.SQLite.DomainModel.Employee
+﻿namespace Lab.DAL.DomainModel.Employee
 {
     public class InsertOrderRequest
     {

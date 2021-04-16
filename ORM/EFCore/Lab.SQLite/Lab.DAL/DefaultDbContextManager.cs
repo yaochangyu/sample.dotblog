@@ -1,12 +1,12 @@
 ﻿using System;
 using System.IO;
-using Lab.SQLite.EntityModel;
+using Lab.DAL.EntityModel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Lab.SQLite
+namespace Lab.DAL
 {
     internal class DefaultDbContextManager
     {
