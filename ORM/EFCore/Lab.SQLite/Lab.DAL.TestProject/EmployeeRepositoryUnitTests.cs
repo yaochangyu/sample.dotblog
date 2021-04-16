@@ -1,8 +1,8 @@
 using System;
 using System.IO;
 using System.Linq;
-using Lab.SQLite.DomainModel.Employee;
-using Lab.SQLite.EntityModel;
+using Lab.DAL.DomainModel.Employee;
+using Lab.DAL.EntityModel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Lab.SQLite.TestProject
+namespace Lab.DAL.TestProject
 {
     [TestClass]
     public class EmployeeRepositoryUnitTests

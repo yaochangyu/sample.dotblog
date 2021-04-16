@@ -2,20 +2,21 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Lab.SQLite.EntityModel
+namespace Lab.DAL.EntityModel
 {
-    [Table("Employee")]
-    public class Employee
+    [Table("Identity")]
+    public class Identity
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
-        public string Id { get; set; }
+        public string Employee_Id { get; set; }
 
         [Required]
-        public string Name { get; set; }
+        public string Account { get; set; }
 
-        public int? Age { get; set; }
-
+        [Required]
+        public string Password { get; set; }
+        
         public string Remark { get; set; }
 
         [Required]
@@ -24,6 +25,7 @@ namespace Lab.SQLite.EntityModel
         [Required]
         public string CreateBy { get; set; }
 
-        public virtual Identity Identity { get; set; }
+        [ForeignKey("Employee_Id")]
+        public virtual Employee Employee { get; set; }
     }
 }

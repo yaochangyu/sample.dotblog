@@ -1,10 +1,9 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.InMemory.Infrastructure.Internal;
 using Microsoft.EntityFrameworkCore.Sqlite.Infrastructure.Internal;
 
-namespace Lab.SQLite.EntityModel
+namespace Lab.DAL.EntityModel
 {
     public class EmployeeDbContext : DbContext
     {
@@ -28,16 +27,17 @@ namespace Lab.SQLite.EntityModel
             {
                 if (s_migrated[0] == false)
                 {
-                    var memoryOptions          = options.FindExtension<InMemoryOptionsExtension>();
-                    var sqliteOptionsExtension = options.FindExtension<SqliteOptionsExtension>();
-
-                    if (sqliteOptionsExtension != null)
-                    {
-                        Console.WriteLine($"EmployeeDbContext 的連線字串為:{sqliteOptionsExtension.ConnectionString}，執行 Migration");
-                    }
+                    var memoryOptions = options.FindExtension<InMemoryOptionsExtension>();
 
                     if (memoryOptions == null)
                     {
+                        var sqliteOptionsExtension = options.FindExtension<SqliteOptionsExtension>();
+
+                        if (sqliteOptionsExtension != null)
+                        {
+                            Console.WriteLine($"EmployeeDbContext 的連線字串為:{sqliteOptionsExtension.ConnectionString}，執行 Migration");
+                        }
+
                         this.Database.Migrate();
                     }
 
