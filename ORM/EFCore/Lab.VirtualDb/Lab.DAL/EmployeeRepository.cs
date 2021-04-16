@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Lab.DAL.DomainModel.Employee;
@@ -116,6 +118,23 @@ namespace Lab.DAL
             employeeToDb.Identity = identityToDb;
             await dbContext.Employees.AddAsync(employeeToDb, cancel);
             return await dbContext.SaveChangesAsync(cancel);
+        }
+
+        public async Task<IList<FilterResponse>> GetAllAsync(CancellationToken cancel)
+        {
+            await using var db = this.EmployeeDbContext;
+            return await db.Employees
+                           .Include(p => p.Identity)
+                           .Select(p => new FilterResponse()
+                           {
+                               Account  = p.Identity.Account,
+                               Age      = p.Age,
+                               Name     = p.Name,
+                               Password = p.Identity.Password,
+                               Remark   = p.Remark
+                           })
+                           .AsNoTracking()
+                           .ToListAsync(cancel);
         }
     }
 }
