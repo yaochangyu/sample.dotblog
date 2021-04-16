@@ -5,9 +5,6 @@ namespace Lab.SQLite.DomainModel.Employee
 {
     public class NewRequest
     {
-        [Key]
-        public Guid Id { get; set; }
-
         [Required]
         public string Name { get; set; }
 

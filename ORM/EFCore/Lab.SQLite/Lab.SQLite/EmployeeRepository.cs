@@ -74,6 +74,7 @@ namespace Lab.SQLite
 
             var toDbOrderHistory = new OrderHistory
             {
+                Id           = Guid.NewGuid().ToString(),
                 Employee_Id  = request.Employee_Id,
                 Product_Id   = request.Product_Id,
                 Product_Name = request.Product_Id,
@@ -92,7 +93,7 @@ namespace Lab.SQLite
         {
             await using var dbContext = this.EmployeeDbContext;
 
-            var id = Guid.NewGuid();
+            var id = Guid.NewGuid().ToString();
             var employeeToDb = new Employee
             {
                 Id       = id,
