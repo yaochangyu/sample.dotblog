@@ -8,16 +8,13 @@ namespace Lab.SQLite.EntityModel
     public class OrderHistory
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public Guid Id { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.None)]
+        public string Id { get; set; }
 
-        public Guid? Employee_Id { get; set; }
+        public string Employee_Id { get; set; }
 
         public string Remark { get; set; }
-
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public long SequenceId { get; set; }
-
+        
         public string Product_Id { get; set; }
 
         public string Product_Name { get; set; }

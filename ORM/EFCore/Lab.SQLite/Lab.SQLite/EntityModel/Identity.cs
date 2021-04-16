@@ -9,17 +9,14 @@ namespace Lab.SQLite.EntityModel
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
-        public Guid Employee_Id { get; set; }
+        public string Employee_Id { get; set; }
 
         [Required]
         public string Account { get; set; }
 
         [Required]
         public string Password { get; set; }
-
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public long SequenceId { get; set; }
-
+        
         public string Remark { get; set; }
 
         [Required]

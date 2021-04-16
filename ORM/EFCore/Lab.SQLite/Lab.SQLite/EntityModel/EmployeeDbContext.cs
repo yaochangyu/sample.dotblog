@@ -1,5 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.InMemory.Infrastructure.Internal;
+using Microsoft.EntityFrameworkCore.Sqlite.Infrastructure.Internal;
 
 namespace Lab.SQLite.EntityModel
 {
@@ -25,7 +28,14 @@ namespace Lab.SQLite.EntityModel
             {
                 if (s_migrated[0] == false)
                 {
-                    var memoryOptions = options.FindExtension<InMemoryOptionsExtension>();
+                    var memoryOptions          = options.FindExtension<InMemoryOptionsExtension>();
+                    var sqliteOptionsExtension = options.FindExtension<SqliteOptionsExtension>();
+
+                    if (sqliteOptionsExtension != null)
+                    {
+                        Console.WriteLine($"EmployeeDbContext 的連線字串為:{sqliteOptionsExtension.ConnectionString}，執行 Migration");
+                    }
+
                     if (memoryOptions == null)
                     {
                         this.Database.Migrate();
@@ -46,36 +56,15 @@ namespace Lab.SQLite.EntityModel
             // // var connectionString = this._connectionString;
             // if (optionsBuilder.IsConfigured == false)
             // {
-            //     optionsBuilder.UseSqlServer(connectionString);
+            //     Console.WriteLine("OnConfiguring");
+            //     optionsBuilder.UseSqlite(connectionString);
             // }
         }
 
         //管理索引
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // modelBuilder.Entity<Employee>(p =>
-            //                               {
-            //                                   p.HasKey(e => e.Id)
-            //                                    .IsClustered(false);
-            //                               });
-            //
-            // modelBuilder.Entity<Employee>(p =>
-            //                               {
-            //                                   p.HasIndex(e => e.SequenceId)
-            //                                    .IsUnique()
-            //                                    .IsClustered();
-            //                               });
-            // modelBuilder.Entity<Identity>(p =>
-            //                               {
-            //                                   p.HasKey(e => e.Employee_Id)
-            //                                    .IsClustered(false);
-            //                               });
-            // modelBuilder.Entity<Identity>(p =>
-            //                               {
-            //                                   p.HasIndex(e => e.SequenceId)
-            //                                    .IsUnique()
-            //                                    .IsClustered();
-            //                               });
+            Console.WriteLine("設定資料表定義");
         }
     }
 }

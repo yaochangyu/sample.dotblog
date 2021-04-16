@@ -70,9 +70,6 @@ namespace Lab.SQLite
                                           {
                                               var services = s_services;
                                               services.AddDbContextFactory<EmployeeDbContext>(ApplyConfigurePhysical);
-
-                                              //services.AddDbContextFactory<EmployeeDbContext>(ApplyConfigurePhysical);
-                                              // services.AddDbContextFactory<EmployeeDbContext>(ApplyConfigureMemory);
                                               return services.BuildServiceProvider();
                                           });
             s_configurationLazy
