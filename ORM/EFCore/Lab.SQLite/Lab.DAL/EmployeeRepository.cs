@@ -91,8 +91,7 @@ namespace Lab.DAL
                                         string            accessId,
                                         CancellationToken cancel = default)
         {
-            await using var dbContext = this.EmployeeDbContext;
-
+             using var dbContext = this.EmployeeDbContext;
             var id = Guid.NewGuid().ToString();
             var employeeToDb = new Employee
             {
