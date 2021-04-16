@@ -68,16 +68,18 @@ namespace Lab.DAL.UnitTest
             DefaultDbContextManager.SetPhysicalDatabase<EmployeeDbContext>();
 
             var repository = new EmployeeRepository();
-            var id         = Guid.NewGuid();
+
+            // var id         = Guid.NewGuid();
             repository.NewAsync(new NewRequest
             {
-                Id       = id,
                 Account  = "yao",
                 Password = "123456",
                 Name     = "余小章",
                 Age      = 18,
                 Remark   = "測試案例，持續航向偉大航道"
             }, "TestUser").Wait();
+            using var db = new EmployeeDbContext(s_employeeContextOptions);
+            var       id = db.Employees.FirstOrDefault(p => p.Name == "余小章").Id;
 
             //act
             var count = repository.InsertLogAsync(new InsertOrderRequest
@@ -93,7 +95,7 @@ namespace Lab.DAL.UnitTest
         }
 
         [TestMethod]
-        public void 操作真實資料庫_從容器取得Repository和EmployeeDbContext執行個體()
+        public void 操作真實資料庫_注入EmployeeDbContext()
         {
             //arrange
             DefaultDbContextManager.Now = new DateTime(1900, 1, 1);
@@ -124,7 +126,6 @@ namespace Lab.DAL.UnitTest
             //act
             var count = repository.NewAsync(new NewRequest
             {
-                Id       = id,
                 Account  = "yao",
                 Password = "123456",
                 Name     = "余小章",
@@ -133,9 +134,8 @@ namespace Lab.DAL.UnitTest
 
             //assert
             Assert.AreEqual(2, count);
-            var db = new EmployeeDbContext(dbContextOptions);
+            using var db = new EmployeeDbContext(dbContextOptions);
 
-            // var actual         = db.Employees.FirstOrDefault();
             var actual = db.Employees
                            .Include(p => p.Identity)
                            .AsNoTracking()
@@ -149,7 +149,7 @@ namespace Lab.DAL.UnitTest
         }
 
         [TestMethod]
-        public void 操作真實資料庫_從容器取得Repository執行個體()
+        public void 操作真實資料庫_預設EmployeeDbContext()
         {
             //arrange
             DefaultDbContextManager.Now = new DateTime(1900, 1, 1);
@@ -160,12 +160,10 @@ namespace Lab.DAL.UnitTest
             var host = builder.Build();
 
             var repository = host.Services.GetService<EmployeeRepository>();
-            var id         = Guid.NewGuid();
 
             //act
             var count = repository.NewAsync(new NewRequest
             {
-                Id       = id,
                 Account  = "yao",
                 Password = "123456",
                 Name     = "余小章",
@@ -174,9 +172,8 @@ namespace Lab.DAL.UnitTest
 
             //assert
             Assert.AreEqual(2, count);
-            var db = new EmployeeDbContext(s_employeeContextOptions);
+            using var db = new EmployeeDbContext(s_employeeContextOptions);
 
-            // var actual         = db.Employees.FirstOrDefault();
             var actual = db.Employees
                            .Include(p => p.Identity)
                            .AsNoTracking()
