@@ -1,5 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.InMemory.Infrastructure.Internal;
+using Microsoft.EntityFrameworkCore.SqlServer.Infrastructure.Internal;
 
 namespace Lab.DAL.EntityModel
 {
@@ -26,9 +28,15 @@ namespace Lab.DAL.EntityModel
                 if (s_migrated[0] == false)
                 {
                     var memoryOptions = options.FindExtension<InMemoryOptionsExtension>();
+
                     if (memoryOptions == null)
                     {
-                        this.Database.Migrate();
+                        var sqlOptions = options.FindExtension<SqlServerOptionsExtension>();
+                        if (sqlOptions != null)
+                        {
+                            Console.WriteLine($"EmployeeDbContext of connection string be '{sqlOptions.ConnectionString}'");
+                            this.Database.Migrate();
+                        }
                     }
 
                     s_migrated[0] = true;
