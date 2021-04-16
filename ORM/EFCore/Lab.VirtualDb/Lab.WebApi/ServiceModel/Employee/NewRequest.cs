@@ -1,7 +1,6 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 
-namespace Lab.DAL.DomainModel.Employee
+namespace Lab.WebApi.ServiceModel.Employee
 {
     public class NewRequest
     {
