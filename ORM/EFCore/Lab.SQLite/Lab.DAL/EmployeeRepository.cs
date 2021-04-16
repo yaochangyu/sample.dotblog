@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Lab.SQLite.DomainModel.Employee;
-using Lab.SQLite.EntityModel;
+using Lab.DAL.DomainModel.Employee;
+using Lab.DAL.EntityModel;
 using Microsoft.EntityFrameworkCore;
 
-namespace Lab.SQLite
+namespace Lab.DAL
 {
     public interface IEmployeeRepository
     {

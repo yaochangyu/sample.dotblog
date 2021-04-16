@@ -1,12 +1,11 @@
 ﻿using System;
+using Lab.DAL.EntityModel;
 using Microsoft.EntityFrameworkCore;
 
-namespace Lab.SQLite.EntityModel
+namespace Lab.DAL.TestProject
 {
     public class TestEmployeeDbContext : DbContext
     {
-        private static readonly bool[] s_migrated = {false};
-
         public virtual DbSet<Employee> Employees { get; set; }
 
         public virtual DbSet<Identity> Identities { get; set; }
