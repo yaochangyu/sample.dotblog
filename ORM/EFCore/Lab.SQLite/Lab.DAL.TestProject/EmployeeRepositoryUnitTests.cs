@@ -105,7 +105,28 @@ namespace Lab.DAL.TestProject
         }
 
         [TestMethod]
-        public void 操作真實資料庫_注入EmployeeDbContext()
+        public void 操作真實資料庫_手動實例化EmployeeDbContext()
+        {
+            var       contextOptions = CreateDbContextOptions();
+            using var dbContext      = new EmployeeDbContext(contextOptions);
+            var       id             = Guid.NewGuid().ToString();
+            dbContext.Employees.Add(new Employee()
+            {
+                Age      = 18,
+                Id       = id,
+                CreateAt = DateTime.Now,
+                CreateBy = "test",
+                Name     = "yao"
+            });
+            dbContext.SaveChanges();
+
+            var actual = dbContext.Employees.AsNoTracking().FirstOrDefault(p => p.Id ==id);
+            Assert.AreEqual(18,actual.Age);
+            Assert.AreEqual("yao",actual.Name);
+        }
+
+        [TestMethod]
+        public void 操作真實資料庫_由Host注入EmployeeDbContext()
         {
             //arrange
             DefaultDbContextManager.Now = new DateTime(1900, 1, 1);
@@ -167,10 +188,7 @@ namespace Lab.DAL.TestProject
             DefaultDbContextManager.SetPhysicalDatabase<EmployeeDbContext>();
 
             var builder = Host.CreateDefaultBuilder()
-                              .ConfigureServices(services =>
-                                                 {
-                                                     services.AddSingleton<EmployeeRepository>();
-                                                 });
+                              .ConfigureServices(services => { services.AddSingleton<EmployeeRepository>(); });
             var host = builder.Build();
 
             var repository = host.Services.GetService<EmployeeRepository>();
