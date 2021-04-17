@@ -4,6 +4,7 @@ using System.Linq;
 using Lab.DAL.DomainModel.Employee;
 using Lab.DAL.EntityModel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -120,49 +121,114 @@ namespace Lab.DAL.TestProject
             });
             dbContext.SaveChanges();
 
-            var actual = dbContext.Employees.AsNoTracking().FirstOrDefault(p => p.Id ==id);
-            Assert.AreEqual(18,actual.Age);
-            Assert.AreEqual("yao",actual.Name);
+            var actual = dbContext.Employees.AsNoTracking().FirstOrDefault(p => p.Id == id);
+            Assert.AreEqual(18,    actual.Age);
+            Assert.AreEqual("yao", actual.Name);
         }
 
         [TestMethod]
-        public void 操作真實資料庫_由Host注入EmployeeDbContext()
+        public void 操作真實資料庫_由Host註冊EmployeeDbContext()
         {
             //arrange
-            DefaultDbContextManager.Now = new DateTime(1900, 1, 1);
-
-            var connectionString = "Data Source=Lab.DAL.Injection.db";
-
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureServices(services =>
                                                  {
-                                                     services.AddSingleton<EmployeeRepository>();
-                                                     services.AddDbContext<EmployeeDbContext>(builder =>
+                                                     services.AddDbContext<EmployeeDbContext>((provider, builder) =>
                                                      {
+                                                         var config =
+                                                             provider.GetService<IConfiguration>();
+                                                         var connectionString =
+                                                             config
+                                                                 .GetConnectionString("DefaultConnection");
                                                          builder.UseSqlite(connectionString);
                                                      });
                                                  });
             var host = builder.Build();
 
-            var dbContextOptions  = host.Services.GetService<DbContextOptions<EmployeeDbContext>>();
-            var repository        = host.Services.GetService<EmployeeRepository>();
-            var employeeDbContext = host.Services.GetService<EmployeeDbContext>();
-
-            if (employeeDbContext.Database.CanConnect() == false)
-            {
-                employeeDbContext.Database.Migrate();
-            }
-
-            repository.EmployeeDbContext = employeeDbContext;
+            var       dbContextOptions = host.Services.GetService<DbContextOptions<EmployeeDbContext>>();
+            using var dbContext        = host.Services.GetService<EmployeeDbContext>();
 
             //act
-            var count = repository.NewAsync(new NewRequest
+            var id  = Guid.NewGuid().ToString();
+            var now = DateTime.Now;
+            dbContext.Employees.Add(new Employee()
             {
-                Account  = "yao",
-                Password = "123456",
+                Id       = id,
                 Name     = "余小章",
                 Age      = 18,
-            }, "TestUser").Result;
+                CreateAt = now,
+                CreateBy = "test user"
+            });
+            dbContext.Identities.Add(new Identity()
+            {
+                Employee_Id = id,
+                Account     = "yao",
+                Password    = "123456",
+                CreateAt    = now,
+                CreateBy    = "test user"
+            });
+            var count = dbContext.SaveChanges();
+
+            //assert
+            Assert.AreEqual(2, count);
+
+            using var db = new EmployeeDbContext(dbContextOptions);
+
+            var actual = db.Employees
+                           .Include(p => p.Identity)
+                           .AsNoTracking()
+                           .FirstOrDefault();
+
+            Assert.AreEqual(actual.Name,              "余小章");
+            Assert.AreEqual(actual.Age,               18);
+            Assert.AreEqual(actual.Identity.Account,  "yao");
+            Assert.AreEqual(actual.Identity.Password, "123456");
+        }
+
+        [TestMethod]
+        public void 操作真實資料庫_由Host註冊EmployeeDbContextFactory()
+        {
+            //arrange
+            var builder = Host.CreateDefaultBuilder()
+                              .ConfigureServices(services =>
+                                                 {
+                                                     services
+                                                         .AddDbContextFactory<EmployeeDbContext>((provider, builder) =>
+                                                         {
+                                                             var config =
+                                                                 provider.GetService<IConfiguration>();
+                                                             var connectionString =
+                                                                 config
+                                                                     .GetConnectionString("DefaultConnection");
+                                                             builder.UseSqlite(connectionString);
+                                                         });
+                                                 });
+            var host = builder.Build();
+
+            var       dbContextOptions = host.Services.GetService<DbContextOptions<EmployeeDbContext>>();
+            var       dbContextFactory = host.Services.GetService<IDbContextFactory<EmployeeDbContext>>();
+            using var dbContext        = dbContextFactory.CreateDbContext();
+
+            //act
+            var id  = Guid.NewGuid().ToString();
+            var now = DateTime.Now;
+            dbContext.Employees.Add(new Employee()
+            {
+                Id       = id,
+                Name     = "余小章",
+                Age      = 18,
+                CreateAt = now,
+                CreateBy = "test user"
+            });
+            dbContext.Identities.Add(new Identity()
+            {
+                Employee_Id = id,
+                Account     = "yao",
+                Password    = "123456",
+                CreateAt    = now,
+                CreateBy    = "test user"
+            });
+            var count = dbContext.SaveChanges();
 
             //assert
             Assert.AreEqual(2, count);
