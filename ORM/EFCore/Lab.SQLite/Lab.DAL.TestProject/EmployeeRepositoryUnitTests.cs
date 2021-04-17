@@ -133,15 +133,18 @@ namespace Lab.DAL.TestProject
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureServices(services =>
                                                  {
-                                                     services.AddDbContext<EmployeeDbContext>((provider, builder) =>
-                                                     {
-                                                         var config =
-                                                             provider.GetService<IConfiguration>();
-                                                         var connectionString =
-                                                             config
-                                                                 .GetConnectionString("DefaultConnection");
-                                                         builder.UseSqlite(connectionString);
-                                                     });
+                                                     services.AddDbContext<EmployeeDbContext>(
+                                                      (provider, builder) =>
+                                                      {
+                                                          var config =
+                                                              provider.GetService<IConfiguration>();
+                                                          var connectionString =
+                                                              config.GetConnectionString("DefaultConnection");
+                                                          var loggerFactory = provider.GetService<ILoggerFactory>();
+                                                          builder.UseSqlite(connectionString)
+                                                                 .UseLoggerFactory(loggerFactory)
+                                                              ;
+                                                      });
                                                  });
             var host = builder.Build();
 
@@ -186,22 +189,148 @@ namespace Lab.DAL.TestProject
         }
 
         [TestMethod]
+        public void 操作真實資料庫_由Host註冊EmployeeDbContextPool()
+        {
+            //arrange
+            var builder = Host.CreateDefaultBuilder()
+                              .ConfigureServices(services =>
+                                                 {
+                                                     services.AddDbContextPool<EmployeeDbContext>(
+                                                      (provider, builder) =>
+                                                      {
+                                                          var config =
+                                                              provider.GetService<IConfiguration>();
+                                                          var connectionString =
+                                                              config.GetConnectionString("DefaultConnection");
+                                                          var loggerFactory = provider.GetService<ILoggerFactory>();
+                                                          builder.UseSqlite(connectionString)
+                                                                 .UseLoggerFactory(loggerFactory)
+                                                              ;
+                                                      }, 64);
+                                                 });
+            var host = builder.Build();
+
+            var       dbContextOptions = host.Services.GetService<DbContextOptions<EmployeeDbContext>>();
+            using var dbContext        = host.Services.GetService<EmployeeDbContext>();
+
+            //act
+            var id  = Guid.NewGuid().ToString();
+            var now = DateTime.Now;
+            dbContext.Employees.Add(new Employee()
+            {
+                Id       = id,
+                Name     = "余小章",
+                Age      = 18,
+                CreateAt = now,
+                CreateBy = "test user"
+            });
+            dbContext.Identities.Add(new Identity()
+            {
+                Employee_Id = id,
+                Account     = "yao",
+                Password    = "123456",
+                CreateAt    = now,
+                CreateBy    = "test user"
+            });
+            var count = dbContext.SaveChanges();
+
+            //assert
+            Assert.AreEqual(2, count);
+
+            using var db = new EmployeeDbContext(dbContextOptions);
+
+            var actual = db.Employees
+                           .Include(p => p.Identity)
+                           .AsNoTracking()
+                           .FirstOrDefault();
+
+            Assert.AreEqual(actual.Name,              "余小章");
+            Assert.AreEqual(actual.Age,               18);
+            Assert.AreEqual(actual.Identity.Account,  "yao");
+            Assert.AreEqual(actual.Identity.Password, "123456");
+        }
+        [TestMethod]
         public void 操作真實資料庫_由Host註冊EmployeeDbContextFactory()
         {
             //arrange
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureServices(services =>
                                                  {
-                                                     services
-                                                         .AddDbContextFactory<EmployeeDbContext>((provider, builder) =>
-                                                         {
-                                                             var config =
-                                                                 provider.GetService<IConfiguration>();
-                                                             var connectionString =
-                                                                 config
-                                                                     .GetConnectionString("DefaultConnection");
-                                                             builder.UseSqlite(connectionString);
-                                                         });
+                                                     services.AddDbContextFactory<EmployeeDbContext>(
+                                                      (provider, builder) =>
+                                                      {
+                                                          var config =
+                                                              provider.GetService<IConfiguration>();
+                                                          var connectionString =
+                                                              config.GetConnectionString("DefaultConnection");
+                                                          var loggerFactory = provider.GetService<ILoggerFactory>();
+                                                          builder.UseSqlite(connectionString)
+                                                                 .UseLoggerFactory(loggerFactory)
+                                                              ;
+                                                      });
+                                                 });
+            var host = builder.Build();
+
+            var       dbContextOptions = host.Services.GetService<DbContextOptions<EmployeeDbContext>>();
+            var       dbContextFactory = host.Services.GetService<IDbContextFactory<EmployeeDbContext>>();
+            using var dbContext        = dbContextFactory.CreateDbContext();
+
+            //act
+            var id  = Guid.NewGuid().ToString();
+            var now = DateTime.Now;
+            dbContext.Employees.Add(new Employee()
+            {
+                Id       = id,
+                Name     = "余小章",
+                Age      = 18,
+                CreateAt = now,
+                CreateBy = "test user"
+            });
+            dbContext.Identities.Add(new Identity()
+            {
+                Employee_Id = id,
+                Account     = "yao",
+                Password    = "123456",
+                CreateAt    = now,
+                CreateBy    = "test user"
+            });
+            var count = dbContext.SaveChanges();
+
+            //assert
+            Assert.AreEqual(2, count);
+
+            using var db = new EmployeeDbContext(dbContextOptions);
+
+            var actual = db.Employees
+                           .Include(p => p.Identity)
+                           .AsNoTracking()
+                           .FirstOrDefault();
+
+            Assert.AreEqual(actual.Name,              "余小章");
+            Assert.AreEqual(actual.Age,               18);
+            Assert.AreEqual(actual.Identity.Account,  "yao");
+            Assert.AreEqual(actual.Identity.Password, "123456");
+        }
+
+        [TestMethod]
+        public void 操作真實資料庫_由Host註冊EmployeeDbContextPoolFactory()
+        {
+            //arrange
+            var builder = Host.CreateDefaultBuilder()
+                              .ConfigureServices(services =>
+                                                 {
+                                                     services.AddPooledDbContextFactory<EmployeeDbContext>(
+                                                      (provider, builder) =>
+                                                      {
+                                                          var config =
+                                                              provider.GetService<IConfiguration>();
+                                                          var connectionString =
+                                                              config.GetConnectionString("DefaultConnection");
+                                                          var loggerFactory = provider.GetService<ILoggerFactory>();
+                                                          builder.UseSqlite(connectionString)
+                                                                 .UseLoggerFactory(loggerFactory)
+                                                              ;
+                                                      },64);
                                                  });
             var host = builder.Build();
 
