@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Lab.DAL.DomainModel.Employee;
 using Lab.DAL.EntityModel;
 using Microsoft.EntityFrameworkCore;
@@ -127,6 +128,58 @@ namespace Lab.DAL.TestProject
         }
 
         [TestMethod]
+        public async Task 操作真實資料庫_()
+        {
+            //arrange
+            var builder = Host.CreateDefaultBuilder()
+                              .ConfigureServices(services =>
+                                                 {
+                                                     services.AddDbContext<EmployeeDbContext>(
+                                                      (provider, builder) =>
+                                                      {
+                                                          var config =
+                                                              provider.GetService<IConfiguration>();
+                                                          var connectionString =
+                                                              config.GetConnectionString("DefaultConnection");
+                                                          var loggerFactory = provider.GetService<ILoggerFactory>();
+                                                          builder.UseSqlite(connectionString)
+                                                                 .UseLoggerFactory(loggerFactory)
+                                                              ;
+                                                      });
+                                                 });
+            var host = builder.Build();
+
+            var             dbContextOptions = host.Services.GetService<DbContextOptions<EmployeeDbContext>>();
+            await using var dbContext        = host.Services.GetService<EmployeeDbContext>();
+
+            //act
+            var id  = Guid.NewGuid().ToString();
+            var now = DateTime.Now;
+            dbContext.Employees.Add(new Employee()
+            {
+                Id       = id,
+                Name     = "余小章",
+                Age      = 18,
+                CreateAt = now,
+                CreateBy = "test user"
+            });
+            dbContext.Identities.Add(new Identity()
+            {
+                Employee_Id = id,
+                Account     = "yao",
+                Password    = "123456",
+                CreateAt    = now,
+                CreateBy    = "test user"
+            });
+            var count = await dbContext.SaveChangesAsync();
+
+            // var employeesTask = dbContext.Employees.OrderBy(p=>p.Id).AsNoTracking().LastAsync();
+            var employeesTask  = dbContext.Employees.AsNoTracking().LastAsync();
+            var identitiesTask = dbContext.Identities.OrderBy(p => p.Employee_Id).AsNoTracking().LastAsync();
+            await Task.WhenAll(employeesTask, identitiesTask);
+        }
+
+        [TestMethod]
         public void 操作真實資料庫_由Host註冊EmployeeDbContext()
         {
             //arrange
@@ -249,6 +302,7 @@ namespace Lab.DAL.TestProject
             Assert.AreEqual(actual.Identity.Account,  "yao");
             Assert.AreEqual(actual.Identity.Password, "123456");
         }
+
         [TestMethod]
         public void 操作真實資料庫_由Host註冊EmployeeDbContextFactory()
         {
@@ -330,7 +384,7 @@ namespace Lab.DAL.TestProject
                                                           builder.UseSqlite(connectionString)
                                                                  .UseLoggerFactory(loggerFactory)
                                                               ;
-                                                      },64);
+                                                      }, 64);
                                                  });
             var host = builder.Build();
 
