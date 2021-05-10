@@ -1,6 +1,8 @@
-﻿namespace WebApiNet48
+﻿using System;
+
+namespace WebApiNet48
 {
-    public interface IMessager
+    public interface IMessager:IDisposable
     {
         string OperationId { get; }
     }
