@@ -8,7 +8,6 @@ namespace Mvc5Net48
 {
     internal class DefaultDependencyResolver : IDependencyResolver
     {
-
         public object GetService(Type serviceType)
         {
             if (HttpContext.Current?.Items[typeof(IServiceScope)] is IServiceScope scope)

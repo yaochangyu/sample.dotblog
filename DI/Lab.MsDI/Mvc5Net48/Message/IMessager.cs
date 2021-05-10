@@ -1,6 +1,8 @@
-﻿namespace Mvc5Net48.Message
+﻿using System;
+
+namespace Mvc5Net48.Message
 {
-    public interface IMessager
+    public interface IMessager:IDisposable
     {
         string OperationId { get; }
     }
