@@ -7,33 +7,34 @@ namespace WebApiNet48
 {
     public class DefaultDependencyResolver : IDependencyResolver
     {
-        protected IServiceProvider ServiceProvider { get; set; }
+        private readonly IServiceProvider _serviceProvider;
+        private          IServiceScope    _serviceScope;
 
-        public DefaultDependencyResolver(IServiceProvider serviceProvider)
+        public DefaultDependencyResolver(IServiceProvider serviceProvider, IServiceScope serviceScope = null)
         {
-            this.ServiceProvider = serviceProvider;
+            this._serviceProvider = serviceProvider;
+            this._serviceScope    = serviceScope;
         }
 
         public object GetService(Type serviceType)
         {
-            return this.ServiceProvider.GetService(serviceType);
+            return this._serviceProvider.GetService(serviceType);
         }
 
         public IEnumerable<object> GetServices(Type serviceType)
         {
-            return this.ServiceProvider.GetServices(serviceType);
+            return this._serviceProvider.GetServices(serviceType);
         }
 
         public IDependencyScope BeginScope()
         {
-            return new DefaultDependencyResolver(this.ServiceProvider.CreateScope().ServiceProvider);
+            this._serviceScope = this._serviceProvider.CreateScope();
+            return new DefaultDependencyResolver(this._serviceScope.ServiceProvider,this._serviceScope);
         }
 
         public void Dispose()
         {
-            // you can implement this interface just when you use .net core 2.0
-            // this.ServiceProvider.Dispose();
-            ((ServiceProvider) this.ServiceProvider).Dispose();
+            this._serviceScope?.Dispose();
         }
     }
 }
