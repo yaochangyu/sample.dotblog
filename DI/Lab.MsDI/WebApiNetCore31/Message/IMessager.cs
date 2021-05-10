@@ -1,6 +1,8 @@
-﻿namespace WebApiNetCore31
+﻿using System;
+
+namespace WebApiNetCore31
 {
-    public interface IMessager
+    public interface IMessager:IDisposable
     {
         string OperationId { get; }
     }
