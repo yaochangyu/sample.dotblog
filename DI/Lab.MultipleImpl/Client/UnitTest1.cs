@@ -12,7 +12,7 @@ namespace Client
     public class UnitTest1
     {
         [TestMethod]
-        public void TestMethod1()
+        public void 注入FuncName()
         {
             using var server =
                 new TestServer(WebHost.CreateDefaultBuilder()
@@ -29,7 +29,7 @@ namespace Client
             response.EnsureSuccessStatusCode();
 
             var result = response.Content.ReadAsStringAsync().Result;
-            Assert.AreEqual("ZipFileProvider",response);
+            Assert.AreEqual("ZipFileProvider",result);
         }
 
         private static void UseFuncName(IServiceCollection services)
