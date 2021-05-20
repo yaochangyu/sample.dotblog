@@ -1,0 +1,39 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using Unity;
+
+namespace Server.Controllers
+{
+    [ApiController]
+    [Route("[controller]")]
+    public class UnityDefaultController : ControllerBase
+    {
+        private readonly IFileProvider _fileProvider;
+
+        private readonly ILogger<UnityDefaultController> _logger;
+
+        // public UnityDefaultController(ILogger<UnityDefaultController>   logger,
+        //                               [Dependency("zip")] IFileProvider fileProvider)
+        // {
+        //     this._logger       = logger;
+        //     this._fileProvider = fileProvider;
+        // }
+        public UnityDefaultController(ILogger<UnityDefaultController> logger)
+        {
+            this._logger = logger;
+
+            // this._fileProvider = fileProvider;
+        }
+
+        [HttpGet]
+        public IActionResult Get()
+        {
+            var serviceProvider      = this.HttpContext.RequestServices;
+            var unityServiceProvider = (Unity.Microsoft.DependencyInjection.ServiceProvider) serviceProvider;
+            var unityContainer       = (UnityContainer) unityServiceProvider;
+            var fileProvider         = unityContainer.Resolve<IFileProvider>("zip");
+            var result               = fileProvider.Print();
+            return this.Ok(result);
+        }
+    }
+}
