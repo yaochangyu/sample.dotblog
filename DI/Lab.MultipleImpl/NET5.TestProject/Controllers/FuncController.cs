@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NET5.TestProject.File;
 
@@ -8,11 +9,16 @@ namespace NET5.TestProject.Controllers
     [Route("[controller]")]
     public class FuncController : ControllerBase
     {
+        private readonly IFileProvider           _fileProvider;
         private readonly ILogger<FuncController> _logger;
 
-        public FuncController(ILogger<FuncController> logger)
+        public FuncController(ILogger<FuncController>     logger,
+                              Func<string, IFileProvider> pool)
         {
-            this._logger = logger;
+            this._fileProvider = pool("zip");
+            this._logger       = logger;
+            var msg = $"{this._fileProvider.Print()} in {this.GetType().Name} constructor";
+            Console.WriteLine(msg);
         }
 
         [HttpGet]
