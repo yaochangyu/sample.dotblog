@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using NET5.TestProject.File;
 using Unity;
+using Unity.Microsoft.DependencyInjection;
 
 namespace NET5.TestProject.Controllers
 {
@@ -13,20 +14,21 @@ namespace NET5.TestProject.Controllers
 
         private readonly ILogger<UnityController> _logger;
 
-        public UnityController(ILogger<UnityController>   logger,
-                                      [Dependency("zip")] IFileProvider fileProvider)
+        public UnityController(ILogger<UnityController>          logger,
+                               [Dependency("zip")] IFileProvider fileProvider)
         {
             this._logger       = logger;
             this._fileProvider = fileProvider;
         }
 
         [HttpGet]
-        public IActionResult Get()
+        [Route("{key}")]
+        public IActionResult Get(string key)
         {
             var serviceProvider      = this.HttpContext.RequestServices;
-            var unityServiceProvider = (Unity.Microsoft.DependencyInjection.ServiceProvider) serviceProvider;
+            var unityServiceProvider = (ServiceProvider) serviceProvider;
             var unityContainer       = (UnityContainer) unityServiceProvider;
-            var fileProvider         = unityContainer.Resolve<IFileProvider>("zip");
+            var fileProvider         = unityContainer.Resolve<IFileProvider>(key);
             var result               = fileProvider.Print();
             return this.Ok(result);
         }
