@@ -1,11 +1,12 @@
 using System;
-using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NET5.TestProject.Controllers;
 using NET5.TestProject.File;
 using Unity;
 using Unity.Microsoft.DependencyInjection;
@@ -19,6 +20,7 @@ namespace NET5.TestProject
         public void Autofac注入ServiceName()
         {
             var hostBuilder = WebHost.CreateDefaultBuilder()
+
                                      // .UseServiceProviderFactory(new AutofacServiceProviderFactory())
                                      .ConfigureServices(services => { services.AddAutofac(); })
                                      .UseStartup<AutofacStartup>()
@@ -63,6 +65,39 @@ namespace NET5.TestProject
         }
 
         [TestMethod]
+        public void 手動註冊()
+        {
+            var hostBuilder =
+                    WebHost.CreateDefaultBuilder()
+                           .UseStartup<Startup>()
+                           .ConfigureServices(services =>
+                                              {
+                                                  services.AddSingleton<ZipFileProvider>();
+                                                  services.AddSingleton<FileProvider>();
+                                                  services.AddSingleton(p =>
+                                                                        {
+                                                                            var fileProvider = p.GetService<ZipFileProvider>();
+                                                                            var logger = p.GetService<ILogger<DefaultController>>();
+                                                                            return new DefaultController(logger, fileProvider);
+                                                                        });
+                                                  services.AddControllers().AddControllersAsServices();
+                                              })
+                ;
+            using var server = new TestServer(hostBuilder)
+            {
+                BaseAddress = new Uri("http://localhost:9527")
+            };
+
+            var client   = server.CreateClient();
+            var url      = "default";
+            var response = client.GetAsync(url).Result;
+            response.EnsureSuccessStatusCode();
+
+            var result = response.Content.ReadAsStringAsync().Result;
+            Assert.AreEqual("ZipFileProvider", result);
+        }
+
+        [TestMethod]
         public void 注入FuncName()
         {
             using var server =
@@ -87,8 +122,6 @@ namespace NET5.TestProject
             container.RegisterType<IFileProvider, ZipFileProvider>("zip");
             container.RegisterType<IFileProvider, FileProvider>("file");
         }
-
-     
 
         private static void UseUnityController(IServiceCollection services)
         {
