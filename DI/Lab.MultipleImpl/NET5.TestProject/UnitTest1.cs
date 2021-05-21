@@ -65,7 +65,7 @@ namespace NET5.TestProject
             };
 
             var client   = server.CreateClient();
-            var url      = "unity";
+            var url      = "unity/zip";
             var response = client.GetAsync(url).Result;
             response.EnsureSuccessStatusCode();
 
