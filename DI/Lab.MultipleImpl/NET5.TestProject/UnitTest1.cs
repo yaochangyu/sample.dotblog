@@ -22,11 +22,11 @@ namespace NET5.TestProject
             var hostBuilder = WebHost.CreateDefaultBuilder()
 
                                      // .UseServiceProviderFactory(new AutofacServiceProviderFactory())
-                                     .UseStartup<AutofacStartup>()
+                                     .UseStartup<AutofacStartup>() //<-- add line
                                      .ConfigureServices(services =>
                                                         {
                                                             services.AddAutofac();
-                                                            services.AddControllers().AddControllersAsServices();
+                                                            services.AddControllers().AddControllersAsServices();//<-- add line
                                                         })
                 ;
             using var server = new TestServer(hostBuilder)
@@ -48,15 +48,15 @@ namespace NET5.TestProject
         {
             var unityContainer = new UnityContainer();
             unityContainer.RegisterType<IFileProvider, ZipFileProvider>("zip");
-            unityContainer.RegisterType<IFileProvider, FileProvider>("file");
+            unityContainer.RegisterType<IFileProvider, FileProvider>("file"); //<-- add line
 
             var builder = WebHost.CreateDefaultBuilder()
                                  .UseStartup<Startup>()
-                                 .UseUnityServiceProvider(unityContainer)
+                                 .UseUnityServiceProvider(unityContainer) //<-- add line
                                  .ConfigureServices(s =>
                                                     {
                                                         s.AddControllers()
-                                                         .AddControllersAsServices();
+                                                         .AddControllersAsServices(); //<-- add line
                                                     })
                 ;
             using var server = new TestServer(builder)
