@@ -22,8 +22,12 @@ namespace NET5.TestProject
             var hostBuilder = WebHost.CreateDefaultBuilder()
 
                                      // .UseServiceProviderFactory(new AutofacServiceProviderFactory())
-                                     .ConfigureServices(services => { services.AddAutofac(); })
                                      .UseStartup<AutofacStartup>()
+                                     .ConfigureServices(services =>
+                                                        {
+                                                            services.AddAutofac();
+                                                            services.AddControllers().AddControllersAsServices();
+                                                        })
                 ;
             using var server = new TestServer(hostBuilder)
             {
@@ -43,17 +47,22 @@ namespace NET5.TestProject
         public void Unity注入ServiceName()
         {
             var unityContainer = new UnityContainer();
-            ConfigureContainer(unityContainer);
+            unityContainer.RegisterType<IFileProvider, ZipFileProvider>("zip");
+            unityContainer.RegisterType<IFileProvider, FileProvider>("file");
 
-            using var server =
-                new TestServer(WebHost.CreateDefaultBuilder()
-                                      .UseStartup<Startup>()
-                                      .UseUnityServiceProvider(unityContainer)
-                                      .ConfigureServices(UseUnityController)
-                              )
-                {
-                    BaseAddress = new Uri("http://localhost:9527")
-                };
+            var builder = WebHost.CreateDefaultBuilder()
+                                 .UseStartup<Startup>()
+                                 .UseUnityServiceProvider(unityContainer)
+                                 .ConfigureServices(s =>
+                                                    {
+                                                        s.AddControllers()
+                                                         .AddControllersAsServices();
+                                                    })
+                ;
+            using var server = new TestServer(builder)
+            {
+                BaseAddress = new Uri("http://localhost:9527")
+            };
 
             var client   = server.CreateClient();
             var url      = "unity";
@@ -70,17 +79,18 @@ namespace NET5.TestProject
             var hostBuilder =
                     WebHost.CreateDefaultBuilder()
                            .UseStartup<Startup>()
-                           .ConfigureServices(services =>
+                           .ConfigureServices(s =>
                                               {
-                                                  services.AddSingleton<ZipFileProvider>();
-                                                  services.AddSingleton<FileProvider>();
-                                                  services.AddSingleton(p =>
-                                                                        {
-                                                                            var fileProvider = p.GetService<ZipFileProvider>();
-                                                                            var logger = p.GetService<ILogger<DefaultController>>();
-                                                                            return new DefaultController(logger, fileProvider);
-                                                                        });
-                                                  services.AddControllers().AddControllersAsServices();
+                                                  s.AddSingleton<ZipFileProvider>();
+                                                  s.AddSingleton<FileProvider>();
+                                                  s.AddSingleton(p =>
+                                                                 {
+                                                                     var fileProvider = p.GetService<ZipFileProvider>();
+                                                                     var logger =
+                                                                         p.GetService<ILogger<DefaultController>>();
+                                                                     return new DefaultController(logger, fileProvider);
+                                                                 });
+                                                  s.AddControllers().AddControllersAsServices();
                                               })
                 ;
             using var server = new TestServer(hostBuilder)
@@ -100,33 +110,39 @@ namespace NET5.TestProject
         [TestMethod]
         public void 注入FuncName()
         {
-            using var server =
-                new TestServer(WebHost.CreateDefaultBuilder()
-                                      .UseStartup<FuncStartup>()
-                              )
-                {
-                    BaseAddress = new Uri("http://localhost:9527")
-                };
+            var builder = WebHost.CreateDefaultBuilder()
+                                 .UseStartup<Startup>()
+                                 .ConfigureServices(s =>
+                                                    {
+                                                        s.AddSingleton<ZipFileProvider>();
+                                                        s.AddSingleton<FileProvider>();
+                                                        s.AddSingleton<Func<string, IFileProvider>>(p =>
+                                                            key =>
+                                                            {
+                                                                switch (key)
+                                                                {
+                                                                    case "zip":
+                                                                        return p.GetService<ZipFileProvider>();
+                                                                    case "file":
+                                                                        return p.GetService<FileProvider>();
+                                                                    default:
+                                                                        throw new NotSupportedException();
+                                                                }
+                                                            });
+                                                    })
+                ;
+            using var server = new TestServer(builder)
+            {
+                BaseAddress = new Uri("http://localhost:9527")
+            };
 
             var client   = server.CreateClient();
-            var url      = "default/zip";
+            var url      = "func/zip";
             var response = client.GetAsync(url).Result;
             response.EnsureSuccessStatusCode();
 
             var result = response.Content.ReadAsStringAsync().Result;
             Assert.AreEqual("ZipFileProvider", result);
-        }
-
-        private static void ConfigureContainer(IUnityContainer container)
-        {
-            container.RegisterType<IFileProvider, ZipFileProvider>("zip");
-            container.RegisterType<IFileProvider, FileProvider>("file");
-        }
-
-        private static void UseUnityController(IServiceCollection services)
-        {
-            services.AddControllers()
-                    .AddControllersAsServices();
         }
     }
 }
