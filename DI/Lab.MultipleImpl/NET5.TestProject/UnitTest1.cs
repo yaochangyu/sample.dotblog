@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -26,7 +27,8 @@ namespace NET5.TestProject
                                      .ConfigureServices(services =>
                                                         {
                                                             services.AddAutofac();
-                                                            services.AddControllers().AddControllersAsServices();//<-- add line
+                                                            services.AddControllers()
+                                                                    .AddControllersAsServices(); //<-- add line
                                                         })
                 ;
             using var server = new TestServer(hostBuilder)
@@ -122,9 +124,11 @@ namespace NET5.TestProject
                                                                 switch (key)
                                                                 {
                                                                     case "zip":
-                                                                        return p.GetService<ZipFileProvider>();
+                                                                        return p
+                                                                            .GetService<ZipFileProvider>();
                                                                     case "file":
-                                                                        return p.GetService<FileProvider>();
+                                                                        return p
+                                                                            .GetService<FileProvider>();
                                                                     default:
                                                                         throw new NotSupportedException();
                                                                 }
@@ -138,6 +142,41 @@ namespace NET5.TestProject
 
             var client   = server.CreateClient();
             var url      = "func/zip";
+            var response = client.GetAsync(url).Result;
+            response.EnsureSuccessStatusCode();
+
+            var result = response.Content.ReadAsStringAsync().Result;
+            Assert.AreEqual("ZipFileProvider", result);
+        }
+
+        [TestMethod]
+        public void 注入相同的介面()
+        {
+            var hostBuilder = WebHost.CreateDefaultBuilder()
+                                     .UseStartup<Startup>() //<-- add line
+                                     .ConfigureServices(s =>
+                                                        {
+                                                            s.AddSingleton<ZipFileProvider>();
+                                                            s.AddSingleton<FileProvider>();
+                                                            s.AddSingleton(p =>
+                                                                           {
+                                                                               var pool =
+                                                                                   new Dictionary<string, IFileProvider>
+                                                                                   {
+                                                                                       {"zip", p.GetService<ZipFileProvider>()},
+                                                                                       {"file", p.GetService<FileProvider>()}};
+
+                                                                               return pool;
+                                                                           });
+                                                        })
+                ;
+            using var server = new TestServer(hostBuilder)
+            {
+                BaseAddress = new Uri("http://localhost:9527")
+            };
+
+            var client   = server.CreateClient();
+            var url      = "multi/zip";
             var response = client.GetAsync(url).Result;
             response.EnsureSuccessStatusCode();
 
