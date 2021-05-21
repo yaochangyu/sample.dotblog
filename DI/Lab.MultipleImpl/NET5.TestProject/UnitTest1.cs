@@ -35,7 +35,7 @@ namespace NET5.TestProject
             };
 
             var client   = server.CreateClient();
-            var url      = "autofac";
+            var url      = "autofac/zip";
             var response = client.GetAsync(url).Result;
             response.EnsureSuccessStatusCode();
 
