@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -154,20 +155,11 @@ namespace NET5.TestProject
         {
             var hostBuilder = WebHost.CreateDefaultBuilder()
                                      .UseStartup<Startup>() //<-- add line
-                                     .ConfigureServices(s =>
+                                     .ConfigureServices(service =>
                                                         {
-                                                            s.AddSingleton<ZipFileProvider>();
-                                                            s.AddSingleton<FileProvider>();
-                                                            s.AddSingleton(p =>
-                                                                           {
-                                                                               var pool =
-                                                                                   new Dictionary<string, IFileProvider>
-                                                                                   {
-                                                                                       {"zip", p.GetService<ZipFileProvider>()},
-                                                                                       {"file", p.GetService<FileProvider>()}};
+                                                            ScanToDictionary(service);
 
-                                                                               return pool;
-                                                                           });
+                                                            // AddToDictionary(service);
                                                         })
                 ;
             using var server = new TestServer(hostBuilder)
@@ -182,6 +174,41 @@ namespace NET5.TestProject
 
             var result = response.Content.ReadAsStringAsync().Result;
             Assert.AreEqual("ZipFileProvider", result);
+        }
+
+        private static void AddToDictionary(IServiceCollection s)
+        {
+            s.AddSingleton<ZipFileProvider>();
+            s.AddSingleton<FileProvider>();
+            s.AddSingleton(p =>
+                           {
+                               var pool =
+                                   new Dictionary<string, IFileProvider>
+                                   {
+                                       {"zip", p.GetService<ZipFileProvider>()},
+                                       {"file", p.GetService<FileProvider>()}
+                                   };
+
+                               return pool;
+                           });
+        }
+
+        private static void ScanToDictionary(IServiceCollection services)
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            assembly.GetTypesAssignableFrom<IFileProvider>()
+                    .ForEach(t => { services.AddSingleton(t); });
+            services.AddSingleton(p =>
+                                  {
+                                      var pool =
+                                          new Dictionary<string, IFileProvider>
+                                          {
+                                              {"zip", p.GetService<ZipFileProvider>()},
+                                              {"file", p.GetService<FileProvider>()}
+                                          };
+
+                                      return pool;
+                                  });
         }
     }
 }
