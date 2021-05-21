@@ -6,23 +6,17 @@ namespace Server.Controllers
 {
     [ApiController]
     [Route("[controller]")]
-    public class UnityDefaultController : ControllerBase
+    public class UnityController : ControllerBase
     {
         private readonly IFileProvider _fileProvider;
 
-        private readonly ILogger<UnityDefaultController> _logger;
+        private readonly ILogger<UnityController> _logger;
 
-        // public UnityDefaultController(ILogger<UnityDefaultController>   logger,
-        //                               [Dependency("zip")] IFileProvider fileProvider)
-        // {
-        //     this._logger       = logger;
-        //     this._fileProvider = fileProvider;
-        // }
-        public UnityDefaultController(ILogger<UnityDefaultController> logger)
+        public UnityController(ILogger<UnityController>   logger,
+                                      [Dependency("zip")] IFileProvider fileProvider)
         {
-            this._logger = logger;
-
-            // this._fileProvider = fileProvider;
+            this._logger       = logger;
+            this._fileProvider = fileProvider;
         }
 
         [HttpGet]
