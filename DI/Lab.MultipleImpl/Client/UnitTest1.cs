@@ -56,7 +56,7 @@ namespace Client
                 };
 
             var client   = server.CreateClient();
-            var url      = "UnityDefault";
+            var url      = "unity";
             var response = client.GetAsync(url).Result;
             response.EnsureSuccessStatusCode();
 
