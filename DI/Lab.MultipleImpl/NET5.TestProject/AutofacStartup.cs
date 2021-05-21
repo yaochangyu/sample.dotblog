@@ -23,7 +23,7 @@ namespace NET5.TestProject
         {
             builder.RegisterType<FileProvider>().Keyed<IFileProvider>("file");
             builder.RegisterType<ZipFileProvider>().Keyed<IFileProvider>("zip");
-            builder.RegisterType<AutofacController>().WithAttributeFiltering();
+            builder.RegisterType<AutofacController>().WithAttributeFiltering();//<-- add line
         }
 
         // This method gets called by the runtime. Use this method to add services to the container.
