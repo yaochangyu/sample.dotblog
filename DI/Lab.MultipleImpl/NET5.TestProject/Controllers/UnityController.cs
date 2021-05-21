@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using NET5.TestProject.File;
 using Unity;
@@ -19,6 +20,8 @@ namespace NET5.TestProject.Controllers
         {
             this._logger       = logger;
             this._fileProvider = fileProvider;
+            var msg = $"{this._fileProvider.Print()} in {this.GetType().Name} constructor";
+            Console.WriteLine(msg);
         }
 
         [HttpGet]
