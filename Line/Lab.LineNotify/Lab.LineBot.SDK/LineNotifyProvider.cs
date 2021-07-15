@@ -124,8 +124,8 @@ namespace Lab.LineBot.SDK
                 Content = formDataContent
             };
 
-            var client   = this.ApiClient;
-            var response = await client.SendAsync(httpRequest, cancelToken);
+            using var client   = this.ApiClient;
+            var       response = await client.SendAsync(httpRequest, cancelToken);
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
@@ -156,8 +156,8 @@ namespace Lab.LineBot.SDK
                 }),
             };
 
-            var client   = this.ApiClient;
-            var response = await client.SendAsync(httpRequest, cancelToken);
+            using var client   = this.ApiClient;
+            var       response = await client.SendAsync(httpRequest, cancelToken);
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
@@ -186,8 +186,8 @@ namespace Lab.LineBot.SDK
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>()),
             };
 
-            var client   = this.ApiClient;
-            var response = await client.SendAsync(httpRequest, cancelToken);
+            using var client   = this.ApiClient;
+            var       response = await client.SendAsync(httpRequest, cancelToken);
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
@@ -240,9 +240,9 @@ namespace Lab.LineBot.SDK
                 {"client_secret", request.ClientSecret},
             });
 
-            var    client   = this.OAuth2Client;
-            var    response = await client.PostAsync(url, content, cancelToken);
-            string result   = null;
+            using var client   = this.OAuth2Client;
+            var       response = await client.PostAsync(url, content, cancelToken);
+            string    result   = null;
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
@@ -270,8 +270,8 @@ namespace Lab.LineBot.SDK
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>()),
             };
 
-            var client   = this.ApiClient;
-            var response = await client.SendAsync(httpRequest, cancelToken);
+            using var client   = this.ApiClient;
+            var       response = await client.SendAsync(httpRequest, cancelToken);
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
