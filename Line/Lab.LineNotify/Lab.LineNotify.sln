@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.LineNotify.Service", "Lab.LineNotify.Service\Lab.LineNotify.Service.csproj", "{AFD89464-B981-4C9D-8336-5E2A9A8A0F60}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.LineBot.SDK", "Lab.LineBot.SDK\Lab.LineBot.SDK.csproj", "{0EA7AE1F-ECF9-4BC8-BA95-CA2F8FA1E95F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AFD89464-B981-4C9D-8336-5E2A9A8A0F60}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFD89464-B981-4C9D-8336-5E2A9A8A0F60}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFD89464-B981-4C9D-8336-5E2A9A8A0F60}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFD89464-B981-4C9D-8336-5E2A9A8A0F60}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0EA7AE1F-ECF9-4BC8-BA95-CA2F8FA1E95F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0EA7AE1F-ECF9-4BC8-BA95-CA2F8FA1E95F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0EA7AE1F-ECF9-4BC8-BA95-CA2F8FA1E95F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0EA7AE1F-ECF9-4BC8-BA95-CA2F8FA1E95F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
