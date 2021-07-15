@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.LineNotify.Service", "L
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.LineBot.SDK", "Lab.LineBot.SDK\Lab.LineBot.SDK.csproj", "{0EA7AE1F-ECF9-4BC8-BA95-CA2F8FA1E95F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.LineNotify.Service.TestProject", "Lab.LineNotify.Service.TestProject\Lab.LineNotify.Service.TestProject.csproj", "{8355BA66-8285-407B-B8D4-3208E66B2D6B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{0EA7AE1F-ECF9-4BC8-BA95-CA2F8FA1E95F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0EA7AE1F-ECF9-4BC8-BA95-CA2F8FA1E95F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0EA7AE1F-ECF9-4BC8-BA95-CA2F8FA1E95F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8355BA66-8285-407B-B8D4-3208E66B2D6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8355BA66-8285-407B-B8D4-3208E66B2D6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8355BA66-8285-407B-B8D4-3208E66B2D6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8355BA66-8285-407B-B8D4-3208E66B2D6B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
