@@ -54,7 +54,7 @@ namespace Lab.LineNotify.Service.Controllers
             };
             var accessToken = await lineNotifyProvider.GetAccessTokenAsync(request, cancelToken);
 
-            //TODO:不應該回傳 Access Token
+            //TODO:應該記錄在你的 DB 或是其它地方，不應該回傳 Access Token
             return this.Ok(accessToken);
         }
     }

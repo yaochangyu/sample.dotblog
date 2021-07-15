@@ -14,30 +14,67 @@ namespace Lab.LineBot.SDK
 {
     public class LineNotifyProvider : ILineNotifyProvider
     {
-        private static readonly Lazy<HttpClient> s_oAuth2ClientLazy =
-            new Lazy<HttpClient>(() => new HttpClient
-            {
-                BaseAddress = new Uri(OAuth2Endpoint)
-            });
-
-        private static readonly Lazy<HttpClient> s_apiClientLazy =
-            new Lazy<HttpClient>(() => new HttpClient
-            {
-                BaseAddress = new Uri(ApiEndpoint)
-            });
-
         private static readonly string OAuth2Endpoint = "https://notify-bot.line.me/";
         private static readonly string ApiEndpoint    = "https://notify-api.line.me/";
 
+        private static readonly Lazy<SocketsHttpHandler> s_oauthSocketsHandlerLazy =
+            new(() =>
+                    new SocketsHttpHandler
+                    {
+                        PooledConnectionLifetime    = TimeSpan.FromMinutes(10),
+                        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
+                        MaxConnectionsPerServer     = 10
+                    });
+
+        private static readonly Lazy<SocketsHttpHandler> s_apiSocketsHandlerLazy =
+            new(() =>
+                    new SocketsHttpHandler
+                    {
+                        PooledConnectionLifetime    = TimeSpan.FromMinutes(10),
+                        PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
+                        MaxConnectionsPerServer     = 10
+                    });
+
+        internal SocketsHttpHandler OAuth2SocketsHandler
+        {
+            get
+            {
+                if (this._oAuth2SocketsHandler == null)
+                {
+                    return s_oauthSocketsHandlerLazy.Value;
+                }
+
+                return this._oAuth2SocketsHandler;
+            }
+            set => this._oAuth2SocketsHandler = value;
+        }
+
+        internal SocketsHttpHandler ApiSocketsHandler
+        {
+            get
+            {
+                if (this._apiSocketsHandler == null)
+                {
+                    return s_apiSocketsHandlerLazy.Value;
+                }
+
+                return this._apiSocketsHandler;
+            }
+            set => this._apiSocketsHandler = value;
+        }
+
         public bool IsThrowInternalError { get; set; } = false;
 
-        public HttpClient OAuth2Client
+        internal HttpClient OAuth2Client
         {
             get
             {
                 if (this._oAuth2Client == null)
                 {
-                    return s_oAuth2ClientLazy.Value;
+                    return new HttpClient(this.OAuth2SocketsHandler)
+                    {
+                        BaseAddress = new Uri(OAuth2Endpoint)
+                    };
                 }
 
                 return this._oAuth2Client;
@@ -45,13 +82,16 @@ namespace Lab.LineBot.SDK
             set => this._oAuth2Client = value;
         }
 
-        public HttpClient ApiClient
+        internal HttpClient ApiClient
         {
             get
             {
                 if (this._apiClient == null)
                 {
-                    return s_apiClientLazy.Value;
+                    return new HttpClient(this.ApiSocketsHandler)
+                    {
+                        BaseAddress = new Uri(OAuth2Endpoint)
+                    };
                 }
 
                 return this._apiClient;
@@ -59,9 +99,10 @@ namespace Lab.LineBot.SDK
             set => this._apiClient = value;
         }
 
-        private HttpClient _apiClient;
-
-        private HttpClient _oAuth2Client;
+        private HttpClient         _apiClient;
+        private SocketsHttpHandler _apiSocketsHandler;
+        private HttpClient         _oAuth2Client;
+        private SocketsHttpHandler _oAuth2SocketsHandler;
 
         public async Task<GenericResponse> NotifyAsync(NotifyWithImageRequest request,
                                                        CancellationToken      cancelToken)
@@ -83,7 +124,8 @@ namespace Lab.LineBot.SDK
                 Content = formDataContent
             };
 
-            var response = await this.ApiClient.SendAsync(httpRequest, cancelToken);
+            var client   = this.ApiClient;
+            var response = await client.SendAsync(httpRequest, cancelToken);
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
@@ -114,7 +156,8 @@ namespace Lab.LineBot.SDK
                 }),
             };
 
-            var response = await this.ApiClient.SendAsync(httpRequest, cancelToken);
+            var client   = this.ApiClient;
+            var response = await client.SendAsync(httpRequest, cancelToken);
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
@@ -143,7 +186,8 @@ namespace Lab.LineBot.SDK
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>()),
             };
 
-            var response = await this.ApiClient.SendAsync(httpRequest, cancelToken);
+            var client   = this.ApiClient;
+            var response = await client.SendAsync(httpRequest, cancelToken);
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
@@ -196,7 +240,8 @@ namespace Lab.LineBot.SDK
                 {"client_secret", request.ClientSecret},
             });
 
-            var    response = await this.OAuth2Client.PostAsync(url, content, cancelToken);
+            var    client   = this.OAuth2Client;
+            var    response = await client.PostAsync(url, content, cancelToken);
             string result   = null;
 
             if (response.StatusCode != HttpStatusCode.OK)
@@ -225,7 +270,8 @@ namespace Lab.LineBot.SDK
                 Content = new FormUrlEncodedContent(new Dictionary<string, string>()),
             };
 
-            var response = await this.ApiClient.SendAsync(httpRequest, cancelToken);
+            var client   = this.ApiClient;
+            var response = await client.SendAsync(httpRequest, cancelToken);
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
