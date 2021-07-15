@@ -10,6 +10,16 @@ namespace Lab.LineNotify.Service.TestProject
     public class LineNotifyProviderTests
     {
         [TestMethod]
+        public void 取得AccessToken狀態()
+        {
+            var provider = new LineNotifyProvider();
+            var response = provider
+                           .GetAccessTokenInfoAsync("3lZwryen62tiQ4BKfh3uH3NFoFtALF4SrfgLWMIKrXh",
+                                                    CancellationToken.None).Result;
+            Assert.AreEqual(200, response.Status);
+        }
+
+        [TestMethod]
         public void 發送訊息和表情()
         {
             var provider = new LineNotifyProvider();
@@ -31,10 +41,20 @@ namespace Lab.LineNotify.Service.TestProject
             var response = provider.NotifyAsync(new NotifyWithImageRequest
                                    {
                                        AccessToken = "3lZwryen62tiQ4BKfh3uH3NFoFtALF4SrfgLWMIKrXh",
-                                       Message = "HI~請給我黃金",
-                                       FilePath = "1.jpg",
-                                       FileBytes = File.ReadAllBytes("1.jpg")
+                                       Message     = "HI~請給我黃金",
+                                       FilePath    = "1.jpg",
+                                       FileBytes   = File.ReadAllBytes("1.jpg")
                                    }, CancellationToken.None)
+                                   .Result;
+            Assert.AreEqual(200, response.Status);
+        }
+
+        [TestMethod]
+        public void 註銷AccessToken()
+        {
+            var provider = new LineNotifyProvider();
+            var response = provider.RevokeAsync("3lZwryen62tiQ4BKfh3uH3NFoFtALF4SrfgLWMIKrXh",
+                                                CancellationToken.None)
                                    .Result;
             Assert.AreEqual(200, response.Status);
         }
