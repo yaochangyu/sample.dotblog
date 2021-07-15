@@ -64,7 +64,7 @@ namespace Lab.LineBot.SDK
             {
                 if (this.IsThrowInternalError)
                 {
-                    var error = await response.Content.ReadAsStringAsync();
+                    var error = await response.Content.ReadAsStringAsync(cancelToken);
                     throw new LineNotifyProviderException(error);
                 }
             }
@@ -94,11 +94,16 @@ namespace Lab.LineBot.SDK
 
             if (response.StatusCode != HttpStatusCode.OK)
             {
+                var error = await response.Content.ReadAsStringAsync(cancelToken);
                 if (this.IsThrowInternalError)
                 {
-                    var error = await response.Content.ReadAsStringAsync();
                     throw new LineNotifyProviderException(error);
                 }
+
+                return new GenericResponse
+                {
+                    Message = error,
+                };
             }
 
             return await response.Content.ReadAsAsync<GenericResponse>(cancelToken);
@@ -126,7 +131,7 @@ namespace Lab.LineBot.SDK
             {
                 if (this.IsThrowInternalError)
                 {
-                    var error = await response.Content.ReadAsStringAsync();
+                    var error = await response.Content.ReadAsStringAsync(cancelToken);
                     throw new LineNotifyProviderException(error);
                 }
             }
@@ -222,7 +227,7 @@ namespace Lab.LineBot.SDK
         {
             return new(s_apiSocketsHandlerLazy.Value)
             {
-                BaseAddress = new Uri(OAuth2Endpoint)
+                BaseAddress = new Uri(ApiEndpoint)
             };
         }
 
