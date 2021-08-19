@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "dgSpecHash": "+oR7kmoX58hU75JnQMAzXJl+PfV8Klr4xZc4raw2Ndh3DuN5Ev+x0AdClXbVyIWS+ICIvv8tTLq6Y376zhkbMQ==",
+  "success": false,
+  "projectFilePath": "D:\\src\\sample.dotblog\\DI\\Lab.MsDIForAutofac\\WebApiNetCore31\\WebApiNetCore31.csproj",
+  "expectedPackageFiles": [],
+  "logs": [
+    {
+      "code": "NU1101",
+      "level": "Error",
+      "message": "Unable to find package Autofac.Extensions.DependencyInjection. No packages exist with this id in source(s): Microsoft Visual Studio Offline Packages",
+      "libraryId": "Autofac.Extensions.DependencyInjection",
+      "targetGraphs": [
+        ".NETCoreApp,Version=v3.1"
+      ]
+    }
+  ]
+}
