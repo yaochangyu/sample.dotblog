@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Controllers\DefaultController.cs" />
+    <Compile Remove="Message\IScopeMessager.cs" />
+    <Compile Remove="Message\ISingleMessager.cs" />
+    <Compile Remove="Message\ITransientMessager.cs" />
+    <Compile Remove="Message\MachineMessager.cs" />
+    <Compile Remove="Message\MultiMessager.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Scrutor" Version="3.2.2" />
+  </ItemGroup>
+
+
+</Project>
