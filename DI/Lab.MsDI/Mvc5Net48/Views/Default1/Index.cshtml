@@ -1,0 +1,18 @@
+﻿@model dynamic
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title>title</title>
+</head>
+<body>
+<div>
+    @Html.Raw(HttpUtility.HtmlDecode(@ViewBag.Message))
+</div>
+</body>
+</html>
