@@ -12,7 +12,7 @@ namespace Lab.Test.WebApi.Net5.TestProject
         {
             var server = new CustomTestServer();
             var httpClient = server.CreateClient();
-            var url = "demo/file";
+            var url = "demo";
             var response = httpClient.GetAsync(url).Result;
             var result = response.Content.ReadAsStringAsync().Result;
             Console.WriteLine(result);
@@ -22,9 +22,9 @@ namespace Lab.Test.WebApi.Net5.TestProject
         public void WebApplicationFactory基本用法()
         {
             var server = new WebApplicationFactory<Startup>();
-            var httpClient = server.CreateClient();
-            var url = "demo/file";
-            var response = httpClient.GetAsync(url).Result;
+            var client = server.CreateClient();
+            var url = "demo";
+            var response = client.GetAsync(url).Result;
             var result = response.Content.ReadAsStringAsync().Result;
             Console.WriteLine(result);
         }
