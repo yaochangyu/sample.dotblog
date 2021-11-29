@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.GracefulShutdown.Net6", "Lab.GracefulShutdown.Net6\Lab.GracefulShutdown.Net6.csproj", "{D21B2207-2D80-49B2-94A1-24234DBD9B8D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D21B2207-2D80-49B2-94A1-24234DBD9B8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D21B2207-2D80-49B2-94A1-24234DBD9B8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D21B2207-2D80-49B2-94A1-24234DBD9B8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D21B2207-2D80-49B2-94A1-24234DBD9B8D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
