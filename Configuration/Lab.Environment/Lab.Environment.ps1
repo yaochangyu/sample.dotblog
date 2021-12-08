@@ -1,2 +1,2 @@
-$Env:APP:ENV = "QA"
+$Env:APP_ENV = "QA"
 ./Lab.Environment.sln
