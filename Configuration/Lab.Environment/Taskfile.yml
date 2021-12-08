@@ -20,7 +20,7 @@ tasks:
   rider:
     desc: Rider
     dir: "/mnt/c/Users/Yao Chang Yu/scoop/apps/Rider-EAP/current/IDE/bin/"
-    cmds:  
+    cmds:
       - rider64.exe
     env:
       Url: http://localhost:9527
