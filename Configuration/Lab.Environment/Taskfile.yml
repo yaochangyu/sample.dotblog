@@ -1,0 +1,26 @@
+version: "3"
+env:
+  GREETING: Hey, there!
+dotenv: ["secrets.env"]
+vars:
+  PATH: "/mnt/c/Users/Yao Chang Yu/scoop/apps/Rider-EAP/current/IDE/bin/"
+  #PATH: "C:\Users\Yao Chang Yu\scoop\apps\Rider-EAP\2021.3-EAP9-213.5744.160\IDE\bin\"
+tasks:
+  print-os:
+    cmds:
+      - echo '{{OS}} {{ARCH}}'
+      - echo '{{if eq OS "windows"}}windows-command{{else}}unix-command{{end}}'
+      # This will be path/to/file on Unix but path\to\file on Windows
+      - echo '{{fromSlash "path/to/file"}}'
+      - echo '{{fromSlash "/mnt/c/Users/Yao Chang Yu/scoop/apps/Rider-EAP/current/IDE/bin/"}}'
+  greet:
+    desc: greet
+    cmds:
+      - echo $GREETING
+  rider:
+    desc: Rider
+    dir: "/mnt/c/Users/Yao Chang Yu/scoop/apps/Rider-EAP/current/IDE/bin/"
+    cmds:  
+      - rider64.exe
+    env:
+      Url: http://localhost:9527
