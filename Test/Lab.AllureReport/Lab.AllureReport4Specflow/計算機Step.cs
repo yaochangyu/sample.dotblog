@@ -6,27 +6,27 @@ namespace Lab.AllureReport4Specflow;
 [Binding]
 public class 計算機Step : Steps
 {
-    [Given(@"the first number is (.*)")]
-    public void GivenTheFirstNumberIs(double firstNumber)
+    [Given(@"第一個數字為 (.*)")]
+    public void Given第一個數字為(double firstNumber)
     {
         this.ScenarioContext.Set(firstNumber, "firstNumber");
     }
 
-    [Given(@"the second number is (.*)")]
-    public void GivenTheSecondNumberIs(double secondNumber)
+    [Given(@"第二個數字為 (.*)")]
+    public void Given第二個數字為(double secondNumber)
     {
         this.ScenarioContext.Set(secondNumber, "secondNumber");
     }
 
-    [Then(@"the result should be (.*)")]
-    public void ThenTheResultShouldBe(int expected)
+    [Then(@"結果應該為 (.*)")]
+    public void Then結果應該為(double expected)
     {
         var actual = this.ScenarioContext.Get<double>("actual");
         Assert.AreEqual(expected, actual);
     }
 
-    [When(@"the two numbers are added")]
-    public void WhenTheTwoNumbersAreAdded()
+    [When(@"兩個數字相加")]
+    public void When兩個數字相加()
     {
         var firstNumber = this.ScenarioContext.Get<double>("firstNumber");
         var secondNumber = this.ScenarioContext.Get<double>("secondNumber");
