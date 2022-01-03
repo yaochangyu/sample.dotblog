@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.AllureReport4Specflow", "Lab.AllureReport4Specflow\Lab.AllureReport4Specflow.csproj", "{24AC2522-D7B4-4854-BE1E-18389125605F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{24AC2522-D7B4-4854-BE1E-18389125605F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24AC2522-D7B4-4854-BE1E-18389125605F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24AC2522-D7B4-4854-BE1E-18389125605F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24AC2522-D7B4-4854-BE1E-18389125605F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
