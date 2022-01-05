@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.DynamoDB.SurveyTest", "Lab.DynamoDB.SurveyTest\Lab.DynamoDB.SurveyTest.csproj", "{36FF7374-A6A2-436D-902D-8805336F3A38}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{36FF7374-A6A2-436D-902D-8805336F3A38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36FF7374-A6A2-436D-902D-8805336F3A38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36FF7374-A6A2-436D-902D-8805336F3A38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36FF7374-A6A2-436D-902D-8805336F3A38}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
