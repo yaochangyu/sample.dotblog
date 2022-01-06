@@ -6,27 +6,22 @@ public class AppEnvironmentOption
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(this._memberDbConnectionString))
+            if (string.IsNullOrWhiteSpace(this._employeeDbConnectionString))
             {
-                this._memberDbConnectionString =
+                this._employeeDbConnectionString =
                     EnvironmentAssistant.GetEnvironmentVariable(this.EMPLOYEE_DB_CONN_STR);
             }
 
-            return this._memberDbConnectionString;
+            return this._employeeDbConnectionString;
         }
         set
         {
-            this._memberDbConnectionString = value;
+            this._employeeDbConnectionString = value;
             Environment.SetEnvironmentVariable(this.EMPLOYEE_DB_CONN_STR, value);
         }
     }
 
-    private string _crmDbConnectionString;
-    private string _currentMarket;
-    private string _memberApiToken;
-    private string _memberDbConnectionString;
-    private string _memberServiceBaseEndpoint;
-    private string _webStoreDbConnectionString;
+    private string _employeeDbConnectionString;
     private readonly string EMPLOYEE_DB_CONN_STR = "EMPLOYEE_DB_CONNECTION_STR";
 
     public void Initial()
