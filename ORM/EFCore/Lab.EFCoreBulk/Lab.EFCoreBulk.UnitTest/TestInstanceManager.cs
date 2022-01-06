@@ -14,12 +14,12 @@ internal class TestInstanceManager
 
     static TestInstanceManager()
     {
-        ConfigureTestServices();
+        var services = new ServiceCollection();
+        ConfigureTestServices(services);
     }
 
-    public static void ConfigureTestServices()
+    public static void ConfigureTestServices(IServiceCollection services)
     {
-        var services = new ServiceCollection();
         services.AddAppEnvironment();
         services.AddEntityFramework();
         _serviceProvider = services.BuildServiceProvider();
@@ -29,6 +29,6 @@ internal class TestInstanceManager
     {
         var option = _serviceProvider.GetService<AppEnvironmentOption>();
         option.EmployeeDbConnectionString =
-            "Data Source=localhost;Initial Catalog=EmployeeDb;Integrated Security=false;User ID=sa;Password=pass@w0rd1~;MultipleActiveResultSets=True";
+            "Data Source=localhost;Initial Catalog=EmployeeDb;Integrated Security=false;User ID=sa;Password=pass@w0rd1~;MultipleActiveResultSets=True;TrustServerCertificate=True";
     }
 }
