@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using EFCore.BulkExtensions;
@@ -10,7 +11,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Lab.EFCoreBulk.UnitTest;
 
-
 [TestClass]
 public class UnitTest1
 {
@@ -18,33 +18,43 @@ public class UnitTest1
     public void AddRanges()
     {
         var db = TestInstanceManager.EmployeeDbContextFactory.CreateDbContext();
-        var totalCount = 1000000;
-        var toDb = Enumerable.Range(0, totalCount)
-                                  .Select(x => new Employee
-                                  {
-                                      Id = Guid.NewGuid(),
-
-                                      // Id = Guid.NewGuid(),
-                                      Age = 10,
-
-                                      // Age = RandomNumber.Next(1, 100),
-                                      CreateBy = "yao",
-
-                                      // CreateBy = Name.FullName(),
-                                      CreateAt = DateTimeOffset.Now,
-
-                                      // CreateAt = DateTimeOffset.Now,
-                                      Name = "yao"
-
-                                      // Name = Name.First(),
-                                  }).ToList();
-
+        var toDb = GetEmployees(1000000);
         var watch = new Stopwatch();
         watch.Restart();
 
         db.AddRange(toDb);
+        var changeCount = db.SaveChanges();
 
-        // db.BulkInsert(employees);
+        watch.Stop();
+
+        var count = db.Employees.Count();
+        Console.WriteLine($"資料庫存在筆數={count}，共花費={watch.Elapsed}");
+    }
+
+    [TestMethod]
+    public void BatchUpdate()
+    {
+        var db = TestInstanceManager.EmployeeDbContextFactory.CreateDbContext();
+        var toDb = GetEmployees(10000);
+        var update = new Employee
+        {
+            Id = Guid.NewGuid(),
+            Age = 10,
+            CreateBy = "yao",
+            CreateAt = DateTimeOffset.Now,
+            Name = "yao",
+            Remark = "等待更新"
+        };
+        toDb.Add(update);
+        var config = new BulkConfig { SetOutputIdentity = false, BatchSize = 4000, UseTempDB = true };
+        db.BulkInsert(toDb, config);
+
+        var watch = new Stopwatch();
+        watch.Restart();
+
+        db.Employees
+          .Where(p => p.Id == update.Id)
+          .BatchUpdate(new Employee() { Remark = "Updated" });
 
         watch.Stop();
 
@@ -56,34 +66,14 @@ public class UnitTest1
     public void BulkInsert()
     {
         var db = TestInstanceManager.EmployeeDbContextFactory.CreateDbContext();
-        var totalCount = 1000000;
-        var employees = Enumerable.Range(0, totalCount)
-                                  .Select(x => new Employee
-                                  {
-                                      Id = Guid.NewGuid(),
-
-                                      // Id = Guid.NewGuid(),
-                                      Age = 10,
-
-                                      // Age = RandomNumber.Next(1, 100),
-                                      CreateBy = "yao",
-
-                                      // CreateBy = Name.FullName(),
-                                      CreateAt = DateTimeOffset.Now,
-
-                                      // CreateAt = DateTimeOffset.Now,
-                                      Name = "yao"
-
-                                      // Name = Name.First(),
-                                  }).ToList();
+        var toDb = GetEmployees(1000000);
 
         var config = new BulkConfig { SetOutputIdentity = false, BatchSize = 4000, UseTempDB = true };
+
         var watch = new Stopwatch();
         watch.Restart();
 
-        db.BulkInsert(employees, config);
-
-        // db.BulkInsert(employees);
+        db.BulkInsert(toDb, config);
 
         watch.Stop();
 
@@ -91,9 +81,72 @@ public class UnitTest1
         Console.WriteLine($"資料庫存在筆數={count},共花費={watch.Elapsed}");
     }
 
-    
-    
-    
+    [TestMethod]
+    public void BulkReadAsync()
+    {
+        var db = TestInstanceManager.EmployeeDbContextFactory.CreateDbContext();
+        var toDb = GetEmployees(100000);
+
+        db.AddRange(toDb);
+
+        var config = new BulkConfig
+        {
+            PropertiesToExclude = new List<string> { "SequenceId" },
+            SetOutputIdentity = false,
+            BatchSize = 4000,
+            UseTempDB = true
+        };
+
+        var watch = new Stopwatch();
+        watch.Restart();
+
+        db.BulkRead(new List<string> { "yao" });
+
+        watch.Stop();
+
+        var count = db.Employees.Count();
+        Console.WriteLine($"資料庫存在筆數={count},共花費={watch.Elapsed}");
+    }
+
+    [TestMethod]
+    public void BulkSaveChanges()
+    {
+        var db = TestInstanceManager.EmployeeDbContextFactory.CreateDbContext();
+        var toDb = GetEmployees(1000);
+
+        db.AddRange(toDb);
+
+        var config = new BulkConfig
+        {
+            PropertiesToExclude = new List<string> { "SequenceId" },
+            BulkCopyTimeout = 30,
+            BatchSize = 4000,
+            UseTempDB = true
+        };
+
+        var watch = new Stopwatch();
+        watch.Restart();
+
+        db.BulkSaveChanges(config);
+
+        watch.Stop();
+
+        var count = db.Employees.Count();
+        Console.WriteLine($"資料庫存在筆數={count},共花費={watch.Elapsed}");
+    }
+
+    [TestCleanup]
+    public void TestCleanup()
+    {
+        CleanData();
+    }
+
+    [TestInitialize]
+    public void TestInitialize()
+    {
+        CleanData();
+    }
+
     [TestMethod]
     public void TestMethod1()
     {
@@ -125,6 +178,40 @@ public class UnitTest1
         host.Services.GetService<IDbContextFactory<EmployeeDbContext>>();
     }
 
+    private static void CleanData()
+    {
+        using var db = TestInstanceManager.EmployeeDbContextFactory.CreateDbContext();
+        // db.Truncate<OrderHistory>();
+        // db.Truncate<Identity>();
+        using var transaction = db.Database.BeginTransaction();
+        
+        db.OrderHistories
+          .BatchDelete();
+
+        db.Identities
+          .BatchDelete();
+
+        // db.Truncate<Employee>();
+        db.Employees
+          .BatchDelete();
+        
+        transaction.Commit();
+
+        // db.Employees
+        //   .Where(p => p.Id != Guid.Empty)
+        //   .BatchDelete();
+        //
+        // while (db.Employees.Any())
+        // {
+        //     var deletedCount = db.Employees
+        //                          .Where(p => p.Id != Guid.Empty)
+        //                          .Take(1000000)
+        //                          .BatchDelete();
+        //     var count = db.Employees.Count();
+        //     Console.WriteLine($"已刪除 {deletedCount} 筆，剩下 {count} 筆");
+        // }
+    }
+
     private static IHostBuilder CreateHostBuilder(string[] args)
     {
         return Host.CreateDefaultBuilder(args)
@@ -132,5 +219,29 @@ public class UnitTest1
                    {
                        TestInstanceManager.ConfigureTestServices(services);
                    });
+    }
+
+    private static List<Employee> GetEmployees(int totalCount)
+    {
+        var employees = Enumerable.Range(0, totalCount)
+                                  .Select(x => new Employee
+                                  {
+                                      Id = Guid.NewGuid(),
+
+                                      // Id = Guid.NewGuid(),
+                                      Age = 10,
+
+                                      // Age = RandomNumber.Next(1, 100),
+                                      CreateBy = "yao",
+
+                                      // CreateBy = Name.FullName(),
+                                      CreateAt = DateTimeOffset.Now,
+
+                                      // CreateAt = DateTimeOffset.Now,
+                                      Name = "yao"
+
+                                      // Name = Name.First(),
+                                  }).ToList();
+        return employees;
     }
 }
