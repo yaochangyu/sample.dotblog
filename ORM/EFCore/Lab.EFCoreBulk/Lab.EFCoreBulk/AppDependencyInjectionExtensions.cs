@@ -9,7 +9,10 @@ public static class AppDependencyInjectionExtensions
 {
     public static void AddAppEnvironment(this IServiceCollection services)
     {
-        services.AddLogging();
+        services.AddLogging(builder =>
+        {
+            builder.AddConsole();
+        });
         services.AddSingleton<AppEnvironmentOption>();
     }
 

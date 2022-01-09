@@ -44,20 +44,6 @@ namespace Lab.EFCoreBulk.EntityModel
             }
         }
 
-        // 給 Migration CLI 使用
-        // 建構函數配置失敗才需要以下處理
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            // var connectionString =
-            //     "Server=(localdb)\\mssqllocaldb;Database=Lab.DAL.UnitTest;Trusted_Connection=True;MultipleActiveResultSets=true";
-            //
-            // // var connectionString = this._connectionString;
-            // if (optionsBuilder.IsConfigured == false)
-            // {
-            //     optionsBuilder.UseSqlServer(connectionString);
-            // }
-        }
-
         //管理索引
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -83,10 +69,6 @@ namespace Lab.EFCoreBulk.EntityModel
                 p.HasIndex(e => e.SequenceId)
                  .IsUnique()
                  .IsClustered();
-            });
-            
-            modelBuilder.Entity<Identity>(p =>
-            {
             });
         }
     }
