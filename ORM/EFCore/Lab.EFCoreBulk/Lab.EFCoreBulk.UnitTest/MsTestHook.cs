@@ -1,8 +1,4 @@
-﻿using Lab.EFCoreBulk.EntityModel;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Lab.EFCoreBulk.UnitTest;
 
