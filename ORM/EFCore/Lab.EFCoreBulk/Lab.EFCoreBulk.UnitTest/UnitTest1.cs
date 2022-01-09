@@ -32,6 +32,39 @@ public class UnitTest1
     }
 
     [TestMethod]
+    public void BatchDelete()
+    {
+        var db = TestInstanceManager.EmployeeDbContextFactory.CreateDbContext();
+        var toDb = GetEmployees(10000);
+        var update = new Employee
+        {
+            Id = Guid.NewGuid(),
+            Age = 10,
+            CreateBy = "yao",
+            CreateAt = DateTimeOffset.Now,
+            Name = "yao",
+            Remark = "等待更新"
+        };
+        toDb.Add(update);
+        var config = new BulkConfig { SetOutputIdentity = false, BatchSize = 4000, UseTempDB = true };
+        db.BulkInsert(toDb, config);
+
+        var watch = new Stopwatch();
+        watch.Restart();
+
+        db.Employees
+          .Where(p => p.Id == update.Id)
+          .BatchDelete();
+
+        watch.Stop();
+
+        var count = db.Employees.Count();
+        var isExist = db.Employees.Any(p => p.Id == update.Id);
+        Assert.AreEqual(false, isExist);
+        Console.WriteLine($"資料庫存在筆數={count},共花費={watch.Elapsed},{update.Id} 資料不存在");
+    }
+
+    [TestMethod]
     public void BatchUpdate()
     {
         var db = TestInstanceManager.EmployeeDbContextFactory.CreateDbContext();
@@ -54,7 +87,7 @@ public class UnitTest1
 
         db.Employees
           .Where(p => p.Id == update.Id)
-          .BatchUpdate(new Employee() { Remark = "Updated" });
+          .BatchUpdate(new Employee { Remark = "Updated" });
 
         watch.Stop();
 
@@ -82,30 +115,37 @@ public class UnitTest1
     }
 
     [TestMethod]
-    public void BulkReadAsync()
+    public void BulkRead()
     {
         var db = TestInstanceManager.EmployeeDbContextFactory.CreateDbContext();
-        var toDb = GetEmployees(100000);
-
-        db.AddRange(toDb);
-
-        var config = new BulkConfig
+        var toDb = GetEmployees(100);
         {
-            PropertiesToExclude = new List<string> { "SequenceId" },
-            SetOutputIdentity = false,
-            BatchSize = 4000,
-            UseTempDB = true
-        };
+            var config = new BulkConfig { SetOutputIdentity = false, BatchSize = 4000, UseTempDB = true };
+            db.BulkInsert(toDb, config);
+        }
 
         var watch = new Stopwatch();
         watch.Restart();
-
-        db.BulkRead(new List<string> { "yao" });
+        {
+            var items = new List<Employee>
+            {
+                new() { Name = "yao1" },
+                new() { Name = "yao2" }
+            };
+            var config = new BulkConfig
+            {
+                UpdateByProperties = new List<string>
+                {
+                    nameof(Employee.Name),
+                },
+                UseTempDB = true
+            };
+            db.BulkRead(items, config);
+        }
 
         watch.Stop();
 
-        var count = db.Employees.Count();
-        Console.WriteLine($"資料庫存在筆數={count},共花費={watch.Elapsed}");
+        Console.WriteLine($"共花費={watch.Elapsed}");
     }
 
     [TestMethod]
@@ -133,6 +173,27 @@ public class UnitTest1
 
         var count = db.Employees.Count();
         Console.WriteLine($"資料庫存在筆數={count},共花費={watch.Elapsed}");
+    }
+
+    [TestMethod]
+    public void Contains()
+    {
+        var db = TestInstanceManager.EmployeeDbContextFactory.CreateDbContext();
+        var toDb = GetEmployees(100);
+        {
+            var config = new BulkConfig { SetOutputIdentity = false, BatchSize = 4000, UseTempDB = true };
+            db.BulkInsert(toDb, config);
+        }
+
+        var watch = new Stopwatch();
+        watch.Restart();
+
+        var items = new List<string> { "yao1", "yao2" };
+        var employees = db.Employees.Where(a => items.Contains(a.Name)).AsNoTracking().ToList(); //SQL IN operator
+
+        watch.Stop();
+
+        Console.WriteLine($"共花費={watch.Elapsed}");
     }
 
     [TestCleanup]
@@ -181,10 +242,11 @@ public class UnitTest1
     private static void CleanData()
     {
         using var db = TestInstanceManager.EmployeeDbContextFactory.CreateDbContext();
+
         // db.Truncate<OrderHistory>();
         // db.Truncate<Identity>();
         using var transaction = db.Database.BeginTransaction();
-        
+
         db.OrderHistories
           .BatchDelete();
 
@@ -194,7 +256,7 @@ public class UnitTest1
         // db.Truncate<Employee>();
         db.Employees
           .BatchDelete();
-        
+
         transaction.Commit();
 
         // db.Employees
@@ -224,7 +286,7 @@ public class UnitTest1
     private static List<Employee> GetEmployees(int totalCount)
     {
         var employees = Enumerable.Range(0, totalCount)
-                                  .Select(x => new Employee
+                                  .Select((x, i) => new Employee
                                   {
                                       Id = Guid.NewGuid(),
 
@@ -238,7 +300,7 @@ public class UnitTest1
                                       CreateAt = DateTimeOffset.Now,
 
                                       // CreateAt = DateTimeOffset.Now,
-                                      Name = "yao"
+                                      Name = $"yao{i}"
 
                                       // Name = Name.First(),
                                   }).ToList();
