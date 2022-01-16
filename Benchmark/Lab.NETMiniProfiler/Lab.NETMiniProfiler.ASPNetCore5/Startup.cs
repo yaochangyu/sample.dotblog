@@ -1,32 +1,19 @@
+using System.Diagnostics;
 using System.Reflection;
 using Lab.NETMiniProfiler.Infrastructure.EFCore5;
+using Lab.NETMiniProfiler.Infrastructure.EFCore5.EntityModel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 
 namespace Lab.NETMiniProfiler.ASPNetCore5
 {
     public class Startup
     {
+        public IConfiguration Configuration { get; }
+
         public Startup(IConfiguration configuration)
         {
             this.Configuration = configuration;
-        }
-
-        public IConfiguration Configuration { get; }
-
-        // This method gets called by the runtime. Use this method to add services to the container.
-        public void ConfigureServices(IServiceCollection services)
-        {
-            services.AddControllers();
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "WebApplication1", Version = "v1" });
-            });
-
-            services.AddMiniProfiler(options =>
-              options.RouteBasePath = "/profiler"
-           );
-            services.AddAppEnvironment();
-            services.AddEntityFramework();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -35,9 +22,9 @@ namespace Lab.NETMiniProfiler.ASPNetCore5
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                app.UseMiniProfiler();
 
                 app.UseSwagger();
+
                 //app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "WebApplication1 v1"));
                 app.UseSwaggerUI(c =>
                 {
@@ -48,7 +35,11 @@ namespace Lab.NETMiniProfiler.ASPNetCore5
                                               .Assembly
                                               .GetManifestResourceStream("Lab.NETMiniProfiler.ASPNetCore5.index.html");
                 });
+
+                app.UseMiniProfiler();
             }
+
+            VerifyDbConnection(app);
 
             app.UseHttpsRedirection();
 
@@ -56,10 +47,33 @@ namespace Lab.NETMiniProfiler.ASPNetCore5
 
             app.UseAuthorization();
 
-            app.UseEndpoints(endpoints =>
+            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
+        }
+
+        // This method gets called by the runtime. Use this method to add services to the container.
+        public void ConfigureServices(IServiceCollection services)
+        {
+            services.AddControllers();
+            services.AddSwaggerGen(c =>
             {
-                endpoints.MapControllers();
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "WebApplication1", Version = "v1" });
             });
+
+            services.AddMiniProfiler(o => o.RouteBasePath = "/profiler")
+                    .AddEntityFramework();
+            services.AddAppEnvironment();
+            services.AddEntityFramework();
+        }
+
+        private static void VerifyDbConnection(IApplicationBuilder app)
+        {
+            var employeeDbContextFactory =
+                app.ApplicationServices.GetService<IDbContextFactory<EmployeeDbContext>>();
+            var db = employeeDbContextFactory.CreateDbContext();
+            if (db.Database.CanConnect())
+            {
+                Debug.WriteLine("資料庫已連線");
+            }
         }
     }
 }
