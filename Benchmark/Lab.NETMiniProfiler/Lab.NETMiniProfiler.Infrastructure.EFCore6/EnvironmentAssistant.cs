@@ -1,4 +1,4 @@
-﻿namespace Lab.NETMiniProfiler.Infrastructure;
+﻿namespace Lab.NETMiniProfiler.Infrastructure.EFCore6;
 
 public class EnvironmentAssistant
 {
