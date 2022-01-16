@@ -1,57 +1,44 @@
-﻿using System.Net;
+﻿using Lab.NETMiniProfiler.Infrastructure.EFCore5.EntityModel;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using StackExchange.Profiling;
 
 namespace Lab.NETMiniProfiler.ASPNetCore5.Controllers
 {
     /// <summary>
-    /// Value Controller
+    ///     Value Controller
     /// </summary>
     [Route("[controller]")]
     [ApiController]
     public class ValuesController : ControllerBase
     {
+        private readonly IDbContextFactory<EmployeeDbContext> _employeeDbContextFactory;
+
+        public ValuesController(IDbContextFactory<EmployeeDbContext> employeeDbContextFactory)
+        {
+            this._employeeDbContextFactory = employeeDbContextFactory;
+        }
+
+        // DELETE api/values/5
+        [HttpDelete("{id}")]
+        public void Delete(int id)
+        {
+        }
+
         /// <summary>
-        /// Get Api
+        ///     Get Api
         /// </summary>
         /// <returns></returns>
+
         // GET api/values
         [HttpGet]
-        public ActionResult<IEnumerable<string>> Get()
+        public async Task<IActionResult> Get(CancellationToken cancel = default)
         {
-            string url1 = string.Empty;
-            string url2 = string.Empty;
-            using (MiniProfiler.Current.Step("Get方法"))
+            using (MiniProfiler.Current.Step("查詢資料庫"))
             {
-                using (MiniProfiler.Current.Step("准备数据"))
-                {
-                    using (MiniProfiler.Current.CustomTiming("SQL", "SELECT * FROM Config"))
-                    {
-                        // 模拟一个SQL查询
-                        Thread.Sleep(500);
-
-                        url1 = "https://www.baidu.com";
-                        url2 = "https://www.sina.com.cn/";
-                    }
-                }
-
-
-                using (MiniProfiler.Current.Step("使用从数据库中查询的数据，进行Http请求"))
-                {
-                    using (MiniProfiler.Current.CustomTiming("HTTP", "GET " + url1))
-                    {
-                        var client = new WebClient();
-                        var reply = client.DownloadString(url1);
-                    }
-
-                    using (MiniProfiler.Current.CustomTiming("HTTP", "GET " + url2))
-                    {
-                        var client = new WebClient();
-                        var reply = client.DownloadString(url2);
-                    }
-                }
+                await using var db = this._employeeDbContextFactory.CreateDbContext();
+                return this.Ok(await db.Employees.AsTracking().ToListAsync(cancel));
             }
-            return new string[] { "value1", "value2" };
         }
 
         // GET api/values/5
@@ -63,19 +50,29 @@ namespace Lab.NETMiniProfiler.ASPNetCore5.Controllers
 
         // POST api/values
         [HttpPost]
-        public void Post([FromBody] string value)
+        public async Task<IActionResult> Post(CancellationToken cancellationToken = default)
         {
+            using (MiniProfiler.Current.Step("異動資料庫"))
+            {
+                await using var db = this._employeeDbContextFactory.CreateDbContext();
+
+                var toDb = new Employee
+                {
+                    Id = Guid.NewGuid(),
+                    CreateAt = DateTimeOffset.Now,
+                    CreateBy = Faker.Name.FullName(),
+                    Age = Faker.RandomNumber.Next(1, 100),
+                    Name = Faker.Name.Suffix(),
+                };
+                db.Employees.Add(toDb);
+                await db.SaveChangesAsync(cancellationToken);
+                return this.Ok(toDb);
+            }
         }
 
         // PUT api/values/5
         [HttpPut("{id}")]
         public void Put(int id, [FromBody] string value)
-        {
-        }
-
-        // DELETE api/values/5
-        [HttpDelete("{id}")]
-        public void Delete(int id)
         {
         }
     }

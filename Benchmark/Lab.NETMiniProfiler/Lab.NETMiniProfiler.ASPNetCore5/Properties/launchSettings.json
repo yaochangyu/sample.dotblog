@@ -7,9 +7,6 @@
       "applicationUrl": "http://localhost:41185",
       "sslPort": 44361
     },
-    "environmentVariables": {
-      "EMPLOYEE_DB_CONNECTION_STR": "Data Source=localhost;Initial Catalog=EmployeeDb;Integrated Security=false;User ID=sa;Password=pass@w0rd1~;MultipleActiveResultSets=True;TrustServerCertificate=True"
-    }
   },
   "profiles": {
     "Lab.NETMiniProfiler.ASPNetCore5": {
@@ -19,7 +16,8 @@
       "launchUrl": "swagger",
       "applicationUrl": "https://localhost:7186;http://localhost:5186",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "EMPLOYEE_DB_CONNECTION_STR": "Data Source=localhost;Initial Catalog=EmployeeDb;Integrated Security=false;User ID=sa;Password=pass@w0rd1~;MultipleActiveResultSets=True;TrustServerCertificate=True"
       }
     },
     "IIS Express": {
@@ -27,7 +25,8 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "EMPLOYEE_DB_CONNECTION_STR": "Data Source=localhost;Initial Catalog=EmployeeDb;Integrated Security=false;User ID=sa;Password=pass@w0rd1~;MultipleActiveResultSets=True;TrustServerCertificate=True"
       }
     }
   }
