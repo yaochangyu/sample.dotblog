@@ -18,7 +18,9 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "EMPLOYEE_DB_CONNECTION_STR": "Host=localhost;Port=5432;Database=member_service;Username=postgres;Password=guest",
-        "//EMPLOYEE_DB_CONNECTION_STR": "Data Source=localhost;Initial Catalog=EmployeeDb;Integrated Security=false;User ID=sa;Password=pass@w0rd1~;MultipleActiveResultSets=True;TrustServerCertificate=True"
+        "DB_TYPE": "postgresSQL",
+        "//EMPLOYEE_DB_CONNECTION_STR": "Data Source=localhost;Initial Catalog=EmployeeDb;Integrated Security=false;User ID=sa;Password=pass@w0rd1~;MultipleActiveResultSets=True;TrustServerCertificate=True",
+        "//DB_RTPE": "MsSQL"
       }
     },
     "IIS Express": {
