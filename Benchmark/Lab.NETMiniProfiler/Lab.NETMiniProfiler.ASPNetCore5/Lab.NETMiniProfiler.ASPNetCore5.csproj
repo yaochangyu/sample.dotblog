@@ -18,4 +18,8 @@
       <EmbeddedResource Include="index.html" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Lab.NETMiniProfiler.Infrastructure.EFCore5\Lab.NETMiniProfiler.Infrastructure.EFCore5.csproj" />
+    </ItemGroup>
+
 </Project>

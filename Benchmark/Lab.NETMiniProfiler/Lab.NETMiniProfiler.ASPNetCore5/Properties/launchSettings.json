@@ -6,6 +6,9 @@
     "iisExpress": {
       "applicationUrl": "http://localhost:41185",
       "sslPort": 44361
+    },
+    "environmentVariables": {
+      "EMPLOYEE_DB_CONNECTION_STR": "Data Source=localhost;Initial Catalog=EmployeeDb;Integrated Security=false;User ID=sa;Password=pass@w0rd1~;MultipleActiveResultSets=True;TrustServerCertificate=True"
     }
   },
   "profiles": {
