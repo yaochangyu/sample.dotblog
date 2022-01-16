@@ -39,7 +39,7 @@ namespace Lab.NETMiniProfiler.ASPNetCore5
                 app.UseMiniProfiler();
             }
 
-            VerifyDbConnection(app);
+            PreConnectionDb(app);
 
             app.UseHttpsRedirection();
 
@@ -65,7 +65,7 @@ namespace Lab.NETMiniProfiler.ASPNetCore5
             services.AddEntityFramework();
         }
 
-        private static void VerifyDbConnection(IApplicationBuilder app)
+        private static void PreConnectionDb(IApplicationBuilder app)
         {
             var employeeDbContextFactory =
                 app.ApplicationServices.GetService<IDbContextFactory<EmployeeDbContext>>();
