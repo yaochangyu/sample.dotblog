@@ -17,4 +17,8 @@
       <ProjectReference Include="..\Lab.NETMiniProfiler.Infrastructure.EFCore6\Lab.NETMiniProfiler.Infrastructure.EFCore6.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <EmbeddedResource Include="index.html" />
+    </ItemGroup>
+
 </Project>
