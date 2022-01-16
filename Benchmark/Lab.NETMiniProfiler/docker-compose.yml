@@ -1,10 +1,17 @@
 version: "3.8"
 
 services:
-  db-sql:
+  db-mssql:
     image: mcr.microsoft.com/mssql/server:2019-latest
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=pass@w0rd1~
     ports:
       - 1433:1433
+  
+  db-postgres:
+    image: postgres:12-alpine
+    environment:
+      - POSTGRES_PASSWORD=guest
+    ports:
+      - 5432:5432
