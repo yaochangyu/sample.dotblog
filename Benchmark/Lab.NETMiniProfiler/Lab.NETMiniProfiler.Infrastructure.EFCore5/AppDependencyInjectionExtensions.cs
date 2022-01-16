@@ -1,4 +1,5 @@
 ﻿using Lab.NETMiniProfiler.Infrastructure.EFCore5.EntityModel;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.SqlServer.Infrastructure.Internal;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure.Internal;
 
 namespace Lab.NETMiniProfiler.Infrastructure.EFCore5;
-
 public static class AppDependencyInjectionExtensions
 {
     public static void AddAppEnvironment(this IServiceCollection services)
@@ -35,21 +35,31 @@ public static class AppDependencyInjectionExtensions
             var appOption = provider.GetService<AppEnvironmentOption>();
             var loggerFactory = provider.GetService<ILoggerFactory>();
             var connectionString = appOption.EmployeeDbConnectionString;
-            // optionsBuilder.UseSqlServer(connectionString)
-            //               .UseLoggerFactory(loggerFactory);
+          
 
-            optionsBuilder.UseNpgsql(
-                              connectionString, //只會呼叫一次
-                              builder =>
-                                  builder.EnableRetryOnFailure(
-                                      10,
-                                      TimeSpan.FromSeconds(30),
-                                      new List<string> { "57P01" }))
+            switch (appOption.DatabaseType)
+            {
+                case DatabaseType.MsSql:
+                    optionsBuilder.UseSqlServer(connectionString)
+                                  .UseLoggerFactory(loggerFactory);
+                    break;
+                case DatabaseType.PostgresSQL:
+                    optionsBuilder.UseNpgsql(
+                                      connectionString, //只會呼叫一次
+                                      builder =>
+                                          builder.EnableRetryOnFailure(
+                                              10,
+                                              TimeSpan.FromSeconds(30),
+                                              new List<string> { "57P01" }))
 
-                          // .UseLazyLoadingProxies()
-                          // .UseSnakeCaseNamingConvention()
-                          .UseLoggerFactory(loggerFactory)
-                ;
+                                  // .UseLazyLoadingProxies()
+                                  // .UseSnakeCaseNamingConvention()
+                                  .UseLoggerFactory(loggerFactory)
+                        ;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();    
+            }
         });
     }
 }
