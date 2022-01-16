@@ -6,7 +6,7 @@
     "iisExpress": {
       "applicationUrl": "http://localhost:41185",
       "sslPort": 44361
-    },
+    }
   },
   "profiles": {
     "Lab.NETMiniProfiler.ASPNetCore5": {
@@ -17,7 +17,8 @@
       "applicationUrl": "https://localhost:7186;http://localhost:5186",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "EMPLOYEE_DB_CONNECTION_STR": "Data Source=localhost;Initial Catalog=EmployeeDb;Integrated Security=false;User ID=sa;Password=pass@w0rd1~;MultipleActiveResultSets=True;TrustServerCertificate=True"
+        "EMPLOYEE_DB_CONNECTION_STR": "Host=localhost;Port=5432;Database=member_service;Username=postgres;Password=guest",
+        "//EMPLOYEE_DB_CONNECTION_STR": "Data Source=localhost;Initial Catalog=EmployeeDb;Integrated Security=false;User ID=sa;Password=pass@w0rd1~;MultipleActiveResultSets=True;TrustServerCertificate=True"
       }
     },
     "IIS Express": {

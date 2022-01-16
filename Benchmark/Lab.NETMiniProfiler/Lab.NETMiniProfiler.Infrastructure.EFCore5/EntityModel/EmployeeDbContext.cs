@@ -30,14 +30,15 @@ namespace Lab.NETMiniProfiler.Infrastructure.EFCore5.EntityModel
                     {
                         Console.WriteLine(
                             $"EmployeeDbContext of connection string be '{sqlOptions.ConnectionString}'");
-                        if (this.Database.CanConnect() == false)
-                        {
-                            this.Database.EnsureCreated();
-                        }
-                        else
-                        {
-                            this.Database.Migrate();
-                        }
+                    }
+
+                    if (this.Database.CanConnect() == false)
+                    {
+                        this.Database.EnsureCreated();
+                    }
+                    else
+                    {
+                        this.Database.Migrate();
                     }
 
                     s_migrated[0] = true;
