@@ -7,6 +7,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lab.NETMiniProfiler.ASPNetC
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.NETMiniProfiler.Infrastructure.EFCore5", "Lab.NETMiniProfiler.Infrastructure.EFCore5\Lab.NETMiniProfiler.Infrastructure.EFCore5.csproj", "{083D436C-B451-4BCE-8A97-E6E77B9F9A23}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{8E1AD56E-E673-4533-B933-3712BD42BD4D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "global", "global", "{BF639261-D8D3-4F57-8682-C0262A5AFE04}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,5 +34,9 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {1A39E53A-25EB-4546-9E76-DA1904FE5DCA}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{8D4D97D5-C7F1-4BD7-9FE8-7A3766DB8D04} = {8E1AD56E-E673-4533-B933-3712BD42BD4D}
+		{083D436C-B451-4BCE-8A97-E6E77B9F9A23} = {8E1AD56E-E673-4533-B933-3712BD42BD4D}
 	EndGlobalSection
 EndGlobal

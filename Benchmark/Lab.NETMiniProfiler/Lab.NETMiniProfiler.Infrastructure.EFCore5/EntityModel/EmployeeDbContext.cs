@@ -30,7 +30,14 @@ namespace Lab.NETMiniProfiler.Infrastructure.EFCore5.EntityModel
                     {
                         Console.WriteLine(
                             $"EmployeeDbContext of connection string be '{sqlOptions.ConnectionString}'");
-                        this.Database.Migrate();
+                        if (this.Database.CanConnect() == false)
+                        {
+                            this.Database.EnsureCreated();
+                        }
+                        else
+                        {
+                            this.Database.Migrate();
+                        }
                     }
 
                     s_migrated[0] = true;
@@ -45,21 +52,21 @@ namespace Lab.NETMiniProfiler.Infrastructure.EFCore5.EntityModel
             {
                 p.HasKey(e => e.Id)
                  .IsClustered(false);
-                
+
                 p.HasIndex(e => e.SequenceId)
                  .IsUnique()
                  .IsClustered();
-                
+
                 p.Property(p => p.Remark)
                  .IsRequired(false)
-                 ;
+                    ;
             });
 
             modelBuilder.Entity<Identity>(p =>
             {
                 p.HasKey(e => e.Employee_Id)
                  .IsClustered(false);
-                
+
                 p.HasIndex(e => e.SequenceId)
                  .IsUnique()
                  .IsClustered();

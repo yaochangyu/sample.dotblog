@@ -21,11 +21,7 @@ public class AppEnvironmentOption
         }
     }
 
-    private string _employeeDbConnectionString;
     private readonly string EMPLOYEE_DB_CONN_STR = "EMPLOYEE_DB_CONNECTION_STR";
 
-    public void Initial()
-    {
-        var memberDbConnectionString = this.EmployeeDbConnectionString;
-    }
+    private string _employeeDbConnectionString;
 }
