@@ -1,8 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.InMemory.Infrastructure.Internal;
 using Microsoft.EntityFrameworkCore.SqlServer.Infrastructure.Internal;
 
-namespace Lab.NETMiniProfiler.Infrastructure.EntityModel
+namespace Lab.NETMiniProfiler.Infrastructure.EFCore6.EntityModel
 {
     public class EmployeeDbContext : DbContext
     {
@@ -26,17 +25,20 @@ namespace Lab.NETMiniProfiler.Infrastructure.EntityModel
             {
                 if (s_migrated[0] == false)
                 {
-                    var memoryOptions = options.FindExtension<InMemoryOptionsExtension>();
-
-                    if (memoryOptions == null)
+                    var sqlOptions = options.FindExtension<SqlServerOptionsExtension>();
+                    if (sqlOptions != null)
                     {
-                        var sqlOptions = options.FindExtension<SqlServerOptionsExtension>();
-                        if (sqlOptions != null)
-                        {
-                            Console.WriteLine(
-                                $"EmployeeDbContext of connection string be '{sqlOptions.ConnectionString}'");
-                            this.Database.Migrate();
-                        }
+                        Console.WriteLine(
+                            $"EmployeeDbContext of connection string be '{sqlOptions.ConnectionString}'");
+                    }
+
+                    if (this.Database.CanConnect() == false)
+                    {
+                        this.Database.EnsureCreated();
+                    }
+                    else
+                    {
+                        this.Database.Migrate();
                     }
 
                     s_migrated[0] = true;
@@ -51,21 +53,21 @@ namespace Lab.NETMiniProfiler.Infrastructure.EntityModel
             {
                 p.HasKey(e => e.Id)
                  .IsClustered(false);
-                
+
                 p.HasIndex(e => e.SequenceId)
                  .IsUnique()
                  .IsClustered();
-                
+
                 p.Property(p => p.Remark)
                  .IsRequired(false)
-                 ;
+                    ;
             });
 
             modelBuilder.Entity<Identity>(p =>
             {
                 p.HasKey(e => e.Employee_Id)
                  .IsClustered(false);
-                
+
                 p.HasIndex(e => e.SequenceId)
                  .IsUnique()
                  .IsClustered();

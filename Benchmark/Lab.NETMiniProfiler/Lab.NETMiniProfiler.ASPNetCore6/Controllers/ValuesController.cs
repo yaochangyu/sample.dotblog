@@ -1,9 +1,9 @@
-﻿using Lab.NETMiniProfiler.Infrastructure.EFCore5.EntityModel;
+﻿using Lab.NETMiniProfiler.Infrastructure.EFCore6.EntityModel;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StackExchange.Profiling;
 
-namespace Lab.NETMiniProfiler.ASPNetCore5.Controllers
+namespace Lab.NETMiniProfiler.ASPNetCore6.Controllers
 {
     /// <summary>
     ///     Value Controller
@@ -36,7 +36,7 @@ namespace Lab.NETMiniProfiler.ASPNetCore5.Controllers
         {
             using (MiniProfiler.Current.Step("查詢資料庫"))
             {
-                await using var db = this._employeeDbContextFactory.CreateDbContext();
+                await using var db = await this._employeeDbContextFactory.CreateDbContextAsync(cancel);
                 return this.Ok(await db.Employees.AsTracking().ToListAsync(cancel));
             }
         }
@@ -54,7 +54,7 @@ namespace Lab.NETMiniProfiler.ASPNetCore5.Controllers
         {
             using (MiniProfiler.Current.Step("異動資料庫"))
             {
-                await using var db = this._employeeDbContextFactory.CreateDbContext();
+                await using var db = await this._employeeDbContextFactory.CreateDbContextAsync(cancel);
 
                 var toDb = new Employee
                 {

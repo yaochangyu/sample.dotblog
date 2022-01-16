@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Lab.NETMiniProfiler.Infrastructure.EntityModel
+namespace Lab.NETMiniProfiler.Infrastructure.EFCore6.EntityModel
 {
     [Table("OrderHistory")]
     public class OrderHistory
