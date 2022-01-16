@@ -14,6 +14,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "global", "global", "{BF6392
 		docker-compose.yml = docker-compose.yml
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.NETMiniProfiler.ASPNetCore6", "Lab.NETMiniProfiler.ASPNetCore6\Lab.NETMiniProfiler.ASPNetCore6.csproj", "{A677D49D-8088-44DD-9900-FC7694C30D70}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.NETMiniProfiler.Infrastructure.EFCore6", "Lab.NETMiniProfiler.Infrastructure.EFCore6\Lab.NETMiniProfiler.Infrastructure.EFCore6.csproj", "{D4CB746B-5711-4338-B716-763A86822134}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,6 +32,14 @@ Global
 		{083D436C-B451-4BCE-8A97-E6E77B9F9A23}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{083D436C-B451-4BCE-8A97-E6E77B9F9A23}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{083D436C-B451-4BCE-8A97-E6E77B9F9A23}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A677D49D-8088-44DD-9900-FC7694C30D70}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A677D49D-8088-44DD-9900-FC7694C30D70}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A677D49D-8088-44DD-9900-FC7694C30D70}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A677D49D-8088-44DD-9900-FC7694C30D70}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4CB746B-5711-4338-B716-763A86822134}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4CB746B-5711-4338-B716-763A86822134}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4CB746B-5711-4338-B716-763A86822134}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4CB746B-5711-4338-B716-763A86822134}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -38,5 +50,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{8D4D97D5-C7F1-4BD7-9FE8-7A3766DB8D04} = {8E1AD56E-E673-4533-B933-3712BD42BD4D}
 		{083D436C-B451-4BCE-8A97-E6E77B9F9A23} = {8E1AD56E-E673-4533-B933-3712BD42BD4D}
+		{A677D49D-8088-44DD-9900-FC7694C30D70} = {8E1AD56E-E673-4533-B933-3712BD42BD4D}
+		{D4CB746B-5711-4338-B716-763A86822134} = {8E1AD56E-E673-4533-B933-3712BD42BD4D}
 	EndGlobalSection
 EndGlobal
