@@ -38,7 +38,7 @@ namespace AspNetCore3
         {
             services.AddControllers();
 
-            //ª`¤J Options ©M§¹¾ã IConfiguration
+            //æ³¨å…¥ Options å’Œå®Œæ•´ IConfiguration
             services.Configure<AppSetting>(this.Configuration);
         }
     }

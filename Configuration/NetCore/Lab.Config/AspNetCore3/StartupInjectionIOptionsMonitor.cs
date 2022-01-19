@@ -38,10 +38,10 @@ namespace AspNetCore3
         {
             services.AddControllers();
 
-            //ª`¤J Options ©M§¹¾ã IConfiguration
+            //æ³¨å…¥ Options å’Œå®Œæ•´ IConfiguration
             services.Configure<AppSetting>(this.Configuration);
             
-            //ª`¤J Options ©M Configuration Section Name
+            //æ³¨å…¥ Options å’Œ Configuration Section Name
             services.Configure<AppSetting>(this.Configuration);
             services.Configure<Player>("Player1",  this.Configuration.GetSection("Player1"));
             services.Configure<Player>("Player2", this.Configuration.GetSection("Player2"));
