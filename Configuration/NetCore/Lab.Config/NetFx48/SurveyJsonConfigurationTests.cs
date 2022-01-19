@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
@@ -74,58 +73,6 @@ namespace NetFx48
             var appService = host.Services.GetService<AppWorkFlow>();
             var playerId = appService.GetPlayerId();
             Console.WriteLine($"AppId = {playerId}");
-        }
-
-        [TestMethod]
-        public void 讀取記憶體組態()
-        {
-            var configBuilder = new ConfigurationBuilder()
-                                .SetBasePath(Directory.GetCurrentDirectory())
-                                .AddInMemoryCollection(new Dictionary<string, string>
-                                {
-                                    { "Player:AppId", "player1" },
-                                    { "Player:Key", "1234567890" },
-                                    {
-                                        "ConnectionStrings:DefaultConnectionString",
-                                        "Server=(localdb)\\mssqllocaldb;Database=EFGetStarted.ConsoleApp.NewDb;Trusted_Connection=True;"
-                                    },
-                                })
-                ;
-
-            var configRoot = configBuilder.Build();
-
-            //讀取組態
-
-            Console.WriteLine($"AppId = {configRoot["AppId"]}");
-            Console.WriteLine($"AppId = {configRoot["Player:AppId"]}");
-            Console.WriteLine($"Key = {configRoot["Player:Key"]}");
-            Console.WriteLine($"Connection String = {configRoot["ConnectionStrings:DefaultConnectionString"]}");
-        }
-
-        [TestMethod]
-        public void 讀取記憶體組態後綁定()
-        {
-            var configBuilder = new ConfigurationBuilder()
-                                .SetBasePath(Directory.GetCurrentDirectory())
-                                .AddInMemoryCollection(new Dictionary<string, string>
-                                {
-                                    { "Player:AppId", "player1" },
-                                    { "Player:Key", "1234567890" },
-                                    {
-                                        "ConnectionStrings:DefaultConnectionString",
-                                        "Server=(localdb)\\mssqllocaldb;Database=EFGetStarted.ConsoleApp.NewDb;Trusted_Connection=True;"
-                                    },
-                                })
-                ;
-
-            var configRoot = configBuilder.Build();
-            var appSetting = configRoot.Get<AppSetting>();
-
-            //讀取組態
-
-            Console.WriteLine($"AppId = {appSetting.Player.AppId}");
-            Console.WriteLine($"Key = {appSetting.Player.Key}");
-            Console.WriteLine($"Connection String = {appSetting.ConnectionStrings.DefaultConnectionString}");
         }
 
         [TestMethod]
