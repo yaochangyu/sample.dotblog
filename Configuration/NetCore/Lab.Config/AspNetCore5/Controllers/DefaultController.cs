@@ -45,7 +45,7 @@ namespace AspNetCore5.Controllers
             };
             appSettingOptions.OnChange(p =>
                                        {
-                                           Console.WriteLine("¸`ÂI¤wÅÜ§ó");
+                                           Console.WriteLine("ç¯€é»žå·²è®Šæ›´");
                                        });
             return this.Ok(content);
         }

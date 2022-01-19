@@ -1,10 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Lab.Infra;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -20,10 +19,10 @@ namespace AspNetCore3.Controllers
         };
 
         private readonly ILogger<WeatherForecastController> _logger;
-        private          AppSetting                         _appSetting;
-        private          IConfiguration                     _config;
-        private          Player                             _player1;
-        private          Player                             _player2;
+        private AppSetting _appSetting;
+        private IConfiguration _config;
+        private Player _player1;
+        private Player _player2;
 
         // TODO:依賴 AppSetting
         // public WeatherForecastController(AppSetting appSetting)
@@ -34,7 +33,6 @@ namespace AspNetCore3.Controllers
         // TODO:依賴 IOptions<AppSetting> 
         public WeatherForecastController(IOptions<AppSetting> options)
         {
-           
             try
             {
                 this._appSetting = options.Value;
@@ -83,13 +81,13 @@ namespace AspNetCore3.Controllers
 
         [HttpGet]
         public IEnumerable<WeatherForecast> Get()
-        { 
-            var rng     = new Random();
+        {
+            var rng = new Random();
             return Enumerable.Range(1, 5).Select(index => new WeatherForecast
                              {
-                                 Date         = DateTime.Now.AddDays(index),
+                                 Date = DateTime.Now.AddDays(index),
                                  TemperatureC = rng.Next(-20, 55),
-                                 Summary      = Summaries[rng.Next(Summaries.Length)]
+                                 Summary = Summaries[rng.Next(Summaries.Length)]
                              })
                              .ToArray();
         }

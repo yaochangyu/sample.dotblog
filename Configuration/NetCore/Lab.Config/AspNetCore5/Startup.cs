@@ -45,7 +45,7 @@ namespace AspNetCore5
                                        c.SwaggerDoc("v1", new OpenApiInfo {Title = "AspNetCore5", Version = "v1"});
                                    });
 
-            //ÅçÃÒ AppSetting
+            //é©—è­‰ AppSetting
             services.AddOptions<AppSetting>()
                     .ValidateDataAnnotations()
                     .Validate(p =>
@@ -58,10 +58,10 @@ namespace AspNetCore5
                                   return true;
                               }, "AllowedHosts must be value"); // Failure message.
 
-            //ª`¤J Options ©M§¹¾ã IConfiguration
+            //æ³¨å…¥ Options å’Œå®Œæ•´ IConfiguration
             services.Configure<AppSetting>(this.Configuration);
             
-            //ª`¤J Options ©M Configuration Section Name
+            //æ³¨å…¥ Options å’Œ Configuration Section Name
             services.Configure<Player>("Player1",           this.Configuration.GetSection("Player1"));
             services.Configure<Player>("Player2",           this.Configuration.GetSection("Player2"));
             services.Configure<Player>("Player3",           this.Configuration.GetSection("Player3"));

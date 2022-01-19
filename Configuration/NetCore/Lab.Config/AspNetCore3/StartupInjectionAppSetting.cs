@@ -38,14 +38,14 @@ namespace AspNetCore3
         {
             services.AddControllers();
 
-            //ª`¤J AppSetting
+            //æ³¨å…¥ AppSetting
             services.AddSingleton(provider =>
-                                  {
-                                      //lazy load
-                                      var appSetting = new AppSetting();
-                                      this.Configuration.Bind(appSetting);
-                                      return appSetting;
-                                  });
+            {
+                //lazy load
+                var appSetting = new AppSetting();
+                this.Configuration.Bind(appSetting);
+                return appSetting;
+            });
         }
     }
 }

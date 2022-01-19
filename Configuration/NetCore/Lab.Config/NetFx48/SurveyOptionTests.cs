@@ -10,12 +10,12 @@ namespace NetFx48
     public class SurveyOptionTests
     {
         [TestMethod]
-        public void ª`¤JOption()
+        public void æ³¨å…¥Option()
         {
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureAppConfiguration((hosting, configBuilder) =>
                                                          {
-                                                             // 1.Åª²ÕºAÀÉ 
+                                                             // 1.è®€çµ„æ…‹æª” 
                                                              var environmentName =
                                                                  hosting.Configuration["ENVIRONMENT2"];
                                                              configBuilder.AddJsonFile("appsettings.json", false, true);
@@ -25,10 +25,10 @@ namespace NetFx48
                                                          })
                               .ConfigureServices((hosting, services) =>
                                                  {
-                                                     // 2. ª`¤J Option ©M Configuration
+                                                     // 2. æ³¨å…¥ Option å’Œ Configuration
                                                      services.Configure<AppSetting1>(hosting.Configuration);
 
-                                                     //ª`¤J¨ä¥LªA°È
+                                                     //æ³¨å…¥å…¶ä»–æœå‹™
                                                      services.AddSingleton<AppWorkFlowWithOption>();
                                                  })
                 ;
@@ -39,12 +39,12 @@ namespace NetFx48
         }
 
         [TestMethod]
-        public void ª`¤JOptionMonitor()
+        public void æ³¨å…¥OptionMonitor()
         {
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureAppConfiguration((hosting, configBuilder) =>
                                                          {
-                                                             // 1.Åª²ÕºAÀÉ 
+                                                             // 1.è®€çµ„æ…‹æª” 
                                                              var environmentName =
                                                                  hosting.Configuration["ENVIRONMENT2"];
                                                              configBuilder.AddJsonFile("appsettings.json", false, true);
@@ -54,14 +54,14 @@ namespace NetFx48
                                                          })
                               .ConfigureServices((hosting, services) =>
                                                  {
-                                                     // ª`¤J Option ©M§¹¾ã Configuration
+                                                     // æ³¨å…¥ Option å’Œå®Œæ•´ Configuration
                                                      services.Configure<AppSetting1>(hosting.Configuration);
 
-                                                     // ª`¤J Option ©M¯S©w Configuration Section Name
+                                                     // æ³¨å…¥ Option å’Œç‰¹å®š Configuration Section Name
                                                      services.Configure<Player1>("Player",
                                                          hosting.Configuration.GetSection("Player"));
 
-                                                     //ª`¤J¨ä¥LªA°È
+                                                     //æ³¨å…¥å…¶ä»–æœå‹™
                                                      services.AddScoped<AppWorkFlowWithOptionsMonitor>();
                                                  })
                 ;
@@ -72,7 +72,7 @@ namespace NetFx48
         }
 
         [TestMethod]
-        public void ª`¤JOptionSnapshot()
+        public void æ³¨å…¥OptionSnapshot()
         {
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureAppConfiguration((hosting, configBuilder) =>
@@ -86,14 +86,14 @@ namespace NetFx48
                                                          })
                               .ConfigureServices((hosting, services) =>
                                                  {
-                                                     //  ª`¤J Option by §¹¾ã²ÕºA
+                                                     //  æ³¨å…¥ Option by å®Œæ•´çµ„æ…‹
                                                      services.Configure<AppSetting1>(hosting.Configuration);
 
-                                                     // ª`¤J Option by ¯S©w²ÕºA
+                                                     // æ³¨å…¥ Option by ç‰¹å®šçµ„æ…‹
                                                      services.Configure<Player1>(hosting.Configuration
                                                          .GetSection("Player"));
 
-                                                     //ª`¤J¨ä¥LªA°È
+                                                     //æ³¨å…¥å…¶ä»–æœå‹™
                                                      services.AddScoped<AppWorkFlowWithOptionsSnapshot>();
                                                  })
                 ;
@@ -104,12 +104,12 @@ namespace NetFx48
         }
 
 [TestMethod]
-        public void ÅçÃÒ()
+        public void é©—è­‰()
         {
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureAppConfiguration((hosting, configBuilder) =>
                                                          {
-                                                             // 1.Åª²ÕºAÀÉ 
+                                                             // 1.è®€çµ„æ…‹æª” 
                                                              var environmentName =
                                                                  hosting.Configuration["ENVIRONMENT2"];
                                                              configBuilder.AddJsonFile("appsettings.json", false, true);
@@ -119,9 +119,9 @@ namespace NetFx48
                                                          })
                               .ConfigureServices((hosting, services) =>
                                                  {
-                                                     // 2. ª`¤J Option ©M Configuration
+                                                     // 2. æ³¨å…¥ Option å’Œ Configuration
                                                      services.Configure<AppSetting1>(hosting.Configuration);
-                                                     //ÅçÃÒ
+                                                     //é©—è­‰
                                                      services.AddOptions<AppSetting1>()
                                                              .ValidateDataAnnotations()
                                                              .Validate(p =>
@@ -137,7 +137,7 @@ namespace NetFx48
                                                                        "DefaultConnectionString must be value"); // Failure message.
                                                      ;
 
-                                                     //ª`¤J¨ä¥LªA°È
+                                                     //æ³¨å…¥å…¶ä»–æœå‹™
                                                      services.AddSingleton<AppWorkFlowWithOption>();
                                                  })
                 ;
@@ -148,12 +148,12 @@ namespace NetFx48
         }
        
         [TestMethod]
-        public void ª½±µª`¤J²ÕºAª«¥ó()
+        public void ç›´æ¥æ³¨å…¥çµ„æ…‹ç‰©ä»¶()
         {
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureAppConfiguration((hosting, configBuilder) =>
                                                          {
-                                                             // 1.Åª²ÕºAÀÉ 
+                                                             // 1.è®€çµ„æ…‹æª” 
                                                              var environmentName =
                                                                  hosting.Configuration["ENVIRONMENT2"];
                                                              configBuilder.AddJsonFile("appsettings.json", false, true);
@@ -166,7 +166,7 @@ namespace NetFx48
                                                      var appSetting = hosting.Configuration.Get<AppSetting>();
                                                      services.AddSingleton(typeof(AppSetting), appSetting);
                                                      
-                                                     //ª`¤J¨ä¥LªA°È
+                                                     //æ³¨å…¥å…¶ä»–æœå‹™
                                                      services.AddSingleton<AppWorkFlow1>();
                                                  })
                 ;
