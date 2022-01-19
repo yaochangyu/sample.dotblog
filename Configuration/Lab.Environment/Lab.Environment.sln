@@ -4,6 +4,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Environment.ConsoleApp.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Environment.ConsoleApp.NET6", "Lab.Environment.ConsoleApp.NET6\Lab.Environment.ConsoleApp.NET6.csproj", "{5033EB4D-63B9-4F17-9FDD-1A81E174F3C9}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "global", "global", "{6ACD7D50-37E9-4003-B8BE-17FC3724B567}"
+	ProjectSection(SolutionItems) = preProject
+		Taskfile.yml = Taskfile.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
