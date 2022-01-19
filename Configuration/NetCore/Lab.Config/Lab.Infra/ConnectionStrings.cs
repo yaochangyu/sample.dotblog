@@ -1,4 +1,4 @@
-﻿namespace Lab.Infra
+namespace Lab.Infra
 {
     public class ConnectionStrings
     {

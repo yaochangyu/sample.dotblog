@@ -1,7 +1,9 @@
 ﻿<?xml version="1.0" encoding="UTF-8" ?>
 <root>
     <ConnectionStrings>
-        <DefaultConnectionString>Server=(localdb)\mssqllocaldb;Database=EFGetStarted.ConsoleApp.NewDb;Trusted_Connection=True;</DefaultConnectionString>
+        <DefaultConnectionString>
+            Server=(localdb)\mssqllocaldb;Database=EFGetStarted.ConsoleApp.NewDb;Trusted_Connection=True;
+        </DefaultConnectionString>
     </ConnectionStrings>
     <Player>
         <AppId>testApp</AppId>

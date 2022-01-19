@@ -13,7 +13,7 @@ namespace AspNetCore3.Controllers
         public IActionResult Get()
         {
             var serviceProvider = this.HttpContext.RequestServices;
-            var options         = serviceProvider.GetService<IOptions<AppSetting>>();
+            var options = serviceProvider.GetService<IOptions<AppSetting>>();
             return this.Ok(options?.Value);
         }
 
@@ -21,8 +21,8 @@ namespace AspNetCore3.Controllers
         public IActionResult GetMonitorPlayer(int id)
         {
             var serviceProvider = this.HttpContext.RequestServices;
-            var playerOption    = serviceProvider.GetService<IOptionsMonitor<Player>>();
-            var player          = playerOption.Get($"Player{id}");
+            var playerOption = serviceProvider.GetService<IOptionsMonitor<Player>>();
+            var player = playerOption.Get($"Player{id}");
             return this.Ok(player);
         }
 
@@ -30,8 +30,8 @@ namespace AspNetCore3.Controllers
         public IActionResult GetSnapshotPlayer(int id)
         {
             var serviceProvider = this.HttpContext.RequestServices;
-            var playerOption    = serviceProvider.GetService<IOptionsMonitor<Player>>();
-            var player          = playerOption.Get($"Player{id}");
+            var playerOption = serviceProvider.GetService<IOptionsMonitor<Player>>();
+            var player = playerOption.Get($"Player{id}");
             return this.Ok(player);
         }
     }

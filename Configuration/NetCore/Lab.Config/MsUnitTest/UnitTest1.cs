@@ -10,7 +10,7 @@ namespace MsUnitTest
     public class UnitTest1
     {
         [TestMethod]
-        public void ³z¹LAppSettingª«¥óÅª¨ú³]©wÀÉ()
+        public void é€éAppSettingç‰©ä»¶è®€å–è¨­å®šæª”()
         {
             var builder = new ConfigurationBuilder()
                           .SetBasePath(Directory.GetCurrentDirectory())
@@ -24,7 +24,7 @@ namespace MsUnitTest
         }
 
         [TestMethod]
-        public void ³z¹LAppSettingª«¥óÅª¨ú³]©wÀÉ_°Ï¬q¤£¦s¦b©ß¥X¨Ò¥~()
+        public void é€éAppSettingç‰©ä»¶è®€å–è¨­å®šæª”_å€æ®µä¸å­˜åœ¨æ‹‹å‡ºä¾‹å¤–()
         {
             var builder = new ConfigurationBuilder()
                           .SetBasePath(Directory.GetCurrentDirectory())
@@ -38,7 +38,7 @@ namespace MsUnitTest
         }
 
         [TestMethod]
-        public void ¸j©w³]©w_ÂX¥R¤èªk_Get()
+        public void ç¶å®šè¨­å®š_æ“´å……æ–¹æ³•_Get()
         {
             var builder = new ConfigurationBuilder()
                           .SetBasePath(Directory.GetCurrentDirectory())
@@ -50,7 +50,7 @@ namespace MsUnitTest
         }
 
         [TestMethod]
-        public void ¸j©w³]©w_ÂX¥R¤èªk_Bind()
+        public void ç¶å®šè¨­å®š_æ“´å……æ–¹æ³•_Bind()
         {
             var builder = new ConfigurationBuilder()
                           .SetBasePath(Directory.GetCurrentDirectory())
@@ -64,7 +64,7 @@ namespace MsUnitTest
         }
 
         [TestMethod]
-        public void Åª¨ú³]©wÀÉ()
+        public void è®€å–è¨­å®šæª”()
         {
             var builder = new ConfigurationBuilder()
                           .SetBasePath(Directory.GetCurrentDirectory())
@@ -78,7 +78,7 @@ namespace MsUnitTest
         }
 
         [TestMethod]
-        public void Åª¨ú³]©wÀÉ_GetConnectionString()
+        public void è®€å–è¨­å®šæª”_GetConnectionString()
         {
             var builder = new ConfigurationBuilder()
                           .SetBasePath(Directory.GetCurrentDirectory())
@@ -92,7 +92,7 @@ namespace MsUnitTest
         }
 
         [TestMethod]
-        public void Åª¨ú³]©wÀÉ_TryGet()
+        public void è®€å–è¨­å®šæª”_TryGet()
         {
             var builder = new ConfigurationBuilder()
                           .SetBasePath(Directory.GetCurrentDirectory())

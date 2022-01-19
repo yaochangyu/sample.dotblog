@@ -12,7 +12,7 @@ namespace AspNetCore5
                                                  {
                                                      webBuilder.ConfigureAppConfiguration(p =>
                                                      {
-                                                         // ¤£­«·s¸ü¤J²ÕºA
+                                                         // ä¸é‡æ–°è¼‰å…¥çµ„æ…‹
                                                          //p.AddJsonFile("appsettings.json", false, false);
                                                      });
                                                      webBuilder.UseStartup<Startup>();

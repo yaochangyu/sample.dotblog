@@ -11,7 +11,7 @@ namespace NetFx48
     public class SurveyUserSecretTests
     {
         [TestMethod]
-        public void HostÅª¨ú¯µ±K()
+        public void Hostè®€å–ç§˜å¯†()
         {
             var builder = Host.CreateDefaultBuilder()
                               .ConfigureHostConfiguration(config =>
@@ -27,7 +27,7 @@ namespace NetFx48
         }
 
         [TestMethod]
-        public void ¤â°Ê¹ê¨Ò¤Æ²ÕºAÅª¨ú¯µ±K()
+        public void æ‰‹å‹•å¯¦ä¾‹åŒ–çµ„æ…‹è®€å–ç§˜å¯†()
         {
             var builder = new ConfigurationBuilder()
                           .SetBasePath(Directory.GetCurrentDirectory())
