@@ -20,9 +20,12 @@ public class 來源為環境變數
         Environment.SetEnvironmentVariable("b:profile:age", "19");
         Environment.SetEnvironmentVariable("b:profile:address", "Taipei");
         var builder = new ConfigurationBuilder();
-        var configRoot = builder.AddInMemoryCollection()
+        var configRoot = builder.AddEnvironmentVariables()
                                 .Build();
         var member = configRoot.Get<Dictionary<string, Member>>();
+
+        Assert.AreEqual("9527", member["a"].Id);
+        Assert.AreEqual("9528", member["b"].Id);
     }
 
     [TestMethod]
@@ -37,10 +40,9 @@ public class 來源為環境變數
         Environment.SetEnvironmentVariable("b:profile:age", "19");
         Environment.SetEnvironmentVariable("b:profile:address", "Taipei");
         var builder = new ConfigurationBuilder();
-        var configRoot = builder.AddInMemoryCollection()
+        var configRoot = builder.AddEnvironmentVariables()
                                 .Build();
         var member = configRoot.Get<IList<Member>>();
-        var member2 = configRoot.Get<Dictionary<string, Member>>();
 
         Assert.AreEqual("9527", member[0].Id);
         Assert.AreEqual("9528", member[1].Id);
@@ -55,8 +57,7 @@ public class 來源為環境變數
         Environment.SetEnvironmentVariable("profile:address", "Taipei");
 
         var builder = new ConfigurationBuilder();
-        builder.AddEnvironmentVariables();
-        var configRoot = builder.AddInMemoryCollection()
+        var configRoot = builder.AddEnvironmentVariables()
                                 .Build();
         var member = configRoot.Get<Member>();
         Assert.AreEqual("9527", member.Id);

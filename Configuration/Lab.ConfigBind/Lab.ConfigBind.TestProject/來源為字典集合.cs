@@ -23,7 +23,7 @@ public class 來源為字典集合
         };
 
         var builder = new ConfigurationBuilder();
-        var configRoot = builder.AddInMemoryCollection(source).Build();
+        var configRoot = builder.AddEnvironmentVariables().Build();
         var member = configRoot.Get<Dictionary<string, Member>>();
 
         Assert.AreEqual("9527", member["a"].Id);
