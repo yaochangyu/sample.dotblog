@@ -9,6 +9,7 @@
     <ItemGroup>
         <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.1"/>
         <PackageReference Include="Microsoft.Extensions.Configuration" Version="6.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.2-mauipre.1.22054.8"/>
         <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="6.0.0"/>
     </ItemGroup>
 
