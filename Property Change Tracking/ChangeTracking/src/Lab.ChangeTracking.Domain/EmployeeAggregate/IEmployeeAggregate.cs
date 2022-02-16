@@ -4,5 +4,5 @@ namespace Lab.ChangeTracking.Domain.EmployeeAggregate;
 
 public interface IEmployeeAggregate
 {
-    Employee InsertAsync(Employee employee, CancellationToken cancel = default);
+    Task<EmployeeEntity> ModifyAsync(EmployeeEntity employee, CancellationToken cancel = default);
 }

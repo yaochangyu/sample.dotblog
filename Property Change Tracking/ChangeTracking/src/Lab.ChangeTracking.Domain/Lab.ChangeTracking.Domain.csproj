@@ -6,4 +6,13 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <ItemGroup>
+      <PackageReference Include="ChangeTracking" Version="2.2.17" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Lab.ChangeTracking.Infrastructure.DB\Lab.ChangeTracking.Infrastructure.DB.csproj" />
+    </ItemGroup>
+
 </Project>
