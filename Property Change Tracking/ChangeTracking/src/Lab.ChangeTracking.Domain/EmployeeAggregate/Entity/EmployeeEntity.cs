@@ -18,4 +18,6 @@ public class EmployeeEntity
     public virtual DateTimeOffset CreateAt { get; set; }
 
     public virtual string CreateBy { get; set; }
+
+    public virtual IdentityEntity Identity { get; set; }
 }

@@ -13,14 +13,13 @@ public class EmployeeAggregate : IEmployeeAggregate
         this._repository = repository;
     }
 
-    public async Task<EmployeeEntity> ModifyAsync(EmployeeEntity employee, CancellationToken cancel = default)
+    public async Task<EmployeeEntity> ModifyFlowAsync(EmployeeEntity srcEmployee, CancellationToken cancel = default)
     {
-        var trackable = employee.AsTrackable();
+        var trackable = srcEmployee.AsTrackable();
         trackable.Age = 20;
         trackable.Name = "小章";
+        trackable.Identity.Password = "9527";
         var changeCount = await this._repository.ChangeAsync(trackable, cancel);
         return trackable;
     }
-
-
 }
