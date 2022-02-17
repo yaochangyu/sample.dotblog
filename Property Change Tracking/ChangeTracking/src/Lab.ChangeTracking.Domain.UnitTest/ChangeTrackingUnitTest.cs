@@ -60,8 +60,9 @@ public class ChangeTrackingUnitTest
             Id = toDB.Id,
             Name = "yao",
             Age = 12,
+            Identity = new IdentityEntity(){}
         };
-        var employeeEntity = this._employeeAggregate.ModifyAsync(source).Result;
+        var employeeEntity = this._employeeAggregate.ModifyFlowAsync(source).Result;
     }
 
     private static Employee Insert()
