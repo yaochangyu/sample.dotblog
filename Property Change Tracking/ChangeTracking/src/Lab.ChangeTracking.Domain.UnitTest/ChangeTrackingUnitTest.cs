@@ -52,14 +52,40 @@ public class ChangeTrackingUnitTest
     }
 
     [TestMethod]
-    public void Repository_追蹤()
+    public void 追蹤後異動()
     {
+        var toDB = Insert();
         var source = new EmployeeEntity()
         {
-            Id = Guid.NewGuid(),
+            Id = toDB.Id,
             Name = "yao",
             Age = 12,
         };
         var employeeEntity = this._employeeAggregate.ModifyAsync(source).Result;
     }
+
+    private static Employee Insert()
+    {
+        using var dbContext = TestAssistants.EmployeeDbContextFactory.CreateDbContext();
+        var toDB = new Employee()
+        {
+            Id = Guid.NewGuid(),
+            Age = 18,
+            Name = "yao",
+            CreateAt = DateTimeOffset.Now,
+            CreateBy = "TEST",
+            Identity = new Identity()
+            {
+                Account = "yao",
+                Password = "123456",
+                CreateAt = DateTimeOffset.Now,
+                CreateBy = "TEST",
+            }
+        };
+        dbContext.Employees.Add(toDB);
+        dbContext.SaveChanges();
+        return toDB;
+    }
+
+  
 }

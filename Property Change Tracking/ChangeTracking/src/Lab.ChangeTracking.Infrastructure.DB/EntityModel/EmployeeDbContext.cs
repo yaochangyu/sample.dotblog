@@ -69,6 +69,10 @@ namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel
                 p.HasIndex(e => e.SequenceId)
                  .IsUnique()
                  .IsClustered();
+                
+                p.Property(p => p.Remark)
+                 .IsRequired(false)
+                    ;
             });
         }
     }

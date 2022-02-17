@@ -8,6 +8,7 @@
 
     <ItemGroup>
       <PackageReference Include="ChangeTracking" Version="2.2.17" />
+      <PackageReference Include="EFCore.BulkExtensions" Version="6.2.6" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.1" />
     </ItemGroup>
 
