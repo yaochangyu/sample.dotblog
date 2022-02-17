@@ -4,5 +4,5 @@ namespace Lab.ChangeTracking.Domain.EmployeeAggregate;
 
 public interface IEmployeeAggregate
 {
-    Task<EmployeeEntity> ModifyAsync(EmployeeEntity employee, CancellationToken cancel = default);
+    Task<EmployeeEntity> ModifyFlowAsync(EmployeeEntity employee, CancellationToken cancel = default);
 }
