@@ -4,5 +4,5 @@ namespace Lab.ChangeTracking.Domain.EmployeeAggregate.Repository;
 
 public interface IEmployeeRepository
 {
-    Task<int> ChangeAsync(EmployeeEntity employee, CancellationToken cancel = default);
+    Task<int> SaveChangeAsync(EmployeeEntity employee, CancellationToken cancel = default);
 }

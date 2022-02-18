@@ -15,6 +15,7 @@ public class EmployeeEntity
 
     public virtual string Remark { get; set; }
 
+    public virtual Dictionary<string,string> Profiles { get; set; }
     public virtual DateTimeOffset CreateAt { get; set; }
 
     public virtual string CreateBy { get; set; }
