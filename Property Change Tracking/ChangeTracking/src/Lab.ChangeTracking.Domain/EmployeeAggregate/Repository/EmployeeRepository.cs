@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using ChangeTracking;
+﻿using ChangeTracking;
 using EFCore.BulkExtensions;
 using Lab.ChangeTracking.Domain.EmployeeAggregate.Entity;
 using Lab.ChangeTracking.Infrastructure.DB.EntityModel;
@@ -16,37 +15,6 @@ public class EmployeeRepository : IEmployeeRepository
         this._memberContextFactory = memberContextFactory;
     }
 
-    public async Task<int> ChangeAsync(EmployeeEntity srcEmployee,
-                                       CancellationToken cancel = default)
-    {
-        var tracked = srcEmployee.CastToIChangeTrackable();
-
-        await using var dbContext = await this._memberContextFactory.CreateDbContextAsync(cancel);
-        var employee =
-            await dbContext.Employees
-                           .FirstOrDefaultAsync(a => a.Id == srcEmployee.Id, cancel);
-        var identity =
-            await dbContext.Identities
-                           .FirstOrDefaultAsync(a => a.Employee_Id == srcEmployee.Id, cancel);
-
-        var destEmployee = this.To(srcEmployee);
-        var updateColumns = tracked.ChangedProperties.ToList();
-        var updateColumns1 = new List<string>()
-        {
-            "Age",
-            nameof(srcEmployee.Identity)
-        };
-        var changeCount = await dbContext.Employees
-                                         .Where(a => a.Id == srcEmployee.Id)
-                                         .BatchUpdateAsync(destEmployee, updateColumns, cancel);
-        var changeCount1 = await dbContext.Identities
-                                         .Where(a => a.Employee_Id == srcEmployee.Id)
-                                         .BatchUpdateAsync(destEmployee.Identity, updateColumns1, cancel);
-
-
-        return changeCount;
-    }
-
     public Employee To(EmployeeEntity srcEmployee)
     {
         return new Employee
@@ -57,17 +25,53 @@ public class EmployeeRepository : IEmployeeRepository
             Remark = srcEmployee.Remark,
             CreateAt = srcEmployee.CreateAt,
             CreateBy = srcEmployee.CreateBy,
-            Identity = To(srcEmployee.Identity)
+            Identity = this.To(srcEmployee.Identity)
         };
     }
+
     public Identity To(IdentityEntity srcIdentity)
     {
-        return new Identity()
+        return new Identity
         {
             Password = srcIdentity.Password,
             Remark = srcIdentity.Remark,
             CreateAt = srcIdentity.CreateAt,
             CreateBy = srcIdentity.CreateBy,
         };
+    }
+
+    public async Task<int> SaveChangeAsync(EmployeeEntity srcEmployee,
+                                           CancellationToken cancel = default)
+    {
+        var employeeTrackable = srcEmployee.CastToIChangeTrackable();
+        var identityTrackable = srcEmployee.Identity.CastToIChangeTrackable();
+
+        var memberChangeProperties = employeeTrackable.ChangedProperties.ToList();
+        var identityChangeProperties = identityTrackable.ChangedProperties.ToList();
+
+        await using var dbContext = await this._memberContextFactory.CreateDbContextAsync(cancel);
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancel);
+
+        try
+        {
+            var destEmployee = this.To(srcEmployee);
+            var memberChangeCount = await dbContext.Employees
+                                                   .Where(a => a.Id == srcEmployee.Id)
+                                                   .BatchUpdateAsync(destEmployee,
+                                                                     memberChangeProperties, cancel);
+            var identityChangeCount = await dbContext.Identities
+                                                     .Where(a => a.Employee_Id == srcEmployee.Id)
+                                                     .BatchUpdateAsync(destEmployee.Identity,
+                                                                       identityChangeProperties,
+                                                                       cancel);
+
+            await transaction.CommitAsync(cancel);
+            return memberChangeCount + identityChangeCount;
+        }
+        catch (Exception e)
+        {
+            await transaction.RollbackAsync(cancel);
+            throw new Exception("存檔失敗");
+        }
     }
 }

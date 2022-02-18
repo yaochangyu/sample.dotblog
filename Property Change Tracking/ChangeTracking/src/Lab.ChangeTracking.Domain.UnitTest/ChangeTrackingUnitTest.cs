@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using ChangeTracking;
 using Lab.ChangeTracking.Domain.EmployeeAggregate;
@@ -60,7 +61,9 @@ public class ChangeTrackingUnitTest
             Id = toDB.Id,
             Name = "yao",
             Age = 12,
-            Identity = new IdentityEntity(){}
+            Identity = new IdentityEntity(){},
+            Profiles = new Dictionary<string, string>()
+            
         };
         var employeeEntity = this._employeeAggregate.ModifyFlowAsync(source).Result;
     }
