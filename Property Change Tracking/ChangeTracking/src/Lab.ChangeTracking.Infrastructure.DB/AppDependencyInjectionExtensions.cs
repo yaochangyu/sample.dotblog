@@ -28,8 +28,6 @@ public static class AppDependencyInjectionExtensions
                 ;
         });
 
-        ;
-
         // services.AddPooledDbContextFactory<EmployeeDbContext>((provider, options) =>
         // {
         //     var option = provider.GetService<AppEnvironmentOption>();

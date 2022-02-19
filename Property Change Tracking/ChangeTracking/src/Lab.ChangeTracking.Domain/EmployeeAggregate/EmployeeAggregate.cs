@@ -15,14 +15,12 @@ public class EmployeeAggregate : IEmployeeAggregate
 
     public async Task<EmployeeEntity> ModifyFlowAsync(EmployeeEntity srcEmployee, CancellationToken cancel = default)
     {
-        var trackable = srcEmployee.AsTrackable();
+        var memberTrackable = srcEmployee.AsTrackable();
+        
+        memberTrackable.Name = "小章";
+        memberTrackable.Identity.Password = "9527";
 
-        trackable.Name = "小章";
-        trackable.Identity.Password = "9527";
-        // trackable.Profiles.Add("FirstName", "余");
-        trackable.Profiles = new Dictionary<string, string>() { { "Last", "小章" } };
-
-        var changeCount = await this._repository.SaveChangeAsync(trackable, cancel);
-        return trackable;
+        var changeCount = await this._repository.SaveChangeAsync(memberTrackable, cancel);
+        return memberTrackable;
     }
 }
