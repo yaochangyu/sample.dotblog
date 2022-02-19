@@ -33,8 +33,6 @@ namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel
                         var sqlOptions = options.FindExtension<SqlServerOptionsExtension>();
                         if (sqlOptions != null)
                         {
-                            Console.WriteLine(
-                                $"EmployeeDbContext of connection string be '{sqlOptions.ConnectionString}'");
                             this.Database.Migrate();
                         }
                     }
