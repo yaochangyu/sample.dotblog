@@ -1,6 +1,6 @@
 ﻿namespace Lab.ChangeTracking.Domain.EmployeeAggregate.Entity;
 
-public class ProfileEntity
+public record ProfileEntity
 {
     public virtual string FirstName { get; set; }
 

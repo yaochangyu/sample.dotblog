@@ -155,7 +155,7 @@ public class ChangeTrackingUnitTest
             ;
 
         Assert.AreEqual("小章", actual.Name);
-        Assert.AreEqual("9528", actual.Identity.Password);
+        Assert.AreEqual("9527", actual.Identity.Password);
     }
 
     private static Employee Insert()

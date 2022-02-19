@@ -6,7 +6,7 @@ using Lab.ChangeTracking.Domain.Annotations;
 
 namespace Lab.ChangeTracking.Domain.EmployeeAggregate.Entity;
 
-public class EmployeeEntity
+public record EmployeeEntity
 {
     public virtual Guid Id { get; init; }
 

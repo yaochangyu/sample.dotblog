@@ -1,6 +1,6 @@
 ﻿namespace Lab.ChangeTracking.Domain.EmployeeAggregate.Entity;
 
-public class IdentityEntity
+public record IdentityEntity
 {
     public virtual string Account { get; set; }
 
