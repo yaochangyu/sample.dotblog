@@ -51,7 +51,7 @@ public class ChangeTrackingUnitTest
 
         var employeeChangedProperties = employTrackable.ChangedProperties;
 
-        Console.WriteLine($"{nameof(this.追蹤)}:追蹤欄位");
+        Console.WriteLine($"{nameof(this.追蹤)}:追蹤 Employee 欄位");
         Console.WriteLine(ToJson(employeeChangedProperties));
     }
 
@@ -82,14 +82,14 @@ public class ChangeTrackingUnitTest
         var changedItems = profileTrackable.ChangedItems;
         var deleteItems = profileTrackable.DeletedItems;
 
-        Console.WriteLine($"{nameof(this.追蹤集合)}:追蹤集合");
+        Console.WriteLine($"{nameof(this.追蹤集合)}:追蹤 Profiles 集合");
         Console.WriteLine($"UnchangedItems:{ToJson(unchangedItems)}");
         Console.WriteLine($"AddItem:{ToJson(addedItems)}");
         Console.WriteLine($"ChangedItems:{ToJson(changedItems)}");
         Console.WriteLine($"DeleteItems:{ToJson(deleteItems)}");
-        Console.WriteLine($"{nameof(this.追蹤集合)}:追蹤變更屬性");
+        Console.WriteLine($"{nameof(this.追蹤集合)}:追蹤 Profiles[0] 變更屬性");
         var changeTrackable = trackable.Profiles[0].CastToIChangeTrackable();
-        Console.WriteLine($"變更欄位:{ToJson(changeTrackable.ChangedProperties)}");
+        Console.WriteLine($"Profiles[0] 變更欄位:{ToJson(changeTrackable.ChangedProperties)}");
     }
 
     [TestMethod]
@@ -111,8 +111,9 @@ public class ChangeTrackingUnitTest
         var employeeChangedProperties = employTrackable.ChangedProperties;
         var identityChangedProperties = identityTrackable.ChangedProperties;
 
-        Console.WriteLine($"{nameof(this.追蹤複雜型別)}:追蹤欄位");
+        Console.WriteLine($"{nameof(this.追蹤複雜型別)}:追蹤 Employee 欄位");
         Console.WriteLine(ToJson(employeeChangedProperties));
+        Console.WriteLine($"{nameof(this.追蹤複雜型別)}:追蹤 Identity 欄位");
         Console.WriteLine(ToJson(identityChangedProperties));
     }
 
