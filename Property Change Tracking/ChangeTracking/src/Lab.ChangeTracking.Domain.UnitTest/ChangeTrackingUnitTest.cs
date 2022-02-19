@@ -52,10 +52,10 @@ public class ChangeTrackingUnitTest
         trackable.Name = "小章";
         var employTrackable = trackable.CastToIChangeTrackable();
 
-        var employeeChangedProperties = employTrackable.ChangedProperties.ToList();
+        var employeeChangedProperties = employTrackable.ChangedProperties;
 
         Console.WriteLine($"{nameof(this.追蹤)}:追蹤欄位");
-        Console.WriteLine(JsonSerializer.Serialize(employeeChangedProperties));
+        Console.WriteLine(ToJson(employeeChangedProperties));
     }
 
     [TestMethod]
@@ -78,8 +78,8 @@ public class ChangeTrackingUnitTest
         var identityChangedProperties = identityTrackable.ChangedProperties.ToList();
 
         Console.WriteLine($"{nameof(this.追蹤複雜型別)}:追蹤欄位");
-        Console.WriteLine(JsonSerializer.Serialize(employeeChangedProperties));
-        Console.WriteLine(JsonSerializer.Serialize(identityChangedProperties));
+        Console.WriteLine(ToJson(employeeChangedProperties));
+        Console.WriteLine(ToJson(identityChangedProperties));
     }
 
     [TestMethod]
@@ -110,16 +110,16 @@ public class ChangeTrackingUnitTest
         var deleteItems = profileTrackable.DeletedItems;
 
         Console.WriteLine($"{nameof(this.追蹤集合)}:追蹤集合");
-        Console.WriteLine($"UnchangedItems:{Serialize(unchangedItems)}");
-        Console.WriteLine($"AddItem:{Serialize(addedItems)}");
-        Console.WriteLine($"ChangedItems:{Serialize(changedItems)}");
-        Console.WriteLine($"DeleteItems:{Serialize(deleteItems)}");
+        Console.WriteLine($"UnchangedItems:{ToJson(unchangedItems)}");
+        Console.WriteLine($"AddItem:{ToJson(addedItems)}");
+        Console.WriteLine($"ChangedItems:{ToJson(changedItems)}");
+        Console.WriteLine($"DeleteItems:{ToJson(deleteItems)}");
         Console.WriteLine($"{nameof(this.追蹤集合)}:追蹤變更屬性");
         var changeTrackable = trackable.Profiles[0].CastToIChangeTrackable();
-        Console.WriteLine($"變更欄位:{Serialize(changeTrackable.ChangedProperties)}");
+        Console.WriteLine($"變更欄位:{ToJson(changeTrackable.ChangedProperties)}");
     }
 
-    private static string Serialize<T>(T instance)
+    private static string ToJson<T>(T instance)
     {
         var serialize = JsonSerializer.Serialize(instance,
                                                  new JsonSerializerOptions()
