@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -9,7 +7,6 @@ using System.Text.Unicode;
 using ChangeTracking;
 using Lab.ChangeTracking.Domain.EmployeeAggregate;
 using Lab.ChangeTracking.Domain.EmployeeAggregate.Entity;
-using Lab.ChangeTracking.Domain.EmployeeAggregate.Repository;
 using Lab.ChangeTracking.Infrastructure.DB.EntityModel;
 using Lab.MultiTestCase.UnitTest;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +25,7 @@ public class ChangeTrackingUnitTest
     [TestMethod]
     public void 原本用法()
     {
-        var source = new EmployeeEntity()
+        var source = new EmployeeEntity
         {
             Id = Guid.NewGuid(),
             Name = "yao",
@@ -41,12 +38,12 @@ public class ChangeTrackingUnitTest
     [TestMethod]
     public void 追蹤()
     {
-        var source = new EmployeeEntity()
+        var source = new EmployeeEntity
         {
             Id = Guid.NewGuid(),
             Name = "yao",
             Age = 12,
-            Identity = new IdentityEntity() { Account = "G1234" },
+            Identity = new IdentityEntity { Account = "G1234" },
         };
         var trackable = source.AsTrackable();
         trackable.Name = "小章";
@@ -59,39 +56,15 @@ public class ChangeTrackingUnitTest
     }
 
     [TestMethod]
-    public void 追蹤複雜型別()
-    {
-        var source = new EmployeeEntity()
-        {
-            Id = Guid.NewGuid(),
-            Name = "yao",
-            Age = 12,
-            Identity = new IdentityEntity() { Account = "G1234" },
-        };
-        var trackable = source.AsTrackable();
-        trackable.Name = "小章";
-        trackable.Identity.Account = "yao";
-        var employTrackable = trackable.CastToIChangeTrackable();
-        var identityTrackable = trackable.Identity.CastToIChangeTrackable();
-
-        var employeeChangedProperties = employTrackable.ChangedProperties.ToList();
-        var identityChangedProperties = identityTrackable.ChangedProperties.ToList();
-
-        Console.WriteLine($"{nameof(this.追蹤複雜型別)}:追蹤欄位");
-        Console.WriteLine(ToJson(employeeChangedProperties));
-        Console.WriteLine(ToJson(identityChangedProperties));
-    }
-
-    [TestMethod]
     public void 追蹤集合()
     {
-        var source = new EmployeeEntity()
+        var source = new EmployeeEntity
         {
             Id = Guid.NewGuid(),
             Name = "yao",
             Age = 12,
-            Identity = new IdentityEntity() { Account = "G1234" },
-            Profiles = new List<ProfileEntity>()
+            Identity = new IdentityEntity { Account = "G1234" },
+            Profiles = new List<ProfileEntity>
             {
                 new() { FirstName = "第一筆" },
                 new() { FirstName = "將被刪掉" },
@@ -99,7 +72,7 @@ public class ChangeTrackingUnitTest
         };
         var trackable = source.AsTrackable();
         trackable.Profiles[0].FirstName = "變更";
-        trackable.Profiles.Add(new ProfileEntity() { FirstName = "新增" });
+        trackable.Profiles.Add(new ProfileEntity { FirstName = "新增" });
         trackable.Profiles.RemoveAt(1);
 
         var profileTrackable = trackable.Profiles.CastToIChangeTrackableCollection();
@@ -119,22 +92,35 @@ public class ChangeTrackingUnitTest
         Console.WriteLine($"變更欄位:{ToJson(changeTrackable.ChangedProperties)}");
     }
 
-    private static string ToJson<T>(T instance)
+    [TestMethod]
+    public void 追蹤複雜型別()
     {
-        var serialize = JsonSerializer.Serialize(instance,
-                                                 new JsonSerializerOptions()
-                                                 {
-                                                     Encoder = JavaScriptEncoder.Create(
-                                                         UnicodeRanges.BasicLatin, UnicodeRanges.CjkUnifiedIdeographs)
-                                                 });
-        return serialize;
+        var source = new EmployeeEntity
+        {
+            Id = Guid.NewGuid(),
+            Name = "yao",
+            Age = 12,
+            Identity = new IdentityEntity { Account = "G1234" },
+        };
+        var trackable = source.AsTrackable();
+        trackable.Name = "小章";
+        trackable.Identity.Account = "yao";
+        var employTrackable = trackable.CastToIChangeTrackable();
+        var identityTrackable = trackable.Identity.CastToIChangeTrackable();
+
+        var employeeChangedProperties = employTrackable.ChangedProperties;
+        var identityChangedProperties = identityTrackable.ChangedProperties;
+
+        Console.WriteLine($"{nameof(this.追蹤複雜型別)}:追蹤欄位");
+        Console.WriteLine(ToJson(employeeChangedProperties));
+        Console.WriteLine(ToJson(identityChangedProperties));
     }
 
     [TestMethod]
     public void 異動追蹤後存檔()
     {
         var toDB = Insert();
-        var source = new EmployeeEntity()
+        var source = new EmployeeEntity
         {
             Id = toDB.Id,
             Name = "yao",
@@ -161,14 +147,14 @@ public class ChangeTrackingUnitTest
     private static Employee Insert()
     {
         using var dbContext = TestAssistants.EmployeeDbContextFactory.CreateDbContext();
-        var toDB = new Employee()
+        var toDB = new Employee
         {
             Id = Guid.NewGuid(),
             Age = 18,
             Name = "yao",
             CreateAt = DateTimeOffset.Now,
             CreateBy = "TEST",
-            Identity = new Identity()
+            Identity = new Identity
             {
                 Account = "yao",
                 Password = "123456",
@@ -179,5 +165,16 @@ public class ChangeTrackingUnitTest
         dbContext.Employees.Add(toDB);
         dbContext.SaveChanges();
         return toDB;
+    }
+
+    private static string ToJson<T>(T instance)
+    {
+        var serialize = JsonSerializer.Serialize(instance,
+                                                 new JsonSerializerOptions
+                                                 {
+                                                     Encoder = JavaScriptEncoder.Create(
+                                                         UnicodeRanges.BasicLatin, UnicodeRanges.CjkUnifiedIdeographs)
+                                                 });
+        return serialize;
     }
 }
