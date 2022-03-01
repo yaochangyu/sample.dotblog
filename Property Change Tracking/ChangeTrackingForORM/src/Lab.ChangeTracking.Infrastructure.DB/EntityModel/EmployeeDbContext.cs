@@ -19,24 +19,26 @@ namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel
         public EmployeeDbContext(DbContextOptions<EmployeeDbContext> options)
             : base(options)
         {
-            if (s_migrated[0])
-            {
-                return;
-            }
-
-            lock (s_migrated)
-            {
-                if (s_migrated[0] == false)
-                {
-                    var sqlOptions = options.FindExtension<SqlServerOptionsExtension>();
-                    if (sqlOptions != null)
-                    {
-                        this.Database.Migrate();
-                    }
-
-                    s_migrated[0] = true;
-                }
-            }
+            // 改用 CI 執行 Migrate
+            
+            // if (s_migrated[0])
+            // {
+            //     return;
+            // }
+            //
+            // lock (s_migrated)
+            // {
+            //     if (s_migrated[0] == false)
+            //     {
+            //         var sqlOptions = options.FindExtension<SqlServerOptionsExtension>();
+            //         if (sqlOptions != null)
+            //         {
+            //             this.Database.Migrate();
+            //         }
+            //
+            //         s_migrated[0] = true;
+            //     }
+            // }
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -63,7 +65,7 @@ namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel
             }
         }
 
-        internal class IdentityConfiguration : IEntityTypeConfiguration<Identity>
+        private class IdentityConfiguration : IEntityTypeConfiguration<Identity>
         {
             public void Configure(EntityTypeBuilder<Identity> builder)
             {
@@ -77,6 +79,28 @@ namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel
 
                 builder.Property(p => p.Account).IsRequired();
                 builder.Property(p => p.Password).IsRequired();
+                builder.Property(p => p.Remark).IsRequired(false);
+                builder.Property(p => p.UpdatedBy).IsRequired(false);
+
+                builder.HasIndex(e => e.SequenceId)
+                    .IsUnique()
+                    .IsClustered();
+            }
+        }
+
+        private class ProfileConfiguration : IEntityTypeConfiguration<Profile>
+        {
+            public void Configure(EntityTypeBuilder<Profile> builder)
+            {
+                builder.ToTable("Profile");
+                builder.HasKey(p => p.Id).IsClustered(false);
+                builder.HasOne(e => e.Employee)
+                    .WithMany(p => p.Profiles)
+                    .HasForeignKey(p => p.Employee_Id)
+                    .OnDelete(DeleteBehavior.Cascade) ;
+
+                builder.Property(p => p.FirstName).IsRequired();
+                builder.Property(p => p.LastName).IsRequired();
                 builder.Property(p => p.Remark).IsRequired(false);
                 builder.Property(p => p.UpdatedBy).IsRequired(false);
 
