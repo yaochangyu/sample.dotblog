@@ -1,8 +1,13 @@
-﻿using Lab.ChangeTracking.Domain.Entity;
+﻿using Lab.ChangeTracking.Abstract;
+using Lab.ChangeTracking.Domain.Entity;
 
 namespace Lab.ChangeTracking.Domain;
 
-public interface IEmployeeAggregate
+public interface IEmployeeAggregate<T> : IAggregationRoot<T> where T : IChangeTrackable
 {
-    Task<EmployeeEntity> ModifyFlowAsync(EmployeeEntity employee, CancellationToken cancel = default);
+    IEmployeeAggregate<T> SetName(string name);
+
+    IEmployeeAggregate<T> SetAge(int age);
+
+    void SaveChangeAsync(CancellationToken cancel = default);
 }

@@ -2,7 +2,7 @@
 
 namespace Lab.ChangeTracking.Domain.Entity;
 
-public class EmployeeEntity :IEmployeeEntity
+public record EmployeeEntity : IEmployeeEntity
 {
     public DateTimeOffset CreatedAt { get; set; }
 

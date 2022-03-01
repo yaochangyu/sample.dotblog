@@ -2,9 +2,9 @@
 
 namespace Lab.ChangeTracking.Domain;
 
-public abstract class AggregationRoot<T> where T : IChangeTrackable
+public abstract class AggregationRoot<T> : IAggregationRoot<T> where T : IChangeTrackable
 {
-    public EntityState State { get; private set; }
+    public EntityState State { get; protected set; }
 
     /// <summary>
     ///     建立時間
@@ -51,25 +51,35 @@ public abstract class AggregationRoot<T> where T : IChangeTrackable
         init => this._instance.Version = value;
     }
 
-    private readonly IList<Action<T>> _changes = new List<Action<T>>();
+    private readonly IList<Action<T>> _changeActions = new List<Action<T>>();
     protected readonly Dictionary<string, object> ChangedProperties = new();
     protected readonly Dictionary<string, object> OriginalValues = new();
 
     protected T _instance;
 
-    public AggregationRoot(T instance)
+    public IReadOnlyList<Action<T>> GetChangeActions()
     {
-        this._instance = instance;
+        return this._changeActions.ToList();
     }
 
-    public IReadOnlyList<Action<T>> GetInstanceChanges()
+    public void SetInstance(T instance)
     {
-        return this._changes.ToList();
+        this.State = EntityState.Unchanged;
+        this._instance = instance;
     }
 
     public T GetInstance()
     {
         return this._instance;
+
+        // return new T
+        // {
+        //     Version = _instance.Version,
+        //     CreatedAt = _instance.CreatedAt,
+        //     CreatedBy = this._instance.CreatedBy,
+        //     UpdatedAt = this.UpdatedAt,
+        //     UpdatedBy = this.CreatedBy
+        // };
     }
 
     /// <summary>
@@ -94,17 +104,17 @@ public abstract class AggregationRoot<T> where T : IChangeTrackable
 
         if (this.State == EntityState.Added)
         {
-            this.Track(x => x.CreatedAt = when);
-            this.Track(x => x.CreatedBy = who);
-            this.Track(x => x.UpdatedAt = when);
-            this.Track(x => x.UpdatedBy = who);
-            this.Track(x => x.Version += 1);
+            this.ChangeTrack(x => x.CreatedAt = when);
+            this.ChangeTrack(x => x.CreatedBy = who);
+            this.ChangeTrack(x => x.UpdatedAt = when);
+            this.ChangeTrack(x => x.UpdatedBy = who);
+            this.ChangeTrack(x => x.Version += 1);
         }
         else
         {
-            this.Track(x => x.UpdatedAt = when);
-            this.Track(x => x.UpdatedBy = who);
-            this.Track(x => x.Version += 1);
+            this.ChangeTrack(x => x.UpdatedAt = when);
+            this.ChangeTrack(x => x.UpdatedBy = who);
+            this.ChangeTrack(x => x.Version += 1);
         }
 
         this.State = EntityState.Submitted;
@@ -112,19 +122,24 @@ public abstract class AggregationRoot<T> where T : IChangeTrackable
         return (null, true);
     }
 
-    protected void Track(Action<T> change)
+    public void ChangeTrack(Action<T> changeAction)
     {
         if (this.State == EntityState.Submitted)
         {
             throw new Exception("已經 Submitted 的 Doamin，無法再進行修改。");
         }
 
-        change(this._instance);
-        this._changes.Add(change);
+        changeAction(this._instance);
+        this._changeActions.Add(changeAction);
 
         if (this.State == EntityState.Unchanged)
         {
             this.State = EntityState.Modified;
         }
+    }
+
+    private T Clone(T source)
+    {
+        return (T)Activator.CreateInstance(typeof(T));
     }
 }

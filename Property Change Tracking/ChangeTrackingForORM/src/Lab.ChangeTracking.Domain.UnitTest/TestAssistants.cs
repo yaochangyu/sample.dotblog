@@ -1,4 +1,5 @@
 ﻿using System;
+using Lab.ChangeTracking.Abstract;
 using Lab.ChangeTracking.Domain;
 using Lab.ChangeTracking.Domain.Repository;
 using Lab.ChangeTracking.Infrastructure.DB;
@@ -19,8 +20,8 @@ internal class TestAssistants
     public static IEmployeeRepository EmployeeRepository =>
         _serviceProvider.GetService<IEmployeeRepository>();
 
-    public static IEmployeeAggregate EmployeeAggregate =>
-        _serviceProvider.GetService<IEmployeeAggregate>();
+    public static IEmployeeAggregate<IEmployeeEntity> EmployeeAggregate =>
+        _serviceProvider.GetService<IEmployeeAggregate<IEmployeeEntity>>();
 
     static TestAssistants()
     {
@@ -34,7 +35,7 @@ internal class TestAssistants
         services.AddAppEnvironment();
         services.AddEntityFramework();
         
-        // services.AddSingleton<IEmployeeRepository, EmployeeRepository>();
+        services.AddSingleton<IEmployeeRepository, EmployeeRepository>();
         // services.AddSingleton<IEmployeeAggregate, EmployeeAggregate>();
         _serviceProvider = services.BuildServiceProvider();
     }
@@ -44,5 +45,12 @@ internal class TestAssistants
         var option = _serviceProvider.GetService<AppEnvironmentOption>();
         option.EmployeeDbConnectionString =
             "Data Source=localhost;Initial Catalog=EmployeeDb;Integrated Security=false;User ID=sa;Password=pass@w0rd1~;MultipleActiveResultSets=True;TrustServerCertificate=True";
+    }
+    public static Guid Parse(string id)
+    {
+        var guidFormat = "{0}-0000-0000-0000-000000000000";
+        var guidText = string.Format(guidFormat, id.PadRight(8, '0'));
+        var key = Guid.Parse(guidText);
+        return key;
     }
 }
