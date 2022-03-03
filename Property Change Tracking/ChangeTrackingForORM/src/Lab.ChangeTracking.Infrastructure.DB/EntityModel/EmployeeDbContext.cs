@@ -45,6 +45,7 @@ namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel
         {
             modelBuilder.ApplyConfiguration(new EmployeeConfiguration());
             modelBuilder.ApplyConfiguration(new IdentityConfiguration());
+            modelBuilder.ApplyConfiguration(new ProfileConfiguration());
         }
 
         internal class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
