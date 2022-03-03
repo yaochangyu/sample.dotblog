@@ -15,7 +15,7 @@ namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel
 
         public string Remark { get; set; }
 
-        public IList<Profile> Profiles { get; set; }
+        public List<Profile> Profiles { get; set; } = new();
 
         public Identity Identity { get; set; }
 

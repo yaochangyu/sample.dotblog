@@ -1,4 +1,5 @@
-﻿using Lab.ChangeTracking.Abstract;
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using Lab.ChangeTracking.Abstract;
 
 namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel;
 
@@ -24,5 +25,6 @@ public class Profile : IProfileEntity
 
     public string Remark { get; set; }
 
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int SequenceId { get; set; }
 }

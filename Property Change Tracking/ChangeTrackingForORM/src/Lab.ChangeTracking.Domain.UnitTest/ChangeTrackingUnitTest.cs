@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Json;
@@ -79,26 +80,76 @@ public class ChangeTrackingUnitTest
         Assert.AreEqual(20, actual.Age);
         Assert.AreEqual(2, actual.Version);
     }
+    [TestMethod]
+    public async Task 編輯1()
+    {
+        // arrange
+        InsertTestData();
+        await using var dbContext = await TestAssistants.EmployeeDbContextFactory.CreateDbContextAsync();
+
+        var employee = dbContext.Employees
+            .Include(p => p.Profiles)
+            .AsTracking()
+            // .Load()
+            .FirstOrDefault()
+            ;
+        var now = DateTimeOffset.Now;
+        var accessUserId = "TEST USER";
+        var newProfile = new Profile
+        {
+            Id = Guid.NewGuid(),
+            Employee_Id = employee.Id,
+            CreatedAt = now,
+            CreatedBy = accessUserId,
+            UpdatedAt = now,
+            UpdatedBy = accessUserId,
+            FirstName = "first name",
+            LastName = "last name",
+        };
+        employee.Profiles.Add(newProfile);
+        // dbContext.Profiles.Add(newProfile);
+        await dbContext.SaveChangesAsync();
+    }   
 
     private static Employee InsertTestData()
     {
         Console.WriteLine("新增資料");
         using var dbContext = TestAssistants.EmployeeDbContextFactory.CreateDbContext();
+        var employeeId = TestAssistants.Parse("1");
+        var now = DateTimeOffset.Now;
+        var accessUserId = "TEST USER";
         var toDB = new Employee
         {
-            Id = TestAssistants.Parse("1"),
+            Id = employeeId,
             Age = 18,
             Name = "yao",
-            CreatedAt = DateTimeOffset.Now,
-            CreatedBy = "TEST",
-            Identity = new Identity
+            CreatedAt = now,
+            CreatedBy = accessUserId,
+            Identity = new()
             {
+                Employee_Id = employeeId, 
                 Account = "yao",
                 Password = "123456",
-                CreatedAt = DateTimeOffset.Now,
-                CreatedBy = "TEST",
+                CreatedAt = now,
+                CreatedBy = accessUserId,
+                UpdatedAt = now,
+                UpdatedBy = accessUserId,
             },
-            Version = 1
+            Version = 1,
+            Profiles = new List<Profile>()
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Employee_Id = employeeId,
+                    CreatedAt = now,
+                    CreatedBy = accessUserId,
+                    UpdatedAt = now,
+                    UpdatedBy = accessUserId,
+                    FirstName = "yao",
+                    LastName = "yu",
+                }
+            },
         };
         dbContext.Employees.Add(toDB);
         dbContext.SaveChanges();
