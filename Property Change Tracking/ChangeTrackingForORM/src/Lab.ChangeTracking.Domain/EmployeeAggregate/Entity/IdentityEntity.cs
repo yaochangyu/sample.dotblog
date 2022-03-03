@@ -1,4 +1,4 @@
-﻿namespace Lab.ChangeTracking.Domain.Entity;
+﻿namespace Lab.ChangeTracking.Domain.EmployeeAggregate.Entity;
 
 public record IdentityEntity
 {

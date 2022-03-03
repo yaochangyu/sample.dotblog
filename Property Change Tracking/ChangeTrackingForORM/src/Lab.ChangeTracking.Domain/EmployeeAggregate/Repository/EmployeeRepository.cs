@@ -1,12 +1,9 @@
-﻿using ChangeTracking;
-using EFCore.BulkExtensions;
-using Lab.ChangeTracking.Abstract;
-using Lab.ChangeTracking.Domain.Entity;
-using Lab.ChangeTracking.Domain.Repository;
+﻿using Lab.ChangeTracking.Abstract;
+using Lab.ChangeTracking.Domain.EmployeeAggregate.Entity;
 using Lab.ChangeTracking.Infrastructure.DB.EntityModel;
 using Microsoft.EntityFrameworkCore;
 
-namespace Lab.ChangeTracking.Domain.Repository;
+namespace Lab.ChangeTracking.Domain.EmployeeAggregate.Repository;
 
 public class EmployeeRepository : IEmployeeRepository
 {
@@ -69,7 +66,12 @@ public class EmployeeRepository : IEmployeeRepository
             .FirstOrDefaultAsync(x => x.Id == srcEmployee.Id, cancel);
         if (employeeFromDb == null)
         {
-            var toDb = srcEmployee.GetInstance().ToDataEntity();
+            var toDb = new Employee();
+            foreach (var changeAction in srcEmployee.GetChangeActions())
+            {
+                changeAction(toDb);
+            }
+
             dbContext.Add(toDb);
         }
         else

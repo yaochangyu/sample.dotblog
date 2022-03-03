@@ -1,8 +1,8 @@
 using Lab.ChangeTracking.Abstract;
-using Lab.ChangeTracking.Domain.Entity;
-using Lab.ChangeTracking.Domain.Repository;
+using Lab.ChangeTracking.Domain.EmployeeAggregate.Entity;
+using Lab.ChangeTracking.Domain.EmployeeAggregate.Repository;
 
-namespace Lab.ChangeTracking.Domain;
+namespace Lab.ChangeTracking.Domain.EmployeeAggregate;
 
 // public class EmployeeAggregate : AggregationRoot<IEmployeeEntity>, 
 //                                  IEmployeeAggregate<IEmployeeEntity>
@@ -17,34 +17,16 @@ public class EmployeeAggregate : AggregationRoot<IEmployeeEntity>
     public string Remark => this._instance.Remark;
 
     private readonly IEmployeeRepository _repository;
-    private readonly ISystemClock _systemClock;
-    private readonly IUUIdProvider _uuIdProvider;
-
-    private string _name;
 
     public EmployeeAggregate(IEmployeeRepository repository,
                              IUUIdProvider uuIdProvider,
-                             ISystemClock systemClock)
+                             ISystemClock systemClock,
+                             IAccessContext accessContext)
     {
         this._repository = repository;
         this._uuIdProvider = uuIdProvider;
+        this._accessContext = accessContext;
         this._systemClock = systemClock;
-    }
-
-    public void CreateInstance(string name, int age, string remark = null)
-    {
-        var now = this._systemClock.Now;
-        var instance = new EmployeeEntity
-        {
-            Id = this._uuIdProvider.GenerateId(),
-            Name = name,
-            Age = age,
-            Version = 1,
-            Remark = remark,
-            Identity = null
-        };
-        this.State = EntityState.Added;
-        this._instance = instance;
     }
 
     public async Task GetAsync(Guid id, CancellationToken cancel = default)
@@ -52,6 +34,18 @@ public class EmployeeAggregate : AggregationRoot<IEmployeeEntity>
         this._instance = await this._repository.GetAsync(id, cancel);
 
         this.State = EntityState.Unchanged;
+    }
+
+    public void Initial(string name, int age, string remark = null)
+    {
+        this._instance = new EmployeeEntity();
+
+        this.ChangeTrack(p => p.Id = this._uuIdProvider.GenerateId());
+        this.ChangeTrack(p => p.Age = age);
+        this.ChangeTrack(p => p.Name = name);
+        this.ChangeTrack(p => p.Version = 0);
+        this.ChangeTrack(p => p.Remark = remark);
+        this.State = EntityState.Added;
     }
 
     public async Task<int> SaveChangeAsync(CancellationToken cancel = default)

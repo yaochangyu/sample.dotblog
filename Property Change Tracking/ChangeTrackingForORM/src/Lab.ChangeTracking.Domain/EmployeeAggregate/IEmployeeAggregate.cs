@@ -1,7 +1,6 @@
 ﻿using Lab.ChangeTracking.Abstract;
-using Lab.ChangeTracking.Domain.Entity;
 
-namespace Lab.ChangeTracking.Domain;
+namespace Lab.ChangeTracking.Domain.EmployeeAggregate;
 
 public interface IEmployeeAggregate<T> : IAggregationRoot<T> where T : IChangeTrackable
 {
