@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Unicode;
 using System.Threading.Tasks;
 using Lab.ChangeTracking.Abstract;
+using Lab.ChangeTracking.Domain.EmployeeAggregate;
 using Lab.ChangeTracking.Infrastructure.DB.EntityModel;
 using Lab.MultiTestCase.UnitTest;
 using Microsoft.EntityFrameworkCore;
@@ -30,11 +31,15 @@ public class ChangeTrackingUnitTest
         systemClock.Now.Returns(DateTimeOffset.Parse("2021-01-01"));
         var uuIdProvider = Substitute.For<IUUIdProvider>();
         uuIdProvider.GenerateId().Returns(TestAssistants.Parse("1"));
+        var accessContext = Substitute.For<IAccessContext>();
+        accessContext.AccessNow.Returns(DateTimeOffset.Parse("2021-01-02"));
+        accessContext.AccessUserId.Returns("System User");
 
         // act
-        var employeeAggregate = new EmployeeAggregate(employeeRepository, uuIdProvider, systemClock);
-        employeeAggregate.CreateInstance("yao", 18, "Test User");
-        employeeAggregate.SubmitChange(systemClock.Now, "Sys1");
+        var employeeAggregate =
+            new EmployeeAggregate.EmployeeAggregate(employeeRepository, uuIdProvider, systemClock, accessContext);
+        employeeAggregate.Initial("yao", 18, "Test User");
+        employeeAggregate.SubmitChange();
         var result = await employeeAggregate.SaveChangeAsync();
 
         // assert
@@ -56,13 +61,15 @@ public class ChangeTrackingUnitTest
         systemClock.Now.Returns(DateTimeOffset.Parse("2021-01-02"));
         var uuIdProvider = Substitute.For<IUUIdProvider>();
         uuIdProvider.GenerateId().Returns(TestAssistants.Parse("1"));
+        var accessContext = Substitute.For<IAccessContext>();
+        accessContext.AccessNow.Returns(DateTimeOffset.Parse("2021-01-02"));
 
         // act
-        var employeeAggregate = new EmployeeAggregate(employeeRepository, uuIdProvider, systemClock);
+        var employeeAggregate =
+            new EmployeeAggregate.EmployeeAggregate(employeeRepository, uuIdProvider, systemClock, accessContext);
         await employeeAggregate.GetAsync(TestAssistants.Parse("1"));
-        employeeAggregate.SetName("小章");
-        employeeAggregate.SetAge(20);
-        employeeAggregate.SubmitChange(systemClock.Now, "Sys1");
+        employeeAggregate.SetName("小章").SetAge(20);
+        employeeAggregate.SubmitChange();
         var count = await employeeAggregate.SaveChangeAsync();
 
         // assert

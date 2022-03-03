@@ -1,7 +1,6 @@
 ﻿using Lab.ChangeTracking.Abstract;
-using Lab.ChangeTracking.Domain.Entity;
 
-namespace Lab.ChangeTracking.Domain.Repository;
+namespace Lab.ChangeTracking.Domain.EmployeeAggregate.Repository;
 
 public interface IEmployeeRepository
 {
