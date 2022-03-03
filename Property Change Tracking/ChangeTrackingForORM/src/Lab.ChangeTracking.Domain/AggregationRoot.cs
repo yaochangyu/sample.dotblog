@@ -54,8 +54,10 @@ public abstract class AggregationRoot<T> : IAggregationRoot<T> where T : IChange
     private readonly IList<Action<T>> _changeActions = new List<Action<T>>();
     protected readonly Dictionary<string, object> ChangedProperties = new();
     protected readonly Dictionary<string, object> OriginalValues = new();
-
+    protected IUUIdProvider _uuIdProvider;
     protected T _instance;
+    protected ISystemClock _systemClock;
+    protected IAccessContext _accessContext;
 
     public IReadOnlyList<Action<T>> GetChangeActions()
     {
@@ -64,32 +66,17 @@ public abstract class AggregationRoot<T> : IAggregationRoot<T> where T : IChange
 
     public void SetInstance(T instance)
     {
-        this.State = EntityState.Unchanged;
         this._instance = instance;
-    }
-
-    public T GetInstance()
-    {
-        return this._instance;
-
-        // return new T
-        // {
-        //     Version = _instance.Version,
-        //     CreatedAt = _instance.CreatedAt,
-        //     CreatedBy = this._instance.CreatedBy,
-        //     UpdatedAt = this.UpdatedAt,
-        //     UpdatedBy = this.CreatedBy
-        // };
+        this.State = EntityState.Unchanged;
     }
 
     /// <summary>
     ///     SubmitChange 後則進版號
     /// </summary>
-    /// <param name="when"></param>
-    /// <param name="who"></param>
     /// <returns></returns>
-    public (Error<string> err, bool changed) SubmitChange(DateTimeOffset when, string who)
+    public (Error<string> err, bool changed) SubmitChange()
     {
+        var (now,accessUserId )= (this._accessContext.AccessNow,this._accessContext.AccessUserId);
         if (this.State == EntityState.Submitted)
         {
             return (
@@ -104,16 +91,16 @@ public abstract class AggregationRoot<T> : IAggregationRoot<T> where T : IChange
 
         if (this.State == EntityState.Added)
         {
-            this.ChangeTrack(x => x.CreatedAt = when);
-            this.ChangeTrack(x => x.CreatedBy = who);
-            this.ChangeTrack(x => x.UpdatedAt = when);
-            this.ChangeTrack(x => x.UpdatedBy = who);
+            this.ChangeTrack(x => x.CreatedAt = now);
+            this.ChangeTrack(x => x.CreatedBy = accessUserId);
+            this.ChangeTrack(x => x.UpdatedAt = now);
+            this.ChangeTrack(x => x.UpdatedBy = accessUserId);
             this.ChangeTrack(x => x.Version += 1);
         }
         else
         {
-            this.ChangeTrack(x => x.UpdatedAt = when);
-            this.ChangeTrack(x => x.UpdatedBy = who);
+            this.ChangeTrack(x => x.UpdatedAt = now);
+            this.ChangeTrack(x => x.UpdatedBy = accessUserId);
             this.ChangeTrack(x => x.Version += 1);
         }
 

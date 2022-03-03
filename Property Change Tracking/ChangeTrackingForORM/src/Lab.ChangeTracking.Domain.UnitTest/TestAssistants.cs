@@ -1,7 +1,8 @@
 ﻿using System;
 using Lab.ChangeTracking.Abstract;
 using Lab.ChangeTracking.Domain;
-using Lab.ChangeTracking.Domain.Repository;
+using Lab.ChangeTracking.Domain.EmployeeAggregate;
+using Lab.ChangeTracking.Domain.EmployeeAggregate.Repository;
 using Lab.ChangeTracking.Infrastructure.DB;
 using Lab.ChangeTracking.Infrastructure.DB.EntityModel;
 using Microsoft.EntityFrameworkCore;
@@ -36,6 +37,7 @@ internal class TestAssistants
         services.AddEntityFramework();
         
         services.AddSingleton<IEmployeeRepository, EmployeeRepository>();
+        services.AddSingleton<IAccessContext, AccessContext>();
         // services.AddSingleton<IEmployeeAggregate, EmployeeAggregate>();
         _serviceProvider = services.BuildServiceProvider();
     }

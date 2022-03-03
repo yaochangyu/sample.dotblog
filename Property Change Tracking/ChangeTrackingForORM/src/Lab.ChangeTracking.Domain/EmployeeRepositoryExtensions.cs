@@ -1,7 +1,7 @@
 using Lab.ChangeTracking.Abstract;
 using Lab.ChangeTracking.Infrastructure.DB.EntityModel;
 
-namespace Lab.ChangeTracking.Domain.Repository;
+namespace Lab.ChangeTracking.Domain;
 
 static class EmployeeRepositoryExtensions
 {
