@@ -1,0 +1,48 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "global", "global", "{1F776B7D-C182-4DC3-BA57-844657BD9AC0}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+		Makefile = Makefile
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{483A9EB7-C4AF-4D68-80ED-49277985C760}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.ChangeTracking.Infrastructure.DB", "src\Lab.ChangeTracking.Infrastructure.DB\Lab.ChangeTracking.Infrastructure.DB.csproj", "{A2FDDEA2-F3BD-43B2-96FE-B12EA5BE909C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.ChangeTracking.Domain", "src\Lab.ChangeTracking.Domain\Lab.ChangeTracking.Domain.csproj", "{A1C827F2-683E-470C-A3DE-BD6DD2BE5198}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.ChangeTracking.Domain.UnitTest", "src\Lab.ChangeTracking.Domain.UnitTest\Lab.ChangeTracking.Domain.UnitTest.csproj", "{7066EE2C-28A8-4408-B212-E582608AB967}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.ChangeTracking.Abstract", "src\Lab.ChangeTracking.Abstract\Lab.ChangeTracking.Abstract.csproj", "{43C40083-77B5-4068-A707-1993D3B29410}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A2FDDEA2-F3BD-43B2-96FE-B12EA5BE909C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2FDDEA2-F3BD-43B2-96FE-B12EA5BE909C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2FDDEA2-F3BD-43B2-96FE-B12EA5BE909C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2FDDEA2-F3BD-43B2-96FE-B12EA5BE909C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1C827F2-683E-470C-A3DE-BD6DD2BE5198}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1C827F2-683E-470C-A3DE-BD6DD2BE5198}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1C827F2-683E-470C-A3DE-BD6DD2BE5198}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1C827F2-683E-470C-A3DE-BD6DD2BE5198}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7066EE2C-28A8-4408-B212-E582608AB967}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7066EE2C-28A8-4408-B212-E582608AB967}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7066EE2C-28A8-4408-B212-E582608AB967}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7066EE2C-28A8-4408-B212-E582608AB967}.Release|Any CPU.Build.0 = Release|Any CPU
+		{43C40083-77B5-4068-A707-1993D3B29410}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{43C40083-77B5-4068-A707-1993D3B29410}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{43C40083-77B5-4068-A707-1993D3B29410}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{43C40083-77B5-4068-A707-1993D3B29410}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{A2FDDEA2-F3BD-43B2-96FE-B12EA5BE909C} = {483A9EB7-C4AF-4D68-80ED-49277985C760}
+		{A1C827F2-683E-470C-A3DE-BD6DD2BE5198} = {483A9EB7-C4AF-4D68-80ED-49277985C760}
+		{7066EE2C-28A8-4408-B212-E582608AB967} = {483A9EB7-C4AF-4D68-80ED-49277985C760}
+		{43C40083-77B5-4068-A707-1993D3B29410} = {483A9EB7-C4AF-4D68-80ED-49277985C760}
+	EndGlobalSection
+EndGlobal
