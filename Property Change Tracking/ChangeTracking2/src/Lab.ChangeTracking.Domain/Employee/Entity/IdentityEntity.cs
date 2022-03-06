@@ -1,5 +1,4 @@
-﻿using Lab.ChangeTracking.Abstract;
-
+﻿
 namespace Lab.ChangeTracking.Domain;
 
 public record IdentityEntity 

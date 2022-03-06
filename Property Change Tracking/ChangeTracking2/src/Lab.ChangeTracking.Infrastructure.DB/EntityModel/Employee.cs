@@ -1,10 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Lab.ChangeTracking.Abstract;
 
 namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel
 {
-    public class Employee : IEntity
+    public class Employee 
     {
         public Guid Id { get; set; }
 
