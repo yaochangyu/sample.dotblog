@@ -1,8 +1,10 @@
-﻿namespace Lab.ChangeTracking.Domain;
+﻿using System.Collections;
+
+namespace Lab.ChangeTracking.Domain;
 
 public abstract record EntityBase : IChangeTrackable
 {
-    public Guid? Id
+    public Guid Id
     {
         get => this._id;
         init => this._id = value;
@@ -11,12 +13,12 @@ public abstract record EntityBase : IChangeTrackable
     protected readonly Dictionary<string, object> _changedProperties = new();
     protected readonly Dictionary<string, object> _originalValues = new();
     protected CommitState _commitState;
-    private DateTimeOffset? _createdAt;
-    private string? _createdBy;
+    protected DateTimeOffset _createdAt;
+    protected string _createdBy;
     protected EntityState _entityState;
-    private Guid? _id;
-    private DateTimeOffset? _modifiedAt;
-    private string? _modifiedBy;
+    protected Guid _id;
+    protected DateTimeOffset? _modifiedAt;
+    protected string? _modifiedBy;
     protected int _version;
 
     public EntityBase AsTrackable()
@@ -99,7 +101,7 @@ public abstract record EntityBase : IChangeTrackable
         return this._originalValues;
     }
 
-    public DateTimeOffset? CreatedAt
+    public DateTimeOffset CreatedAt
     {
         get => this._createdAt;
         init => this._createdAt = value;
@@ -129,21 +131,30 @@ public abstract record EntityBase : IChangeTrackable
 
         var changes = this._changedProperties;
         var originals = this._originalValues;
+        if (originals.Count <= 0)
+        {
+            throw new Exception("尚未啟用追蹤");
+        }
+
         if (changes.ContainsKey(propertyName) == false)
         {
             if (originals[propertyName] != value)
             {
                 changes.Add(propertyName, value);
-                this._entityState = EntityState.Added;
+                this._entityState = EntityState.Modified;
             }
         }
         else
         {
-            if (originals[propertyName] != changes[propertyName])
+            if (originals[propertyName].ToString() == value.ToString())
             {
-                changes[propertyName] = value;
-                this._entityState = EntityState.Modified;
+                changes.Remove(propertyName);
             }
+        }
+
+        if (changes.Count <= 0)
+        {
+            this._entityState = EntityState.Unchanged;
         }
     }
 
