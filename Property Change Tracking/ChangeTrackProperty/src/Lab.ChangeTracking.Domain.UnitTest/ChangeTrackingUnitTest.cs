@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Unicode;
+using EFCore.BulkExtensions;
 using Lab.ChangeTracking.Infrastructure.DB.EntityModel;
 using Lab.MultiTestCase.UnitTest;
 using Microsoft.EntityFrameworkCore;
@@ -17,47 +18,101 @@ public class ChangeTrackingUnitTest
     private static readonly IAccessContext _accessContext = TestAssistants.AccessContext;
 
     private static readonly IUUIdProvider _uuIdProvider = TestAssistants.UUIdProvider;
-    private readonly IEmployeeAggregate _employeeAggregate = TestAssistants.EmployeeAggregate;
 
-    private readonly IDbContextFactory<EmployeeDbContext> _employeeDbContextFactory =
+    private static readonly IDbContextFactory<EmployeeDbContext> s_employeeDbContextFactory =
         TestAssistants.EmployeeDbContextFactory;
+
+    private readonly IEmployeeAggregate _employeeAggregate = TestAssistants.EmployeeAggregate;
 
     private readonly IEmployeeRepository _employeeRepository = TestAssistants.EmployeeRepository;
 
     private readonly ISystemClock _systemClock = TestAssistants.SystemClock;
 
-    [TestMethod]
-    public void 異動追蹤後存檔()
+    [ClassCleanup]
+    public static void ClassCleanup()
     {
-        var employeeEntity = Insert().To();
-        employeeEntity.AsTrackable();
-        employeeEntity.SetProfile("小章", 19,"新來的");
-        employeeEntity.AcceptChanges(this._systemClock, _accessContext, _uuIdProvider);
+        DeleteAllTable();
+    }
+
+    [ClassInitialize]
+    public static void ClassInitialize(TestContext context)
+    {
+        DeleteAllTable();
+    }
+
+    [TestMethod]
+    public void 刪除一筆資料()
+    {
+        var fromDb = Insert();
+        var employeeEntity = new EmployeeEntity();
+        employeeEntity.AsTrackable(fromDb)
+            .SetDelete()
+            .AcceptChanges(this._systemClock, _accessContext, _uuIdProvider);
 
         var count = this._employeeRepository.SaveChangeAsync(employeeEntity).Result;
-        var dbContext = this._employeeDbContextFactory.CreateDbContext();
+
+        Assert.AreEqual(1, count);
+        var dbContext = s_employeeDbContextFactory.CreateDbContext();
 
         var actual = dbContext.Employees
-                .Where(p => p.Id == employeeEntity.Id)
+                .Where(p => p.Id == fromDb.Id)
+                .Include(p => p.Identity)
+                .Include(p => p.Addresses)
+                .FirstOrDefault()
+            ;
+        Assert.AreEqual(null, actual);
+    }
+
+    [TestMethod]
+    public void 更新一筆資料()
+    {
+        var fromDb = Insert();
+        var employeeEntity = new EmployeeEntity();
+        employeeEntity.AsTrackable(fromDb)
+            .SetProfile("小章", 19, "我變了")
+            .AcceptChanges(this._systemClock, _accessContext, _uuIdProvider);
+
+        var count = this._employeeRepository.SaveChangeAsync(employeeEntity).Result;
+
+        Assert.AreEqual(1, count);
+        var dbContext = s_employeeDbContextFactory.CreateDbContext();
+
+        var actual = dbContext.Employees
+                .Where(p => p.Id == fromDb.Id)
                 .Include(p => p.Identity)
                 .Include(p => p.Addresses)
                 .First()
             ;
         Assert.AreEqual("小章", actual.Name);
         Assert.AreEqual(19, actual.Age);
-        Assert.AreEqual("新來的", actual.Remark);
-        Assert.AreEqual("我新的", actual.Addresses[1].Remark);
+        Assert.AreEqual("我變了", actual.Remark);
     }
 
     [TestMethod]
-    public void 新增一筆後存檔()
+    public void 沒有異動()
     {
+        var fromDb = Insert();
         var employeeEntity = new EmployeeEntity();
-        employeeEntity.New("yao", 10);
-        employeeEntity.AcceptChanges(this._systemClock, _accessContext, _uuIdProvider);
+        employeeEntity.AsTrackable(fromDb)
+            .SetProfile("小章", 19, "新來的")
+            .SetProfile("yao", 18, "編輯")
+            .AcceptChanges(this._systemClock, _accessContext, _uuIdProvider);
 
         var count = this._employeeRepository.SaveChangeAsync(employeeEntity).Result;
-        var dbContext = this._employeeDbContextFactory.CreateDbContext();
+        Assert.AreEqual(0, count);
+    }
+
+    [TestMethod]
+    public void 新增一筆資料()
+    {
+        var employeeEntity = new EmployeeEntity();
+        employeeEntity.New("yao", 10, "新的")
+            .AcceptChanges(this._systemClock, _accessContext, _uuIdProvider);
+
+        var count = this._employeeRepository.SaveChangeAsync(employeeEntity).Result;
+
+        Assert.AreEqual(1, count);
+        var dbContext = s_employeeDbContextFactory.CreateDbContext();
 
         var actual = dbContext.Employees
                 .Where(p => p.Id == employeeEntity.Id)
@@ -65,10 +120,17 @@ public class ChangeTrackingUnitTest
                 .Include(p => p.Addresses)
                 .First()
             ;
-        Assert.AreEqual("我變了", actual.Remark);
-        Assert.AreEqual("我變了", actual.Identity.Remark);
-        Assert.AreEqual("我變了", actual.Addresses[0].Remark);
-        Assert.AreEqual("我新的", actual.Addresses[1].Remark);
+        Assert.AreEqual("yao", actual.Name);
+        Assert.AreEqual(10, actual.Age);
+        Assert.AreEqual("新的", actual.Remark);
+    }
+
+    private static void DeleteAllTable()
+    {
+        var dbContext = s_employeeDbContextFactory.CreateDbContext();
+        dbContext.Employees.BatchDelete();
+        dbContext.Addresses.BatchDelete();
+        dbContext.Identity.BatchDelete();
     }
 
     private static Employee Insert()
@@ -82,6 +144,7 @@ public class ChangeTrackingUnitTest
             Name = "yao",
             CreatedAt = DateTimeOffset.Now,
             CreatedBy = "Sys",
+            Remark = "編輯",
             Identity = new Identity
             {
                 Employee_Id = employeeId,

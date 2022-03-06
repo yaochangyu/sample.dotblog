@@ -2,5 +2,7 @@
 
 public interface IEmployeeRepository
 {
-    Task<int> SaveChangeAsync(EmployeeEntity employee, CancellationToken cancel = default);
+    Task<int> SaveChangeAsync(EmployeeEntity employee, 
+                              IEnumerable<string> excludeProperties = null,
+                              CancellationToken cancel = default);
 }

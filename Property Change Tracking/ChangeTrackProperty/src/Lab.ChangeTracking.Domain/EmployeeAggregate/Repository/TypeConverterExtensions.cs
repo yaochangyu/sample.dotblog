@@ -13,14 +13,14 @@ public static class TypeConverterExtensions
 
         return new Employee
         {
-            Id = srcEmployee.Id ?? default,
+            Id = srcEmployee.Id,
             Name = srcEmployee.Name,
             Age = srcEmployee.Age,
             Version = srcEmployee.Version,
             Remark = srcEmployee.Remark,
             Addresses = srcEmployee.Addresses != null ? srcEmployee.Addresses.To().ToList() : null,
             Identity = srcEmployee.Identity.To(),
-            CreatedAt = srcEmployee.CreatedAt ?? default,
+            CreatedAt = srcEmployee.CreatedAt,
             CreatedBy = srcEmployee.CreatedBy,
             ModifiedAt = srcEmployee.ModifiedAt,
             ModifiedBy = srcEmployee.ModifiedBy
