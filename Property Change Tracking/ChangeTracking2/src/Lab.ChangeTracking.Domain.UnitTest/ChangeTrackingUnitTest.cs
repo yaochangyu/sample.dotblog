@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Unicode;
 using ChangeTracking;
+using EFCore.BulkExtensions;
 using Lab.ChangeTracking.Infrastructure.DB.EntityModel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -16,7 +17,7 @@ public class ChangeTrackingUnitTest
 {
     private readonly IEmployeeAggregate _employeeAggregate = TestAssistants.EmployeeAggregate;
 
-    private readonly IDbContextFactory<EmployeeDbContext> _employeeDbContextFactory =
+    private static readonly IDbContextFactory<EmployeeDbContext> s_employeeDbContextFactory =
         TestAssistants.EmployeeDbContextFactory;
 
     private readonly IEmployeeRepository _employeeRepository = TestAssistants.EmployeeRepository;
@@ -43,7 +44,7 @@ public class ChangeTrackingUnitTest
             Remark = "我新的"
         });
         var count = this._employeeRepository.SaveChangeAsync(trackable).Result;
-        var dbContext = this._employeeDbContextFactory.CreateDbContext();
+        var dbContext = s_employeeDbContextFactory.CreateDbContext();
         var actual = dbContext.Employees
                 .Where(p => p.Id == employeeEntity.Id)
                 .Include(p => p.Identity)
@@ -93,7 +94,7 @@ public class ChangeTrackingUnitTest
 
     private void DataShouldOk(EmployeeEntity source)
     {
-        var dbContext = this._employeeDbContextFactory.CreateDbContext();
+        var dbContext = s_employeeDbContextFactory.CreateDbContext();
         var actual = dbContext.Employees
                 .Where(p => p.Id == source.Id)
                 .Include(p => p.Identity)
@@ -152,7 +153,24 @@ public class ChangeTrackingUnitTest
         dbContext.SaveChanges();
         return toDB;
     }
+    [ClassCleanup]
+    public static void ClassCleanup()
+    {
+        DeleteAllTable();
+    }
 
+    [ClassInitialize]
+    public static void ClassInitialize(TestContext context)
+    {
+        DeleteAllTable();
+    }
+    private static void DeleteAllTable()
+    {
+        var dbContext = s_employeeDbContextFactory.CreateDbContext();
+        dbContext.Employees.BatchDelete();
+        dbContext.Addresses.BatchDelete();
+        dbContext.Identity.BatchDelete();
+    }
     private static string ToJson<T>(T instance)
     {
         var serialize = JsonSerializer.Serialize(instance,
