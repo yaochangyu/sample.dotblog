@@ -1,12 +1,14 @@
 ﻿namespace Lab.ChangeTracking.Domain;
 
-public record IdentityEntity
+public record AddressEntity
 {
+    public Guid Id { get; set; }
+
     public Guid Employee_Id { get; set; }
 
-    public string Account { get; set; }
+    public string Country { get; set; }
 
-    public string Password { get; set; }
+    public string Street { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; }
 
@@ -14,7 +16,7 @@ public record IdentityEntity
 
     public DateTimeOffset? ModifiedAt { get; set; }
 
-    public string? ModifiedBy { get; set; }
+    public string ModifiedBy { get; set; }
 
-    public virtual string Remark { get; set; }
+    public string Remark { get; set; }
 }
