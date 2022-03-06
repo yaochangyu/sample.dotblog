@@ -1,32 +1,32 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel;
-
-[Table("Identity")]
-public class Identity
+namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel
 {
-    [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.None)]
-    public Guid Employee_Id { get; set; }
+    public class Identity
+    {
+        public Guid Employee_Id { get; set; }
 
-    [Required]
-    public string Account { get; set; }
+        // [ForeignKey("Employee_Id")]
+        public virtual Employee Employee { get; set; }
 
-    [Required]
-    public string Password { get; set; }
+        [Required]
+        public string Account { get; set; }
 
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public long SequenceId { get; set; }
+        [Required]
+        public string Password { get; set; }
 
-    public string Remark { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public long SequenceId { get; set; }
 
-    [Required]
-    public DateTimeOffset CreateAt { get; set; }
+        public string Remark { get; set; }
 
-    [Required]
-    public string CreateBy { get; set; }
+        public DateTimeOffset CreatedAt { get; set; }
 
-    [ForeignKey("Employee_Id")]
-    public virtual Employee Employee { get; set; }
+        public string CreatedBy { get; set; }
+
+        public DateTimeOffset? ModifiedAt { get; set; }
+
+        public string? ModifiedBy { get; set; }
+    }
 }

@@ -22,6 +22,8 @@ public static class AppDependencyInjectionExtensions
             var loggerFactory = provider.GetService<ILoggerFactory>();
             optionsBuilder.UseSqlServer(connectionString)
                 .UseLoggerFactory(loggerFactory)
+                .LogTo(Console.WriteLine)
+                .EnableSensitiveDataLogging()
                 ;
         });
 
