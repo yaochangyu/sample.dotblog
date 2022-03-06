@@ -94,7 +94,7 @@ public class RepositoryBase
     }
 
     private static TTarget CreateNewInstance<TSource, TTarget>(TSource sourceInstance,
-                                                                     IEnumerable<string> excludeProperties = null)
+                                                               IEnumerable<string> excludeProperties = null)
         where TSource : class
         where TTarget : class
     {
