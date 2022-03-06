@@ -14,17 +14,19 @@ public class RepositoryBase
         where TTarget : class
     {
         var sourceTrackable = source.CastToIChangeTrackable();
+        var targetInstance = CreateTargetInstance<TSource, TTarget>(source, excludeProperties);
+        dbContext.Set<TTarget>().Attach(targetInstance);
+
         var changedProperties = sourceTrackable.ChangedProperties;
-        dbContext.Set<TTarget>().Attach(target);
-        foreach (var property in changedProperties)
+        foreach (var changedProperty in changedProperties)
         {
             if (excludeProperties != null
-                && excludeProperties.Any(p => p == property))
+                && excludeProperties.Any(p => p == changedProperty))
             {
                 continue;
             }
 
-            dbContext.Entry(target).Property(property).IsModified = true;
+            dbContext.Entry(targetInstance).Property(changedProperty).IsModified = true;
         }
     }
 
@@ -42,9 +44,10 @@ public class RepositoryBase
             return;
         }
 
+        var modifyItems = targetsTrackable.ChangedItems;
         var addedItems = targetsTrackable.AddedItems;
         var deletedItems = targetsTrackable.DeletedItems;
-        foreach (var source in targetsTrackable.ChangedItems)
+        foreach (var source in modifyItems)
         {
             var target = targets.FirstOrDefault(p => p.Id == source.Id);
             if (target == null)
@@ -57,8 +60,8 @@ public class RepositoryBase
 
         foreach (var addedItem in addedItems)
         {
-            
-            // dbContext.Add(addedItem as TTarget);
+            var targetInstance = CreateTargetInstance<TSource, TTarget>(addedItem,excludeProperties);
+            dbContext.Entry(targetInstance).State = EntityState.Added;
         }
 
         foreach (var source in deletedItems)
@@ -68,5 +71,39 @@ public class RepositoryBase
             dbContext.Set<TTarget>().Attach(target);
             dbContext.Entry(target).State = EntityState.Deleted;
         }
+    }
+
+    private static TTarget CreateTargetInstance<TSource, TTarget>(TSource sourceInstance,
+                                                                  IEnumerable<string> excludeProperties = null)
+        where TSource : class
+        where TTarget : class
+    {
+        var targetType = typeof(TTarget);
+        var targetInstance = (TTarget)Activator.CreateInstance(targetType);
+        var targetProperties = targetInstance.GetType().GetProperties();
+        var sourceType = typeof(TSource);
+        var sourceProperties = sourceType.GetProperties();
+        foreach (var sourceProperty in sourceProperties)
+        {
+            if (excludeProperties != null &&
+                excludeProperties.Contains(sourceProperty.Name))
+            {
+                continue;
+            }
+
+            foreach (var targetProperty in targetProperties)
+            {
+                if (sourceProperty.Name == targetProperty.Name
+                    & sourceProperty.PropertyType == targetProperty.PropertyType
+                   )
+                {
+                    var value = sourceProperty.GetValue(sourceInstance, null);
+                    targetProperty.SetValue(targetInstance, value, null);
+                    break;
+                }
+            }
+        }
+
+        return targetInstance;
     }
 }

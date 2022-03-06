@@ -1,6 +1,8 @@
-﻿namespace Lab.ChangeTracking.Domain;
+﻿using Lab.ChangeTracking.Abstract;
 
-public record IdentityEntity
+namespace Lab.ChangeTracking.Domain;
+
+public record IdentityEntity 
 {
     public virtual Guid Employee_Id { get; set; }
 
@@ -17,4 +19,5 @@ public record IdentityEntity
     public virtual string? ModifiedBy { get; set; }
 
     public virtual string Remark { get; set; }
+
 }
