@@ -4,9 +4,9 @@ namespace Lab.ChangeTracking.Domain;
 
 public interface IChangeTime
 {
-    DateTimeOffset? CreatedAt { get; init; }
+    DateTimeOffset CreatedAt { get; init; }
 
-    string? CreatedBy { get; init; }
+    string CreatedBy { get; init; }
 
     DateTimeOffset? ModifiedAt { get; init; }
 

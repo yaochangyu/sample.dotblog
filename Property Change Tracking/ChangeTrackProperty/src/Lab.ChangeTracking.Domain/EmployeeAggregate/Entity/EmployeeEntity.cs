@@ -30,7 +30,36 @@ public record EmployeeEntity : EntityBase
     private string _name;
     private string _remark;
 
-    public EmployeeEntity Delete()
+    /// <summary>
+    ///     從資料庫查到之後放進去
+    /// </summary>
+    /// <param name="employee"></param>
+    /// <returns></returns>
+    public EmployeeEntity AsTrackable(Employee employee)
+    {
+        this._changedProperties.Clear();
+        this._originalValues.Clear();
+        this._entityState = EntityState.Unchanged;
+        this._commitState = CommitState.Unchanged;
+        this._id = employee.Id;
+        this._version = employee.Version;
+        this._createdAt = employee.CreatedAt;
+        this._createdBy = employee.CreatedBy;
+        this._modifiedAt = employee.ModifiedAt;
+        this._modifiedBy = employee.ModifiedBy;
+        this._version = employee.Version;
+        this._name = employee.Name;
+        this._age = employee.Age;
+        this._remark = employee.Remark;
+
+        // Addresses = null,
+        // Identity = null,
+
+        this.AsTrackable();
+        return this;
+    }
+
+    public EmployeeEntity SetDelete()
     {
         this._entityState = EntityState.Deleted;
         return this;
@@ -50,25 +79,6 @@ public record EmployeeEntity : EntityBase
     public override void Reset()
     {
         throw new NotImplementedException();
-    }
-
-    /// <summary>
-    ///     從資料庫查到之後放進去
-    /// </summary>
-    /// <param name="employee"></param>
-    /// <returns></returns>
-    public EmployeeEntity AsTrackable(Employee employee)
-    {
-        this._changedProperties.Clear();
-        this._originalValues.Clear();
-        this._entityState = EntityState.Unchanged;
-        this._commitState = CommitState.Unchanged;
-        this._version = employee.Version;
-        this._name = employee.Name;
-        this._age = employee.Age;
-        this._remark = employee.Remark;
-        this.AsTrackable();
-        return this;
     }
 
     public EmployeeEntity SetProfile(string name, int age, string remark = null)
