@@ -14,8 +14,4 @@ public interface IChangeTrackable : IChangeTime, IChangeState
     Dictionary<string, object> GetChangedProperties();
 
     Dictionary<string, object> GetOriginalValues();
-
-    // void SetTrackable();
-    //
-    // void ChangeTrack(string propertyName, object value);
 }
