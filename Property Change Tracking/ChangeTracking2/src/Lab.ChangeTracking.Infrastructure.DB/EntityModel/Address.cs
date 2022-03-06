@@ -1,9 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
-using Lab.ChangeTracking.Abstract;
 
 namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel;
 
-public class Address : IEntity
+public class Address
 {
     public Guid Id { get; set; }
 

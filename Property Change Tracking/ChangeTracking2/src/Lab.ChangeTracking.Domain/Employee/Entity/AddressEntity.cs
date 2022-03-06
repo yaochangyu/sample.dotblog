@@ -1,8 +1,7 @@
-﻿using Lab.ChangeTracking.Abstract;
-
+﻿
 namespace Lab.ChangeTracking.Domain;
 
-public record AddressEntity : IEntity
+public record AddressEntity 
 {
     public virtual Guid Id { get; set; }
 

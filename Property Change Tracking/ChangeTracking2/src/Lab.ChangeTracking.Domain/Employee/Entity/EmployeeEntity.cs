@@ -1,8 +1,6 @@
-﻿using Lab.ChangeTracking.Abstract;
+﻿namespace Lab.ChangeTracking.Domain;
 
-namespace Lab.ChangeTracking.Domain;
-
-public record EmployeeEntity : IEntity
+public record EmployeeEntity
 {
     public virtual Guid Id { get; set; }
 
