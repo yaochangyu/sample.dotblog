@@ -1,76 +1,120 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.InMemory.Infrastructure.Internal;
-using Microsoft.EntityFrameworkCore.SqlServer.Infrastructure.Internal;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel;
-
-public class EmployeeDbContext : DbContext
+namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel
 {
-    private static readonly bool[] s_migrated = { false };
-
-    public virtual DbSet<Employee> Employees { get; set; }
-
-    public virtual DbSet<Identity> Identities { get; set; }
-
-    public virtual DbSet<OrderHistory> OrderHistories { get; set; }
-
-    public EmployeeDbContext(DbContextOptions<EmployeeDbContext> options)
-        : base(options)
+    public class EmployeeDbContext : DbContext
     {
-        if (s_migrated[0])
+        private static readonly bool[] s_migrated = { false };
+
+        public virtual DbSet<Employee> Employees { get; set; }
+
+        public virtual DbSet<Identity> Identity { get; set; }
+
+        public virtual DbSet<Address> Addresses { get; set; }
+
+        public EmployeeDbContext(DbContextOptions<EmployeeDbContext> options)
+            : base(options)
         {
-            return;
+            // 改用 CI 執行 Migrate
+
+            // if (s_migrated[0])
+            // {
+            //     return;
+            // }
+            //
+            // lock (s_migrated)
+            // {
+            //     if (s_migrated[0] == false)
+            //     {
+            //         var sqlOptions = options.FindExtension<SqlServerOptionsExtension>();
+            //         if (sqlOptions != null)
+            //         {
+            //             this.Database.Migrate();
+            //         }
+            //
+            //         s_migrated[0] = true;
+            //     }
+            // }
         }
 
-        lock (s_migrated)
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            if (s_migrated[0] == false)
+            modelBuilder.ApplyConfiguration(new EmployeeConfiguration());
+            modelBuilder.ApplyConfiguration(new IdentityConfiguration());
+            modelBuilder.ApplyConfiguration(new AddressConfiguration());
+        }
+
+        internal class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
+        {
+            public void Configure(EntityTypeBuilder<Employee> builder)
             {
-                var memoryOptions = options.FindExtension<InMemoryOptionsExtension>();
+                builder.ToTable("Employee");
+                builder.HasKey(p => p.Id)
+                    .IsClustered(false);
 
-                if (memoryOptions == null)
-                {
-                    var sqlOptions = options.FindExtension<SqlServerOptionsExtension>();
-                    if (sqlOptions != null)
-                    {
-                        this.Database.Migrate();
-                    }
-                }
+                builder.Property(p => p.Name).IsRequired();
+                builder.Property(p => p.CreatedBy).IsRequired();
+                builder.Property(p => p.CreatedAt).IsRequired();
+                builder.Property(p => p.ModifiedAt).IsRequired(false);
+                builder.Property(p => p.ModifiedBy).IsRequired(false);
+                builder.Property(p => p.Remark).IsRequired(false);
 
-                s_migrated[0] = true;
+                builder.HasIndex(e => e.SequenceId)
+                    .IsUnique()
+                    .IsClustered();
             }
         }
-    }
 
-    //管理索引
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
-    {
-        modelBuilder.Entity<Employee>(p =>
+        private class IdentityConfiguration : IEntityTypeConfiguration<Identity>
         {
-            p.HasKey(e => e.Id)
-                .IsClustered(false);
+            public void Configure(EntityTypeBuilder<Identity> builder)
+            {
+                builder.ToTable("Identity");
+                builder.HasKey(p => p.Employee_Id).IsClustered(false);
+                builder.HasOne(e => e.Employee)
+                    .WithOne(p => p.Identity)
+                    .HasForeignKey<Identity>(p => p.Employee_Id)
+                    .OnDelete(DeleteBehavior.Cascade)
+                    ;
 
-            p.HasIndex(e => e.SequenceId)
-                .IsUnique()
-                .IsClustered();
+                builder.Property(p => p.Account).IsRequired();
+                builder.Property(p => p.Password).IsRequired();
+                builder.Property(p => p.CreatedBy).IsRequired();
+                builder.Property(p => p.CreatedAt).IsRequired();
+                builder.Property(p => p.ModifiedAt).IsRequired(false);
+                builder.Property(p => p.ModifiedBy).IsRequired(false);
+                builder.Property(p => p.Remark).IsRequired(false);
 
-            p.Property(p => p.Remark)
-                .IsRequired(false)
-                ;
-        });
+                builder.HasIndex(e => e.SequenceId)
+                    .IsUnique()
+                    .IsClustered();
+            }
+        }
 
-        modelBuilder.Entity<Identity>(p =>
+        private class AddressConfiguration : IEntityTypeConfiguration<Address>
         {
-            p.HasKey(e => e.Employee_Id)
-                .IsClustered(false);
+            public void Configure(EntityTypeBuilder<Address> builder)
+            {
+                builder.ToTable("Address");
+                builder.HasKey(p => p.Id).IsClustered(false);
+                builder.HasOne(e => e.Employee)
+                    .WithMany(p => p.Addresses)
+                    .HasForeignKey(p => p.Employee_Id)
+                    .OnDelete(DeleteBehavior.Cascade);
 
-            p.HasIndex(e => e.SequenceId)
-                .IsUnique()
-                .IsClustered();
+                builder.Property(p => p.Country).IsRequired();
+                builder.Property(p => p.Street).IsRequired();
+                builder.Property(p => p.CreatedBy).IsRequired();
+                builder.Property(p => p.CreatedAt).IsRequired();
+                builder.Property(p => p.ModifiedBy).IsRequired(false);
+                builder.Property(p => p.ModifiedAt).IsRequired(false);
+                builder.Property(p => p.Remark).IsRequired(false);
 
-            p.Property(p => p.Remark)
-                .IsRequired(false)
-                ;
-        });
+                builder.HasIndex(e => e.SequenceId)
+                    .IsUnique()
+                    .IsClustered();
+            }
+        }
     }
 }

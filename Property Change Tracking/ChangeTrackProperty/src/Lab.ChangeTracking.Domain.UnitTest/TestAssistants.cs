@@ -45,6 +45,7 @@ internal class TestAssistants
         services.AddSingleton<IEmployeeRepository, EmployeeRepository>();
         services.AddSingleton<ISystemClock, SystemClock>();
         services.AddSingleton<IAccessContext, AccessContext>();
+        services.AddSingleton<IUUIdProvider, UUIdProvider>();
         _serviceProvider = services.BuildServiceProvider();
     }
 

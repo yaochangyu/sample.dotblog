@@ -1,4 +1,6 @@
-﻿namespace Lab.ChangeTracking.Domain;
+﻿using Lab.ChangeTracking.Infrastructure.DB.EntityModel;
+
+namespace Lab.ChangeTracking.Domain;
 
 public record EmployeeEntity : EntityBase
 {
@@ -20,28 +22,55 @@ public record EmployeeEntity : EntityBase
         init => this._remark = value;
     }
 
-    private IAccessContext _accessContext;
+    public List<AddressEntity> Addresses { get; init; }
+
+    public IdentityEntity Identity { get; init; }
+
     private int? _age;
-
-    // public IList<ProfileEntity> Profiles { get; private set; } = new();
-    //
-    // public IdentityEntity Identity { get; private set; } = new();
-
-    private IUUIdProvider _idProvider;
     private string _name;
     private string _remark;
-    private ISystemClock _systemClock;
 
-    public EmployeeEntity SetId(string name, int age, string remark = null)
+    public EmployeeEntity Delete()
     {
+        this._entityState = EntityState.Deleted;
+        return this;
+    }
+
+    public EmployeeEntity New(string name, int age, string remark = null)
+    {
+        this._entityState = EntityState.Added;
+        this._commitState = CommitState.Unchanged;
+        this._version = 1;
         this._name = name;
         this._age = age;
         this._remark = remark;
-        this.ChangeTrack(nameof(this.Name), name);
-        this.ChangeTrack(nameof(this.Age), age);
-        this.ChangeTrack(nameof(this.Remark), remark);
         return this;
-    } 
+    }
+
+    public override void Reset()
+    {
+        throw new NotImplementedException();
+    }
+
+    /// <summary>
+    ///     從資料庫查到之後放進去
+    /// </summary>
+    /// <param name="employee"></param>
+    /// <returns></returns>
+    public EmployeeEntity AsTrackable(Employee employee)
+    {
+        this._changedProperties.Clear();
+        this._originalValues.Clear();
+        this._entityState = EntityState.Unchanged;
+        this._commitState = CommitState.Unchanged;
+        this._version = employee.Version;
+        this._name = employee.Name;
+        this._age = employee.Age;
+        this._remark = employee.Remark;
+        this.AsTrackable();
+        return this;
+    }
+
     public EmployeeEntity SetProfile(string name, int age, string remark = null)
     {
         this._name = name;
