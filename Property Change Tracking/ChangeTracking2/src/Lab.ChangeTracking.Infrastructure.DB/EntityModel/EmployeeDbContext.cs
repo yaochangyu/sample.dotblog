@@ -42,7 +42,7 @@ namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel
         {
             modelBuilder.ApplyConfiguration(new EmployeeConfiguration());
             modelBuilder.ApplyConfiguration(new IdentityConfiguration());
-            modelBuilder.ApplyConfiguration(new ProfileConfiguration());
+            modelBuilder.ApplyConfiguration(new AddressConfiguration());
         }
 
         internal class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
@@ -92,11 +92,11 @@ namespace Lab.ChangeTracking.Infrastructure.DB.EntityModel
             }
         }
 
-        private class ProfileConfiguration : IEntityTypeConfiguration<Address>
+        private class AddressConfiguration : IEntityTypeConfiguration<Address>
         {
             public void Configure(EntityTypeBuilder<Address> builder)
             {
-                builder.ToTable("Profile");
+                builder.ToTable("Address");
                 builder.HasKey(p => p.Id).IsClustered(false);
                 builder.HasOne(e => e.Employee)
                     .WithMany(p => p.Addresses)

@@ -24,24 +24,26 @@ public class ChangeTrackingUnitTest
     [TestMethod]
     public void 異動追蹤後存檔()
     {
-        var toDB = Insert().To();
-        var trackable = toDB.AsTrackable();
+        var employeeEntity = Insert().To();
+        var trackable = employeeEntity.AsTrackable();
         trackable.Age = 20;
         trackable.Name = "小章";
+        trackable.Remark = "我變了";
         trackable.Identity.Remark = "我變了";
         trackable.Addresses[0].Remark = "我變了";
+        trackable.Addresses[1].Remark = "我掉了";
         trackable.Addresses.RemoveAt(1);
         trackable.Addresses.Add(new AddressEntity()
         {
             Id = Guid.NewGuid(),
-            Employee_Id = toDB.Id,
+            Employee_Id = employeeEntity.Id,
             CreatedAt = DateTimeOffset.Now,
             CreatedBy = "sys",
-            Country = "Taipei",
-            Street = "Street",
+            Country = "Taipei1",
+            Street = "Street1",
             Remark = "我新的"
         });
-        var employeeEntity = this._employeeRepository.SaveChangeAsync(trackable).Result;
+        var count = this._employeeRepository.SaveChangeAsync(trackable).Result;
     }
 
     [TestMethod]

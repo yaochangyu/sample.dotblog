@@ -2,7 +2,7 @@
 
 namespace Lab.ChangeTracking.Domain;
 
-public record AddressEntity:IEntity
+public record AddressEntity : IEntity
 {
     public virtual Guid Id { get; set; }
 
