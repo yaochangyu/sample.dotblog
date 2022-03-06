@@ -1,20 +1,68 @@
 ﻿using ChangeTracking;
-using Lab.ChangeTracking.Abstract;
 using Microsoft.EntityFrameworkCore;
 
 namespace Lab.ChangeTracking.Domain;
 
 public class RepositoryBase
 {
-    protected void ApplyChange<TSource, TTarget>(DbContext dbContext,
+    protected void ApplyAdd<TSource, TTarget>(DbContext dbContext,
+                                              TSource sourceInstance,
+                                              IEnumerable<string> excludeProperties = null)
+        where TSource : class
+        where TTarget : class
+    {
+        var targetInstance = CreateNewInstance<TSource, TTarget>(sourceInstance, excludeProperties);
+        dbContext.Entry(targetInstance).State = EntityState.Added;
+    }
+
+    protected void ApplyAdd<TSource, TTarget>(DbContext dbContext, TSource source)
+        where TSource : class where TTarget : class
+    {
+        var targetInstance = CreateDeleteInstance<TSource, TTarget>(source, "Id");
+        dbContext.Set<TTarget>().Attach(targetInstance);
+        dbContext.Entry(targetInstance).State = EntityState.Deleted;
+    }
+
+    protected void ApplyChanges<TSource, TTarget>(DbContext dbContext,
+                                                  IList<TSource> sources,
+                                                  IEnumerable<string> excludeProperties = null)
+        where TSource : class
+        where TTarget : class
+
+    {
+        var targetsTrackable = sources.CastToIChangeTrackableCollection();
+        if (targetsTrackable == null)
+        {
+            return;
+        }
+
+        var modifyItems = targetsTrackable.ChangedItems;
+        var addedItems = targetsTrackable.AddedItems;
+        var deletedItems = targetsTrackable.DeletedItems;
+        foreach (var source in modifyItems)
+        {
+            this.ApplyModify<TSource, TTarget>(dbContext, source, excludeProperties);
+        }
+
+        foreach (var addedItem in addedItems)
+        {
+            this.ApplyAdd<TSource, TTarget>(dbContext, addedItem, excludeProperties);
+        }
+
+        foreach (var source in deletedItems)
+        {
+            this.ApplyAdd<TSource, TTarget>(dbContext, source);
+        }
+    }
+
+    protected void ApplyModify<TSource, TTarget>(DbContext dbContext,
                                                  TSource source,
-                                                 TTarget target,
                                                  IEnumerable<string> excludeProperties = null)
         where TSource : class
         where TTarget : class
     {
         var sourceTrackable = source.CastToIChangeTrackable();
-        var targetInstance = CreateTargetInstance<TSource, TTarget>(source, excludeProperties);
+        var targetInstance = CreateNewInstance<TSource, TTarget>(source, excludeProperties);
         dbContext.Set<TTarget>().Attach(targetInstance);
 
         var changedProperties = sourceTrackable.ChangedProperties;
@@ -30,51 +78,23 @@ public class RepositoryBase
         }
     }
 
-    protected void ApplyChanges<TSource, TTarget>(DbContext dbContext,
-                                                  IList<TSource> sources,
-                                                  IList<TTarget> targets,
-                                                  IEnumerable<string> excludeProperties = null)
-        where TSource : class, IEntity
-        where TTarget : class, IEntity
-
+    private static TTarget CreateDeleteInstance<TSource, TTarget>(TSource sourceInstance, string propertyName)
+        where TSource : class
+        where TTarget : class
     {
-        var targetsTrackable = sources.CastToIChangeTrackableCollection();
-        if (targetsTrackable == null)
-        {
-            return;
-        }
+        var targetType = typeof(TTarget);
+        var targetInstance = (TTarget)Activator.CreateInstance(targetType);
+        var targetProperty = targetType.GetProperty(propertyName);
+        var sourceType = sourceInstance.GetType();
+        var sourceProperty = sourceType.GetProperty(propertyName);
+        var value = sourceProperty.GetValue(sourceInstance, null);
+        targetProperty.SetValue(targetInstance, value, null);
 
-        var modifyItems = targetsTrackable.ChangedItems;
-        var addedItems = targetsTrackable.AddedItems;
-        var deletedItems = targetsTrackable.DeletedItems;
-        foreach (var source in modifyItems)
-        {
-            var target = targets.FirstOrDefault(p => p.Id == source.Id);
-            if (target == null)
-            {
-                continue;
-            }
-
-            this.ApplyChange(dbContext, source, target, excludeProperties);
-        }
-
-        foreach (var addedItem in addedItems)
-        {
-            var targetInstance = CreateTargetInstance<TSource, TTarget>(addedItem,excludeProperties);
-            dbContext.Entry(targetInstance).State = EntityState.Added;
-        }
-
-        foreach (var source in deletedItems)
-        {
-            var target = Activator.CreateInstance<TTarget>();
-            target.Id = source.Id;
-            dbContext.Set<TTarget>().Attach(target);
-            dbContext.Entry(target).State = EntityState.Deleted;
-        }
+        return targetInstance;
     }
 
-    private static TTarget CreateTargetInstance<TSource, TTarget>(TSource sourceInstance,
-                                                                  IEnumerable<string> excludeProperties = null)
+    private static TTarget CreateNewInstance<TSource, TTarget>(TSource sourceInstance,
+                                                                     IEnumerable<string> excludeProperties = null)
         where TSource : class
         where TTarget : class
     {
@@ -94,8 +114,7 @@ public class RepositoryBase
             foreach (var targetProperty in targetProperties)
             {
                 if (sourceProperty.Name == targetProperty.Name
-                    & sourceProperty.PropertyType == targetProperty.PropertyType
-                   )
+                    & sourceProperty.PropertyType == targetProperty.PropertyType)
                 {
                     var value = sourceProperty.GetValue(sourceInstance, null);
                     targetProperty.SetValue(targetInstance, value, null);

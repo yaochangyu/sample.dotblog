@@ -16,15 +16,14 @@ public class EmployeeRepository : RepositoryBase, IEmployeeRepository
                                            CancellationToken cancel = default)
     {
         await using var dbContext = await this._memberContextFactory.CreateDbContextAsync(cancel);
-        var destEmployee = srcEmployee.To();
-        this.ApplyChange(dbContext, srcEmployee, destEmployee, new List<string>
+        this.ApplyModify<EmployeeEntity, Employee>(dbContext, srcEmployee, new List<string>
             {
                 "Identity",
                 "Addresses"
             }
         );
-        this.ApplyChange(dbContext, srcEmployee.Identity, destEmployee.Identity);
-        this.ApplyChanges(dbContext, srcEmployee.Addresses, destEmployee.Addresses);
+        this.ApplyModify<IdentityEntity, Identity>(dbContext, srcEmployee.Identity);
+        this.ApplyChanges<AddressEntity, Address>(dbContext, srcEmployee.Addresses);
         return await dbContext.SaveChangesAsync(cancel);
     }
 }
