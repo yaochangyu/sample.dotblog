@@ -76,7 +76,7 @@ public record EmployeeEntity : EntityBase
         return this;
     }
 
-    public override void Reset()
+    public override void RejectChanges()
     {
         throw new NotImplementedException();
     }
