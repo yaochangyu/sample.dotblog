@@ -71,7 +71,7 @@ public abstract record EntityBase : IChangeTrackable
         return (null, true);
     }
 
-    public abstract void Reset();
+    public abstract void RejectChanges();
 
     public Dictionary<string, object> GetChangedProperties()
     {

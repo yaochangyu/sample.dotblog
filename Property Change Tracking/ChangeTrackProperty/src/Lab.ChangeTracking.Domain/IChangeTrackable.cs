@@ -1,6 +1,6 @@
 namespace Lab.ChangeTracking.Domain;
 
-public interface IChangeTrackable : IChangeTime, IChangeState
+public interface IChangeTrackable : IChangeContent, IChangeTime, IChangeState
 {
     // bool HasChanged { get; }
     public (Error<string> err, bool changed) AcceptChanges(ISystemClock systemClock,
@@ -9,9 +9,5 @@ public interface IChangeTrackable : IChangeTime, IChangeState
 
     void ChangeTrack(string propertyName, object value);
 
-    void Reset();
-
-    Dictionary<string, object> GetChangedProperties();
-
-    Dictionary<string, object> GetOriginalValues();
+    void RejectChanges();
 }
