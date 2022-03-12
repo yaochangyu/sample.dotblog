@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Xml.XPath;
 using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 void IncludeXmlComments(Assembly assembly, SwaggerGenOptions swaggerGenOptions)
@@ -67,10 +68,12 @@ builder.Services.AddSwaggerGen(options =>
         Version = "v2",
         Title = "Employee API",
     }); 
-    
+    options.ExampleFilters();
+ 
     var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
 });
+builder.Services.AddSwaggerExamplesFromAssemblies(Assembly.GetEntryAssembly());
 
 var app = builder.Build();
 
