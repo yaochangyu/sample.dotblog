@@ -40,7 +40,7 @@ public class EmployeeController : ControllerBase
     [HttpGet]
     [Produces("application/json")]
     // [ProducesResponseType(typeof(EmployeeResponse), StatusCodes.Status200OK)]
-    // [SwaggerResponse(200, "The list of countries", typeof(IEnumerable<EmployeeResponse>))]
+    [SwaggerResponse(200, "查詢結果", typeof(EmployeeResponse))]
     [SwaggerRequestExample(typeof(QueryEmployeeRequest), typeof(QueryEmployeeRequestExample))]
     [SwaggerResponseExample(200, typeof(EmployeeResponseExample))]
     public async Task<IActionResult> Get(QueryEmployeeRequest request)
