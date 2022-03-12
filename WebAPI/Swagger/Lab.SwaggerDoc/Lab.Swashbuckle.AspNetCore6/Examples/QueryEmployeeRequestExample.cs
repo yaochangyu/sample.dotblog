@@ -9,7 +9,8 @@ public class QueryEmployeeRequestExample : IExamplesProvider<QueryEmployeeReques
         return new QueryEmployeeRequest
         {
             Name = "小章",
-            Age = 18
+            Age = 18,
+            // State = (State)1
         };
     }
 }

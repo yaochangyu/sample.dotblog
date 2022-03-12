@@ -66,10 +66,10 @@ builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("v2", new OpenApiInfo
     {
         Version = "v2",
-        Title = "Employee API",
-    }); 
+        Title = "Employee API"
+    });
     options.ExampleFilters();
- 
+
     var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
 });
@@ -81,10 +81,10 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(options=>
+    app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-        options.SwaggerEndpoint("/swagger/v2/swagger.json", "v2"); 
+        options.SwaggerEndpoint("/swagger/v2/swagger.json", "v2");
     });
 }
 
