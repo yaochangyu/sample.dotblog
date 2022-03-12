@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
 
 namespace Lab.Swashbuckle.AspNetCore6;
@@ -25,18 +27,24 @@ public class QueryEmployeeRequest
     public State State { get; set; }
 }
 
-// [JsonConverter(typeof(JsonStringEnumMemberConverter))] // This custom converter was placed in a system namespace.
+[JsonConverter(typeof(JsonStringEnumMemberConverter))] // This custom converter was placed in a system namespace.
 public enum State
 {
+    [EnumMember(Value = "UNKNOWN_DEFINITION_000")]
+
     None = 0,
 
     /// <summary>
     ///     Approved
     /// </summary>
+    /// <remarks>Approved</remarks>
+    // [Description("Approved")]
+    [EnumMember(Value = "Approved")]
     Approved = 1,
 
     /// <summary>
     ///     Rejected
     /// </summary>
+    [EnumMember(Value = "Rejected")]
     Rejected = 2
 }
