@@ -9,7 +9,16 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3"/>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Examples\EmployeeResponseExample.cs" />
+      <Compile Remove="Examples\QueryEmployeeRequestExample.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Examples" />
     </ItemGroup>
 
 </Project>

@@ -18,6 +18,20 @@ public class EmployeeController : ControllerBase
         this._logger = logger;
     }
 
+    /// <summary>
+    /// 取得會員
+    /// </summary>
+    /// <param name="request"></param>
+    /// <remarks>
+    /// Sample request:
+    ///
+    ///     POST /Todo
+    ///     {
+    ///        "id": 1,
+    ///        "name": "Item #1",
+    ///        "isComplete": true
+    ///     }
+    /// </remarks>
     // [HttpGet(Name = "GetEmployee")]
     [HttpGet]
     public async Task<IActionResult> Get(QueryEmployeeRequest request)
