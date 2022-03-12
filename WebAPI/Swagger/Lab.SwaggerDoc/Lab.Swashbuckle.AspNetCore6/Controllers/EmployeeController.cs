@@ -1,4 +1,7 @@
+using Lab.Swashbuckle.AspNetCore6.Examples;
 using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
+using Swashbuckle.AspNetCore.Filters;
 
 namespace Lab.Swashbuckle.AspNetCore6.Controllers;
 
@@ -32,8 +35,14 @@ public class EmployeeController : ControllerBase
     ///        "isComplete": true
     ///     }
     /// </remarks>
+
     // [HttpGet(Name = "GetEmployee")]
     [HttpGet]
+    [Produces("application/json")]
+    // [ProducesResponseType(typeof(EmployeeResponse), StatusCodes.Status200OK)]
+    // [SwaggerResponse(200, "The list of countries", typeof(IEnumerable<EmployeeResponse>))]
+    [SwaggerRequestExample(typeof(QueryEmployeeRequest), typeof(QueryEmployeeRequestExample))]
+    [SwaggerResponseExample(200, typeof(EmployeeResponseExample))]
     public async Task<IActionResult> Get(QueryEmployeeRequest request)
     {
         if (this.ModelState.IsValid == false)
