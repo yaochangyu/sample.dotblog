@@ -5,6 +5,7 @@ namespace Lab.Swashbuckle.AspNetCore6.Controllers.Employee.v1_1;
 [ApiVersion("1.1")]
 [ApiController]
 [Route("api/[controller]")]
+[Route("api/v{version:apiVersion}/[controller]")]
 public class DemoController : ControllerBase
 {
     [HttpGet]
