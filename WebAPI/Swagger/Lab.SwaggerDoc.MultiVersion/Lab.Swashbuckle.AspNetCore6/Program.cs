@@ -50,12 +50,12 @@ builder.Services.AddApiVersioning(option =>
     option.ReportApiVersions = true;
 
     //未提供版本請請時，使用預設版號
-    option.AssumeDefaultVersionWhenUnspecified = true;
+    option.AssumeDefaultVersionWhenUnspecified = false;
 
     //預設api版本號，支援時間或數字版本號 
     option.DefaultApiVersion = new ApiVersion(1, 0);
 
-    //支援MediaType、Header、QueryString 設定版本號；預設為 QueryString、UrlSegment
+    //支援MediaType、Header、QueryString 設定版本號
     option.ApiVersionReader = ApiVersionReader.Combine(
         new MediaTypeApiVersionReader("api-version"),
         new HeaderApiVersionReader("api-version"),
