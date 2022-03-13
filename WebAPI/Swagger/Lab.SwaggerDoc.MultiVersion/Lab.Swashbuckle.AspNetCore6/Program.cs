@@ -1,7 +1,10 @@
 using System.Reflection;
 using System.Xml.XPath;
+using Lab.Swashbuckle.AspNetCore6;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Versioning;
+using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
 using Swashbuckle.AspNetCore.SwaggerGen;
@@ -16,28 +19,6 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Version = "v1",
-        Title = "Employee API",
-        Description = "An ASP.NET Core Web API for managing employees",
-        TermsOfService = new Uri("https://example.com/terms"),
-        Contact = new OpenApiContact
-        {
-            Name = "Example Contact",
-            Url = new Uri("https://example.com/contact")
-        },
-        License = new OpenApiLicense
-        {
-            Name = "Example License",
-            Url = new Uri("https://example.com/license")
-        }
-    });
-    options.SwaggerDoc("v2", new OpenApiInfo
-    {
-        Version = "v2",
-        Title = "Employee API"
-    });
     options.ExampleFilters();
 
     var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
@@ -63,27 +44,39 @@ builder.Services.AddApiVersioning(option =>
         new UrlSegmentApiVersionReader());
 });
 
-// builder.Services.AddVersionedApiExplorer(options =>
-// {
-//     // add the versioned api explorer, which also adds IApiVersionDescriptionProvider service
-//     // note: the specified format code will format the version as "'v'major[.minor][-status]"
-//     options.GroupNameFormat = "'v'VVV";
-//
-//     // note: this option is only necessary when versioning by url segment. the SubstitutionFormat
-//     // can also be used to control the format of the API version in route templates
-//     options.SubstituteApiVersionInUrl = true;
-// });
+builder.Services.AddVersionedApiExplorer(options =>
+{
+    
+    // add the versioned api explorer, which also adds IApiVersionDescriptionProvider service
+    // note: the specified format code will format the version as "'v'major[.minor][-status]"
+    //options.GroupNameFormat = "'v'VVV";
+
+    // note: this option is only necessary when versioning by url segment. the SubstitutionFormat
+    // can also be used to control the format of the API version in route templates
+    //options.SubstituteApiVersionInUrl = true;
+});
+builder.Services.AddSingleton<IConfigureOptions<SwaggerGenOptions>, ConfigureApiVersionSwaggerGenOptions>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "v1");
-        options.SwaggerEndpoint("/swagger/v2/swagger.json", "v2");
-    });
+   
+    app.UseSwaggerUI(
+        options =>
+        {
+            var provider = app.Services.GetService<IApiVersionDescriptionProvider>();
+
+            // build a swagger endpoint for each discovered API version
+            foreach (var description in provider.ApiVersionDescriptions)
+            {
+                var url = $"/swagger/{description.GroupName}/swagger.json";
+                options.SwaggerEndpoint(url,
+                                        description.GroupName.ToUpperInvariant());
+            }
+        });
 }
 
 app.UseHttpsRedirection();
