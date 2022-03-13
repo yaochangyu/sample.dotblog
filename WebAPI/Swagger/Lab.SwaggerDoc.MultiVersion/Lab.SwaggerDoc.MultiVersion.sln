@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Swashbuckle.AspNetCore6", "Lab.Swashbuckle.AspNetCore6\Lab.Swashbuckle.AspNetCore6.csproj", "{2DA608D5-BC95-4DF6-AB7A-0A22085E9257}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApiVersioningSample", "..\..\..\..\lab\blogsamples\ApiVersioningSample\ApiVersioningSample.csproj", "{D3DAD3B2-CA83-40E0-90B7-BF005C7C7210}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{2DA608D5-BC95-4DF6-AB7A-0A22085E9257}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2DA608D5-BC95-4DF6-AB7A-0A22085E9257}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2DA608D5-BC95-4DF6-AB7A-0A22085E9257}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D3DAD3B2-CA83-40E0-90B7-BF005C7C7210}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D3DAD3B2-CA83-40E0-90B7-BF005C7C7210}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D3DAD3B2-CA83-40E0-90B7-BF005C7C7210}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D3DAD3B2-CA83-40E0-90B7-BF005C7C7210}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
