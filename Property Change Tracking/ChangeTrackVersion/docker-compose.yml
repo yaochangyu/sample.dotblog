@@ -1,0 +1,10 @@
+version: "3.8"
+
+services:
+  db-sql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=pass@w0rd1~
+    ports:
+      - 1433:1433
