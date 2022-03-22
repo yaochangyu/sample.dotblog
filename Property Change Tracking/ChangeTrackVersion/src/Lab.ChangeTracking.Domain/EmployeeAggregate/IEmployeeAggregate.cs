@@ -1,0 +1,1 @@
+﻿namespace Lab.ChangeTracking.Domain;
