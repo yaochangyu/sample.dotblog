@@ -8,9 +8,9 @@ public class GlobalSteps
     [AssemblyCleanup]
     public static void Cleanup()
     {
-        TestAssistant.SetTestEnvironmentVariable();
-        using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
-        db.Database.EnsureDeleted();
+        // TestAssistant.SetTestEnvironmentVariable();
+        // using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
+        // db.Database.EnsureDeleted();
     }
 
     [AssemblyInitialize]

@@ -22,6 +22,9 @@ namespace Lab.ORM.DynamicField.EntityModel
         {
             modelBuilder.Entity<Employee>(p =>
             {
+                p.Property(p=>p.Profiles).HasColumnType("jsonb");
+                p.Property(p=>p.Customer).IsRequired(false).HasColumnType("jsonb");
+                // p.Property(p => p._customer).HasColumnName("Customer").HasColumnType("jsonb");
                 p.Property(p => p.Name).IsRequired().HasMaxLength(50);
                 p.Property(p => p.CreatedAt).IsRequired();
                 p.Property(p => p.CreatedBy).IsRequired();

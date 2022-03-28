@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using EFCore.BulkExtensions;
 using Faker;
 using Lab.ORM.DynamicField.EntityModel;
@@ -17,7 +18,7 @@ public class UnitTest1
     [TestCleanup]
     public void TestCleanup()
     {
-        CleanData();
+        // CleanData();
     }
 
     [TestInitialize]
@@ -27,37 +28,111 @@ public class UnitTest1
     }
 
     [TestMethod]
-    public void TestMethod1()
-    {
-        using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
-
-        // var id = Guid.NewGuid();
-        // db.Employees.Add(new Employee
-        // {
-        //     Id = id,
-        //     Age = RandomNumber.Next(1, 100),
-        //     Name = Name.FullName(),
-        //     CreatedAt = DateTimeOffset.UtcNow,
-        //     CreatedBy = "Sys",
-        //
-        //     // Identity = new Identity
-        //     // {
-        //     //     Account = "yao",
-        //     //     CreateAt = DateTimeOffset.UtcNow,
-        //     //     CreateBy = "Sys",
-        //     //     Password = "123456",
-        //     // },
-        // });
-        var generateEmployees = GenerateEmployees(1);
-        db.AddRange(generateEmployees);
-        db.SaveChanges();
-    }
-
-    [TestMethod]
     public void TestMethod2()
     {
         var host = CreateHostBuilder(null).Start();
         host.Services.GetService<IDbContextFactory<EmployeeDbContext>>();
+    }
+
+    [TestMethod]
+    public void 查詢所有資料()
+    {
+        var options = new JsonSerializerOptions
+        {
+            Converters = { new DictionaryStringObjectJsonConverter() }
+        };
+        var newEmployee = Insert();
+        using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
+        var actual = db.Employees
+            .Where(p => p.Id == newEmployee.Id)
+            .Select(p => new
+            {
+                Profiles = p.Profiles.To<Dictionary<string, object>>(options),
+            })
+            .FirstOrDefault();
+    }
+
+    [TestMethod]
+    public void 查詢特定欄位_JsonDoc()
+    {
+        var options = new JsonSerializerOptions
+        {
+            Converters = { new DictionaryStringObjectJsonConverter() }
+        };
+        var newEmployee = Insert();
+        using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
+        var actual = db.Employees
+
+            // .Where(p => p.Profiles.RootElement.GetProperty("long").GetString() == "255")
+            .Where(p => p.Profiles.RootElement.GetProperty("long").GetInt64() == 255)
+            .Select(p => new
+            {
+                Profiles = p.Profiles.To<Dictionary<string, object>>(options),
+            })
+            .FirstOrDefault();
+    }
+
+    [TestMethod]
+    public void 查詢特定欄位_POCO()
+    {
+        var options = new JsonSerializerOptions
+        {
+            Converters = { new DictionaryStringObjectJsonConverter() }
+        };
+        var newEmployee = Insert();
+        using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
+        var actual = db.Employees
+                .Where(p => p.Customer.Age > 12)
+                .Select(p => new
+                {
+                    p.Customer
+
+                    // Order = p.Customer.Orders.Select(p => new { p.Price, p.ShippingAddress })
+                    // Order = p.Customer
+                    //     .Orders
+                    //     .Select(p => new Order
+                    //     {
+                    //         Price = p.Price
+                    //     })
+                    //     
+
+                    // aa = p.Customer.Orders.ToDictionary(p => p.Price, p => p.ShippingAddress)
+                })
+
+                // .AsAsyncEnumerable()
+                .FirstOrDefault()
+            ;
+    }
+
+    [TestMethod]
+    public void 新增資料()
+    {
+        using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
+        var expected = new Dictionary<string, object>
+        {
+            ["anonymousType"] = new { Prop = 123 },
+            ["model"] = new Model { Age = 19, Name = "yao" },
+            ["null"] = null!,
+            ["dateTimeOffset"] = DateTimeOffset.Now,
+            ["long"] = (long)255,
+            ["decimal"] = (decimal)3.1416,
+            ["guid"] = Guid.NewGuid(),
+            ["string"] = "String",
+            ["decimalArray"] = new[] { 1, (decimal)2.1 },
+        };
+
+        var id = Guid.NewGuid();
+        db.Employees.Add(new Employee
+        {
+            Id = id,
+            Age = RandomNumber.Next(1, 100),
+            Name = Name.FullName(),
+            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedBy = "Sys",
+            Profiles = expected.ToJsonDocument(),
+        });
+
+        db.SaveChanges();
     }
 
     private static void CleanData()
@@ -94,4 +169,61 @@ public class UnitTest1
             }).ToList();
         return employees;
     }
+
+    private static Employee Insert()
+    {
+        using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
+        var expected = new Dictionary<string, object>
+        {
+            ["anonymousType"] = new { Prop = 123 },
+            ["model"] = new Model { Age = 19, Name = "yao" },
+            ["null"] = null!,
+            ["dateTimeOffset"] = DateTimeOffset.Now,
+            ["long"] = (long)255,
+            ["decimal"] = (decimal)3.1416,
+            ["guid"] = Guid.NewGuid(),
+            ["string"] = "String",
+            ["decimalArray"] = new[] { 1, (decimal)2.1 },
+        };
+
+        var id = Guid.NewGuid();
+        var newEmployee = new Employee
+        {
+            Id = id,
+            Age = RandomNumber.Next(1, 100),
+            Name = Name.FullName(),
+            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedBy = "Sys",
+            Profiles = expected.ToJsonDocument(),
+            Customer = new Customer
+            {
+                Age = 19,
+                Name = "小章",
+                Orders = new[]
+                {
+                    new Order
+                    {
+                        Price = (decimal)22.1,
+                        ShippingAddress = "台北市"
+                    }
+                },
+                Product = new Product
+                {
+                    Id = Guid.NewGuid(),
+                    Name = "Mouse"
+                }
+            }
+        };
+        db.Employees.Add(newEmployee);
+
+        db.SaveChanges();
+        return newEmployee;
+    }
+}
+
+public record Model
+{
+    public int Age { get; set; }
+
+    public string Name { get; set; }
 }

@@ -27,7 +27,7 @@ public static class AppDependencyInjectionExtensions
                 )
 
                 //  .UseLazyLoadingProxies()
-                .EnableSensitiveDataLogging()                   //这将捕获通过迁移发送的更改。
+                // .EnableSensitiveDataLogging()                   //这将捕获通过迁移发送的更改。
                 .LogTo(Console.WriteLine, LogLevel.Information) //这将捕获所有发送到数据库的SQL。
                 // .UseLoggerFactory(loggerFactory)
                 ;
