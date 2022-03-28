@@ -1,10 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
 
 namespace Lab.ORM.DynamicField.EntityModel
 {
     [Table("Employee")]
-    public class Employee
+    public class Employee : IDisposable
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.None)]
@@ -20,7 +21,19 @@ namespace Lab.ORM.DynamicField.EntityModel
 
         public string Remark { get; set; }
 
-        // public virtual Identity Identity { get; set; }
+        public JsonDocument Profiles { get; set; }
+
+        // [NotMapped]
+        public Customer Customer
+        {
+            get;
+            set;
+
+            // get => _customer == null ? null : JsonSerializer.Deserialize<Customer>(_customer);
+            // set => _customer = JsonSerializer.Serialize(value);
+        }
+
+        internal string _customer;
 
         [Required]
         public DateTimeOffset CreatedAt { get; set; }
@@ -31,5 +44,7 @@ namespace Lab.ORM.DynamicField.EntityModel
         public DateTimeOffset? ModifiedAt { get; set; }
 
         public string ModifiedBy { get; set; }
+
+        public void Dispose() => this.Profiles?.Dispose();
     }
 }
