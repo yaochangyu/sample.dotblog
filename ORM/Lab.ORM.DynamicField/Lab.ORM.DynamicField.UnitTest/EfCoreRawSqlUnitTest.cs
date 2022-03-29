@@ -13,12 +13,12 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Lab.ORM.DynamicField.UnitTest;
 
 [TestClass]
-public class UnitTest1
+public class EFCoreRawSqlUnitTest
 {
     [TestCleanup]
     public void TestCleanup()
     {
-        // CleanData();
+        CleanData();
     }
 
     [TestInitialize]
@@ -43,13 +43,12 @@ public class UnitTest1
         };
         var newEmployee = Insert();
         using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
-        var actual = db.Employees
-            .Where(p => p.Id == newEmployee.Id)
-            .Select(p => new
-            {
-                Profiles = p.Profiles.To<Dictionary<string, object>>(options),
-            })
-            .FirstOrDefault();
+
+        var actual = db.Employees.FromSqlRaw(@"       
+SELECT *
+FROM ""Employee"" AS e
+LIMIT 1
+").ToList();
     }
 
     [TestMethod]
@@ -82,6 +81,7 @@ public class UnitTest1
         var newEmployee = Insert();
         using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
         var actual = db.Employees
+
                 // .Where(p => p.Customer.Age > 12)
                 .Select(p => new
                 {
@@ -219,11 +219,4 @@ public class UnitTest1
         db.SaveChanges();
         return newEmployee;
     }
-}
-
-public record Model
-{
-    public int Age { get; set; }
-
-    public string Name { get; set; }
 }
