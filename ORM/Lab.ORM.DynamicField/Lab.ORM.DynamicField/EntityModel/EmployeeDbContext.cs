@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace Lab.ORM.DynamicField.EntityModel
 {
@@ -20,10 +21,17 @@ namespace Lab.ORM.DynamicField.EntityModel
         //管理索引
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            var options = new JsonSerializerOptions();
             modelBuilder.Entity<Employee>(p =>
             {
-                p.Property(p=>p.Profiles).HasColumnType("jsonb");
-                p.Property(p=>p.Customer).IsRequired(false).HasColumnType("jsonb");
+                p.Property(p => p.Profiles).HasColumnType("jsonb");
+                p.Property(p => p.Customer)
+                    .IsRequired(false)
+                    .HasColumnType("jsonb")
+                    // .HasConversion(p => JsonSerializer.Serialize(p, options),
+                    //                p => JsonSerializer.Deserialize<Customer>(p, options))
+                    ;
+
                 // p.Property(p => p._customer).HasColumnName("Customer").HasColumnType("jsonb");
                 p.Property(p => p.Name).IsRequired().HasMaxLength(50);
                 p.Property(p => p.CreatedAt).IsRequired();

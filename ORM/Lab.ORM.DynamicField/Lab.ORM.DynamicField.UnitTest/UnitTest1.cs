@@ -82,7 +82,7 @@ public class UnitTest1
         var newEmployee = Insert();
         using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
         var actual = db.Employees
-                .Where(p => p.Customer.Age > 12)
+                // .Where(p => p.Customer.Age > 12)
                 .Select(p => new
                 {
                     p.Customer
