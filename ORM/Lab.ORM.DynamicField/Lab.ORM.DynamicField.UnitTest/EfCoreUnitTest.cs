@@ -35,6 +35,30 @@ public class EfCoreUnitTest
     }
 
     [TestMethod]
+    public void 更新部分欄位()
+    {
+        var options = new JsonSerializerOptions
+        {
+            Converters = { new DictionaryStringObjectJsonConverter() }
+        };
+        var newEmployee = Insert();
+        using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
+        var destEmployee = new Employee
+        {
+            Id = newEmployee.Id,
+            Name = "yao",
+            ModifiedAt = DateTimeOffset.UtcNow,
+            ModifiedBy = "sys"
+        };
+        var employeeEntry = db.Entry(destEmployee);
+        db.Attach(destEmployee);
+        employeeEntry.Property(p => p.Name).IsModified = true;
+        employeeEntry.Property(p => p.ModifiedAt).IsModified = true;
+        employeeEntry.Property(p => p.ModifiedBy).IsModified = true;
+        var count = db.SaveChanges();
+    }
+
+    [TestMethod]
     public void 查詢所有資料()
     {
         var options = new JsonSerializerOptions
@@ -51,25 +75,7 @@ public class EfCoreUnitTest
             })
             .FirstOrDefault();
     }
-
-    [TestMethod]
-    public void 查詢所有資料_Raw_SQL()
-    {
-        var options = new JsonSerializerOptions
-        {
-            Converters = { new DictionaryStringObjectJsonConverter() }
-        };
-        var newEmployee = Insert();
-        using var db = TestAssistant.EmployeeDbContextFactory.CreateDbContext();
-        var queryCommand = @"       
-SELECT e.""Profiles""
-FROM ""Employee"" AS e
-LIMIT 1
-";
-
-        var actual = db.Employees.FromSqlRaw(queryCommand);
-    }
-
+    
     [TestMethod]
     public void 查詢特定欄位_JsonDoc()
     {
