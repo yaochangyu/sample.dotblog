@@ -33,6 +33,7 @@ public class EFCoreRawSqlUnitTest
         var host = CreateHostBuilder(null).Start();
         host.Services.GetService<IDbContextFactory<EmployeeDbContext>>();
     }
+   
 
     [TestMethod]
     public void 查詢所有資料()
