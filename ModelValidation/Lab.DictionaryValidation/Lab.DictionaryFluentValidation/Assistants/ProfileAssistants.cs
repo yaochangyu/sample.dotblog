@@ -1,0 +1,40 @@
+using System.Reflection;
+
+namespace Lab.DictionaryFluentValidation.Assistants;
+
+public class ProfileAssistants
+{
+    public static IEnumerable<string> GetFieldNames<T>()
+    {
+        var type = typeof(T);
+
+        var bindingFlags = BindingFlags.Public
+                           | BindingFlags.Static
+            ;
+        var results = new List<string>();
+        var fieldInfosInfos = type.GetFields(bindingFlags);
+        foreach (var fieldInfo in fieldInfosInfos)
+        {
+            results.Add(fieldInfo.GetValue(null).ToString());
+        }
+
+        return results;
+    }
+
+    public static Dictionary<string, string> GetFields<T>()
+    {
+        var type = typeof(T);
+
+        var bindingFlags = BindingFlags.Public
+                           | BindingFlags.Static
+            ;
+        var results = new Dictionary<string, string>();
+        var fieldInfosInfos = type.GetFields(bindingFlags);
+        foreach (var fieldInfo in fieldInfosInfos)
+        {
+            results.Add(fieldInfo.GetValue(null).ToString(), null);
+        }
+
+        return results;
+    }
+}
