@@ -4,9 +4,9 @@ namespace Lab.DictionaryFluentValidation.Fields;
 
 public class NameFieldNames
 {
-    public static readonly string FirstName = "firstName";
-    public static readonly string LastName = "lastName";
-    public static readonly string FullName = "fullName";
+    public const string FirstName = "firstName";
+    public const string LastName = "lastName";
+    public const string FullName = "fullName";
 
     private static readonly Lazy<IEnumerable<string>> s_fieldNameLazy =
         new(ProfileAssistants.GetFieldNames<NameFieldNames>);
