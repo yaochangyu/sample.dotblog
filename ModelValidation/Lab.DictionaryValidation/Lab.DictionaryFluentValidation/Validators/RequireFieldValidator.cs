@@ -2,10 +2,10 @@ using FluentValidation;
 
 namespace Lab.DictionaryFluentValidation.Validators;
 
-public class RequireFieldValidator : AbstractValidator<string>
+public class RequireFieldValidator : AbstractValidator<object>
 {
     public RequireFieldValidator()
     {
-        this.RuleFor(customer => customer).NotEmpty();
+        this.RuleFor(p => p).NotEmpty().NotNull();
     }
 }

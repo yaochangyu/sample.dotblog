@@ -6,6 +6,6 @@ public class EmailFieldValidator : AbstractValidator<string>
 {
     public EmailFieldValidator()
     {
-        this.RuleFor(customer => customer).EmailAddress();
+        this.RuleFor(p => p).EmailAddress();
     }
 }
