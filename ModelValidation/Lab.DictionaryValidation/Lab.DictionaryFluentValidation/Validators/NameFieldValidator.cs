@@ -28,7 +28,7 @@ public class NameFieldValidator : AbstractValidator<object>
             var value = propertyInfo.GetValue(instance);
             if (value == null)
             {
-                return isValid;
+                continue;
             }
 
             var propertyName = $"name.{propertyInfo.Name}";
