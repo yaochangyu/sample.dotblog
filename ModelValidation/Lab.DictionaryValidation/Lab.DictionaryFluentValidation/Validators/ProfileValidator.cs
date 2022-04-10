@@ -6,10 +6,15 @@ namespace Lab.DictionaryFluentValidation.Validators;
 
 public class ProfileValidator : AbstractValidator<Dictionary<string, object>>
 {
-    private static readonly Lazy<EmailFieldValidator> s_emailFieldValidatorLazy 
+    private static readonly Lazy<EmailFieldValidator> s_emailFieldValidatorLazy
         = new(() => new EmailFieldValidator());
-    private static readonly Lazy<NameFieldValidator> s_nameFieldValidatorLazy 
+
+    private static readonly Lazy<NameFieldValidator> s_nameFieldValidatorLazy
         = new(() => new NameFieldValidator());
+
+    private static readonly Lazy<BirthdayFieldValidator> s_birthdayFieldValidatorLazy
+        = new(() => new BirthdayFieldValidator());
+
     private static bool IsNotSupportFields(ValidationContext<Dictionary<string, object>> context)
     {
         var instances = context.InstanceToValidate;
@@ -105,6 +110,13 @@ public class ProfileValidator : AbstractValidator<Dictionary<string, object>>
                 {
                     RuleFor(p => p[fieldName])
                         .SetValidator(p => s_nameFieldValidatorLazy.Value)
+                        ;
+                    break;
+                }
+                case ProfileFieldNames.Birthday:
+                {
+                    RuleFor(p => p[fieldName])
+                        .SetValidator(p => s_birthdayFieldValidatorLazy.Value)
                         ;
                     break;
                 }

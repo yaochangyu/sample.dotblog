@@ -4,9 +4,9 @@ namespace Lab.DictionaryFluentValidation.Fields;
 
 public class BirthdayFieldNames
 {
-    public static readonly string Year = "year";
-    public static readonly string Month = "month";
-    public static readonly string Day = "day";
+    public const string Year = "year";
+    public const string Month = "month";
+    public const string Day = "day";
 
     private static readonly Lazy<IEnumerable<string>> s_fieldNameLazy =
         new(ProfileAssistants.GetFieldNames<BirthdayFieldNames>);
