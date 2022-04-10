@@ -8,19 +8,13 @@ public class GenderFieldValues
     public const string Female = "female";
     public const string NotAvailable = "notAvailable";
 
-    private static readonly Lazy<IEnumerable<string>> s_fieldNameLazy =
-        new(ProfileAssistants.GetFieldNames<GenderFieldValues>);
+    private static readonly Lazy<Dictionary<string, string>> s_fieldValuesLazy =
+        new(() => ProfileAssistants.GetFieldNames<GenderFieldValues>());
 
-    private static readonly Lazy<Dictionary<string, string>> s_fieldLazy =
-        new(ProfileAssistants.GetFields<GenderFieldValues>);
+    private static Dictionary<string, string> FieldValues => s_fieldValuesLazy.Value;
 
-    public static IEnumerable<string> GetFieldValues()
+    public static Dictionary<string, string> GetFieldValues()
     {
-        return s_fieldNameLazy.Value;
-    }
-
-    public static Dictionary<string, string> GetValues()
-    {
-        return s_fieldLazy.Value;
+        return FieldValues;
     }
 }
