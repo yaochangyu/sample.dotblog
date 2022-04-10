@@ -86,7 +86,7 @@ public class ProfileValidatorTests
         var actualError = validationResult.Errors.First();
         Assert.AreEqual("birthday", actualError.PropertyName);
         Assert.AreEqual("BirthdayFieldValidator", actualError.ErrorCode);
-        Assert.AreEqual("year:2000,month:2,day:31 is invalid date format", actualError.ErrorMessage);
+        Assert.AreEqual("year:2000,month:2,day:30 is invalid date format", actualError.ErrorMessage);
     }
 
     [TestMethod]
