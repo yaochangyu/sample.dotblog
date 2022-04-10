@@ -9,19 +9,13 @@ public class ProfileFieldNames
     public const string Birthday = "birthday";
     public const string ContactEmail = "contactEmail";
 
-    private static readonly Lazy<IEnumerable<string>> s_fieldNames =
-        new(ProfileAssistants.GetFieldNames<ProfileFieldNames>);
+    private static readonly Lazy<Dictionary<string, string>> s_fieldNamesLazy =
+        new(() => ProfileAssistants.GetFieldNames<ProfileFieldNames>());
 
-    private static Lazy<Dictionary<string, string>> s_fields =
-        new(ProfileAssistants.GetFields<ProfileFieldNames>);
+    private static Dictionary<string, string> FieldNames => s_fieldNamesLazy.Value;
 
-    public static IEnumerable<string> GetFieldNames()
+    public static Dictionary<string, string> GetFieldNames()
     {
-        return s_fieldNames.Value;
-    }
-
-    public static Dictionary<string, string> GetFields()
-    {
-        return s_fields.Value;
+        return FieldNames;
     }
 }

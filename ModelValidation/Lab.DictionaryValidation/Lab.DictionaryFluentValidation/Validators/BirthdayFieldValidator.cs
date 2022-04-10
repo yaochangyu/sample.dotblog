@@ -37,7 +37,7 @@ public class BirthdayFieldValidator : AbstractValidator<object>
             birthday.Add(propertyInfo.Name, Convert.ToInt32(value));
         }
 
-        var srcBirthdayFields = BirthdayFieldNames.GetFields();
+        var srcBirthdayFields = BirthdayFieldNames.GetFieldNames();
         isValid = HasRequireField(context, srcBirthdayFields, birthday);
         if (isValid == false)
         {

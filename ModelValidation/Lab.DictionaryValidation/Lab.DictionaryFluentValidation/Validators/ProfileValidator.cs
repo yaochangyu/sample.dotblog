@@ -31,13 +31,13 @@ public class ProfileValidator : AbstractValidator<Dictionary<string, object>>
             switch (fieldName)
             {
                 case ProfileFieldNames.Name:
-                    isNotSupports.Add(IsNotSupportNestFields(NameFieldNames.GetFields(), fieldValue, context));
+                    isNotSupports.Add(IsNotSupportNestFields(NameFieldNames.GetFieldNames(), fieldValue, context));
                     break;
                 case ProfileFieldNames.Birthday:
-                    isNotSupports.Add(IsNotSupportNestFields(BirthdayFieldNames.GetFields(), fieldValue, context));
+                    isNotSupports.Add(IsNotSupportNestFields(BirthdayFieldNames.GetFieldNames(), fieldValue, context));
                     break;
                 default:
-                    isNotSupports.Add(IsNotSupportFields(ProfileFieldNames.GetFields(), fieldName, context));
+                    isNotSupports.Add(IsNotSupportFields(ProfileFieldNames.GetFieldNames(), fieldName, context));
                     break;
             }
         }

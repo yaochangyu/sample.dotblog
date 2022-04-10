@@ -24,7 +24,7 @@ public class GenderFieldValidator : AbstractValidator<object>
             return isValid;
         }
 
-        var srcValues = GenderFieldValues.GetValues();
+        var srcValues = GenderFieldValues.GetFieldValues();
         var destValue = instance.ToString();
         if (srcValues.ContainsKey(destValue) == false)
         {

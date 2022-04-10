@@ -7,20 +7,14 @@ public class NameFieldNames
     public const string FirstName = "firstName";
     public const string LastName = "lastName";
     public const string FullName = "fullName";
+    
+    private static readonly Lazy<Dictionary<string, string>> s_fieldNamesLazy =
+        new(() => ProfileAssistants.GetFieldNames<NameFieldNames>());
 
-    private static readonly Lazy<IEnumerable<string>> s_fieldNameLazy =
-        new(ProfileAssistants.GetFieldNames<NameFieldNames>);
+    private static Dictionary<string, string> FieldNames => s_fieldNamesLazy.Value;
 
-    private static readonly Lazy<Dictionary<string, string>> s_fieldLazy =
-        new(ProfileAssistants.GetFields<NameFieldNames>);
-
-    public static IEnumerable<string> GetFieldNames()
+    public static Dictionary<string, string> GetFieldNames()
     {
-        return s_fieldNameLazy.Value;
-    }
-
-    public static Dictionary<string, string> GetFields()
-    {
-        return s_fieldLazy.Value;
+        return FieldNames;
     }
 }

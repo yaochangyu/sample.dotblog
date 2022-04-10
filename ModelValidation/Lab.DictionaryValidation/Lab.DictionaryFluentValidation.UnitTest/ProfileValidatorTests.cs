@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Lab.DictionaryFluentValidation.Fields;
 using Lab.DictionaryFluentValidation.Validators;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -8,6 +9,23 @@ namespace Lab.DictionaryFluentValidation.UnitTest;
 [TestClass]
 public class ProfileValidatorTests
 {
+    [TestMethod]
+    public void 通過驗證()
+    {
+        BirthdayFieldNames.GetFieldNames();
+        BirthdayFieldNames.GetFieldNames();
+        var data = new Dictionary<string, object>
+        {
+            { "name", new { firstName = "yao", lastName = "yu", fullName = "yao-chang.yu" } },
+            { "birthday", new { year = 2000, month = 2, day = 28 } },
+            { "contactEmail", "yao@aa.bb" },
+        };
+
+        var profileValidator = new ProfileValidator();
+        var validationResult = profileValidator.Validate(data);
+        Assert.AreEqual(true, validationResult.IsValid);
+    }
+
     [TestMethod]
     public void Key區分大小寫()
     {
@@ -134,6 +152,7 @@ public class ProfileValidatorTests
         Assert.AreEqual("EmailValidator", actualError.ErrorCode);
         Assert.AreEqual("'contactEmail' is not a valid email address.", actualError.ErrorMessage);
     }
+
     [TestMethod]
     public void 性別格式錯誤()
     {
@@ -149,5 +168,4 @@ public class ProfileValidatorTests
         Assert.AreEqual("GenderFieldValidator", actualError.ErrorCode);
         Assert.AreEqual("'公的' is invalid value.", actualError.ErrorMessage);
     }
-
 }
