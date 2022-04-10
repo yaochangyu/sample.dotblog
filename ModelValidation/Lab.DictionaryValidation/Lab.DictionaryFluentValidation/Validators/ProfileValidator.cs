@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using FluentValidation;
 using FluentValidation.Results;
 using Lab.DictionaryFluentValidation.Fields;
@@ -90,6 +91,13 @@ public class ProfileValidator : AbstractValidator<Dictionary<string, object>>
         }
 
         var instances = context.InstanceToValidate;
+        this.SetValidateRule(instances);
+
+        return true;
+    }
+
+    private void SetValidateRule(Dictionary<string, object> instances)
+    {
         foreach (var item in instances)
         {
             var fieldName = item.Key;
@@ -98,41 +106,38 @@ public class ProfileValidator : AbstractValidator<Dictionary<string, object>>
             {
                 continue;
             }
-
+            
             switch (fieldName)
             {
                 case ProfileFieldNames.ContactEmail:
                 {
-                    RuleFor(p => p[fieldName])
-                        .SetValidator(p => s_emailFieldValidatorLazy.Value)
-                        ;
-
+                   this.RuleFor(p => p[fieldName])
+                        .SetValidator(p => s_emailFieldValidatorLazy.Value);
+            
                     break;
                 }
                 case ProfileFieldNames.Name:
                 {
-                    RuleFor(p => p[fieldName])
+                    this.RuleFor(p => p[fieldName])
                         .SetValidator(p => s_nameFieldValidatorLazy.Value)
                         ;
                     break;
                 }
                 case ProfileFieldNames.Birthday:
                 {
-                    RuleFor(p => p[fieldName])
+                    this.RuleFor(p => p[fieldName])
                         .SetValidator(p => s_birthdayFieldValidatorLazy.Value)
                         ;
                     break;
                 }
                 case ProfileFieldNames.Gender:
                 {
-                    RuleFor(p => p[fieldName])
+                    this.RuleFor(p => p[fieldName])
                         .SetValidator(p => s_genderFieldValidatorLazy.Value)
                         ;
                     break;
                 }
             }
         }
-
-        return true;
     }
 }

@@ -8,7 +8,6 @@ public class ProfileFieldNames
     public const string Gender = "gender";
     public const string Birthday = "birthday";
     public const string ContactEmail = "contactEmail";
-    public const string Address = "address";
 
     private static readonly Lazy<IEnumerable<string>> s_fieldNames =
         new(ProfileAssistants.GetFieldNames<ProfileFieldNames>);
