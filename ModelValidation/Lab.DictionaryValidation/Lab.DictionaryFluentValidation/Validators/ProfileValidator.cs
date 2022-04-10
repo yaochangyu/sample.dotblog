@@ -15,6 +15,9 @@ public class ProfileValidator : AbstractValidator<Dictionary<string, object>>
     private static readonly Lazy<BirthdayFieldValidator> s_birthdayFieldValidatorLazy
         = new(() => new BirthdayFieldValidator());
 
+    private static readonly Lazy<GenderFieldValidator> s_genderFieldValidatorLazy
+        = new(() => new GenderFieldValidator());
+
     private static bool IsNotSupportFields(ValidationContext<Dictionary<string, object>> context)
     {
         var instances = context.InstanceToValidate;
@@ -117,6 +120,13 @@ public class ProfileValidator : AbstractValidator<Dictionary<string, object>>
                 {
                     RuleFor(p => p[fieldName])
                         .SetValidator(p => s_birthdayFieldValidatorLazy.Value)
+                        ;
+                    break;
+                }
+                case ProfileFieldNames.Gender:
+                {
+                    RuleFor(p => p[fieldName])
+                        .SetValidator(p => s_genderFieldValidatorLazy.Value)
                         ;
                     break;
                 }

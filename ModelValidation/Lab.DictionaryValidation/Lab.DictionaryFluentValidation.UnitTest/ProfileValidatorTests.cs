@@ -134,4 +134,20 @@ public class ProfileValidatorTests
         Assert.AreEqual("EmailValidator", actualError.ErrorCode);
         Assert.AreEqual("'contactEmail' is not a valid email address.", actualError.ErrorMessage);
     }
+    [TestMethod]
+    public void 性別格式錯誤()
+    {
+        var data = new Dictionary<string, object>
+        {
+            { "gender", "公的" },
+        };
+        var profileValidator = new ProfileValidator();
+        var validationResult = profileValidator.Validate(data);
+        Assert.AreEqual(false, validationResult.IsValid);
+        var actualError = validationResult.Errors.First();
+        Assert.AreEqual("gender", actualError.PropertyName);
+        Assert.AreEqual("GenderFieldValidator", actualError.ErrorCode);
+        Assert.AreEqual("'公的' is invalid value.", actualError.ErrorMessage);
+    }
+
 }
