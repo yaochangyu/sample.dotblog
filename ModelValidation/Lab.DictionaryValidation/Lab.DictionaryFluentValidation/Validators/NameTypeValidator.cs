@@ -4,8 +4,15 @@ using Lab.DictionaryFluentValidation.Fields;
 
 namespace Lab.DictionaryFluentValidation.Validators;
 
-public class NameFieldValidator : AbstractValidator<object>
+public class NameTypeValidator : AbstractValidator<object>
 {
+    private readonly string _propertyName;
+
+    public NameTypeValidator(string propertyName)
+    {
+        this._propertyName = propertyName;
+    }
+
     /// <summary>
     ///     return true 繼續往下驗證
     ///     https://docs.fluentvalidation.net/en/latest/advanced.html?highlight=PreValidate#prevalidate
@@ -31,14 +38,14 @@ public class NameFieldValidator : AbstractValidator<object>
                 continue;
             }
 
-            var propertyName = $"name.{propertyInfo.Name}";
+            var propertyName = $"{this._propertyName}.{propertyInfo.Name}";
             switch (propertyInfo.Name)
             {
-                case NameFieldNames.FirstName:
+                case NameTypeNames.FirstName:
                     break;
-                case NameFieldNames.LastName:
+                case NameTypeNames.LastName:
                     break;
-                case NameFieldNames.FullName:
+                case NameTypeNames.FullName:
                     this.RuleFor(p => value)
                         .NotEmpty()
                         .WithName(propertyName)
