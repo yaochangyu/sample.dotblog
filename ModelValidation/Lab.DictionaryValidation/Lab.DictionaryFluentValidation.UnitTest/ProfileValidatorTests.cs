@@ -12,8 +12,8 @@ public class ProfileValidatorTests
     [TestMethod]
     public void 通過驗證()
     {
-        BirthdayFieldNames.GetFieldNames();
-        BirthdayFieldNames.GetFieldNames();
+        BirthdayTypeNames.GetFieldNames();
+        BirthdayTypeNames.GetFieldNames();
         var data = new Dictionary<string, object>
         {
             { "name", new { firstName = "yao", lastName = "yu", fullName = "yao-chang.yu" } },
@@ -21,7 +21,7 @@ public class ProfileValidatorTests
             { "contactEmail", "yao@aa.bb" },
         };
 
-        var profileValidator = new ProfileValidator();
+        var profileValidator = new ProfileTypeValidator();
         var validationResult = profileValidator.Validate(data);
         Assert.AreEqual(true, validationResult.IsValid);
     }
@@ -34,7 +34,7 @@ public class ProfileValidatorTests
             { "Name", null },
         };
 
-        var profileValidator = new ProfileValidator();
+        var profileValidator = new ProfileTypeValidator();
         var validationResult = profileValidator.Validate(data);
         Assert.AreEqual(false, validationResult.IsValid);
         var actualError = validationResult.Errors.First();
@@ -50,7 +50,7 @@ public class ProfileValidatorTests
         {
             { "name", new { firstName = "yao", lastName = "", fullName = "" } },
         };
-        var profileValidator = new ProfileValidator();
+        var profileValidator = new ProfileTypeValidator();
         var validationResult = profileValidator.Validate(data);
 
         // Assert.AreEqual(false, validationResult.IsValid);
@@ -68,7 +68,7 @@ public class ProfileValidatorTests
             { "Hi", null },
         };
 
-        var profileValidator = new ProfileValidator();
+        var profileValidator = new ProfileTypeValidator();
         var validationResult = profileValidator.Validate(data);
         Assert.AreEqual(false, validationResult.IsValid);
         var actualError = validationResult.Errors.First();
@@ -85,7 +85,7 @@ public class ProfileValidatorTests
             { "name", null },
         };
 
-        var profileValidator = new ProfileValidator();
+        var profileValidator = new ProfileTypeValidator();
         var validationResult = profileValidator.Validate(data);
         Assert.AreEqual(true, validationResult.IsValid);
     }
@@ -98,12 +98,12 @@ public class ProfileValidatorTests
             { "birthday", new { year = 2000, month = 2, day = 30 } },
         };
 
-        var profileValidator = new ProfileValidator();
+        var profileValidator = new ProfileTypeValidator();
         var validationResult = profileValidator.Validate(data);
         Assert.AreEqual(false, validationResult.IsValid);
         var actualError = validationResult.Errors.First();
         Assert.AreEqual("birthday", actualError.PropertyName);
-        Assert.AreEqual("BirthdayFieldValidator", actualError.ErrorCode);
+        Assert.AreEqual(nameof(BirthdayTypeValidator), actualError.ErrorCode);
         Assert.AreEqual("year:2000,month:2,day:30 is invalid date format", actualError.ErrorMessage);
     }
 
@@ -115,12 +115,12 @@ public class ProfileValidatorTests
             { "birthday", new { month = 2, day = 30 } },
         };
 
-        var profileValidator = new ProfileValidator();
+        var profileValidator = new ProfileTypeValidator();
         var validationResult = profileValidator.Validate(data);
         Assert.AreEqual(false, validationResult.IsValid);
         var actualError = validationResult.Errors.First();
         Assert.AreEqual("birthday.year", actualError.PropertyName);
-        Assert.AreEqual("BirthdayFieldValidator", actualError.ErrorCode);
+        Assert.AreEqual(nameof(BirthdayTypeValidator), actualError.ErrorCode);
         Assert.AreEqual("'birthday.year' must not be empty.", actualError.ErrorMessage);
     }
 
@@ -132,7 +132,7 @@ public class ProfileValidatorTests
             { "birthday", null },
         };
 
-        var profileValidator = new ProfileValidator();
+        var profileValidator = new ProfileTypeValidator();
         var validationResult = profileValidator.Validate(data);
         Assert.AreEqual(true, validationResult.IsValid);
     }
@@ -144,12 +144,12 @@ public class ProfileValidatorTests
         {
             { "contactEmail", "yao" },
         };
-        var profileValidator = new ProfileValidator();
+        var profileValidator = new ProfileTypeValidator();
         var validationResult = profileValidator.Validate(data);
         Assert.AreEqual(false, validationResult.IsValid);
         var actualError = validationResult.Errors.First();
         Assert.AreEqual("contactEmail", actualError.PropertyName);
-        Assert.AreEqual("EmailValidator", actualError.ErrorCode);
+        Assert.AreEqual(nameof(EmailTypeValidator), actualError.ErrorCode);
         Assert.AreEqual("'contactEmail' is not a valid email address.", actualError.ErrorMessage);
     }
 
@@ -160,12 +160,12 @@ public class ProfileValidatorTests
         {
             { "gender", "公的" },
         };
-        var profileValidator = new ProfileValidator();
+        var profileValidator = new ProfileTypeValidator();
         var validationResult = profileValidator.Validate(data);
         Assert.AreEqual(false, validationResult.IsValid);
         var actualError = validationResult.Errors.First();
         Assert.AreEqual("gender", actualError.PropertyName);
-        Assert.AreEqual("GenderFieldValidator", actualError.ErrorCode);
+        Assert.AreEqual(nameof(GenderTypeValidator), actualError.ErrorCode);
         Assert.AreEqual("'公的' is invalid value.", actualError.ErrorMessage);
     }
 }

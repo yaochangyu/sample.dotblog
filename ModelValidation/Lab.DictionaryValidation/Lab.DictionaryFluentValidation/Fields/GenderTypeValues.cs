@@ -2,14 +2,14 @@ using Lab.DictionaryFluentValidation.Assistants;
 
 namespace Lab.DictionaryFluentValidation.Fields;
 
-public class GenderFieldValues
+public class GenderTypeValues
 {
     public const string Male = "male";
     public const string Female = "female";
     public const string NotAvailable = "notAvailable";
 
     private static readonly Lazy<Dictionary<string, string>> s_fieldValuesLazy =
-        new(() => ProfileAssistants.GetFieldNames<GenderFieldValues>());
+        new(() => ProfileAssistants.GetFieldNames<GenderTypeValues>());
 
     private static Dictionary<string, string> FieldValues => s_fieldValuesLazy.Value;
 

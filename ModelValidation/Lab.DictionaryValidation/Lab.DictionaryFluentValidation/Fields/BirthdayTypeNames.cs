@@ -2,15 +2,14 @@ using Lab.DictionaryFluentValidation.Assistants;
 
 namespace Lab.DictionaryFluentValidation.Fields;
 
-public class ProfileFieldNames
+public class BirthdayTypeNames
 {
-    public const string Name = "name";
-    public const string Gender = "gender";
-    public const string Birthday = "birthday";
-    public const string ContactEmail = "contactEmail";
+    public const string Year = "year";
+    public const string Month = "month";
+    public const string Day = "day";
 
     private static readonly Lazy<Dictionary<string, string>> s_fieldNamesLazy =
-        new(() => ProfileAssistants.GetFieldNames<ProfileFieldNames>());
+        new(() => ProfileAssistants.GetFieldNames<BirthdayTypeNames>());
 
     private static Dictionary<string, string> FieldNames => s_fieldNamesLazy.Value;
 
