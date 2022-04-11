@@ -4,9 +4,15 @@ using Lab.DictionaryFluentValidation.Fields;
 
 namespace Lab.DictionaryFluentValidation.Validators;
 
-public class GenderFieldValidator : AbstractValidator<object>
+public class GenderTypeValidator : AbstractValidator<object>
 {
-    private const string ErrorCode = nameof(GenderFieldValidator);
+    private const string ErrorCode = nameof(GenderTypeValidator);
+    private readonly string _propertyName;
+
+    public GenderTypeValidator(string propertyName)
+    {
+        this._propertyName = propertyName;
+    }
 
     /// <summary>
     ///     return true 繼續往下驗證
@@ -24,12 +30,12 @@ public class GenderFieldValidator : AbstractValidator<object>
             return isValid;
         }
 
-        var srcValues = GenderFieldValues.GetFieldValues();
+        var srcValues = GenderTypeValues.GetFieldValues();
         var destValue = instance.ToString();
         if (srcValues.ContainsKey(destValue) == false)
         {
-            var validationFailure = new ValidationFailure("gender",
-                                                $"'{destValue}' is invalid value.")
+            var validationFailure = new ValidationFailure(this._propertyName,
+                                                          $"'{destValue}' is invalid value.")
             {
                 ErrorCode = ErrorCode
             };

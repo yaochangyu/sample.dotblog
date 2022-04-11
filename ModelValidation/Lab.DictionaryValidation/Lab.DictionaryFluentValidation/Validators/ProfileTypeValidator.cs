@@ -1,23 +1,18 @@
-using System.Linq.Expressions;
 using FluentValidation;
 using FluentValidation.Results;
 using Lab.DictionaryFluentValidation.Fields;
 
 namespace Lab.DictionaryFluentValidation.Validators;
 
-public class ProfileValidator : AbstractValidator<Dictionary<string, object>>
+public class ProfileTypeValidator : AbstractValidator<Dictionary<string, object>>
 {
-    private static readonly Lazy<EmailFieldValidator> s_emailFieldValidatorLazy
-        = new(() => new EmailFieldValidator());
+    private static EmailTypeValidator EmailTypeValidator => new(ProfileTypeNames.ContactEmail);
 
-    private static readonly Lazy<NameFieldValidator> s_nameFieldValidatorLazy
-        = new(() => new NameFieldValidator());
+    private static NameTypeValidator NameTypeValidator => new(ProfileTypeNames.Name);
 
-    private static readonly Lazy<BirthdayFieldValidator> s_birthdayFieldValidatorLazy
-        = new(() => new BirthdayFieldValidator());
+    private static BirthdayTypeValidator BirthdayTypeValidator => new(ProfileTypeNames.Birthday);
 
-    private static readonly Lazy<GenderFieldValidator> s_genderFieldValidatorLazy
-        = new(() => new GenderFieldValidator());
+    private static GenderTypeValidator GenderTypeValidator => new(ProfileTypeNames.Gender);
 
     private static bool IsNotSupportFields(ValidationContext<Dictionary<string, object>> context)
     {
@@ -30,14 +25,14 @@ public class ProfileValidator : AbstractValidator<Dictionary<string, object>>
 
             switch (fieldName)
             {
-                case ProfileFieldNames.Name:
-                    isNotSupports.Add(IsNotSupportNestFields(NameFieldNames.GetFieldNames(), fieldValue, context));
+                case ProfileTypeNames.Name:
+                    isNotSupports.Add(IsNotSupportNestFields(NameTypeNames.GetFieldNames(), fieldValue, context));
                     break;
-                case ProfileFieldNames.Birthday:
-                    isNotSupports.Add(IsNotSupportNestFields(BirthdayFieldNames.GetFieldNames(), fieldValue, context));
+                case ProfileTypeNames.Birthday:
+                    isNotSupports.Add(IsNotSupportNestFields(BirthdayTypeNames.GetFieldNames(), fieldValue, context));
                     break;
                 default:
-                    isNotSupports.Add(IsNotSupportFields(ProfileFieldNames.GetFieldNames(), fieldName, context));
+                    isNotSupports.Add(IsNotSupportFields(ProfileTypeNames.GetFieldNames(), fieldName, context));
                     break;
             }
         }
@@ -106,34 +101,36 @@ public class ProfileValidator : AbstractValidator<Dictionary<string, object>>
             {
                 continue;
             }
-            
+
             switch (fieldName)
             {
-                case ProfileFieldNames.ContactEmail:
+                case ProfileTypeNames.ContactEmail:
                 {
-                   this.RuleFor(p => p[fieldName])
-                        .SetValidator(p => s_emailFieldValidatorLazy.Value);
-            
+                    var PropertyName = fieldName;
+                    this.RuleFor(p => p[fieldName])
+                        .SetValidator(p => EmailTypeValidator)
+                        ;
+
                     break;
                 }
-                case ProfileFieldNames.Name:
+                case ProfileTypeNames.Name:
                 {
                     this.RuleFor(p => p[fieldName])
-                        .SetValidator(p => s_nameFieldValidatorLazy.Value)
+                        .SetValidator(p => NameTypeValidator)
                         ;
                     break;
                 }
-                case ProfileFieldNames.Birthday:
+                case ProfileTypeNames.Birthday:
                 {
                     this.RuleFor(p => p[fieldName])
-                        .SetValidator(p => s_birthdayFieldValidatorLazy.Value)
+                        .SetValidator(p => BirthdayTypeValidator)
                         ;
                     break;
                 }
-                case ProfileFieldNames.Gender:
+                case ProfileTypeNames.Gender:
                 {
                     this.RuleFor(p => p[fieldName])
-                        .SetValidator(p => s_genderFieldValidatorLazy.Value)
+                        .SetValidator(p => GenderTypeValidator)
                         ;
                     break;
                 }
