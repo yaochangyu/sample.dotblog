@@ -6,13 +6,25 @@ namespace Lab.DictionaryFluentValidation.Validators;
 
 public class ProfileTypeValidator : AbstractValidator<Dictionary<string, object>>
 {
-    private static EmailTypeValidator EmailTypeValidator => new(ProfileTypeNames.ContactEmail);
+    private static readonly Lazy<EmailTypeValidator> s_emailTypeValidatorLazy =
+        new(() => new EmailTypeValidator(ProfileTypeNames.ContactEmail));
 
-    private static NameTypeValidator NameTypeValidator => new(ProfileTypeNames.Name);
+    private static readonly Lazy<NameTypeValidator> s_nameTypeValidator =
+        new Lazy<NameTypeValidator>(() => new NameTypeValidator(ProfileTypeNames.Name));
 
-    private static BirthdayTypeValidator BirthdayTypeValidator => new(ProfileTypeNames.Birthday);
+    private static readonly Lazy<BirthdayTypeValidator> s_birthdayTypeValidatorLazy =
+        new(() => new BirthdayTypeValidator(ProfileTypeNames.Birthday));
 
-    private static GenderTypeValidator GenderTypeValidator => new(ProfileTypeNames.Gender);
+    private static readonly Lazy<GenderTypeValidator> s_genderTypeValidatorLazy =
+        new(() => new GenderTypeValidator(ProfileTypeNames.Gender));
+
+    private static EmailTypeValidator EmailTypeValidator => s_emailTypeValidatorLazy.Value;
+
+    private static NameTypeValidator NameTypeValidator => s_nameTypeValidator.Value;
+
+    private static BirthdayTypeValidator BirthdayTypeValidator => s_birthdayTypeValidatorLazy.Value;
+
+    private static GenderTypeValidator GenderTypeValidator => s_genderTypeValidatorLazy.Value;
 
     private static bool IsNotSupportFields(ValidationContext<Dictionary<string, object>> context)
     {
@@ -44,18 +56,18 @@ public class ProfileTypeValidator : AbstractValidator<Dictionary<string, object>
                                            string destFieldName,
                                            ValidationContext<Dictionary<string, object>> context)
     {
-        var isSNotSupport = sourceFields.ContainsKey(destFieldName) == false;
-        if (isSNotSupport)
+        var isNotSupport = sourceFields.ContainsKey(destFieldName) == false;
+        if (isNotSupport)
         {
             var failure = new ValidationFailure(destFieldName,
-                                                $"not support column '{destFieldName}'")
+                                                $"'{destFieldName}' column not support")
             {
                 ErrorCode = "NotSupportValidator",
             };
             context.AddFailure(failure);
         }
 
-        return isSNotSupport;
+        return isNotSupport;
     }
 
     private static bool IsNotSupportNestFields(Dictionary<string, string> sourceFields,
@@ -106,7 +118,6 @@ public class ProfileTypeValidator : AbstractValidator<Dictionary<string, object>
             {
                 case ProfileTypeNames.ContactEmail:
                 {
-                    var PropertyName = fieldName;
                     this.RuleFor(p => p[fieldName])
                         .SetValidator(p => EmailTypeValidator)
                         ;
