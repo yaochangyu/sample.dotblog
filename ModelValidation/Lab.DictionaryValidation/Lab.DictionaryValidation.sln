@@ -4,6 +4,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.DictionaryFluentValidat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.DictionaryFluentValidation.UnitTest", "Lab.DictionaryFluentValidation.UnitTest\Lab.DictionaryFluentValidation.UnitTest.csproj", "{3C5718DF-EA0D-472B-8067-B5C736923125}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.DictionaryFluentValidation2", "Lab.DictionaryFluentValidation2\Lab.DictionaryFluentValidation2.csproj", "{98F42EDB-CAB8-4D61-9238-6A8F41148F86}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.DictionaryFluentValidation2.UnitTest", "Lab.DictionaryFluentValidation2.UnitTest\Lab.DictionaryFluentValidation2.UnitTest.csproj", "{BB09B9B1-BC5A-4D09-B365-9AAE57D96D7B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +22,13 @@ Global
 		{3C5718DF-EA0D-472B-8067-B5C736923125}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3C5718DF-EA0D-472B-8067-B5C736923125}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3C5718DF-EA0D-472B-8067-B5C736923125}.Release|Any CPU.Build.0 = Release|Any CPU
+		{98F42EDB-CAB8-4D61-9238-6A8F41148F86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{98F42EDB-CAB8-4D61-9238-6A8F41148F86}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{98F42EDB-CAB8-4D61-9238-6A8F41148F86}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{98F42EDB-CAB8-4D61-9238-6A8F41148F86}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB09B9B1-BC5A-4D09-B365-9AAE57D96D7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB09B9B1-BC5A-4D09-B365-9AAE57D96D7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB09B9B1-BC5A-4D09-B365-9AAE57D96D7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB09B9B1-BC5A-4D09-B365-9AAE57D96D7B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
