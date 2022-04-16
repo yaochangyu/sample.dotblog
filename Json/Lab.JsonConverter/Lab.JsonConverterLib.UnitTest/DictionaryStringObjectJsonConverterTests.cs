@@ -17,31 +17,13 @@ public class DictionaryStringObjectJsonConverterTests
         {
             Converters = { new DictionaryStringObjectJsonConverter() }
         };
-        var expected = new Dictionary<string, object>
-        {
-            ["anonymousType"] = new { Prop = 123 },
-            ["model"] = new Model { Age = 19, Name = "小章" },
-            ["null"] = null!,
-            ["dateTimeOffset"] = DateTimeOffset.Now,
-            ["long"] = (long)255,
-            ["decimal"] = (decimal)3.1416,
-            ["guid"] = Guid.NewGuid(),
-            ["string"] = "字串",
-            ["decimalArray"] = new[] { 1, (decimal)2.1 },
-        };
+        var expected = CreateDictionary();
         var json = JsonSerializer.Serialize(expected);
 
         using var jsonDoc = json.ToJsonDocument();
         var actual = jsonDoc.To<Dictionary<string, object>>(options);
 
-        Assert.AreEqual(expected["dateTimeOffset"], actual["dateTimeOffset"]);
-        Assert.AreEqual(expected["string"], actual["string"]);
-        Assert.AreEqual(expected["long"], actual["long"]);
-        Assert.AreEqual(expected["decimal"], actual["decimal"]);
-        Assert.AreEqual(expected["null"], actual["null"]);
-
-        AssertAnonymousType(actual["anonymousType"] as Dictionary<string, object>);
-        AssertDecimalArray(actual["decimalArray"] as List<object>);
+        AssertThat(expected, actual);
     }
 
     [TestMethod]
@@ -51,30 +33,11 @@ public class DictionaryStringObjectJsonConverterTests
         {
             Converters = { new DictionaryStringObjectJsonConverter() }
         };
-        var expected = new Dictionary<string, object>
-        {
-            ["anonymousType"] = new { Prop = 123 },
-            ["model"] = new Model { Age = 19, Name = "小章" },
-            ["null"] = null!,
-            ["dateTimeOffset"] = DateTimeOffset.Now,
-            ["long"] = (long)255,
-            ["decimal"] = (decimal)3.1416,
-            ["guid"] = Guid.NewGuid(),
-            ["string"] = "字串",
-            ["decimalArray"] = new[] { 1, (decimal)2.1 },
-        };
+        var expected = CreateDictionary();
 
         using var jsonDoc = expected.ToJsonDocument();
         var actual = jsonDoc.To<Dictionary<string, object>>(options);
-
-        Assert.AreEqual(expected["dateTimeOffset"], actual["dateTimeOffset"]);
-        Assert.AreEqual(expected["string"], actual["string"]);
-        Assert.AreEqual(expected["long"], actual["long"]);
-        Assert.AreEqual(expected["decimal"], actual["decimal"]);
-        Assert.AreEqual(expected["null"], actual["null"]);
-
-        AssertAnonymousType(actual["anonymousType"] as Dictionary<string, object>);
-        AssertDecimalArray(actual["decimalArray"] as List<object>);
+        AssertThat(expected, actual);
     }
 
     [TestMethod]
@@ -84,31 +47,13 @@ public class DictionaryStringObjectJsonConverterTests
         {
             Converters = { new DictionaryStringObjectJsonConverter() }
         };
-        var expected = new Dictionary<string, object>
-        {
-            ["anonymousType"] = new { Prop = 123 },
-            ["model"] = new Model { Age = 19, Name = "小章" },
-            ["null"] = null!,
-            ["dateTimeOffset"] = DateTimeOffset.Now,
-            ["long"] = (long)255,
-            ["decimal"] = (decimal)3.1416,
-            ["guid"] = Guid.NewGuid(),
-            ["string"] = "字串",
-            ["decimalArray"] = new[] { 1, (decimal)2.1 },
-        };
+        var expected = CreateDictionary();
         var json = JsonSerializer.Serialize(expected);
 
         var jsonObject = json.ToJsonNode();
         var actual = jsonObject.To<Dictionary<string, object>>(options);
 
-        Assert.AreEqual(expected["dateTimeOffset"], actual["dateTimeOffset"]);
-        Assert.AreEqual(expected["string"], actual["string"]);
-        Assert.AreEqual(expected["long"], actual["long"]);
-        Assert.AreEqual(expected["decimal"], actual["decimal"]);
-        Assert.AreEqual(expected["null"], actual["null"]);
-
-        AssertAnonymousType(actual["anonymousType"] as Dictionary<string, object>);
-        AssertDecimalArray(actual["decimalArray"] as List<object>);
+        AssertThat(expected, actual);
     }
 
     [TestMethod]
@@ -119,32 +64,13 @@ public class DictionaryStringObjectJsonConverterTests
             Converters = { new DictionaryStringObjectJsonConverter() }
         };
 
-        var expected = new Dictionary<string, object>
-        {
-            ["anonymousType"] = new { Prop = 123 },
-            ["model"] = new Model { Age = 19, Name = "小章" },
-            ["null"] = null!,
-            ["dateTimeOffset"] = DateTimeOffset.Now,
-            ["long"] = (long)255,
-            ["decimal"] = (decimal)3.1416,
-            ["guid"] = Guid.NewGuid(),
-            ["string"] = "字串",
-            ["decimalArray"] = new[] { 1, (decimal)2.1 },
-        };
+        var expected = CreateDictionary();
 
         var json = JsonSerializer.Serialize(expected, options);
         var jsonMemory = new MemoryStream(Encoding.UTF8.GetBytes(json));
 
         var actual = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonMemory, options);
-
-        Assert.AreEqual(expected["dateTimeOffset"], actual["dateTimeOffset"]);
-        Assert.AreEqual(expected["string"], actual["string"]);
-        Assert.AreEqual(expected["long"], actual["long"]);
-        Assert.AreEqual(expected["decimal"], actual["decimal"]);
-        Assert.AreEqual(expected["null"], actual["null"]);
-
-        AssertAnonymousType(actual["anonymousType"] as Dictionary<string, object>);
-        AssertDecimalArray(actual["decimalArray"] as List<object>);
+        AssertThat(expected, actual);
     }
 
     [TestMethod]
@@ -154,30 +80,11 @@ public class DictionaryStringObjectJsonConverterTests
         {
             Converters = { new DictionaryStringObjectJsonConverter() }
         };
-        var expected = new Dictionary<string, object>
-        {
-            ["anonymousType"] = new { Prop = 123 },
-            ["model"] = new Model { Age = 19, Name = "小章" },
-            ["null"] = null!,
-            ["dateTimeOffset"] = DateTimeOffset.Now,
-            ["long"] = (long)255,
-            ["decimal"] = (decimal)3.1416,
-            ["guid"] = Guid.NewGuid(),
-            ["string"] = "字串",
-            ["decimalArray"] = new[] { 1, (decimal)2.1 },
-        };
+        var expected = CreateDictionary();
 
         var json = JsonSerializer.Serialize(expected, options);
         var actual = JsonSerializer.Deserialize<Dictionary<string, object>>(json, options);
-
-        Assert.AreEqual(expected["dateTimeOffset"], actual["dateTimeOffset"]);
-        Assert.AreEqual(expected["string"], actual["string"]);
-        Assert.AreEqual(expected["long"], actual["long"]);
-        Assert.AreEqual(expected["decimal"], actual["decimal"]);
-        Assert.AreEqual(expected["null"], actual["null"]);
-
-        AssertAnonymousType(actual["anonymousType"] as Dictionary<string, object>);
-        AssertDecimalArray(actual["decimalArray"] as List<object>);
+        AssertThat(expected, actual);
     }
 
     [TestMethod]
@@ -223,6 +130,35 @@ public class DictionaryStringObjectJsonConverterTests
 
         Assert.AreEqual(expected[0], actual[0]);
         Assert.AreEqual(expected[1], actual[1]);
+    }
+
+    private static void AssertThat(Dictionary<string, object> expected, Dictionary<string, object> actual)
+    {
+        Assert.AreEqual(expected["dateTimeOffset"], actual["dateTimeOffset"]);
+        Assert.AreEqual(expected["string"], actual["string"]);
+        Assert.AreEqual(expected["long"], actual["long"]);
+        Assert.AreEqual(expected["decimal"], actual["decimal"]);
+        Assert.AreEqual(expected["null"], actual["null"]);
+
+        AssertAnonymousType(actual["anonymousType"] as Dictionary<string, object>);
+        AssertDecimalArray(actual["decimalArray"] as List<object>);
+    }
+
+    private static Dictionary<string, object> CreateDictionary()
+    {
+        var expected = new Dictionary<string, object>
+        {
+            ["anonymousType"] = new { Prop = 123 },
+            ["model"] = new Model { Age = 19, Name = "小章" },
+            ["null"] = null!,
+            ["dateTimeOffset"] = DateTimeOffset.Now,
+            ["long"] = (long)255,
+            ["decimal"] = (decimal)3.1416,
+            ["guid"] = Guid.NewGuid(),
+            ["string"] = "字串",
+            ["decimalArray"] = new[] { 1, (decimal)2.1 },
+        };
+        return expected;
     }
 
     private class Model
