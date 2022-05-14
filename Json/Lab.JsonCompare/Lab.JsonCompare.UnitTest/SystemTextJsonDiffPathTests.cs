@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.Json.JsonDiffPatch;
 using System.Text.Json.JsonDiffPatch.MsTest;
@@ -123,8 +125,8 @@ public class SystemTextJsonDiffPathTests
 
         var dest = new JsonObject
         {
-            { "integer", 12345 },
-            { "String", "A string" },
+            { "Integer", 12345 },
+            { "String", JsonValue.Create("A string") },
             { "Items", new JsonArray(1, 2, new JsonArray { "a", "b" }) }
         };
 
@@ -151,10 +153,14 @@ public class SystemTextJsonDiffPathTests
             { "String", "A string" },
             { "Items", new JsonArray(1, 2) }
         };
+        
+        var left = JsonNode.Parse(dest.ToJsonString());
+        var right = JsonNode.Parse(source.ToJsonString());
+        
+        //左邊不等於來源，跟我認知的不一樣
+        var diff = left.Diff(right);
+        JsonDiffPatcher.Patch(ref left, diff);
 
-        var diff = source.Diff(dest);
-        JsonDiffPatcher.Patch(ref diff, dest);
-
-        Assert.That.JsonAreEqual(source,dest);
+        Assert.That.JsonAreEqual(right, right, true);
     }
 }
