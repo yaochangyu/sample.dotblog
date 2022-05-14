@@ -8,7 +8,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Lab.JsonCompare.UnitTest;
 
 [TestClass]
-public class SystemTextJsonTests
+public class SystemTextJsonDiffPathTests
 {
     [TestMethod]
     public void 比對兩個一樣的Json字串_via_JsonDiffPatcher()
