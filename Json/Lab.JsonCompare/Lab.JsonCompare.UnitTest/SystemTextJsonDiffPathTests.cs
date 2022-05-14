@@ -13,22 +13,22 @@ public class SystemTextJsonDiffPathTests
     [TestMethod]
     public void 比對兩個一樣的Json字串_via_JsonDiffPatcher()
     {
-        var o1 = new JsonObject
+        var source = new JsonObject
         {
             { "Integer", 12345 },
             { "String", "A string" },
             { "Items", new JsonArray(1, 2) }
         };
 
-        var o2 = new JsonObject
+        var dest = new JsonObject
         {
             { "Integer", 12345 },
             { "String", "A string" },
             { "Items", new JsonArray(1, 2) }
         };
 
-        var left = o1.ToJsonString();
-        var right = o2.ToJsonString();
+        var left = source.ToJsonString();
+        var right = dest.ToJsonString();
         var diff = JsonDiffPatcher.Diff(left, right);
         if (diff != null)
         {
@@ -41,21 +41,21 @@ public class SystemTextJsonDiffPathTests
     [TestMethod]
     public void 比對兩個不一樣的JsonObject()
     {
-        var o1 = new JsonObject
+        var source = new JsonObject
         {
             { "Integer", 12345 },
             { "String", JsonValue.Create("A string") },
             { "Items", new JsonArray(1, 2) }
         };
 
-        var o2 = new JsonObject
+        var dest = new JsonObject
         {
             { "integer", 12345 },
             { "String", "A string" },
             { "Items", new JsonArray(1, 2, new JsonArray { "a", "b" }) }
         };
 
-        var diff = o1.Diff(o2);
+        var diff = source.Diff(dest);
         if (diff != null)
         {
             Console.WriteLine(JsonSerializer.Serialize(diff));
@@ -67,22 +67,22 @@ public class SystemTextJsonDiffPathTests
     [TestMethod]
     public void 比對兩個不一樣的JsonNode()
     {
-        var o1 = new JsonObject
+        var source = new JsonObject
         {
             { "Integer", 12345 },
             { "String", JsonValue.Create("A string") },
             { "Items", new JsonArray(1, 2) }
         };
 
-        var o2 = new JsonObject
+        var dest = new JsonObject
         {
             { "integer", 12345 },
             { "String", "A string" },
             { "Items", new JsonArray(1, 2, new JsonArray { "a", "b" }) }
         };
 
-        var left = JsonNode.Parse(o1.ToJsonString());
-        var right = JsonNode.Parse(o2.ToJsonString());
+        var left = JsonNode.Parse(source.ToJsonString());
+        var right = JsonNode.Parse(dest.ToJsonString());
         var diff = left.Diff(right);
         if (diff != null)
         {
@@ -95,43 +95,66 @@ public class SystemTextJsonDiffPathTests
     [TestMethod]
     public void 比對兩個不一樣的JsonObject_via_JsonAssert()
     {
-        var o1 = new JsonObject
+        var source = new JsonObject
         {
             { "Integer", 12345 },
             { "String", JsonValue.Create("A string") },
             { "Items", new JsonArray(1, 2) }
         };
 
-        var o2 = new JsonObject
+        var dest = new JsonObject
         {
             { "integer", 12345 },
             { "String", "A string" },
             { "Items", new JsonArray(1, 2, new JsonArray { "a", "b" }) }
         };
-        Assert.That.JsonAreEqual(o1, o2, true);
+        Assert.That.JsonAreEqual(source, dest, true);
     }
 
     [TestMethod]
     public void 比對兩個不一樣的JsonDocument()
     {
-        var o1 = new JsonObject
+        var source = new JsonObject
         {
             { "Integer", 12345 },
             { "String", JsonValue.Create("A string") },
             { "Items", new JsonArray(1, 2) }
         };
 
-        var o2 = new JsonObject
+        var dest = new JsonObject
         {
             { "integer", 12345 },
             { "String", "A string" },
             { "Items", new JsonArray(1, 2, new JsonArray { "a", "b" }) }
         };
 
-        var left = JsonDocument.Parse(o1.ToJsonString());
-        var right = JsonDocument.Parse(o2.ToJsonString());
+        var left = JsonDocument.Parse(source.ToJsonString());
+        var right = JsonDocument.Parse(dest.ToJsonString());
 
         var isEquals = left.DeepEquals(right);
         Assert.IsFalse(isEquals);
+    }
+
+    [TestMethod]
+    public void 更新節點()
+    {
+        var source = new JsonObject
+        {
+            { "Integer", 12345 },
+            { "String", "A string" },
+            { "Items", new JsonArray(1, 2, new JsonArray { "a", "b" }) }
+        };
+
+        var dest = new JsonObject
+        {
+            { "Integer", 12345 },
+            { "String", "A string" },
+            { "Items", new JsonArray(1, 2) }
+        };
+
+        var diff = source.Diff(dest);
+        JsonDiffPatcher.Patch(ref diff, dest);
+
+        Assert.That.JsonAreEqual(source,dest);
     }
 }
