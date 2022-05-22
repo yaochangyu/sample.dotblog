@@ -21,7 +21,6 @@ public class UnitTest1
         var result = response.Content.ReadAsStringAsync().Result;
         Console.WriteLine(result);
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
-
     }
 
     [TestMethod]

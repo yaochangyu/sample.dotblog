@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
 
 namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authentication;
@@ -12,6 +13,7 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
 {
     private const string AuthorizationHeaderName = "Authorization";
     private readonly IBasicAuthenticationProvider _authenticationProvider;
+    private string _failReason;
 
     public BasicAuthenticationHandler(
         IOptionsMonitor<BasicAuthenticationOptions> options,
@@ -35,17 +37,20 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
 
         if (!this.Request.Headers.ContainsKey(AuthorizationHeaderName))
         {
-            return AuthenticateResult.Fail("Invalid basic authentication header");
+            this._failReason = "Invalid basic authentication header";
+            return AuthenticateResult.Fail(this._failReason);
         }
 
         if (!AuthenticationHeaderValue.TryParse(this.Request.Headers[AuthorizationHeaderName],
                 out var authHeaderValue))
         {
-            return AuthenticateResult.Fail("Invalid authorization Header");
+            this._failReason = "Invalid authorization Header";
+            return AuthenticateResult.Fail(this._failReason);
         }
 
         if (authHeaderValue.Scheme.StartsWith(schemeName, StringComparison.InvariantCultureIgnoreCase) == false)
         {
+            this._failReason = "Invalid authorization scheme name";
             return AuthenticateResult.Fail("Invalid authorization scheme name");
         }
 
@@ -54,7 +59,8 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
         var credentials = userAndPassword.Split(':');
         if (credentials.Length != 2)
         {
-            return AuthenticateResult.Fail("Invalid basic authentication header");
+            this._failReason = "Invalid basic authentication header";
+            return AuthenticateResult.Fail(this._failReason);
         }
 
         var user = credentials[0];
@@ -64,7 +70,8 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
 
         if (!isValidate)
         {
-            return AuthenticateResult.Fail("Invalid username or password");
+            this._failReason = "Invalid username or password";
+            return AuthenticateResult.Fail(this._failReason);
         }
 
         return this.SignIn(user);
@@ -72,8 +79,10 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
 
     protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
     {
+        this.Response.StatusCode = 401;
+        this.Response.HttpContext.Features.Get<IHttpResponseFeature>().ReasonPhrase = this._failReason;
         this.Response.Headers["WWW-Authenticate"] = $"Basic realm=\"{this.Options.Realm}\", charset=\"UTF-8\"";
-        await base.HandleChallengeAsync(properties);
+        await Task.CompletedTask;
     }
 
     private AuthenticateResult SignIn(string user)
