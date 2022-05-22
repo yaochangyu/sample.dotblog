@@ -4,5 +4,5 @@ namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authenticatio
 
 public class BasicAuthenticationOptions : AuthenticationSchemeOptions
 {
-    public string Realm { get; set; }
+    public string Realm { get; set; } = "Demo Site";
 }

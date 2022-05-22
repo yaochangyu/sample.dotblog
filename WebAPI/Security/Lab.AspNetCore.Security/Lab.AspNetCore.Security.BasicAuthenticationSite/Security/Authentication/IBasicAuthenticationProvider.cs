@@ -2,5 +2,5 @@ namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authenticatio
 
 public interface IBasicAuthenticationProvider
 {
-    Task<bool> IsValidUserAsync(string user, string password);
+    Task<bool> IsValidateAsync(string user, string password, CancellationToken cancel);
 }

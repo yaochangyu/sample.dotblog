@@ -12,7 +12,10 @@ public class TestServer : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.ConfigureServices(this.ConfigureServices);
-        builder.UseSetting("https_port", "9527");
+        builder.ConfigureServices(this.ConfigureServices)
+            .UseSetting("https_port", "9527")
+
+            // .UseUrls("https://localhost:9527")
+            ;
     }
 }
