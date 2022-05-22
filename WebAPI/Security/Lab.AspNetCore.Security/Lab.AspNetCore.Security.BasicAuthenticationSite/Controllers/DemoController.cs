@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Controllers;
@@ -13,6 +14,7 @@ public class DemoController : ControllerBase
         this._logger = logger;
     }
 
+    [AllowAnonymous]
     public async Task<IActionResult> Get()
     {
         return this.Ok("好");

@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 
 namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authentication;
@@ -10,7 +11,6 @@ namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authenticatio
 public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticationOptions>
 {
     private const string AuthorizationHeaderName = "Authorization";
-    private const string BasicSchemeName = BasicAuthenticationDefaults.AuthenticationScheme;
     private readonly IBasicAuthenticationProvider _authenticationProvider;
 
     public BasicAuthenticationHandler(
@@ -26,35 +26,39 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        var schemeName = this.Scheme.Name; //由外部注入
+        var endpoint = this.Context.GetEndpoint();
+        if (endpoint?.Metadata?.GetMetadata<IAllowAnonymous>() != null)
+        {
+            return AuthenticateResult.NoResult();
+        }
+
         if (!this.Request.Headers.ContainsKey(AuthorizationHeaderName))
         {
-            // return AuthenticateResult.Fail("Invalid Basic authentication header");
-            //Authorization header not in request
-            return AuthenticateResult.NoResult();
+            return AuthenticateResult.Fail("Invalid basic authentication header");
         }
 
         if (!AuthenticationHeaderValue.TryParse(this.Request.Headers[AuthorizationHeaderName],
-                out var headerValue))
+                out var authHeaderValue))
         {
-            //Invalid Authorization header
-            return AuthenticateResult.NoResult();
+            return AuthenticateResult.Fail("Invalid authorization Header");
         }
 
-        if (headerValue.Scheme.StartsWith(BasicSchemeName, StringComparison.InvariantCultureIgnoreCase) == false)
+        if (authHeaderValue.Scheme.StartsWith(schemeName, StringComparison.InvariantCultureIgnoreCase) == false)
         {
-            return AuthenticateResult.NoResult();
+            return AuthenticateResult.Fail("Invalid authorization scheme name");
         }
 
-        var headerValueBytes = Convert.FromBase64String(headerValue.Parameter);
-        var userAndPassword = Encoding.UTF8.GetString(headerValueBytes);
-        var parts = userAndPassword.Split(':');
-        if (parts.Length != 2)
+        var credentialBytes = Convert.FromBase64String(authHeaderValue.Parameter);
+        var userAndPassword = Encoding.UTF8.GetString(credentialBytes);
+        var credentials = userAndPassword.Split(':');
+        if (credentials.Length != 2)
         {
-            return AuthenticateResult.Fail("Invalid Basic authentication header");
+            return AuthenticateResult.Fail("Invalid basic authentication header");
         }
 
-        var user = parts[0];
-        var password = parts[1];
+        var user = credentials[0];
+        var password = credentials[1];
 
         var isValidate = await this._authenticationProvider.IsValidateAsync(user, password, CancellationToken.None);
 
@@ -74,10 +78,11 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
 
     private AuthenticateResult SignIn(string user)
     {
+        var schemeName = this.Scheme.Name;
         var claims = new[] { new Claim(ClaimTypes.Name, user) };
-        var identity = new ClaimsIdentity(claims, this.Scheme.Name);
+        var identity = new ClaimsIdentity(claims, schemeName);
         var principal = new ClaimsPrincipal(identity);
-        var ticket = new AuthenticationTicket(principal, this.Scheme.Name);
+        var ticket = new AuthenticationTicket(principal, schemeName);
         return AuthenticateResult.Success(ticket);
     }
 }
