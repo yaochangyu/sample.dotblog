@@ -10,8 +10,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Logging.AddConsole();
-builder.Services.AddAuthentication("Basic")
-    .AddScheme<BasicAuthenticationOptions, BasicAuthenticationHandler>("Basic", null);
+builder.Services.AddAuthentication(BasicAuthenticationDefaults.AuthenticationScheme)
+    .AddScheme<BasicAuthenticationOptions, BasicAuthenticationHandler>(BasicAuthenticationDefaults.AuthenticationScheme, null);
 builder.Services.AddSingleton<IBasicAuthenticationProvider, BasicAuthenticationProvider>();
 
 // builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, PermissionAuthorizationMiddlewareResultHandler>();
