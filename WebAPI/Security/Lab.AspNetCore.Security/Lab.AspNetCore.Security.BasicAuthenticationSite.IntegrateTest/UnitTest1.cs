@@ -11,7 +11,7 @@ namespace Lab.AspNetCore.Security.BasicAuthenticationSite.IntegrateTest;
 public class UnitTest1
 {
     [TestMethod]
-    public void 訪問沒有授權的服務()
+    public void 訪問不需要授權的服務()
     {
         var server = new TestServer();
         var httpClient = server.CreateClient();
@@ -19,6 +19,8 @@ public class UnitTest1
         var response = httpClient.GetAsync(url).Result;
         var result = response.Content.ReadAsStringAsync().Result;
         Console.WriteLine(result);
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
     }
 
     [TestMethod]
