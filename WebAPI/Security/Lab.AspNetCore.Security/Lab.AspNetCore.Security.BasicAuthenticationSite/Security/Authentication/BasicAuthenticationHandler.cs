@@ -10,7 +10,7 @@ namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authenticatio
 public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticationOptions>
 {
     private const string AuthorizationHeaderName = "Authorization";
-    private const string BasicSchemeName = "Basic";
+    private const string BasicSchemeName = BasicAuthenticationDefaults.AuthenticationScheme;
     private readonly IBasicAuthenticationProvider _authenticationProvider;
 
     public BasicAuthenticationHandler(
@@ -18,10 +18,10 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
         ILoggerFactory logger,
         UrlEncoder encoder,
         ISystemClock clock,
-        IBasicAuthenticationProvider authenticationService)
+        IBasicAuthenticationProvider authenticationProvider)
         : base(options, logger, encoder, clock)
     {
-        this._authenticationProvider = authenticationService;
+        this._authenticationProvider = authenticationProvider;
     }
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
@@ -45,12 +45,6 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
             return AuthenticateResult.NoResult();
         }
 
-        if (!BasicSchemeName.Equals(headerValue.Scheme, StringComparison.OrdinalIgnoreCase))
-        {
-            //Not Basic authentication header
-            return AuthenticateResult.NoResult();
-        }
-
         var headerValueBytes = Convert.FromBase64String(headerValue.Parameter);
         var userAndPassword = Encoding.UTF8.GetString(headerValueBytes);
         var parts = userAndPassword.Split(':');
@@ -62,9 +56,9 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
         var user = parts[0];
         var password = parts[1];
 
-        var isValidUser = await this._authenticationProvider.IsValidUserAsync(user, password);
+        var isValidate = await this._authenticationProvider.IsValidateAsync(user, password, CancellationToken.None);
 
-        if (!isValidUser)
+        if (!isValidate)
         {
             return AuthenticateResult.Fail("Invalid username or password");
         }
