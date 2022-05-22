@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -46,8 +47,8 @@ public class UnitTest1
         var clientSecret = "9527";
         using var requestMessage = CreateBasicAuthenticationRequest(url, clientId, clientSecret);
         var response = httpClient.SendAsync(requestMessage).Result;
-        response.Headers.TryGetValues("WWW-Authenticate", out var result);
-        Console.WriteLine($"驗證失敗：{result}");
+        response.Headers.TryGetValues("WWW-Authenticate", out var values);
+        Console.WriteLine($"驗證失敗：{values.First()}");
         Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
