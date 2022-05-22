@@ -15,6 +15,7 @@ public class DemoController : ControllerBase
     }
 
     [AllowAnonymous]
+    [HttpGet]
     public async Task<IActionResult> Get()
     {
         return this.Ok("好");
