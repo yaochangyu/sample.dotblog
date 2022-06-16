@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.AspNetCoreMiddleware", "Lab.AspNetCoreMiddleware\Lab.AspNetCoreMiddleware.csproj", "{FA33EE2C-5954-457C-9A00-ED3FDD38010C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.AspNetCoreMiddleware.UnitTest", "Lab.AspNetCoreMiddleware.UnitTest\Lab.AspNetCoreMiddleware.UnitTest.csproj", "{FAB4FE0D-4232-46EA-A0A4-038D419E208F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.AspNetCoreMiddleware.Web", "Lab.AspNetCoreMiddleware.Web\Lab.AspNetCoreMiddleware.Web.csproj", "{93EB2B91-FE4B-4A90-B517-8A959AD0BC40}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FA33EE2C-5954-457C-9A00-ED3FDD38010C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA33EE2C-5954-457C-9A00-ED3FDD38010C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA33EE2C-5954-457C-9A00-ED3FDD38010C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA33EE2C-5954-457C-9A00-ED3FDD38010C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FAB4FE0D-4232-46EA-A0A4-038D419E208F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FAB4FE0D-4232-46EA-A0A4-038D419E208F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FAB4FE0D-4232-46EA-A0A4-038D419E208F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FAB4FE0D-4232-46EA-A0A4-038D419E208F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{93EB2B91-FE4B-4A90-B517-8A959AD0BC40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{93EB2B91-FE4B-4A90-B517-8A959AD0BC40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{93EB2B91-FE4B-4A90-B517-8A959AD0BC40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{93EB2B91-FE4B-4A90-B517-8A959AD0BC40}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
