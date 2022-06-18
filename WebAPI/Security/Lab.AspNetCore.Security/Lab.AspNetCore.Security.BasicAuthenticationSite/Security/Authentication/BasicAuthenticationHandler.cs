@@ -79,6 +79,7 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
 
     protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
     {
+        // todo: write detail log
         this.Response.StatusCode = 401;
         this.Response.HttpContext.Features.Get<IHttpResponseFeature>().ReasonPhrase = this._failReason;
         this.Response.Headers["WWW-Authenticate"] = $"Basic realm=\"{this.Options.Realm}\", charset=\"UTF-8\"";
