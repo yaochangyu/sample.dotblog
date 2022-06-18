@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.AspNetCore.Security.Bas
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.AspNetCore.Security.BasicAuthenticationSite.IntegrateTest", "Lab.AspNetCore.Security.BasicAuthenticationSite.IntegrateTest\Lab.AspNetCore.Security.BasicAuthenticationSite.IntegrateTest.csproj", "{13085C3E-F174-45D2-B8F7-3EE51D42DDF4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.AspNetCore.Security.BasicAuthenticationSite.UnitTest", "Lab.AspNetCore.Security.BasicAuthenticationSite.UnitTest\Lab.AspNetCore.Security.BasicAuthenticationSite.UnitTest.csproj", "{12F00FC6-1D31-48CD-AB17-B00F76846A33}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{13085C3E-F174-45D2-B8F7-3EE51D42DDF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{13085C3E-F174-45D2-B8F7-3EE51D42DDF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{13085C3E-F174-45D2-B8F7-3EE51D42DDF4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12F00FC6-1D31-48CD-AB17-B00F76846A33}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12F00FC6-1D31-48CD-AB17-B00F76846A33}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12F00FC6-1D31-48CD-AB17-B00F76846A33}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12F00FC6-1D31-48CD-AB17-B00F76846A33}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -9,7 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Lab.AspNetCore.Security.BasicAuthenticationSite.IntegrateTest;
 
 [TestClass]
-public class UnitTest1
+public class BasicAuthenticationMiddleware整合測試
 {
     [TestMethod]
     public void 訪問不需要授權的服務()
