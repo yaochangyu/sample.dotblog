@@ -11,12 +11,12 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Logging.AddConsole();
 
-builder.Services.AddAuthentication(BasicAuthenticationDefaults.AuthenticationScheme)
-    .AddScheme<BasicAuthenticationOptions, BasicAuthenticationHandler>(BasicAuthenticationDefaults.AuthenticationScheme,
-        p => new BasicAuthenticationOptions());
+// builder.Services.AddAuthentication(BasicAuthenticationDefaults.AuthenticationScheme)
+//     .AddScheme<BasicAuthenticationOptions, BasicAuthenticationHandler>(BasicAuthenticationDefaults.AuthenticationScheme,
+//         p => new BasicAuthenticationOptions());
 builder.Services.AddSingleton<IBasicAuthenticationProvider, BasicAuthenticationProvider>();
 
-// builder.Services.AddBasicAuthentication<BasicAuthenticationProvider>();
+builder.Services.AddBasicAuthentication(options => { });
 
 var app = builder.Build();
 
