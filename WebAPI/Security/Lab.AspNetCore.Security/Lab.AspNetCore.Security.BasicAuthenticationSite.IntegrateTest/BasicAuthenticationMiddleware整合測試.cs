@@ -16,7 +16,7 @@ public class BasicAuthenticationMiddleware整合測試
     {
         var server = new TestServer();
         var httpClient = server.CreateClient();
-        var url = "demo";
+        var url = "test";
         var response = httpClient.GetAsync(url).Result;
         var result = response.Content.ReadAsStringAsync().Result;
         Console.WriteLine(result);
@@ -28,7 +28,7 @@ public class BasicAuthenticationMiddleware整合測試
     {
         var server = new TestServer();
         var httpClient = server.CreateClient();
-        var url = "user";
+        var url = "test";
         var clientId = "YAO";
         var clientSecret = "9527";
         using var requestMessage = CreateBasicAuthenticationRequest(url, clientId, clientSecret);

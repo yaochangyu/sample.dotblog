@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Lab.AspNetCore.Security.BasicAuthenticationSite.IntegrateTest.Controllers.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,13 @@ public class TestController : ControllerBase
     [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> Get()
+    {
+        return this.Ok("好");
+    }
+
+    [Authorize]
+    [HttpPost]
+    public async Task<IActionResult> Post(User user)
     {
         return this.Ok("好");
     }
