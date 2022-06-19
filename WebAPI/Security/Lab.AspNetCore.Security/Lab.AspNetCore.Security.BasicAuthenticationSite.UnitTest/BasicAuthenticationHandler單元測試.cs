@@ -22,7 +22,25 @@ namespace Lab.AspNetCore.Security.BasicAuthenticationSite.UnitTest;
 public class BasicAuthenticationHandler單元測試
 {
     [TestMethod]
-    public async Task AuthenticateAsyncTest()
+    public async Task 驗證成功()
+    {
+        var context = new DefaultHttpContext();
+        var authorizationHeader = new StringValues(CreateBasicAuthenticationValue("yao", "9527"));
+        context.Request.Headers.Add(HeaderNames.Authorization, authorizationHeader);
+
+        using var testHost = await CreateTestHost();
+        var handler = testHost.Services.GetService<BasicAuthenticationHandler>();
+        await handler.InitializeAsync(new AuthenticationScheme("basic",
+                "basic",
+                typeof(BasicAuthenticationHandler)),
+            context);
+        var result = await handler.AuthenticateAsync();
+
+        Assert.IsTrue(result.Succeeded);
+    }
+
+    [TestMethod]
+    public async Task 驗證失敗()
     {
         var context = new DefaultHttpContext();
         var authorizationHeader = new StringValues(string.Empty);
@@ -41,14 +59,14 @@ public class BasicAuthenticationHandler單元測試
     }
 
     [TestMethod]
-    public async Task ChallengeAsyncTest()
+    public async Task 驗證失敗後回應錯誤()
     {
         var context = new DefaultHttpContext
         {
             Response = { Body = new MemoryStream() }
         };
 
-        var authorizationHeader = new StringValues(string.Empty);
+        var authorizationHeader = new StringValues(CreateBasicAuthenticationValue("yao", "9527"));
         context.Request.Headers.Add(HeaderNames.Authorization, authorizationHeader);
 
         using var testHost = await CreateTestHost();
@@ -61,28 +79,9 @@ public class BasicAuthenticationHandler單元測試
         await handler.ChallengeAsync(authenticateResult.Properties);
         var response = context.Response;
 
-        // Assert.IsFalse(result.Succeeded);
+        Assert.IsFalse(authenticateResult.Succeeded);
         var expected = "Basic realm=\"Demo Site\", charset=\"UTF-8\"";
         Assert.AreEqual(expected, response.Headers.WWWAuthenticate.ToString());
-    }
-
-    [TestMethod]
-    public async Task 驗證成功()
-    {
-        using var server = await CreateTestServer();
-        var httpContext = await server.SendAsync(config =>
-        {
-            config.Request.Headers.Authorization = CreateBasicAuthenticationValue("yao", "9527");
-        });
-        var userPrincipal = httpContext.User;
-        Assert.AreEqual(true, userPrincipal.Identity.IsAuthenticated);
-    }
-
-    private static AuthenticationHeaderValue CreateAuthenticationHeaderValue(string userId, string password)
-    {
-        var certificate = CreateBasicAuthenticationValue(userId, password);
-        var authenticationHeaderValue = new AuthenticationHeaderValue("basic", certificate);
-        return authenticationHeaderValue;
     }
 
     private static string CreateBasicAuthenticationValue(string userId, string password)
