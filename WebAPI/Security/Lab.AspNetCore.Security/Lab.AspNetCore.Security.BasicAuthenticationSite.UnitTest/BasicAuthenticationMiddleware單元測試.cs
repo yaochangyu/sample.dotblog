@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Lab.AspNetCore.Security.BasicAuthenticationSite.UnitTest;
@@ -17,44 +16,6 @@ namespace Lab.AspNetCore.Security.BasicAuthenticationSite.UnitTest;
 [TestClass]
 public class BasicAuthenticationMiddleware單元測試
 {
-    [TestMethod]
-    public async Task aaaa()
-    {
-        var host = await new HostBuilder()
-            .ConfigureWebHost(webBuilder =>
-            {
-                webBuilder.UseTestServer()
-                    .ConfigureServices(
-                        services =>
-                        {
-                            services.AddSingleton<IBasicAuthenticationProvider, BasicAuthenticationProvider>();
-                            services.AddBasicAuthentication(_ => { });
-                            services.AddAuthorization();
-                        })
-                    .Configure(app =>
-                    {
-                        app.UseAuthentication();
-                        app.UseAuthorization();
-                    });
-            })
-            .StartAsync();
-        var optionsMonitor = host.Services.GetService<IOptionsMonitor<AuthenticationSchemeOptions>>();
-        var handler = host.Services.GetService<BasicAuthenticationHandler>();
-        var authenticationScheme = new AuthenticationScheme("basic", "basic", typeof(BasicAuthenticationHandler));
-        handler.InitializeAsync(authenticationScheme, new DefaultHttpContext());
-        var authenticateResult = await handler.AuthenticateAsync();
-
-        using var server = await CreateTestServer();
-        var httpContext = await server.SendAsync(config =>
-        {
-            config.Request.Headers.Authorization = CreateBasicAuthenticationValue("yao", "9527xxxx");
-        });
-
-        // 驗證失敗沒有觸發 BasicAuthenticationHandler.HandleChallengeAsync
-        var userPrincipal = httpContext.User;
-        Assert.AreEqual(false, userPrincipal.Identity.IsAuthenticated);
-    }
-
     [TestMethod]
     public async Task 驗證失敗()
     {
