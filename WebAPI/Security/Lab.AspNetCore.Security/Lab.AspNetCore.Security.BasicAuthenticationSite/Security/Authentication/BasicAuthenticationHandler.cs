@@ -6,12 +6,12 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 
 namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authentication;
 
 public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticationOptions>
 {
-    private const string AuthorizationHeaderName = "Authorization";
     private readonly IBasicAuthenticationProvider _authenticationProvider;
     private string _failReason;
 
@@ -35,13 +35,13 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
             return AuthenticateResult.NoResult();
         }
 
-        if (!this.Request.Headers.ContainsKey(AuthorizationHeaderName))
+        if (!this.Request.Headers.ContainsKey(HeaderNames.Authorization))
         {
             this._failReason = "Invalid basic authentication header";
             return AuthenticateResult.Fail(this._failReason);
         }
 
-        if (!AuthenticationHeaderValue.TryParse(this.Request.Headers[AuthorizationHeaderName],
+        if (!AuthenticationHeaderValue.TryParse(this.Request.Headers[HeaderNames.Authorization],
                 out var authHeaderValue))
         {
             this._failReason = "Invalid authorization Header";
@@ -79,9 +79,23 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
 
     protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
     {
+        // 寫入詳細的失敗原因，排除敏感性資料 
+        this.Logger.LogInformation("{FailureReason}", new
+        {
+            Code = "InvalidAuthentication",
+            Message = this._failReason
+        });
+
         this.Response.StatusCode = 401;
         this.Response.HttpContext.Features.Get<IHttpResponseFeature>().ReasonPhrase = this._failReason;
         this.Response.Headers["WWW-Authenticate"] = $"Basic realm=\"{this.Options.Realm}\", charset=\"UTF-8\"";
+
+        // 響應粗糙的內容，這不是標準的 Basic Authentication 失敗的回傳，僅是為了示意
+        this.Response.WriteAsJsonAsync(new
+        {
+            Code = "InvalidAuthentication",
+            Message = "Please contact your administrator"
+        });
         await Task.CompletedTask;
     }
 

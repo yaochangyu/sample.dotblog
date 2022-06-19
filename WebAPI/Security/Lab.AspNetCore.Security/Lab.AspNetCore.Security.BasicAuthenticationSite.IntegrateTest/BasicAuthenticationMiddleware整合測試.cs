@@ -9,14 +9,14 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Lab.AspNetCore.Security.BasicAuthenticationSite.IntegrateTest;
 
 [TestClass]
-public class UnitTest1
+public class BasicAuthenticationMiddleware整合測試
 {
     [TestMethod]
     public void 訪問不需要授權的服務()
     {
         var server = new TestServer();
         var httpClient = server.CreateClient();
-        var url = "demo";
+        var url = "test";
         var response = httpClient.GetAsync(url).Result;
         var result = response.Content.ReadAsStringAsync().Result;
         Console.WriteLine(result);
@@ -28,7 +28,7 @@ public class UnitTest1
     {
         var server = new TestServer();
         var httpClient = server.CreateClient();
-        var url = "user";
+        var url = "test";
         var clientId = "YAO";
         var clientSecret = "9527";
         using var requestMessage = CreateBasicAuthenticationRequest(url, clientId, clientSecret);
