@@ -28,11 +28,15 @@ public class BasicAuthenticationMiddleware整合測試
     {
         var server = new TestServer();
         var httpClient = server.CreateClient();
-        var url = "test";
+        var url = "protect";
         var clientId = "YAO";
         var clientSecret = "9527";
-        using var requestMessage = CreateBasicAuthenticationRequest(url, clientId, clientSecret);
-        var response = httpClient.SendAsync(requestMessage).Result;
+        var request = new HttpRequestMessage(HttpMethod.Get, url)
+        {
+            Headers = { Authorization = CreateAuthenticationHeaderValue(clientId, clientSecret) }
+        };
+
+        var response = httpClient.SendAsync(request).Result;
         Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -41,11 +45,14 @@ public class BasicAuthenticationMiddleware整合測試
     {
         var server = new TestServer();
         var httpClient = server.CreateClient();
-        var url = "user";
+        var url = "protect";
         var clientId = "YAO1234";
         var clientSecret = "9527";
-        using var requestMessage = CreateBasicAuthenticationRequest(url, clientId, clientSecret);
-        var response = httpClient.SendAsync(requestMessage).Result;
+        var request = new HttpRequestMessage(HttpMethod.Get, url)
+        {
+            Headers = { Authorization = CreateAuthenticationHeaderValue(clientId, clientSecret) }
+        };
+        var response = httpClient.SendAsync(request).Result;
         response.Headers.TryGetValues("WWW-Authenticate", out var values);
         Console.WriteLine($"驗證失敗：{values.First()}");
         Assert.AreEqual(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -58,5 +65,12 @@ public class BasicAuthenticationMiddleware整合測試
         var base64Encoded = Convert.ToBase64String(Encoding.ASCII.GetBytes(authenticationString));
         requestMessage.Headers.Authorization = new AuthenticationHeaderValue("basic", base64Encoded);
         return requestMessage;
+    }
+
+    private static AuthenticationHeaderValue CreateAuthenticationHeaderValue(string clientId, string clientSecret)
+    {
+        var authenticationString = $"{clientId}:{clientSecret}";
+        var base64Encoded = Convert.ToBase64String(Encoding.ASCII.GetBytes(authenticationString));
+        return new AuthenticationHeaderValue("basic", base64Encoded);
     }
 }
