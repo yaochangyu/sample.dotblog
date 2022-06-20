@@ -24,7 +24,7 @@ public class TestController : ControllerBase
         return this.Ok("好");
     }
 
-    [Authorize]
+    [AllowAnonymous]
     [HttpPost]
     public async Task<IActionResult> Post(User user)
     {

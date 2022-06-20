@@ -66,7 +66,7 @@ public class BasicAuthenticationHandler單元測試
             Response = { Body = new MemoryStream() }
         };
 
-        var authorizationHeader = new StringValues(CreateBasicAuthenticationValue("yao", "9527"));
+        var authorizationHeader = new StringValues(CreateBasicAuthenticationValue("yao123", "9527"));
         context.Request.Headers.Add(HeaderNames.Authorization, authorizationHeader);
 
         using var testHost = await CreateTestHost();
