@@ -1,4 +1,10 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Unicode;
 using Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authentication;
+using Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,9 +20,25 @@ builder.Logging.AddConsole();
 // builder.Services.AddAuthentication(BasicAuthenticationDefaults.AuthenticationScheme)
 //     .AddScheme<BasicAuthenticationOptions, BasicAuthenticationHandler>(BasicAuthenticationDefaults.AuthenticationScheme,
 //         p => new BasicAuthenticationOptions());
+builder.Services.AddSingleton(p=>new JsonSerializerOptions
+{
+    Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.CjkUnifiedIdeographs),
+    PropertyNameCaseInsensitive = true,
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+});
 builder.Services.AddSingleton<IBasicAuthenticationProvider, BasicAuthenticationProvider>();
-
 builder.Services.AddBasicAuthentication(options => { });
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, PermissionAuthorizationMiddlewareResultHandler>();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
+builder.Services.AddSingleton<IPermissionAuthorizationProvider, PermissionAuthorizationProvider>();
+// builder.Services.AddAuthorization(options =>
+// {
+//     options.AddPolicy("Permission", policy =>
+//         policy.Requirements.Add(new PermissionAuthorizationRequirement()));
+// });
 
 var app = builder.Build();
 
