@@ -4,7 +4,7 @@ namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authorization
 
 public class PermissionAuthorizationHandler : AuthorizationHandler<PermissionAuthorizationRequirement>
 {
-    private IPermissionAuthorizationProvider _authorizationProvider;
+    private readonly IPermissionAuthorizationProvider _authorizationProvider;
 
     public PermissionAuthorizationHandler(IPermissionAuthorizationProvider authorizationProvider)
     {
