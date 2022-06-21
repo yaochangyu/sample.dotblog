@@ -8,7 +8,6 @@ public class PermissionAuthorizationMiddlewareResultHandler : IAuthorizationMidd
 {
     private readonly ILogger<PermissionAuthorizationMiddlewareResultHandler> _logger;
 
-    // private readonly AuthorizationMiddlewareResultHandler _defaultHandler = new();
     private readonly JsonSerializerOptions _jsonSerializerOptions;
 
     public PermissionAuthorizationMiddlewareResultHandler(
