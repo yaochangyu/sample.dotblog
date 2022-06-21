@@ -5,8 +5,6 @@ namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authorization
 
 internal class PermissionAuthorizationPolicyProvider : IAuthorizationPolicyProvider
 {
-    const string POLICY_PREFIX = "Permission";
-
     public DefaultAuthorizationPolicyProvider FallbackPolicyProvider { get; }
 
     public PermissionAuthorizationPolicyProvider(IOptions<AuthorizationOptions> options)
