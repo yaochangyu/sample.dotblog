@@ -3,7 +3,8 @@
 @{
     var _market = ViewBag.Market;
     var _environment = ViewBag.Environment;
-    Console.WriteLine(_environment.ToString());
+    Console.WriteLine($"{nameof(_market)} = {_market}");
+    Console.WriteLine($"{nameof(_environment)} = {_environment}");
 }
 @{
     var K8S_COMMON_SERVICE_NAME = new Dictionary<string, string>()
