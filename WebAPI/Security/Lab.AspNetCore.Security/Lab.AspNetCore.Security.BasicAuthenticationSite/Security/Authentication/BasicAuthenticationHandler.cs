@@ -26,6 +26,18 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
         this._authenticationProvider = authenticationProvider;
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    void CreateTestServer()
+    {
+
+    }
+   
+    void CreateTask()
+    {
+       
+    }
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var schemeName = this.Scheme.Name; //由外部注入
