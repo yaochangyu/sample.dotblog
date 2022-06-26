@@ -27,32 +27,23 @@ public class K8sTemplateEngineTests
 
         var engine = new K8sTemplateEngine();
         var result = await engine.RenderAsync(templatePath, k8sValue, k8sDynamicValues);
-        Console.WriteLine(result);
+        Console.WriteLine($"Render Result:\r\n{result}");
     }
 
     [TestMethod]
-    public async Task 替換範本aa()
+    public async Task 替換範本_1()
     {
         var templatePath = "EnvTemplate.cshtml";
-        var k8sValue = new K8sValue()
-        {
-            Common = new Common
-            {
-                ProjectName = "member-service-api",
-                Namespace = "member-service",
-            },
-        };
+        var k8sValue = new K8sValue();
         var k8sDynamicValues = new Dictionary<string, object>
         {
             ["Market"] = "TW",
             ["Environment"] = "Dev",
         };
-        var response = new HttpResponseMessage();
-        response.StatusCode = HttpStatusCode.NoContent;
-        response.Content = new StringContent("[]", Encoding.UTF8);
 
         var engine = new K8sTemplateEngine();
         var result = await engine.RenderAsync(templatePath, k8sValue, k8sDynamicValues);
-        Console.WriteLine(result);
+        Console.WriteLine();
+        Console.WriteLine($"Render Result:\r\n{result}");
     }
 }
