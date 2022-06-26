@@ -1,0 +1,9 @@
+@model Lab.RazorTemplate.K8sValue
+apiVersion: v1
+kind: ConfigMap
+metadata:
+name: @Model.Common.ProjectName
+namespace: @Model.Common.Namespace
+spec1: @ViewData["Value1"]
+spec2: @ViewBag.Value2
+spec3: @ViewBag.K8S_COMMON_SERVICE_NAME
