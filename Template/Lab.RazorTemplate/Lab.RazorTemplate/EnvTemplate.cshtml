@@ -1,0 +1,32 @@
+@using Lab.RazorTemplate
+@model Lab.RazorTemplate.K8sValue
+@{
+    var _market = ViewBag.Market;
+    var _environment = ViewBag.Environment;
+    Console.WriteLine($"{nameof(_market)} = {_market}");
+    Console.WriteLine($"{nameof(_environment)} = {_environment}");
+}
+@{
+    var K8S_COMMON_SERVICE_NAME = new Dictionary<string, string>()
+    {
+        { MarketName.TW, "k8s-common-tw" },
+        { MarketName.HK, "k8s-common-hk" },
+        { MarketName.MY, "k8s-common-my" },
+    };
+    Console.WriteLine($"{nameof(K8S_COMMON_SERVICE_NAME)} = {K8S_COMMON_SERVICE_NAME}");
+}
+K8S_COMMON_SERVICE_NAME= @K8S_COMMON_SERVICE_NAME[_market]
+@{
+    string NMQ_APIMIN_BASE_URL = null;
+    if (_environment == EnvironmentName.Dev)
+    {
+        NMQ_APIMIN_BASE_URL = "ABC";
+    }
+    else if (_environment == EnvironmentName.QA
+             && _market == MarketName.TW)
+    {
+        NMQ_APIMIN_BASE_URL = "DEF";
+    }
+    Console.WriteLine($"{nameof(NMQ_APIMIN_BASE_URL)} = {NMQ_APIMIN_BASE_URL}");
+}
+NMQ_APIMIN_BASE_URL = @NMQ_APIMIN_BASE_URL;
