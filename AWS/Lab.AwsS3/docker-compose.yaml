@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  s3-minio:
+    container_name: "s3-minio"
+    hostname: "minio"
+    image: minio/minio:latest
+    volumes:
+      - ./minio/data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      # 這裡的 key 要跟 .aws/credentials 裡的 key 名稱一樣，aws cli 才能正常的運作
+      MINIO_ROOT_USER: "AKIAIOSFODNN7EXAMPLE"
+      MINIO_ROOT_PASSWORD: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+    command: server --console-address :9001 /data
