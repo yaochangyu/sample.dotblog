@@ -12,12 +12,12 @@
 #pragma warning disable 8073 // Disable "CS8073 The result of the expression is always 'false' since a value of type 'T' is never equal to 'null' of type 'T?'"
 #pragma warning disable 3016 // Disable "CS3016 Arrays as attribute arguments is not CLS-compliant"
 
-namespace Lab.SpecFirst.Web
+namespace Lab.SpecFirst.Web.Controllers
 {
     using System = global::System;
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.13.2.0 (NJsonSchema v10.5.2.0 (Newtonsoft.Json v11.0.0.0))")]
-    public interface ISpecFirstConteollerController
+    public interface ISpecFirstContractController
     {
         /// <summary>List all pets</summary>
         /// <param name="limit">How many items to return at one time (max 100)</param>
@@ -37,11 +37,11 @@ namespace Lab.SpecFirst.Web
     
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "13.13.2.0 (NJsonSchema v10.5.2.0 (Newtonsoft.Json v11.0.0.0))")]
     [Microsoft.AspNetCore.Mvc.Route("api/")]
-    public partial class SpecFirstConteollerController : Microsoft.AspNetCore.Mvc.ControllerBase
+    public partial class SpecFirstContractController : Microsoft.AspNetCore.Mvc.ControllerBase
     {
-        private ISpecFirstConteollerController _implementation;
+        private ISpecFirstContractController _implementation;
     
-        public SpecFirstConteollerController(ISpecFirstConteollerController implementation)
+        public SpecFirstContractController(ISpecFirstContractController implementation)
         {
             _implementation = implementation;
         }

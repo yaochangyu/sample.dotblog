@@ -1,7 +1,10 @@
+using Lab.SpecFirst.Web.Controllers;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Services.AddScoped<ISpecFirstContractController, SpecFirstController>();
 
+// Add services to the container.
 builder.Services.AddControllers();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
