@@ -4,6 +4,7 @@ dotenv: [ "secrets/secrets.env" ]
 
 tasks:
   rest-codegen-code:
+    desc: 產生 Client / Server Code
     cmds:
       - task: rest-codegen-client
       - task: rest-codegen-server
