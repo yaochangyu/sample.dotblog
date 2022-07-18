@@ -1,0 +1,44 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "global", "global", "{1C8C1BD9-1338-47A0-963B-D35B1AD07476}"
+	ProjectSection(SolutionItems) = preProject
+		Taskfile.yml = Taskfile.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{7C405A84-132F-43F2-9F97-388CC40BED1D}"
+	ProjectSection(SolutionItems) = preProject
+		doc\index.yaml = doc\index.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F900DCE0-EF45-4629-AA24-949E65BAB714}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.SpecFirst.Web", "src\Lab.SpecFirst.Web\Lab.SpecFirst.Web.csproj", "{70299524-F9F4-41DF-80EF-D1CE03C2965A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.SpecFirst.Adapter", "src\Lab.SpecFirst.Adapter\Lab.SpecFirst.Adapter.csproj", "{F5AAACC5-781F-41E6-8CD5-39389A00942C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "schemas", "schemas", "{087A302F-7CB9-411A-A189-33919965A007}"
+	ProjectSection(SolutionItems) = preProject
+		doc\schemas\index.yaml = doc\schemas\index.yaml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{70299524-F9F4-41DF-80EF-D1CE03C2965A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70299524-F9F4-41DF-80EF-D1CE03C2965A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70299524-F9F4-41DF-80EF-D1CE03C2965A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70299524-F9F4-41DF-80EF-D1CE03C2965A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F5AAACC5-781F-41E6-8CD5-39389A00942C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F5AAACC5-781F-41E6-8CD5-39389A00942C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F5AAACC5-781F-41E6-8CD5-39389A00942C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F5AAACC5-781F-41E6-8CD5-39389A00942C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{70299524-F9F4-41DF-80EF-D1CE03C2965A} = {F900DCE0-EF45-4629-AA24-949E65BAB714}
+		{F5AAACC5-781F-41E6-8CD5-39389A00942C} = {F900DCE0-EF45-4629-AA24-949E65BAB714}
+		{087A302F-7CB9-411A-A189-33919965A007} = {7C405A84-132F-43F2-9F97-388CC40BED1D}
+	EndGlobalSection
+EndGlobal
