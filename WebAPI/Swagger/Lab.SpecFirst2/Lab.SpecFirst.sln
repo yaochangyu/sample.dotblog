@@ -21,6 +21,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "schemas", "schemas", "{087A
 		doc\schemas\index.yaml = doc\schemas\index.yaml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "components", "components", "{4D3DDFBF-E6C5-4E38-8FC2-AE1C10450670}"
+	ProjectSection(SolutionItems) = preProject
+		doc\components\index.yaml = doc\components\index.yaml
+		doc\components\parameters.yaml = doc\components\parameters.yaml
+		doc\components\schemas.yaml = doc\components\schemas.yaml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,5 +47,6 @@ Global
 		{70299524-F9F4-41DF-80EF-D1CE03C2965A} = {F900DCE0-EF45-4629-AA24-949E65BAB714}
 		{F5AAACC5-781F-41E6-8CD5-39389A00942C} = {F900DCE0-EF45-4629-AA24-949E65BAB714}
 		{087A302F-7CB9-411A-A189-33919965A007} = {7C405A84-132F-43F2-9F97-388CC40BED1D}
+		{4D3DDFBF-E6C5-4E38-8FC2-AE1C10450670} = {7C405A84-132F-43F2-9F97-388CC40BED1D}
 	EndGlobalSection
 EndGlobal
