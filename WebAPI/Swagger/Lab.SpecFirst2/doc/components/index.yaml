@@ -1,0 +1,9 @@
+parameters:
+  petId:
+    name: petId
+    in: path
+    required: true
+    description: The id of the pet to retrieve
+    schema:
+      type: string
+      example: 1
