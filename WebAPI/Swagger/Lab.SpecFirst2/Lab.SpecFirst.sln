@@ -16,16 +16,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.SpecFirst.Web", "src\La
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.SpecFirst.Adapter", "src\Lab.SpecFirst.Adapter\Lab.SpecFirst.Adapter.csproj", "{F5AAACC5-781F-41E6-8CD5-39389A00942C}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "schemas", "schemas", "{087A302F-7CB9-411A-A189-33919965A007}"
-	ProjectSection(SolutionItems) = preProject
-		doc\schemas\index.yaml = doc\schemas\index.yaml
-	EndProjectSection
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "components", "components", "{4D3DDFBF-E6C5-4E38-8FC2-AE1C10450670}"
 	ProjectSection(SolutionItems) = preProject
-		doc\components\index.yaml = doc\components\index.yaml
 		doc\components\parameters.yaml = doc\components\parameters.yaml
 		doc\components\schemas.yaml = doc\components\schemas.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "merge", "merge", "{F28E0DEE-5774-42CF-ABE2-2654AF751215}"
+	ProjectSection(SolutionItems) = preProject
+		doc\merge\index.yaml = doc\merge\index.yaml
 	EndProjectSection
 EndProject
 Global
@@ -46,7 +45,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{70299524-F9F4-41DF-80EF-D1CE03C2965A} = {F900DCE0-EF45-4629-AA24-949E65BAB714}
 		{F5AAACC5-781F-41E6-8CD5-39389A00942C} = {F900DCE0-EF45-4629-AA24-949E65BAB714}
-		{087A302F-7CB9-411A-A189-33919965A007} = {7C405A84-132F-43F2-9F97-388CC40BED1D}
 		{4D3DDFBF-E6C5-4E38-8FC2-AE1C10450670} = {7C405A84-132F-43F2-9F97-388CC40BED1D}
+		{F28E0DEE-5774-42CF-ABE2-2654AF751215} = {7C405A84-132F-43F2-9F97-388CC40BED1D}
 	EndGlobalSection
 EndGlobal
