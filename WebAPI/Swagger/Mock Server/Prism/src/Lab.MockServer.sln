@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{3B9B5D72-1C50-43D1-8E33-FBE93C4D0FF8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "1", "1", "{DA17785E-5C85-4A31-AFA6-B5BF799B3DDD}"
+	ProjectSection(SolutionItems) = preProject
+		..\doc\1\index.yaml = ..\doc\1\index.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "2", "2", "{F7194878-92F6-4FE5-9841-DE99711949F6}"
+	ProjectSection(SolutionItems) = preProject
+		..\doc\2\index.yaml = ..\doc\2\index.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "global", "global", "{A84DAC1D-5160-47E1-916B-892AB78EA2E8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{DA17785E-5C85-4A31-AFA6-B5BF799B3DDD} = {3B9B5D72-1C50-43D1-8E33-FBE93C4D0FF8}
+		{F7194878-92F6-4FE5-9841-DE99711949F6} = {3B9B5D72-1C50-43D1-8E33-FBE93C4D0FF8}
+	EndGlobalSection
+EndGlobal
