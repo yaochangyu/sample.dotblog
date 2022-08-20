@@ -9,15 +9,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="6.0.8" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
-        <PackageReference Include="MSTest.TestAdapter" Version="2.2.8" />
-        <PackageReference Include="MSTest.TestFramework" Version="2.2.8" />
-        <PackageReference Include="coverlet.collector" Version="3.1.2" />
+        <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="6.0.8"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0"/>
+        <PackageReference Include="MSTest.TestAdapter" Version="2.2.8"/>
+        <PackageReference Include="MSTest.TestFramework" Version="2.2.8"/>
+        <PackageReference Include="coverlet.collector" Version="3.1.2"/>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\Lib.Middleware.OverrideResponse\Lib.Middleware.OverrideResponse.csproj" />
+        <ProjectReference Include="..\Lib.Middleware.OverrideResponse\Lib.Middleware.OverrideResponse.csproj"/>
     </ItemGroup>
 
 </Project>
