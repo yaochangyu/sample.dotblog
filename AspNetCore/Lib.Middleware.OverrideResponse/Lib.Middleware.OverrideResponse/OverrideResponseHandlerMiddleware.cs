@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -17,20 +18,15 @@ public class OverrideResponseHandlerMiddleware
         ILogger<OverrideResponseHandlerMiddleware> logger,
         JsonSerializerOptions jsonSerializerOptions)
     {
-        var srcStream = context.Response.Body;
-        await using var destStream = new MemoryStream();
-        context.Response.Body = destStream;
+        var originalResponseBodyStream = context.Response.Body;
+        await using var newResponseBodyStream = new MemoryStream();
+        context.Response.Body = newResponseBodyStream;
 
         await this._next(context);
 
-        destStream.Seek(0, SeekOrigin.Begin);
-
-        var realResponseBody = await new StreamReader(destStream).ReadToEndAsync();
-        destStream.Seek(0, SeekOrigin.Begin);
-        // await destStream.CopyToAsync(srcStream);
-        context.Response.Body = srcStream;
-
-        var fuzzyBody = context.Response.StatusCode switch
+        newResponseBodyStream.Seek(0, SeekOrigin.Begin);
+        var statusCode = context.Response.StatusCode;
+        var fuzzyBody = statusCode switch
         {
             401 => CreateFuzzyBody("NoAuthentication"),
             403 => CreateFuzzyBody("NoAuthorization"),
@@ -40,11 +36,13 @@ public class OverrideResponseHandlerMiddleware
         if (fuzzyBody != null)
         {
             var json = JsonSerializer.Serialize(fuzzyBody, jsonSerializerOptions);
+            context.Response.Body = originalResponseBodyStream;
             await context.Response.WriteAsync(json);
         }
         else
         {
-            await context.Response.WriteAsync(realResponseBody);
+            await newResponseBodyStream.CopyToAsync(originalResponseBodyStream);
+            context.Response.Body = originalResponseBodyStream;
         }
     }
 
