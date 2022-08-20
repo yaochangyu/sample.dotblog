@@ -72,6 +72,38 @@ public class OverrideResponseHandlerMiddlewareUnitTest
         Assert.AreEqual(expected, actual);
     }
 
+    [TestMethod]
+    public async Task 模糊化未授權訊息()
+    {
+        var expected = @"{""errorCode"":""NoAuthorization"",""errorMessage"":""Please contact your administrator""}";
+        var httpContext = new DefaultHttpContext
+        {
+            Response = { Body = new MemoryStream() }
+        };
+        var serviceProvider = CreateServiceProvider();
+        var jsonSerializerOptions = serviceProvider.GetService<JsonSerializerOptions>();
+        var logger = serviceProvider.GetService<ILogger<OverrideResponseHandlerMiddleware>>();
+
+        var target = new OverrideResponseHandlerMiddleware(nextContext =>
+            CreateFakeNextContext(nextContext, new
+            {
+                ErrorCode = "NoAuthorization",
+                ErrorMessage = "No permission"
+            }, StatusCodes.Status403Forbidden));
+
+        await target.InvokeAsync(httpContext, logger, jsonSerializerOptions);
+
+        var response = httpContext.Response;
+        var stream = response.Body;
+        if (stream.CanSeek)
+        {
+            stream.Seek(0, SeekOrigin.Begin);
+        }
+
+        var actual = await new StreamReader(stream).ReadToEndAsync();
+        Assert.AreEqual(expected, actual);
+    }
+
     private static Task CreateFakeNextContext(HttpContext context, object detailFailure, int statusCode)
     {
         context.Response.StatusCode = statusCode;
