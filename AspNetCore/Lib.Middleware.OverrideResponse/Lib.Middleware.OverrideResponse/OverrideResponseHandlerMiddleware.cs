@@ -35,9 +35,14 @@ public class OverrideResponseHandlerMiddleware
 
         if (fuzzyBody != null)
         {
-            var json = JsonSerializer.Serialize(fuzzyBody, jsonSerializerOptions);
+            var fuzzyData = JsonSerializer.Serialize(fuzzyBody, jsonSerializerOptions);
+            logger.LogInformation("Fuzzy data：{FuzzyData}", fuzzyData);
+
+            var realData = await new StreamReader(newResponseBodyStream).ReadToEndAsync();
+            logger.LogInformation("Read data：{RealData}", realData);
+
             context.Response.Body = originalResponseBodyStream;
-            await context.Response.WriteAsync(json);
+            await context.Response.WriteAsync(fuzzyData);
         }
         else
         {
