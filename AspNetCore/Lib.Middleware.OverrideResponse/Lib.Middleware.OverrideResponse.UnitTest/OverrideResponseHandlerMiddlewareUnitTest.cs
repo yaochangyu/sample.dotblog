@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -13,7 +12,7 @@ namespace Lib.Middleware.OverrideResponse.UnitTest;
 public class OverrideResponseHandlerMiddlewareUnitTest
 {
     [TestMethod]
-    public async Task 不模糊內部訊息()
+    public async Task 不模糊訊息()
     {
         var expected = @"{""code"":""9527""}";
 
@@ -29,38 +28,6 @@ public class OverrideResponseHandlerMiddlewareUnitTest
         };
 
         await target.InvokeAsync(httpContext, logger, jsonSerializerOptions);
-        var response = httpContext.Response;
-        var stream = response.Body;
-        if (stream.CanSeek)
-        {
-            stream.Seek(0, SeekOrigin.Begin);
-        }
-
-        var actual = await new StreamReader(stream).ReadToEndAsync();
-        Assert.AreEqual(expected, actual);
-    }
-
-    [TestMethod]
-    public async Task 模糊化未驗證訊息()
-    {
-        var expected = @"{""errorCode"":""NoAuthentication"",""errorMessage"":""Please contact your administrator""}";
-        var httpContext = new DefaultHttpContext
-        {
-            Response = { Body = new MemoryStream() }
-        };
-        var serviceProvider = CreateServiceProvider();
-        var jsonSerializerOptions = serviceProvider.GetService<JsonSerializerOptions>();
-        var logger = serviceProvider.GetService<ILogger<OverrideResponseHandlerMiddleware>>();
-
-        var target = new OverrideResponseHandlerMiddleware(nextContext =>
-            CreateFakeNextContext(nextContext, new
-            {
-                ErrorCode = "NoAuthentication",
-                ErrorMessage = "Invalid userid or password"
-            }, StatusCodes.Status401Unauthorized));
-
-        await target.InvokeAsync(httpContext, logger, jsonSerializerOptions);
-
         var response = httpContext.Response;
         var stream = response.Body;
         if (stream.CanSeek)
@@ -104,6 +71,38 @@ public class OverrideResponseHandlerMiddlewareUnitTest
         Assert.AreEqual(expected, actual);
     }
 
+    [TestMethod]
+    public async Task 模糊化未驗證訊息()
+    {
+        var expected = @"{""errorCode"":""NoAuthentication"",""errorMessage"":""Please contact your administrator""}";
+        var httpContext = new DefaultHttpContext
+        {
+            Response = { Body = new MemoryStream() }
+        };
+        var serviceProvider = CreateServiceProvider();
+        var jsonSerializerOptions = serviceProvider.GetService<JsonSerializerOptions>();
+        var logger = serviceProvider.GetService<ILogger<OverrideResponseHandlerMiddleware>>();
+
+        var target = new OverrideResponseHandlerMiddleware(nextContext =>
+            CreateFakeNextContext(nextContext, new
+            {
+                ErrorCode = "NoAuthentication",
+                ErrorMessage = "Invalid userid or password"
+            }, StatusCodes.Status401Unauthorized));
+
+        await target.InvokeAsync(httpContext, logger, jsonSerializerOptions);
+
+        var response = httpContext.Response;
+        var stream = response.Body;
+        if (stream.CanSeek)
+        {
+            stream.Seek(0, SeekOrigin.Begin);
+        }
+
+        var actual = await new StreamReader(stream).ReadToEndAsync();
+        Assert.AreEqual(expected, actual);
+    }
+
     private static Task CreateFakeNextContext(HttpContext context, object detailFailure, int statusCode)
     {
         context.Response.StatusCode = statusCode;
@@ -113,7 +112,7 @@ public class OverrideResponseHandlerMiddlewareUnitTest
 
     private static JsonSerializerOptions CreateJsonSerializerOptions()
     {
-        return new()
+        return new JsonSerializerOptions
         {
             Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin,
                 UnicodeRanges.CjkUnifiedIdeographs),
