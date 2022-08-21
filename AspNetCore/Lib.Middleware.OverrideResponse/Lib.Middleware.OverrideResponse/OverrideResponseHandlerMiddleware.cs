@@ -46,6 +46,9 @@ public class OverrideResponseHandlerMiddleware
         else
         {
             await newResponseBodyStream.CopyToAsync(originalResponseBodyStream);
+            logger.LogWarning("{Time} ,不需要模糊訊息", DateTime.UtcNow);
+            logger.LogInformation("Retrieved {Count} records", 123);
+
             context.Response.Body = originalResponseBodyStream;
         }
     }
