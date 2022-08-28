@@ -1,0 +1,132 @@
+# Taskfile.yml
+
+version: "3"
+
+dotenv: [ "secrets/secrets.env" ]
+
+tasks:
+
+  api-dev:
+    desc: WebApi Development
+    dir: "src/NineYi.Msa.MemberService.WebAPI"
+    cmds:
+      - dotnet watch run --local {{.CLI_ARGS}} | jq -rR '. as $line | try (fromjson | "\(._ts) | \(._lvl) | \(._hid)-\(._ver) | \(._srctx)",  ._msg, ._props) catch $line'
+
+  dm-dev:
+    desc: DataMigration Development. Usage => task dm-dev -- diff -s 2001-01-01 -e 2022-01-01
+    dir: "src/NineYi.Msa.MemberService.DataMigration.ConsoleApp"
+    cmds:
+      - dotnet watch run {{.CLI_ARGS}} --local true | jq -rR '. as $line | try (fromjson | "\(._ts) | \(._lvl) | \(._hid)-\(._ver) | \(._srctx)",  ._msg, ._props) catch $line'
+
+  dm-run:
+    desc: DataMigration run. Usage => task dm-run -- diff -s 2001-01-01 -e 2022-01-01
+    dir: "src/NineYi.Msa.MemberService.DataMigration.ConsoleApp"
+    cmds:
+      - dotnet run {{.CLI_ARGS}} --local true
+
+  db-start:
+    desc: start PostgreSQL at local
+    cmds:
+      - docker-compose up -d --remove-orphans db
+
+  db-update:
+    desc: apply db migration on local PostgreSQL
+    cmds:
+      - dotnet ef database update {{.CLI_ARGS}} --project src/NineYi.Msa.MemberService.Infrastructure.DB --context MemberDbContext
+
+  redis-start:
+    desc: start redis 5.X version
+    cmds:
+      - docker-compose up -d redis
+
+  redis-admin-start:
+    desc: admin ui to manage redis
+    cmds:
+      - docker-compose up -d redis-admin
+
+  db-otm-db-start:
+    dir: test/NineYi.Msa.MemberService.NMQ3.Worker.Infrastructure.Tests
+    cmds:
+      - docker run --privileged -e 'ACCEPT_EULA=Y' -e 'SA_PASSWORD=pass@w0rd1~' -p 1433:1433 -d datagrip/mssql-server-linux
+
+  db-otm-db-update:
+    dir: test/NineYi.Msa.MemberService.NMQ3.Worker.Infrastructure.Tests
+    cmds:
+      - dotnet build
+      - dotnet ef database update --context CrmDbContext --no-build
+      - dotnet ef database update --context WebStoreDbContext --no-build
+
+  db-mssql-start:
+    desc: start MSSQL at local
+    cmds:
+      - docker-compose up -d db-sql
+
+  db-mssql-update:
+    desc: db update on local MSSQL
+    dir: src/NineYi.Msa.MemberService.DataMigration.Infrastructure
+    cmds:
+      - dotnet build
+      - dotnet ef database update --context CrmDbContext --no-build
+      - dotnet ef database update --context WebStoreDbContext --no-build
+
+  db-list-migrations:
+    desc: member-service list migrations
+    cmds:
+      - dotnet ef migrations list {{.CLI_ARGS}} -p src/NineYi.Msa.MemberService.Infrastructure.DB --context MemberDbContext
+
+  db-add-migration:
+    desc: member-service add migration
+    cmds:
+      - dotnet ef migrations add {{.CLI_ARGS}} -p src/NineYi.Msa.MemberService.Infrastructure.DB --context MemberDbContext
+
+  db-remove-migration:
+    desc: member-service remove migration
+    cmds:
+      - dotnet ef migrations remove -p src/NineYi.Msa.MemberService.Infrastructure.DB --context MemberDbContext
+
+  db-script:
+    desc: generate member-service db script
+    cmds:
+      - dotnet ef migrations script 0 -p src/NineYi.Msa.MemberService.Infrastructure.DB --context MemberDbContext
+
+  ddb-start:
+    desc: start dynamodb at local
+    cmds:
+      - docker-compose up -d ddb
+
+  ddb-clear:
+    desc: clear ddb table
+    cmds:
+      - docker-compose restart ddb
+      - aws dynamodb create-table --endpoint-url http://localhost:8000 --cli-input-json file://./ddb.json
+
+  ddb-init:
+    desc: init dynamodb table at local
+    cmds:
+      - aws dynamodb create-table --endpoint-url http://localhost:8000 --cli-input-json file://./ddb.json
+
+  ddb-list:
+    desc: list dynamodb tables at local
+    cmds:
+      - aws dynamodb list-tables --endpoint-url http://localhost:8000
+
+  ddb-logs:
+    cmds:
+      - docker-compose logs -f ddb
+
+  ddb-admin-start:
+    desc: start dynamodb admin
+    cmds:
+      - docker-compose up -d ddb-admin
+      
+  s3-minio-start:
+    desc: start s3-minio at local
+    cmds:
+      - docker-compose up -d s3-minio
+      
+  gen-k8s:
+    desc: generate k8s
+    cmds:
+      - dotnet run --project src/NineYi.Msa.K8S.Template.GeneratorApp -- -s $(pwd)/env -d $(pwd)/env/k8s -v 1.0.0.1
+
+
