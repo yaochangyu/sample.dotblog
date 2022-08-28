@@ -10,3 +10,8 @@ tasks:
     dir: "src/Lab.Host.Env.WebApi"
     cmds:
       - dotnet run --environment Staging
+  app:
+    desc: WebApi Development
+    dir: "src/Lab.Host.Env.ConsoleApp"
+    cmds:
+      - dotnet run --environment Production
