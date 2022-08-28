@@ -11,10 +11,9 @@ builder.Services.AddSwaggerGen();
 var environmentName = builder.Environment.EnvironmentName;
 var configRoot = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
-    .AddJsonFile($"appsettings.{environmentName}.json", optional: true, reloadOnChange: true)
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{environmentName}.json", optional: true, reloadOnChange: true)
     .Build();
-    ;
 
 builder.Configuration.AddConfiguration(configRoot);
 var app = builder.Build();
@@ -26,7 +25,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-var extension = app.Configuration.GetSection("Extension:Version");
+var version = app.Configuration.GetSection("Extension:Version").Value;
+Console.WriteLine($"Environment: {app.Environment.EnvironmentName}");
+Console.WriteLine($"Extension.Version: {version}");
+
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
