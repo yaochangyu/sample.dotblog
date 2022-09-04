@@ -1,13 +1,19 @@
 using Serilog;
 using Serilog.Events;
+using Serilog.Formatting.Compact;
+using Serilog.Formatting.Display;
+using Serilog.Formatting.Json;
+using Serilog.Formatting.Raw;
+using Serilog.Templates;
 
 Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
-    .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File("logs/app-.txt", rollingInterval: RollingInterval.Day)
-    .CreateLogger();
+        .MinimumLevel.Information()
+        .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+        .Enrich.FromLogContext()
+        .WriteTo.Console()
+        .WriteTo.File("logs/host-.txt", rollingInterval: RollingInterval.Day)
+        .CreateBootstrapLogger()
+    ;
 try
 {
     Log.Information("Starting web host");
@@ -15,14 +21,22 @@ try
     var builder = WebApplication.CreateBuilder(args);
 
     // builder.Host.UseSerilog(); //<=== 讓 Host 使用 Serilog 
+    // var formatter = new JsonFormatter();
+    // var formatter = new MessageTemplateTextFormatter();
+    // var formatter = new RawFormatter();
+    // var formatter = new RenderedCompactJsonFormatter();
+    var formatter = new CompactJsonFormatter();
+    // var formatter = new ExpressionTemplate(
+    //     "{ {_t: @t, _msg: @m, _props: @p} }\n");
     builder.Host.UseSerilog((context, services, config) =>
+    {
         config.ReadFrom.Configuration(context.Configuration)
             .ReadFrom.Services(services)
             .Enrich.FromLogContext()
-            .WriteTo.Console()
+            .WriteTo.Console(formatter)
             .WriteTo.Seq("http://localhost:5341")
-            // .WriteTo.File("logs/aspnet-.txt", rollingInterval: RollingInterval.Minute)
-        );
+            .WriteTo.File(formatter, "logs/aspnet-.txt", rollingInterval: RollingInterval.Minute);
+    });
 
     // Add services to the container.
 
