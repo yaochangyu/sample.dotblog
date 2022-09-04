@@ -1,11 +1,7 @@
 using Lab.SerilogProject.WebApi;
 using Serilog;
 using Serilog.Events;
-using Serilog.Formatting.Compact;
-using Serilog.Formatting.Display;
 using Serilog.Formatting.Json;
-using Serilog.Formatting.Raw;
-using Serilog.Templates;
 
 Log.Logger = new LoggerConfiguration()
         .MinimumLevel.Information()
