@@ -15,3 +15,8 @@ tasks:
     dir: "src/Lab.SerilogProject.ConsoleApp"
     cmds:
       - dotnet run --environment Production
+      
+  seq-start:
+    desc: start seq service
+    cmds:
+      - docker run --name seq -d --restart unless-stopped -e ACCEPT_EULA=Y -p 5341:80 datalust/seq:latest
