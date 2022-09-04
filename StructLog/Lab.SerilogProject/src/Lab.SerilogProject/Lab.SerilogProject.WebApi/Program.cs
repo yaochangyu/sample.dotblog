@@ -1,3 +1,4 @@
+using Lab.SerilogProject.WebApi;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
@@ -21,11 +22,11 @@ try
     var builder = WebApplication.CreateBuilder(args);
 
     // builder.Host.UseSerilog(); //<=== 讓 Host 使用 Serilog 
-    // var formatter = new JsonFormatter();
+    var formatter = new JsonFormatter();
     // var formatter = new MessageTemplateTextFormatter();
     // var formatter = new RawFormatter();
     // var formatter = new RenderedCompactJsonFormatter();
-    var formatter = new CompactJsonFormatter();
+    // var formatter = new CompactJsonFormatter();
     // var formatter = new ExpressionTemplate(
     //     "{ {_t: @t, _msg: @m, _props: @p} }\n");
     builder.Host.UseSerilog((context, services, config) =>
@@ -55,8 +56,17 @@ try
         app.UseSwaggerUI();
     }
 
+    app.UseMiddleware<TraceMiddleware>();
     app.UseHttpsRedirection();
-    app.UseSerilogRequestLogging(); //<=== 每一個 Request 使用 Serilog 記錄下來 
+    // app.UseSerilogRequestLogging(); //<=== 每一個 Request 使用 Serilog 記錄下來 
+    app.UseSerilogRequestLogging(options =>
+    {
+        options.EnrichDiagnosticContext = (diagnosticContext, httpContext) =>
+        {
+            diagnosticContext.Set("UserId", "svrooij");
+            diagnosticContext.Set("OperationType", "update");
+        };
+    }); 
     app.UseAuthorization();
 
     app.MapControllers();
