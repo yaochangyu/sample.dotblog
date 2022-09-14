@@ -16,11 +16,22 @@ builder.Services.AddSwaggerGen();
 
 // builder.Services.AddHealthChecks();
 
-builder.Services.AddHealthChecksUI()
+builder.Services.AddHealthChecksUI(p=>
+    {
+        p.AddHealthCheckEndpoint("Readiness", "/_readiness");
+        p.AddHealthCheckEndpoint("Liveness", "/_liveness");
+    })
     .AddInMemoryStorage();
+
 builder.Services.AddHealthChecks()
-    .AddUrlGroup(new Uri("https://www.google.com1"), "3rd api health check", tags: new[] { "3rd" });
-;
+    .AddUrlGroup(new Uri("https://www.google.com1"), "3rd API", tags: new[] { "3rd API", "google" })
+    .AddNpgSql(
+        npgsqlConnectionString: "Host=localhost;Port=5432;Database=member_service;Username=postgres;Password=guest",
+        healthQuery: "SELECT 1;",
+        name: "db",
+        failureStatus: HealthStatus.Unhealthy,
+        tags: new[] { "db", "sql", "PostgreSQL" })
+    ;
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -35,10 +46,17 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHealthChecks("/_hc",
+app.MapHealthChecks("/_liveness", new HealthCheckOptions()
+{
+    Predicate = _ => false, //只檢查應用程式本身
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+});
+
+app.MapHealthChecks("/_readiness",
     new HealthCheckOptions()
     {
-        // ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+        //檢查應用程式所依賴的服務
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
 
         // ResponseWriter = (context, report) =>
         // {
@@ -46,25 +64,25 @@ app.MapHealthChecks("/_hc",
         //     return context.Response.WriteAsync("OK");
         // }
 
-        ResponseWriter = async (context, report) =>
-        {
-            var result = JsonSerializer.Serialize(
-                new
-                {
-                    status = report.Status.ToString(),
-                    errors = report.Entries
-                        .Select(e =>
-                            new
-                            {
-                                key = e.Key,
-                                value = Enum.GetName(typeof(HealthStatus), e.Value.Status)
-                            })
-                });
-            context.Response.ContentType = MediaTypeNames.Application.Json;
-            await context.Response.WriteAsync(result);
-        }
+        // ResponseWriter = async (context, report) =>
+        // {
+        //     var result = JsonSerializer.Serialize(
+        //         new
+        //         {
+        //             status = report.Status.ToString(),
+        //             errors = report.Entries
+        //                 .Select(e =>
+        //                     new
+        //                     {
+        //                         key = e.Key,
+        //                         value = Enum.GetName(typeof(HealthStatus), e.Value.Status)
+        //                     })
+        //         });
+        //     context.Response.ContentType = MediaTypeNames.Application.Json;
+        //     await context.Response.WriteAsync(result);
+        // }
     });
 
-app.UseHealthChecksUI(options => { options.UIPath = "/_hc-ui"; });
+app.UseHealthChecksUI(options => { options.UIPath = "/_hc"; });
 
 app.Run();
