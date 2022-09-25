@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -30,6 +31,8 @@ public class BasicAuthenticationHandler單元測試
 
         using var testHost = await CreateTestHost();
         var handler = testHost.Services.GetService<BasicAuthenticationHandler>();
+        var authenticationHandler = testHost.Services.GetService<AuthenticationHandler<BasicAuthenticationOptions>>();
+
         await handler.InitializeAsync(new AuthenticationScheme("basic",
                 "basic",
                 typeof(BasicAuthenticationHandler)),
@@ -123,7 +126,8 @@ public class BasicAuthenticationHandler單元測試
                     .ConfigureServices(
                         services =>
                         {
-                            services.AddBasicAuthentication<BasicAuthenticationProvider>(_ => { });
+
+                            services.AddBasicAuthentication<BasicAuthenticationProvider>(o => { o.Realm = "Test"; });
                             services.AddAuthorization();
                         })
                     .Configure(app =>

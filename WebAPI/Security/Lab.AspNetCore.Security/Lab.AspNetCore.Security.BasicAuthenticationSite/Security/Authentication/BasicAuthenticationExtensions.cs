@@ -5,15 +5,15 @@ namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authenticatio
 
 public static class BasicAuthenticationExtensions
 {
-    public static AuthenticationBuilder AddBasic<TAuthService>(this AuthenticationBuilder builder,
+    public static AuthenticationBuilder AddBasic<TAuthProvider>(this AuthenticationBuilder builder,
         string authenticationScheme,
         string displayName,
         Action<BasicAuthenticationOptions> configureOptions)
-        where TAuthService : class, IBasicAuthenticationProvider
+        where TAuthProvider : class, IBasicAuthenticationProvider
     {
         builder.Services
             .AddSingleton<IPostConfigureOptions<BasicAuthenticationOptions>, BasicAuthenticationPostConfigureOptions>();
-        builder.Services.AddSingleton<IBasicAuthenticationProvider, TAuthService>();
+        builder.Services.AddSingleton<IBasicAuthenticationProvider, TAuthProvider>();
 
         return builder.AddScheme<BasicAuthenticationOptions, BasicAuthenticationHandler>(
             authenticationScheme,
@@ -21,9 +21,9 @@ public static class BasicAuthenticationExtensions
             configureOptions);
     }
 
-    public static AuthenticationBuilder AddBasicAuthentication<TAuthService>(this IServiceCollection services,
+    public static AuthenticationBuilder AddBasicAuthentication<TAuthProvider>(this IServiceCollection services,
         Action<BasicAuthenticationOptions> configureOptions)
-        where TAuthService : class, IBasicAuthenticationProvider
+        where TAuthProvider : class, IBasicAuthenticationProvider
     {
         var scheme = BasicAuthenticationDefaults.AuthenticationScheme;
         return services.AddAuthentication(o =>
@@ -31,6 +31,6 @@ public static class BasicAuthenticationExtensions
                 o.DefaultAuthenticateScheme = scheme;
                 o.DefaultChallengeScheme = scheme;
             })
-            .AddBasic<TAuthService>(scheme, scheme, configureOptions);
+            .AddBasic<TAuthProvider>(scheme, scheme, configureOptions);
     }
 }
