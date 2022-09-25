@@ -11,13 +11,13 @@ public class DemoController : ControllerBase
 
     public DemoController(ILogger<DemoController> logger)
     {
-        this._logger = logger;
+        _logger = logger;
     }
 
-    [AllowAnonymous]
     [HttpGet]
-    public async Task<IActionResult> Get()
+    [Authorize]
+    public ActionResult Get()
     {
-        return this.Ok("好");
+        return this.Ok("OK~好");
     }
 }
