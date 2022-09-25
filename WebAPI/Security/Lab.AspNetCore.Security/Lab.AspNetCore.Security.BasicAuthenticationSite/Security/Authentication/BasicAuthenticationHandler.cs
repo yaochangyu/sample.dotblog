@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -13,6 +13,7 @@ namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authenticatio
 public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticationOptions>
 {
     private readonly IBasicAuthenticationProvider _authenticationProvider;
+
     private string _failReason;
 
     public BasicAuthenticationHandler(
@@ -26,21 +27,9 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
         this._authenticationProvider = authenticationProvider;
     }
 
-    /// <summary>
-    /// 
-    /// </summary>
-    void CreateTestServer()
-    {
-
-    }
-   
-    void CreateTask()
-    {
-       
-    }
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        var schemeName = this.Scheme.Name; //由外部注入
+        var schemeName = this.Scheme.Name;
         var endpoint = this.Context.GetEndpoint();
         if (endpoint?.Metadata?.GetMetadata<IAllowAnonymous>() != null)
         {

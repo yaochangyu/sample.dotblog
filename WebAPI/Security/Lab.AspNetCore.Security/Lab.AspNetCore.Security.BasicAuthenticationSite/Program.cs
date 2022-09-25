@@ -28,18 +28,13 @@ builder.Services.AddSingleton(p=>new JsonSerializerOptions
     DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
 });
-builder.Services.AddSingleton<IBasicAuthenticationProvider, BasicAuthenticationProvider>();
-builder.Services.AddBasicAuthentication(options => { });
-builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
-builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, PermissionAuthorizationMiddlewareResultHandler>();
-builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
-builder.Services.AddSingleton<IPermissionAuthorizationProvider, PermissionAuthorizationProvider>();
-// builder.Services.AddAuthorization(options =>
-// {
-//     options.AddPolicy("Permission", policy =>
-//         policy.Requirements.Add(new PermissionAuthorizationRequirement()));
-// });
+builder.Services.AddBasicAuthentication<BasicAuthenticationProvider>(o => o.Realm = "Basic Authentication");
 
+// builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+// builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, PermissionAuthorizationMiddlewareResultHandler>();
+// builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
+// builder.Services.AddSingleton<IPermissionAuthorizationProvider, PermissionAuthorizationProvider>();
+//
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -49,7 +44,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseStaticFiles();
+app.UseStatusCodePages();
 app.UseHttpsRedirection();
+app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
