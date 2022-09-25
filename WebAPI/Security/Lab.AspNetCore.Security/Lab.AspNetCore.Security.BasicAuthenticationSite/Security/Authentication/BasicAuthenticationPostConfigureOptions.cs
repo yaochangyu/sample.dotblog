@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 
 namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authentication;
 
