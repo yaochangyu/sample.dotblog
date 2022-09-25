@@ -5,35 +5,32 @@ namespace Lab.AspNetCore.Security.MultiAuthenticationSite.Security.Authenticatio
 
 public static class BasicAuthenticationExtensions
 {
-    public static AuthenticationBuilder AddBasic<TAuthService>(this AuthenticationBuilder builder)
-        where TAuthService : class, IBasicAuthenticationProvider
-    {
-        return AddBasic<TAuthService>(builder, BasicAuthenticationDefaults.AuthenticationScheme, _ => { });
-    }
-
     public static AuthenticationBuilder AddBasic<TAuthService>(this AuthenticationBuilder builder,
-        string authenticationScheme)
-        where TAuthService : class, IBasicAuthenticationProvider
-    {
-        return AddBasic<TAuthService>(builder, authenticationScheme, _ => { });
-    }
-
-    public static AuthenticationBuilder AddBasic<TAuthService>(this AuthenticationBuilder builder,
+        string authenticationScheme,
+        string displayName,
         Action<BasicAuthenticationOptions> configureOptions)
-        where TAuthService : class, IBasicAuthenticationProvider
-    {
-        return AddBasic<TAuthService>(builder, BasicAuthenticationDefaults.AuthenticationScheme, configureOptions);
-    }
-
-    public static AuthenticationBuilder AddBasic<TAuthService>(this AuthenticationBuilder builder,
-        string authenticationScheme, Action<BasicAuthenticationOptions> configureOptions)
         where TAuthService : class, IBasicAuthenticationProvider
     {
         builder.Services
             .AddSingleton<IPostConfigureOptions<BasicAuthenticationOptions>, BasicAuthenticationPostConfigureOptions>();
-        builder.Services.AddTransient<IBasicAuthenticationProvider, TAuthService>();
+        builder.Services.AddSingleton<IBasicAuthenticationProvider, TAuthService>();
 
         return builder.AddScheme<BasicAuthenticationOptions, BasicAuthenticationHandler>(
-            authenticationScheme, configureOptions);
+            authenticationScheme,
+            displayName,
+            configureOptions);
+    }
+
+    public static AuthenticationBuilder AddBasicAuthentication<TAuthService>(this IServiceCollection services,
+        Action<BasicAuthenticationOptions> configureOptions)
+        where TAuthService : class, IBasicAuthenticationProvider
+    {
+        var scheme = BasicAuthenticationDefaults.AuthenticationScheme;
+        return services.AddAuthentication(o =>
+            {
+                o.DefaultAuthenticateScheme = scheme;
+                o.DefaultChallengeScheme = scheme;
+            })
+            .AddBasic<TAuthService>(scheme, scheme, configureOptions);
     }
 }

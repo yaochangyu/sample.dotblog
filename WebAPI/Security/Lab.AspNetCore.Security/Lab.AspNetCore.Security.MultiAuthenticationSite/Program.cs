@@ -9,8 +9,7 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddAuthentication(BasicAuthenticationDefaults.AuthenticationScheme)
-    .AddBasic<BasicAuthenticationProvider>(o => { o.Realm = "My App"; });
+builder.Services.AddBasicAuthentication<BasicAuthenticationProvider>(o => o.Realm = "Basic Authentication");
 
 var app = builder.Build();
 
@@ -26,7 +25,7 @@ app.UseStatusCodePages();
 app.UseHttpsRedirection();
 app.UseRouting();
 
-// app.UseAuthentication();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

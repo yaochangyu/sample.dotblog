@@ -14,6 +14,8 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
 {
     private readonly IBasicAuthenticationProvider _authenticationProvider;
 
+    private string _failReason;
+
     public BasicAuthenticationHandler(
         IOptionsMonitor<BasicAuthenticationOptions> options,
         ILoggerFactory logger,
@@ -25,11 +27,9 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
         this._authenticationProvider = authenticationProvider;
     }
 
-    private string _failReason;
-
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        var schemeName = this.Scheme.Name; //由外部注入
+        var schemeName = this.Scheme.Name;
         var endpoint = this.Context.GetEndpoint();
         if (endpoint?.Metadata?.GetMetadata<IAllowAnonymous>() != null)
         {
@@ -78,16 +78,6 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
         return this.SignIn(user);
     }
 
-    private AuthenticateResult SignIn(string user)
-    {
-        var schemeName = this.Scheme.Name;
-        var claims = new[] { new Claim(ClaimTypes.Name, user) };
-        var identity = new ClaimsIdentity(claims, schemeName);
-        var principal = new ClaimsPrincipal(identity);
-        var ticket = new AuthenticationTicket(principal, schemeName);
-        return AuthenticateResult.Success(ticket);
-    }
-
     protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
     {
         // 寫入詳細的失敗原因，排除敏感性資料 
@@ -108,5 +98,15 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
             Message = "Please contact your administrator"
         });
         await Task.CompletedTask;
+    }
+
+    private AuthenticateResult SignIn(string user)
+    {
+        var schemeName = this.Scheme.Name;
+        var claims = new[] { new Claim(ClaimTypes.Name, user) };
+        var identity = new ClaimsIdentity(claims, schemeName);
+        var principal = new ClaimsPrincipal(identity);
+        var ticket = new AuthenticationTicket(principal, schemeName);
+        return AuthenticateResult.Success(ticket);
     }
 }
