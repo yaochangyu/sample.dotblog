@@ -19,7 +19,12 @@ builder.Logging.AddConsole();
 
 // builder.Services.AddAuthentication(BasicAuthenticationDefaults.AuthenticationScheme)
 //     .AddScheme<BasicAuthenticationOptions, BasicAuthenticationHandler>(BasicAuthenticationDefaults.AuthenticationScheme,
-//         p => new BasicAuthenticationOptions());
+//         p => new BasicAuthenticationOptions()
+//         {
+//             Realm =  "Basic Authentication"
+//         });
+
+builder.Services.AddBasicAuthentication<BasicAuthenticationProvider>(o => o.Realm = "Basic Authentication");
 builder.Services.AddSingleton(p=>new JsonSerializerOptions
 {
     Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.CjkUnifiedIdeographs),
@@ -28,12 +33,11 @@ builder.Services.AddSingleton(p=>new JsonSerializerOptions
     DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
 });
-builder.Services.AddBasicAuthentication<BasicAuthenticationProvider>(o => o.Realm = "Basic Authentication");
 
-// builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
-// builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, PermissionAuthorizationMiddlewareResultHandler>();
-// builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
-// builder.Services.AddSingleton<IPermissionAuthorizationProvider, PermissionAuthorizationProvider>();
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, PermissionAuthorizationMiddlewareResultHandler>();
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
+builder.Services.AddSingleton<IPermissionAuthorizationProvider, PermissionAuthorizationProvider>();
 //
 var app = builder.Build();
 

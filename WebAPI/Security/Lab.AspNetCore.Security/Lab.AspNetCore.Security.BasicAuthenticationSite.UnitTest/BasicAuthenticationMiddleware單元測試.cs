@@ -56,7 +56,7 @@ public class BasicAuthenticationMiddleware單元測試
                     .ConfigureServices(
                         services =>
                         {
-                            services.AddBasicAuthentication<BasicAuthenticationProvider>(_ => { });
+                            services.AddBasicAuthentication<BasicAuthenticationProvider>(o => { o.Realm = "Test"; });
                             services.AddAuthorization();
                         })
                     .Configure(app =>
