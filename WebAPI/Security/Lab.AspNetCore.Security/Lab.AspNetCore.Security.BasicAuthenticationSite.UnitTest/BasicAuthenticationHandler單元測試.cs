@@ -100,8 +100,7 @@ public class BasicAuthenticationHandler單元測試
                     .ConfigureServices(
                         services =>
                         {
-                            services.AddSingleton<IBasicAuthenticationProvider, BasicAuthenticationProvider>();
-                            services.AddBasicAuthentication(_ => { });
+                            services.AddBasicAuthentication<BasicAuthenticationProvider>(_ => { });
                             services.AddAuthorization();
                         })
                     .Configure(app =>
@@ -124,8 +123,7 @@ public class BasicAuthenticationHandler單元測試
                     .ConfigureServices(
                         services =>
                         {
-                            services.AddSingleton<IBasicAuthenticationProvider, BasicAuthenticationProvider>();
-                            services.AddBasicAuthentication(_ => { });
+                            services.AddBasicAuthentication<BasicAuthenticationProvider>(_ => { });
                             services.AddAuthorization();
                         })
                     .Configure(app =>
@@ -147,8 +145,7 @@ public class BasicAuthenticationHandler單元測試
                     .ConfigureServices(
                         services =>
                         {
-                            services.AddSingleton<IBasicAuthenticationProvider, BasicAuthenticationProvider>();
-                            services.AddBasicAuthentication(_ => { });
+                            services.AddBasicAuthentication<BasicAuthenticationProvider>(_ => { });
                             services.AddAuthorization();
                         })
                     .Configure(app =>
