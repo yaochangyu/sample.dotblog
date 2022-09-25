@@ -11,9 +11,4 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="6.0.0" />
 
     </ItemGroup>
-    <ItemGroup>
-        <!--        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">-->
-        <!--            <_Parameter1>Lab.AspNetCore.Security.BasicAuthenticationSite.IntegrateTest</_Parameter1>-->
-        <!--        </AssemblyAttribute>-->
-    </ItemGroup>
 </Project>
