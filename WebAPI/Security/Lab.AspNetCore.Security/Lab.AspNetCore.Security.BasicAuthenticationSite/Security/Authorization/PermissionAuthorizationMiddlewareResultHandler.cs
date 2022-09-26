@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Policy;
 
@@ -7,8 +8,8 @@ namespace Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authorization
 public class PermissionAuthorizationMiddlewareResultHandler : IAuthorizationMiddlewareResultHandler
 {
     private readonly ILogger<PermissionAuthorizationMiddlewareResultHandler> _logger;
-
     private readonly JsonSerializerOptions _jsonSerializerOptions;
+    private readonly AuthorizationMiddlewareResultHandler _defaultHandler = new();
 
     public PermissionAuthorizationMiddlewareResultHandler(
         ILogger<PermissionAuthorizationMiddlewareResultHandler> logger,
@@ -25,7 +26,7 @@ public class PermissionAuthorizationMiddlewareResultHandler : IAuthorizationMidd
         PolicyAuthorizationResult authorizeResult)
     {
         var permissionAuthorizationRequirements = policy.Requirements.OfType<PermissionAuthorizationRequirement>();
-
+        
         if (authorizeResult.Forbidden
             && permissionAuthorizationRequirements.Any())
         {
@@ -41,13 +42,14 @@ public class PermissionAuthorizationMiddlewareResultHandler : IAuthorizationMidd
             {
                 ErrorCode = "Invalid Authorization",
                 ErrorMessages = new[] { "Please contact your administrator" }
+
                 // ErrorMessages = authorizeResult.AuthorizationFailure.FailureReasons
             }, this._jsonSerializerOptions);
             return;
         }
 
-        await next.Invoke(context);
+        await this._defaultHandler.HandleAsync(next, context, policy, authorizeResult);
 
-        // await next(context);
+        // await next.Invoke(context);
     }
 }
