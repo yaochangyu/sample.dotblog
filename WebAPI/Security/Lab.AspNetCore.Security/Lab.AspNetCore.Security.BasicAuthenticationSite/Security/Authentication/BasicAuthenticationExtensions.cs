@@ -28,8 +28,8 @@ public static class BasicAuthenticationExtensions
         var scheme = BasicAuthenticationDefaults.AuthenticationScheme;
         return services.AddAuthentication(o =>
             {
-                o.DefaultAuthenticateScheme = scheme;
-                o.DefaultChallengeScheme = scheme;
+                // o.DefaultAuthenticateScheme = scheme;
+                // o.DefaultChallengeScheme = scheme;
             })
             .AddBasic<TAuthProvider>(scheme, scheme, configureOptions);
     }
