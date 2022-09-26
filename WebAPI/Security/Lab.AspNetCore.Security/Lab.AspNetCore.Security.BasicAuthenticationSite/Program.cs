@@ -2,6 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
+using AspNetCore.Authentication.ApiKey;
 using Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authentication;
 using Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authorization;
 using Microsoft.AspNetCore.Authorization;
@@ -24,6 +25,12 @@ builder.Logging.AddConsole();
 //             Realm =  "Basic Authentication"
 //         });
 
+builder.Services.AddAuthentication(ApiKeyDefaults.AuthenticationScheme)
+    .AddApiKeyInHeaderOrQueryParams<ApiKeyProvider>(options =>
+    {
+        options.Realm = "Sample Web API";
+        options.KeyName = "X-API-KEY";
+    });
 builder.Services.AddBasicAuthentication<BasicAuthenticationProvider>(o => o.Realm = "Basic Authentication");
 builder.Services.AddSingleton(p=>new JsonSerializerOptions
 {
@@ -34,10 +41,10 @@ builder.Services.AddSingleton(p=>new JsonSerializerOptions
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
 });
 
-builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
-builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, PermissionAuthorizationMiddlewareResultHandler>();
-builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
-builder.Services.AddSingleton<IPermissionAuthorizationProvider, PermissionAuthorizationProvider>();
+// builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+// builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, PermissionAuthorizationMiddlewareResultHandler>();
+// builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
+// builder.Services.AddSingleton<IPermissionAuthorizationProvider, PermissionAuthorizationProvider>();
 //
 var app = builder.Build();
 
