@@ -1,0 +1,21 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.AwsDDB.Test", "test\Lab.AwsDDB.Test\Lab.AwsDDB.Test.csproj", "{5B2F9C1D-597C-4890-9806-42B42D42F15C}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "global", "global", "{23EBD672-F330-4AEB-9F14-24C0E562F670}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5B2F9C1D-597C-4890-9806-42B42D42F15C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5B2F9C1D-597C-4890-9806-42B42D42F15C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5B2F9C1D-597C-4890-9806-42B42D42F15C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5B2F9C1D-597C-4890-9806-42B42D42F15C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
