@@ -1,3 +1,8 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Unicode;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -7,8 +12,11 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddDistributedMemoryCache();
-
+builder.Services.AddDistributedMemoryCache(p =>
+{
+    p.ExpirationScanFrequency = TimeSpan.FromSeconds(60);
+});
+builder.Services.AddSingleton(p => CreateJsonSerializerOptions());
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -25,3 +33,14 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+JsonSerializerOptions CreateJsonSerializerOptions() =>
+    new()
+    {
+        Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.CjkUnifiedIdeographs),
+        PropertyNameCaseInsensitive = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new JsonStringEnumConverter() }
+    };
