@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{97B4E8A6-F946-4D97-87E8-6ED45319A07F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{FABC7D61-6407-48E3-BC03-E1618276A877}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Idempotent.WebApi", "src\Lab.Idempotent.WebApi\Lab.Idempotent.WebApi.csproj", "{EA97918D-52E7-4DD2-A2F5-5B5A76FED4FF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{EA97918D-52E7-4DD2-A2F5-5B5A76FED4FF} = {97B4E8A6-F946-4D97-87E8-6ED45319A07F}
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EA97918D-52E7-4DD2-A2F5-5B5A76FED4FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EA97918D-52E7-4DD2-A2F5-5B5A76FED4FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EA97918D-52E7-4DD2-A2F5-5B5A76FED4FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EA97918D-52E7-4DD2-A2F5-5B5A76FED4FF}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
