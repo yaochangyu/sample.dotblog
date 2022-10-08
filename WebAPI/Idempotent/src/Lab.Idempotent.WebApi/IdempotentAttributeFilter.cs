@@ -1,12 +1,13 @@
 ﻿using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Caching.Distributed;
 
 namespace Lab.Idempotent.WebApi;
 
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = false)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = false)]
 public class IdempotentAttribute : Attribute, IFilterFactory
 {
     public bool IsReusable => false;
@@ -22,38 +23,27 @@ public class IdempotentAttribute : Attribute, IFilterFactory
 
 public class IdempotentAttributeFilter : ActionFilterAttribute
 {
+    public const string HeaderName = "IdempotencyKey";
+    public static readonly TimeSpan Expiration = new(0, 0, 60);
+
     private readonly IDistributedCache _distributedCache;
-    private bool _isIdempotencyCache = false;
-    const string HeaderName = "IdempotencyKey";
     private string _idempotencyKey;
+    private bool _hasIdempotencyKey;
 
     public IdempotentAttributeFilter(IDistributedCache distributedCache)
     {
-        _distributedCache = distributedCache;
+        this._distributedCache = distributedCache;
     }
 
     public override void OnActionExecuting(ActionExecutingContext context)
     {
         if (context.HttpContext.Request.Headers.TryGetValue(HeaderName, out var idempotencyKey) == false)
         {
-            context.Result = new ObjectResult(new
-            {
-                ErrorCode = "NotFoundIdempotentKey",
-                ErrorMessage = "Not found Idempotent key in header",
-                Data = new
-                {
-                    PropertyName = "IdempotentKey",
-                    Value = ""
-                }
-            })
-            {
-                StatusCode = (int)HttpStatusCode.BadRequest
-            };
-
+            context.Result = Failure.Results[FailureCode.NotFoundIdempotentKey];
             return;
         }
 
-        this._idempotencyKey = idempotencyKey.ToString();
+        this._idempotencyKey = idempotencyKey;
 
         var cacheData = this._distributedCache.GetString(this.GetDistributedCacheKey());
         if (cacheData == null)
@@ -61,27 +51,44 @@ public class IdempotentAttributeFilter : ActionFilterAttribute
             return;
         }
 
-        context.Result = JsonSerializer.Deserialize<ObjectResult>(cacheData);
-        this._isIdempotencyCache = true;
+        //從快取取出內容回傳給調用端 
+        var jsonObject = JsonObject.Parse(cacheData);
+        context.Result = new ObjectResult(jsonObject["Data"])
+        {
+            StatusCode = jsonObject["StatusCode"].GetValue<int>()
+        };
+        this._hasIdempotencyKey = true;
     }
 
     public override void OnResultExecuted(ResultExecutedContext context)
     {
-        if (_isIdempotencyCache)
+        if (this._hasIdempotencyKey)
         {
             return;
         }
 
-        var contextResult = context.Result;
+        var contextResult = (ObjectResult)context.Result;
+        if (contextResult.StatusCode != (int)HttpStatusCode.OK)
+        {
+            return;
+        }
 
-        DistributedCacheEntryOptions cacheOptions = new DistributedCacheEntryOptions();
-        cacheOptions.AbsoluteExpirationRelativeToNow = new TimeSpan(24, 0, 0);
-
-        _distributedCache.SetString(GetDistributedCacheKey(), JsonSerializer.Serialize(contextResult), cacheOptions);
+        var cacheOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = Expiration
+        };
+        var json = JsonSerializer.Serialize(new
+        {
+            Data = contextResult.Value,
+            contextResult.StatusCode
+        });
+        this._distributedCache.SetString(this.GetDistributedCacheKey(),
+            json,
+            cacheOptions);
     }
 
     private string GetDistributedCacheKey()
     {
-        return "Idempotency:" + _idempotencyKey;
+        return "IdempotencyKey:" + this._idempotencyKey;
     }
 }
