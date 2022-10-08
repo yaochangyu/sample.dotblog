@@ -6,6 +6,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{FABC7D61-6
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Idempotent.WebApi", "src\Lab.Idempotent.WebApi\Lab.Idempotent.WebApi.csproj", "{EA97918D-52E7-4DD2-A2F5-5B5A76FED4FF}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "global", "global", "{87BA93CC-B40F-45DC-BB6D-3393B443C7CD}"
+	ProjectSection(SolutionItems) = preProject
+		Taskfile.yml = Taskfile.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

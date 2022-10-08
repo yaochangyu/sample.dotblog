@@ -22,23 +22,23 @@ public class WeatherForecastController : ControllerBase
 
     [HttpPost("{temperature}")]
     [Idempotent]
-    public WeatherForecast Post(int temperature)
+    public async Task<ActionResult<WeatherForecast>> Post(int temperature, CancellationToken cancel = default)
     {
-        var data = new WeatherForecast { TemperatureC = temperature, Date = DateTime.UtcNow };
+        var rng = new Random();
+        var data = new WeatherForecast
+        {
+            TemperatureC = temperature,
+            Summary =  Summaries[rng.Next(Summaries.Length)],
+            Date = DateTime.UtcNow
+        };
         s_repository.Add(data);
 
         return data;
     }
 
     [HttpGet]
-    public IEnumerable<WeatherForecast> Get()
+    public async Task<ActionResult<IEnumerable<WeatherForecast>>> Get()
     {
-        var rng = new Random();
-        return s_repository.Select(p => new WeatherForecast
-            {
-                TemperatureC = p.TemperatureC,
-                Summary = Summaries[rng.Next(Summaries.Length)]
-            })
-            .ToArray();
+        return s_repository;
     }
 }
