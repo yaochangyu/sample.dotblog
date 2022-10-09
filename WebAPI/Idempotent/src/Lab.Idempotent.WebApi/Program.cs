@@ -16,7 +16,16 @@ builder.Services.AddDistributedMemoryCache(p =>
 {
     p.ExpirationScanFrequency = TimeSpan.FromSeconds(60);
 });
-builder.Services.AddSingleton(p => CreateJsonSerializerOptions());
+builder.Services.AddSingleton(p => new JsonSerializerOptions
+{
+    Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.CjkUnifiedIdeographs),
+    PropertyNameCaseInsensitive = true,
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
+    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+    Converters = { new JsonStringEnumConverter() }
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -33,14 +42,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
-JsonSerializerOptions CreateJsonSerializerOptions() =>
-    new()
-    {
-        Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.CjkUnifiedIdeographs),
-        PropertyNameCaseInsensitive = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        Converters = { new JsonStringEnumConverter() }
-    };
