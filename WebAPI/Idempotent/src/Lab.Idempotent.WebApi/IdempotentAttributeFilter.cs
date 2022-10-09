@@ -37,21 +37,24 @@ public class IdempotentAttributeFilter : ActionFilterAttribute
 
     public override void OnActionExecuting(ActionExecutingContext context)
     {
+        // 檢查 Header 有沒有 IdempotencyKey
         if (context.HttpContext.Request.Headers.TryGetValue(HeaderName, out var idempotencyKey) == false)
         {
+            // 沒有的話則回傳 Bad Request
             context.Result = Failure.Results[FailureCode.NotFoundIdempotentKey];
             return;
         }
 
         this._idempotencyKey = idempotencyKey;
-
+        
         var cacheData = this._distributedCache.GetString(this.GetDistributedCacheKey());
         if (cacheData == null)
         {
+            // 沒有快取則進入 Action
             return;
         }
 
-        //從快取取出內容回傳給調用端 
+        // 從快取取出內容回傳給調用端 
         var jsonObject = JsonObject.Parse(cacheData);
         context.Result = new ObjectResult(jsonObject["Data"])
         {
