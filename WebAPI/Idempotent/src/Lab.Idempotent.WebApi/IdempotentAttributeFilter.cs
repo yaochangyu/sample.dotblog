@@ -69,7 +69,8 @@ public class IdempotentAttributeFilter : ActionFilterAttribute
         {
             return;
         }
-
+        
+        // 把回傳結果放到快取裡面
         var contextResult = (ObjectResult)context.Result;
         if (contextResult.StatusCode != (int)HttpStatusCode.OK)
         {
