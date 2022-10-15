@@ -1,0 +1,18 @@
+# Taskfile.yml
+
+version: "3"
+
+dotenv: [ "secrets/secrets.env" ]
+
+tasks:
+  clear-log:
+    cmds:
+      - nu -c 'rm -rf ./jmeter.log'
+      - nu -c 'rm -rf ./temp'
+      
+  first:
+    desc: first sample
+    cmds:
+      - task: clear-log
+      - nu -c 'rm -rf ./first'
+      - jmeter -n -t first.jmx -l ./first/result.jtl -e -o ./first 
