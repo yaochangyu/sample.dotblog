@@ -1,0 +1,21 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{029D0395-F267-4B37-BFD7-D6CC61D0495B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.NBomberTest", "test\Lab.NBomberTest\Lab.NBomberTest.csproj", "{90320F28-4CD0-4A7A-A95E-9F1D642EFF74}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{90320F28-4CD0-4A7A-A95E-9F1D642EFF74} = {029D0395-F267-4B37-BFD7-D6CC61D0495B}
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{90320F28-4CD0-4A7A-A95E-9F1D642EFF74}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90320F28-4CD0-4A7A-A95E-9F1D642EFF74}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90320F28-4CD0-4A7A-A95E-9F1D642EFF74}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90320F28-4CD0-4A7A-A95E-9F1D642EFF74}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
