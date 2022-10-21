@@ -36,7 +36,7 @@ public class test : Steps
                 var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, url);
                 foreach (var header in headers)
                 {
-                    // httpRequestMessage.Headers.TryAddWithoutValidation(header.Key, header.Value);
+                    httpRequestMessage.Headers.TryAddWithoutValidation(header.Key, header.Value);
                 }
 
                 // await context.Client.SendAsync(httpRequestMessage);
@@ -46,6 +46,7 @@ public class test : Steps
                     ? Response.Ok(statusCode: (int)response.StatusCode)
                     : Response.Fail(statusCode: (int)response.StatusCode);
             });
+
         this.ScenarioContext.Set(step, "step");
     }
 
@@ -54,9 +55,8 @@ public class test : Steps
     {
         var step = this.ScenarioContext.Get<IStep>("step");
         var scenario = ScenarioBuilder.CreateScenario("demo", step)
-                .WithLoadSimulations(Simulation.InjectPerSec(1, TimeSpan.FromSeconds(10)))
+                .WithLoadSimulations(Simulation.InjectPerSec(50, TimeSpan.FromSeconds(60)))
             ;
-
         var result = NBomberRunner
             .RegisterScenarios(scenario)
             .Run();

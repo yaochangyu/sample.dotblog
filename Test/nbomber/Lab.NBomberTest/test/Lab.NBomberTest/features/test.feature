@@ -1,6 +1,6 @@
 ﻿Feature: test
-Simple calculator for adding two numbers
 
+    @ignore
     Scenario: 壓力測試
         Given 準備以下 Header 參數
             | Key       | Value  |
