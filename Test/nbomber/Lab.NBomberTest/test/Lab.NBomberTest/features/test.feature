@@ -1,6 +1,5 @@
 ﻿Feature: test
 
-    @ignore
     Scenario: 壓力測試
         Given 準備以下 Header 參數
             | Key       | Value  |
