@@ -55,7 +55,7 @@ public class test : Steps
     {
         var step = this.ScenarioContext.Get<IStep>("step");
         var scenario = ScenarioBuilder.CreateScenario("demo", step)
-                .WithLoadSimulations(Simulation.InjectPerSec(50, TimeSpan.FromSeconds(60)))
+                .WithLoadSimulations(Simulation.InjectPerSec(30, TimeSpan.FromSeconds(60)))
             ;
         var result = NBomberRunner
             .RegisterScenarios(scenario)
