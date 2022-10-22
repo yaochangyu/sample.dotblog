@@ -4,8 +4,6 @@ using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using AspNetCore.Authentication.ApiKey;
 using Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authentication;
-using Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authorization;
-using Microsoft.AspNetCore.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
