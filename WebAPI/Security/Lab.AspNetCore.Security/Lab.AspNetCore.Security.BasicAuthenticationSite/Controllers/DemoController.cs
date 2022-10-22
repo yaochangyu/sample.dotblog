@@ -1,3 +1,5 @@
+using AspNetCore.Authentication.ApiKey;
+using Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,7 +17,9 @@ public class DemoController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize]
+    // [Authorize]
+    [Authorize(AuthenticationSchemes = BasicAuthenticationDefaults.AuthenticationScheme)] 
+    [Authorize(AuthenticationSchemes = ApiKeyDefaults.AuthenticationScheme)] 
     public ActionResult Get()
     {
         return this.Ok("OK~好");
