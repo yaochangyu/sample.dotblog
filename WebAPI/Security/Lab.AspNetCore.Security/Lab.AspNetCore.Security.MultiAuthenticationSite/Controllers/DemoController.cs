@@ -16,9 +16,10 @@ public class DemoController : ControllerBase
         _logger = logger;
     }
 
-    [Authorize(AuthenticationSchemes = BasicAuthenticationDefaults.AuthenticationScheme)] 
-    [Authorize(AuthenticationSchemes = ApiKeyDefaults.AuthenticationScheme)] 
 
+    // [Authorize(AuthenticationSchemes = BasicAuthenticationDefaults.AuthenticationScheme)] 
+    // [Authorize(AuthenticationSchemes = ApiKeyDefaults.AuthenticationScheme)] 
+    [Authorize]
     public ActionResult Get()
     {
         return this.Ok("OK~好");
