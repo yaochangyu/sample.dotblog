@@ -1,4 +1,4 @@
-namespace Lab.AspNetCore.Security.MultiAuthenticationSite.Security.Authentication;
+namespace Lab.AspNetCore.Security.BasicAuthentication;
 
 public class BasicAuthenticationProvider : IBasicAuthenticationProvider
 {

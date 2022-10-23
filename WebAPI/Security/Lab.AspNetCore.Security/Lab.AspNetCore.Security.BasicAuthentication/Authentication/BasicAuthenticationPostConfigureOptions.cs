@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Options;
 
-namespace Lab.AspNetCore.Security.MultiAuthenticationSite.Security.Authentication;
+namespace Lab.AspNetCore.Security.BasicAuthentication;
 
 public class BasicAuthenticationPostConfigureOptions : IPostConfigureOptions<BasicAuthenticationOptions>
 {

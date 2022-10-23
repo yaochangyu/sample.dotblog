@@ -1,3 +1,5 @@
+using AspNetCore.Authentication.ApiKey;
+using Lab.AspNetCore.Security.BasicAuthentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,7 +16,9 @@ public class DemoController : ControllerBase
         _logger = logger;
     }
 
-    [Authorize]
+    [Authorize(AuthenticationSchemes = BasicAuthenticationDefaults.AuthenticationScheme)] 
+    [Authorize(AuthenticationSchemes = ApiKeyDefaults.AuthenticationScheme)] 
+
     public ActionResult Get()
     {
         return this.Ok("OK~好");
