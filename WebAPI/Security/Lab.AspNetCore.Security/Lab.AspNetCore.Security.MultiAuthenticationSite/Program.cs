@@ -31,15 +31,46 @@ builder.Services.AddAuthentication(p =>
         p.ForwardDefaultSelector = context =>
         {
             string authorization = context.Request.Headers[HeaderNames.Authorization];
-            if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Basic "))
+            if (string.IsNullOrEmpty(authorization) == false &&
+                authorization.StartsWith($"{BasicAuthenticationDefaults.AuthenticationScheme} ",
+                    StringComparison.InvariantCultureIgnoreCase))
             {
                 return BasicAuthenticationDefaults.AuthenticationScheme;
             }
 
             return ApiKeyDefaults.AuthenticationScheme;
         };
-    });
+    })
     ;
+
+// builder.Services.AddAuthentication(p =>
+//     {
+//         p.DefaultScheme = "MultiAuthSchemes";
+//         p.DefaultChallengeScheme = "MultiAuthSchemes";
+//     })
+//     .AddApiKeyInHeaderOrQueryParams<ApiKeyProvider>(p =>
+//     {
+//         p.Realm = "Sample Web API";
+//         p.KeyName = "X-API-KEY";
+//     })
+//     .AddBasicAuthentication<BasicAuthenticationProvider>(BasicAuthenticationDefaults.AuthenticationScheme,
+//         BasicAuthenticationDefaults.AuthenticationScheme,
+//         p => p.Realm = "Basic Authentication")
+//     .AddPolicyScheme("MultiAuthSchemes", ApiKeyDefaults.AuthenticationScheme, p =>
+//     {
+//         p.ForwardDefaultSelector = context =>
+//         {
+//             string authorization = context.Request.Headers[HeaderNames.Authorization];
+//             if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Basic "))
+//             {
+//                 return BasicAuthenticationDefaults.AuthenticationScheme;
+//             }
+//
+//             return ApiKeyDefaults.AuthenticationScheme;
+//         };
+//     })
+//     ;
+
 // private string Challenge => $"{GetWwwAuthenticateSchemeName()} realm=\"{Options.Realm}\", charset=\"UTF-8\", in=\"{GetWwwAuthenticateInParameter()}\", key_name=\"{Options.KeyName}\"";
 
 var app = builder.Build();
