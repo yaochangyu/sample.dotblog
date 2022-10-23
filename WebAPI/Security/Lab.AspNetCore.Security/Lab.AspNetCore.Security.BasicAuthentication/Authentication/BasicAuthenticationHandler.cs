@@ -88,18 +88,18 @@ public class BasicAuthenticationHandler : AuthenticationHandler<BasicAuthenticat
             Code = "InvalidAuthentication",
             Message = this._failReason
         });
-
+    
         this.Response.StatusCode = 401;
         this.Response.HttpContext.Features.Get<IHttpResponseFeature>().ReasonPhrase = this._failReason;
-        this.Response.Headers["WWW-Authenticate"] = $"Basic realm=\"{this.Options.Realm}\", charset=\"UTF-8\"";
-
+        this.Response.Headers[HeaderNames.WWWAuthenticate] = $"Basic realm=\"{this.Options.Realm}\", charset=\"UTF-8\"";
+    
         // 響應粗糙的內容，這不是標準的 Basic Authentication 失敗的回傳，僅是為了示意
-        this.Response.WriteAsJsonAsync(new
-        {
-            Code = "InvalidAuthentication",
-            Message = "Please contact your administrator"
-        });
-        await Task.CompletedTask;
+        // this.Response.WriteAsJsonAsync(new
+        // {
+        //     Code = "InvalidAuthentication",
+        //     Message = "Please contact your administrator"
+        // });
+        await base.HandleChallengeAsync(properties);
     }
 
     private AuthenticateResult SignIn(string user)
