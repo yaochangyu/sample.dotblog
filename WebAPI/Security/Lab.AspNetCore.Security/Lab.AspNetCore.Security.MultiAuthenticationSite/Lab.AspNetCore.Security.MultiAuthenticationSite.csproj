@@ -8,6 +8,11 @@
 
     <ItemGroup>
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.2.3" />
+        <PackageReference Include="AspNetCore.Authentication.ApiKey" Version="6.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Lab.AspNetCore.Security.BasicAuthentication\Lab.AspNetCore.Security.BasicAuthentication.csproj" />
     </ItemGroup>
 
 </Project>
