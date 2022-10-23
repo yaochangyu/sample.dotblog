@@ -2,7 +2,6 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
-using AspNetCore.Authentication.ApiKey;
 using Lab.AspNetCore.Security.BasicAuthenticationSite.Security.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,19 +15,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Logging.AddConsole();
 
-// builder.Services.AddAuthentication(BasicAuthenticationDefaults.AuthenticationScheme)
-//     .AddScheme<BasicAuthenticationOptions, BasicAuthenticationHandler>(BasicAuthenticationDefaults.AuthenticationScheme,
-//         p => new BasicAuthenticationOptions()
-//         {
-//             Realm =  "Basic Authentication"
-//         });
-
-builder.Services.AddAuthentication(ApiKeyDefaults.AuthenticationScheme)
-    .AddApiKeyInHeaderOrQueryParams<ApiKeyProvider>(options =>
-    {
-        options.Realm = "Sample Web API";
-        options.KeyName = "X-API-KEY";
-    });
 builder.Services.AddBasicAuthentication<BasicAuthenticationProvider>(o => o.Realm = "Basic Authentication");
 builder.Services.AddSingleton(p=>new JsonSerializerOptions
 {
