@@ -13,10 +13,11 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+var multiScheme = "MultiAuthSchemes";
 builder.Services.AddAuthentication(p =>
     {
-        p.DefaultScheme = "MultiAuthSchemes";
-        p.DefaultChallengeScheme = "MultiAuthSchemes";
+        p.DefaultScheme = multiScheme;
+        p.DefaultChallengeScheme = multiScheme;
     })
     .AddApiKeyInHeaderOrQueryParams<ApiKeyProvider>(p =>
     {
@@ -24,9 +25,11 @@ builder.Services.AddAuthentication(p =>
         p.KeyName = "X-API-KEY";
     })
     .AddBasicAuthentication<BasicAuthenticationProvider>(BasicAuthenticationDefaults.AuthenticationScheme,
-        BasicAuthenticationDefaults.AuthenticationScheme,
-        p => p.Realm = "Basic Authentication")
-    .AddPolicyScheme("MultiAuthSchemes", ApiKeyDefaults.AuthenticationScheme, p =>
+        p =>
+        {
+            p.Realm = "Basic Authentication";
+        })
+    .AddPolicyScheme(multiScheme, ApiKeyDefaults.AuthenticationScheme, p =>
     {
         p.ForwardDefaultSelector = context =>
         {
