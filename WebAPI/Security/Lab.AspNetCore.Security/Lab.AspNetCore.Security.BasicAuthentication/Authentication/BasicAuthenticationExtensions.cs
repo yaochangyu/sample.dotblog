@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using System.Runtime.CompilerServices;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -21,17 +22,12 @@ public static class BasicAuthenticationExtensions
             displayName,
             configureOptions);
     }
-
-    public static AuthenticationBuilder AddBasicAuthentication<TAuthProvider>(this IServiceCollection services,
+    public static AuthenticationBuilder AddBasicAuthentication<TAuthProvider>(this AuthenticationBuilder builder,
+        string authenticationScheme,
         Action<BasicAuthenticationOptions> configureOptions)
         where TAuthProvider : class, IBasicAuthenticationProvider
     {
-        var scheme = BasicAuthenticationDefaults.AuthenticationScheme;
-        return services.AddAuthentication(o =>
-            {
-                o.DefaultScheme = scheme;
-                // o.DefaultChallengeScheme = scheme;
-            })
-            .AddBasicAuthentication<TAuthProvider>(scheme, scheme, configureOptions);
+        return AddBasicAuthentication<TAuthProvider>(builder, authenticationScheme, null, configureOptions);
     }
+
 }
