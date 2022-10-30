@@ -1,0 +1,11 @@
+# Taskfile.yml
+
+version: "3"
+
+dotenv: [ "secrets/secrets.env" ]
+
+tasks:
+  dev-stop:
+    desc: Stop development environment
+    cmds:
+      - docker-compose down
