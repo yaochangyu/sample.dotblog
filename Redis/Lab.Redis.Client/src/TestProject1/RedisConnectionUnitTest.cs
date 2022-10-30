@@ -1,3 +1,4 @@
+using Lab.Redis.Client;
 using StackExchange.Redis;
 
 namespace TestProject1;
@@ -9,8 +10,9 @@ public class RedisConnectionUnitTest
     public void SetDTO()
     {
         var connection = new RedisConnection();
-        var database = connection.Connect();
-
+        // var database = connection.Connect("localhost:6379");
+        var config = ConfigurationOptions.Parse("127.0.0.1:6379");
+        var database = connection.Connect(config.ToString());
         var model = new Model
         {
             Name = "小章",
