@@ -10,6 +10,7 @@ public class RedisConnectionUnitTest
     public void SetDTO()
     {
         var connection = new RedisConnection();
+
         // var database = connection.Connect("localhost:6379");
         var config = ConfigurationOptions.Parse("127.0.0.1:6379");
         var database = connection.Connect(config.ToString());
@@ -19,8 +20,8 @@ public class RedisConnectionUnitTest
             Age = 29
         };
 
-        database.Set("dto", model);
-        var actual = database.Get<Model>("dto");
+        database.Set("dto", model, options: JsonSerializeFactory.CreateDefault());
+        var actual = database.Get<Model>("dto", options: JsonSerializeFactory.CreateDefault());
         Assert.AreEqual(model, actual);
     }
 
