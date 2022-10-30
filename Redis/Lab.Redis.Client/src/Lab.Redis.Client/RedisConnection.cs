@@ -1,26 +1,27 @@
 ﻿using System.Collections.Concurrent;
 using StackExchange.Redis;
 
-namespace TestProject1;
+namespace Lab.Redis.Client;
 
 public class RedisConnection
 {
-    private static ConcurrentDictionary<string, ConnectionMultiplexer> s_connections = new();
+    private static ConcurrentDictionary<string, Lazy<ConnectionMultiplexer>> s_connectionPool = new();
 
     public IDatabase Connect(string setting = "localhost")
     {
-        var connMultiplexer = ConnectionMultiplexer.Connect(setting);
-        s_connections.TryAdd(setting, connMultiplexer);
-        return connMultiplexer.GetDatabase();
+        var connMultiplexer = s_connectionPool.GetOrAdd(setting,
+            new Lazy<ConnectionMultiplexer>(() => ConnectionMultiplexer.Connect(setting)));
+
+        return connMultiplexer.Value.GetDatabase();
     }
 
     public IDatabase GetDatabase(string setting = "localhost")
     {
-        if (s_connections.TryGetValue(setting, out var connMultiplexer))
+        if (s_connectionPool.TryGetValue(setting, out var connMultiplexer))
         {
-            return connMultiplexer.GetDatabase();
+            return connMultiplexer.Value.GetDatabase();
         }
 
-        return null;
+        return default;
     }
 }

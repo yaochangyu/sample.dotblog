@@ -1,7 +1,7 @@
 using System.Text.Json;
 using StackExchange.Redis;
 
-namespace TestProject1;
+namespace Lab.Redis.Client;
 
 public static class RedisDatabaseExtensions
 {
