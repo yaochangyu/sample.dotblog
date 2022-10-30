@@ -1,3 +1,4 @@
+using Lab.Redis.Client;
 using StackExchange.Redis;
 
 namespace TestProject1;
@@ -8,6 +9,7 @@ public class UnitTest1
     [TestMethod]
     public void StringSet()
     {
+        RedisClient.Init("localhost");
         var db = new RedisClient().Database;
 
         // Set
@@ -68,22 +70,6 @@ public class UnitTest1
         db.HashSet("employee", 3, "anson");
     }
 
-    [TestMethod]
-    public void SetDTO()
-    {
-        var connection = new RedisClient();
-        var db = connection.Database;
-
-        var model = new MyClass
-        {
-            Name = "小章",
-            Age = 29
-        };
-        connection.Set("dto1", model);
-        connection.Set2("dto2", model);
-
-        // var myClass = connection.Get<MyClass>("dto");
-    }
 
     [Serializable]
     class MyClass
