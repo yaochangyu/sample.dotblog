@@ -13,18 +13,29 @@ public static class RedisDatabaseExtensions
     public static void Set<T>(this IDatabase db, string key, T value,
         TimeSpan? expiry = default,
         When when = When.Always,
-        CommandFlags flags = CommandFlags.None)
+        CommandFlags flags = CommandFlags.None,
+        JsonSerializerOptions options = default)
     {
-        db.StringSet(key, JsonSerializer.Serialize(value), expiry, when, flags);
+        db.StringSet(key, Serialize(value, options), expiry, when, flags);
     }
 
-    public static T Get<T>(this IDatabase db, string key)
+    private static string Serialize<T>(T value, JsonSerializerOptions options)
+    {
+        return JsonSerializer.Serialize(value, options);
+    }
+
+    public static T Get<T>(this IDatabase db, string key, JsonSerializerOptions options = default)
     {
         if (db.IsExist(key))
         {
-            return JsonSerializer.Deserialize<T>(db.StringGet(key));
+            return Deserialize<T>(db.StringGet(key), options);
         }
 
         return default;
+    }
+
+    private static T? Deserialize<T>(RedisValue value, JsonSerializerOptions options)
+    {
+        return JsonSerializer.Deserialize<T>(value, options);
     }
 }
