@@ -1,6 +1,6 @@
 ﻿using TechTalk.SpecFlow;
 
-namespace TestProject1Lab.StepDependencyInjection.Test.Steps;
+namespace Lab.StepDependencyInjection.Test.Steps;
 
 [Binding]
 [Scope(Feature = "Demo0")]

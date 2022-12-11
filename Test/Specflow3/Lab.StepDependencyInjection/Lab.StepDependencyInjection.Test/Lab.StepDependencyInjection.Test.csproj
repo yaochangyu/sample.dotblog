@@ -19,16 +19,4 @@
         <PackageReference Include="SpecFlow.MsTest" Version="3.9.74" />
     </ItemGroup>
 
-    <ItemGroup>
-      <UpToDateCheckInput Remove="Features\Demo0.feature" />
-      <UpToDateCheckInput Remove="Features\Demo1.feature" />
-      <UpToDateCheckInput Remove="Features\Demo2.feature" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <UpToDateCheckBuild Remove="Features\Demo0.feature.cs" />
-      <UpToDateCheckBuild Remove="Features\Demo1.feature.cs" />
-      <UpToDateCheckBuild Remove="Features\Demo2.feature.cs" />
-    </ItemGroup>
-
 </Project>
