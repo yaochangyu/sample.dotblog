@@ -9,18 +9,16 @@
 //  </auto-generated>
 // ------------------------------------------------------------------------------
 #region Designer generated code
+
+using TechTalk.SpecFlow;
+
 #pragma warning disable
-namespace TestProject1Lab.StepDependencyInjection.Test.Features
+namespace Lab.StepDependencyInjection.Test.Features
 {
-    using TechTalk.SpecFlow;
-    using System;
-    using System.Linq;
-    
-    
     [System.CodeDom.Compiler.GeneratedCodeAttribute("TechTalk.SpecFlow", "3.9.0.0")]
     [System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [Microsoft.VisualStudio.TestTools.UnitTesting.TestClassAttribute()]
-    public partial class Demo0Feature
+    [TestClass()]
+    public partial class Demo1Feature
     {
         
         private static TechTalk.SpecFlow.ITestRunner testRunner;
@@ -29,7 +27,7 @@ namespace TestProject1Lab.StepDependencyInjection.Test.Features
         
         private static string[] featureTags = ((string[])(null));
         
-#line 1 "Demo0.feature"
+#line 1 "Demo1.feature"
 #line hidden
         
         public virtual Microsoft.VisualStudio.TestTools.UnitTesting.TestContext TestContext
@@ -44,32 +42,32 @@ namespace TestProject1Lab.StepDependencyInjection.Test.Features
             }
         }
         
-        [Microsoft.VisualStudio.TestTools.UnitTesting.ClassInitializeAttribute()]
+        [ClassInitialize()]
         public static void FeatureSetup(Microsoft.VisualStudio.TestTools.UnitTesting.TestContext testContext)
         {
             testRunner = TechTalk.SpecFlow.TestRunnerManager.GetTestRunner();
-            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Demo0", null, ProgrammingLanguage.CSharp, featureTags);
+            TechTalk.SpecFlow.FeatureInfo featureInfo = new TechTalk.SpecFlow.FeatureInfo(new System.Globalization.CultureInfo("en-US"), "Features", "Demo1", null, ProgrammingLanguage.CSharp, featureTags);
             testRunner.OnFeatureStart(featureInfo);
         }
         
-        [Microsoft.VisualStudio.TestTools.UnitTesting.ClassCleanupAttribute()]
+        [ClassCleanup()]
         public static void FeatureTearDown()
         {
             testRunner.OnFeatureEnd();
             testRunner = null;
         }
         
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestInitializeAttribute()]
+        [TestInitialize()]
         public void TestInitialize()
         {
             if (((testRunner.FeatureContext != null) 
-                        && (testRunner.FeatureContext.FeatureInfo.Title != "Demo0")))
+                        && (testRunner.FeatureContext.FeatureInfo.Title != "Demo1")))
             {
-                global::TestProject1Lab.StepDependencyInjection.Test.Features.Demo0Feature.FeatureSetup(null);
+                global::Lab.StepDependencyInjection.Test.Features.Demo1Feature.FeatureSetup(null);
             }
         }
         
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestCleanupAttribute()]
+        [TestCleanup()]
         public void TestTearDown()
         {
             testRunner.OnScenarioEnd();
@@ -78,7 +76,7 @@ namespace TestProject1Lab.StepDependencyInjection.Test.Features
         public void ScenarioInitialize(TechTalk.SpecFlow.ScenarioInfo scenarioInfo)
         {
             testRunner.OnScenarioInitialize(scenarioInfo);
-            testRunner.ScenarioContext.ScenarioContainer.RegisterInstanceAs<Microsoft.VisualStudio.TestTools.UnitTesting.TestContext>(_testContext);
+            testRunner.ScenarioContext.ScenarioContainer.RegisterInstanceAs<Microsoft.VisualStudio.TestTools.UnitTesting.TestContext>(this._testContext);
         }
         
         public void ScenarioStart()
@@ -91,9 +89,9 @@ namespace TestProject1Lab.StepDependencyInjection.Test.Features
             testRunner.CollectScenarioErrors();
         }
         
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestMethodAttribute()]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.DescriptionAttribute("測試步驟注入")]
-        [Microsoft.VisualStudio.TestTools.UnitTesting.TestPropertyAttribute("FeatureTitle", "Demo0")]
+        [TestMethod()]
+        [Description("測試步驟注入")]
+        [TestProperty("FeatureTitle", "Demo1")]
         public void 測試步驟注入()
         {
             string[] tagsOfScenario = ((string[])(null));
