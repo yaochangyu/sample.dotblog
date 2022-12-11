@@ -1,4 +1,4 @@
-﻿namespace TestProject1Lab.StepDependencyInjection.Test;
+﻿namespace Lab.StepDependencyInjection.Test;
 
 public class FileProvider
 {
