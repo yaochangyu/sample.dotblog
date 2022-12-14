@@ -110,10 +110,10 @@ namespace Lab.StepDependencyInjection.Test.Features
             {
                 this.ScenarioStart();
 #line 4
-        testRunner.When("取得檔案路徑", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
+        testRunner.When("寫入資料表", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
 #line 5
-        testRunner.Then("預期得到 \"File Provider\"", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "Then ");
+        testRunner.When("讀取資料表", ((string)(null)), ((TechTalk.SpecFlow.Table)(null)), "When ");
 #line hidden
             }
             this.ScenarioCleanup();

@@ -36,7 +36,7 @@ internal class InstanceManager
                 ;
 
             //.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-        });
+        }, lifetime: ServiceLifetime.Transient);
         return services;
     }
 }
