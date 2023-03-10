@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.StepDependencyInjection.Test", "Lab.StepDependencyInjection.Test\Lab.StepDependencyInjection.Test.csproj", "{B44A3BAF-10A5-499A-B1D4-48F9BA333884}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.StepDependencyInjection.WebAPI", "Lab.StepDependencyInjection.WebAPI\Lab.StepDependencyInjection.WebAPI.csproj", "{794E332B-0A00-4FFB-A951-877B8DD4B927}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,9 @@ Global
 		{B44A3BAF-10A5-499A-B1D4-48F9BA333884}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B44A3BAF-10A5-499A-B1D4-48F9BA333884}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B44A3BAF-10A5-499A-B1D4-48F9BA333884}.Release|Any CPU.Build.0 = Release|Any CPU
+		{794E332B-0A00-4FFB-A951-877B8DD4B927}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{794E332B-0A00-4FFB-A951-877B8DD4B927}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{794E332B-0A00-4FFB-A951-877B8DD4B927}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{794E332B-0A00-4FFB-A951-877B8DD4B927}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace Lab.StepDependencyInjection.Test.EntityModel
+namespace Lab.StepDependencyInjection.WebAPI.EntityModel
 {
     public class EmployeeDbContext : DbContext
     {
