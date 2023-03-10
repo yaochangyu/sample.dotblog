@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
-namespace Lab.StepDependencyInjection.Test.EntityModel;
+namespace Lab.StepDependencyInjection.WebAPI.EntityModel;
 
 public class EmployeeDbContextContextFactory : IDesignTimeDbContextFactory<EmployeeDbContext>
 {

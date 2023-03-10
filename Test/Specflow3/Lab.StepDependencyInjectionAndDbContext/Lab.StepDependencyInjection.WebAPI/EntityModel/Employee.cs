@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Lab.StepDependencyInjection.Test.EntityModel
+namespace Lab.StepDependencyInjection.WebAPI.EntityModel
 {
     [Table("Employee")]
     public class Employee
