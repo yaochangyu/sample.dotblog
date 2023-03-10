@@ -8,7 +8,7 @@ namespace Lab.StepDependencyInjection.WebAPI.Controllers;
 [Route("[controller]")]
 public class DefaultController : ControllerBase
 {
-    IDbContextFactory<EmployeeDbContext> _employeeDbContextFactory;
+    private readonly IDbContextFactory<EmployeeDbContext> _employeeDbContextFactory;
 
     public DefaultController(IDbContextFactory<EmployeeDbContext> employeeDbContextFactory)
     {
@@ -20,7 +20,7 @@ public class DefaultController : ControllerBase
     {
         await using var dbContext = await this._employeeDbContextFactory.CreateDbContextAsync();
         await dbContext.Database.EnsureCreatedAsync();
-        var data = await dbContext.Employees.AsNoTracking().ToListAsync();
+        var data = await dbContext.Employees.Where(p => p.Age == 10).AsNoTracking().ToListAsync();
         return this.Ok(data);
     }
 }

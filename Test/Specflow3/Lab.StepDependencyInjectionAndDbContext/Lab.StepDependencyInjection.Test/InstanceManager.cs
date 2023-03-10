@@ -1,4 +1,4 @@
-﻿using Lab.StepDependencyInjection.Test.EntityModel;
+﻿using Lab.StepDependencyInjection.WebAPI.EntityModel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

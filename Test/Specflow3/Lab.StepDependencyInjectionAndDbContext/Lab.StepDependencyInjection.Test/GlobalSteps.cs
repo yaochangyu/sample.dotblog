@@ -1,9 +1,9 @@
-﻿using Lab.StepDependencyInjection.Test.EntityModel;
+﻿using Lab.StepDependencyInjection.WebAPI.EntityModel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using TechTalk.SpecFlow;
 
-namespace Lab.StepDependencyInjection.Test.Steps;
+namespace Lab.StepDependencyInjection.Test;
 
 [Binding]
 public class GlobalSteps
