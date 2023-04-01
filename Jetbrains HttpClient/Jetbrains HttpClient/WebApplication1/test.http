@@ -1,0 +1,25 @@
+
+### 宣告變數
+< {%
+    request.variables.set("BaseUrl", "https://localhost:44347/")
+%}
+GET {{BaseUrl}}/WeatherForecast
+
+
+### 取得所有
+GET {{BaseUrl}}/WeatherForecast
+
+### 取得id
+GET {{BaseUrl}}/WeatherForecast/get:id
+
+> {%
+    client.global.set("id", response.body.id); 
+    client.log("result: " + response.body.id);
+    client.test("Request executed successfully", function () {
+        client.log(response.body.id);
+        client.assert(response.status === 201, "Response status is not 200");
+    });
+%}
+
+### 依照上一動作取得的 id 取得資料
+GET {{BaseUrl}}/WeatherForecast/{{id}}
