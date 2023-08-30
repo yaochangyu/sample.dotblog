@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using Lab.ModelValidation.API.Extensions;
 using Lab.ModelValidation.API.Models;
 
 namespace Lab.ModelValidation.API;
@@ -18,14 +19,7 @@ public class MemberService
         var validateResult = await this._validator.ValidateAsync(request, cancel);
         if (validateResult.IsValid == false)
         {
-            var errors = validateResult.Errors
-                .ToDictionary(p => p.PropertyName, p => p.ErrorMessage);
-            var failure = new Failure()
-            {
-                Code = FailureCode.InputInvalid,
-                Message = "input invalid",
-                Data = errors,
-            };
+            var failure = validateResult.ToFailure();
             return (failure, false);
         }
 

@@ -9,15 +9,12 @@ namespace Lab.ModelValidation.API.Controllers;
 public class MembersController : GenericController
 {
     private readonly ILogger<MembersController> _logger;
-    private readonly IValidator<CreateMemberRequest> _validator;
     private readonly MemberService _memberService;
 
     public MembersController(ILogger<MembersController> logger,
-        IValidator<CreateMemberRequest> validator,
         MemberService memberService)
     {
         this._logger = logger;
-        this._validator = validator;
         this._memberService = memberService;
     }
 
