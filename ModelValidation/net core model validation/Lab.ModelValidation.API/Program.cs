@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Lab.ModelValidation.API;
+using Lab.ModelValidation.API.Filters;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
@@ -12,17 +13,23 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers().AddJsonOptions(options =>
-{
-    options.JsonSerializerOptions.MaxDepth = 10;
-    options.JsonSerializerOptions.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
-    options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-    options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-    options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
-    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    options.AllowInputFormatterExceptionMessages = true;
-});
+builder.Services
+    .AddControllers(p =>
+    {
+        // p.Filters.Add<DataValidationAttribute>();
+    })
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.MaxDepth = 10;
+        options.JsonSerializerOptions.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        options.AllowInputFormatterExceptionMessages = true;
+    })
+    ;
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     //停用 Model Validation
@@ -66,8 +73,7 @@ IActionResult ValidationErrorHandler(ApiBehaviorOptions apiBehaviorOptions, Acti
     var jsonPathKeys = actionContext.ModelState.Keys.Where(e => e.StartsWith("$.")).ToList();
     if (jsonPathKeys.Count > 0)
     {
-        var errorData = new List<string>();
-
+        var errorData = new Dictionary<string, string>();
         foreach (var key in jsonPathKeys)
         {
             var normalizedKey = key.Substring(2);
@@ -79,31 +85,31 @@ IActionResult ValidationErrorHandler(ApiBehaviorOptions apiBehaviorOptions, Acti
                 }
 
                 actionContext.ModelState.TryAddModelError(normalizedKey, "The provided value is not valid.");
+                errorData.Add(normalizedKey, error.ErrorMessage);
             }
 
             actionContext.ModelState.Remove(key);
-            errorData.Add($"The {normalizedKey} field is not valid.");
         }
 
-        var failure = new Failure
+        //複寫錯誤內容
+        return new BadRequestObjectResult(new Failure
         {
-            Code = FailureCode.InputValid,
-            Message = "input valid",
-            Data = errorData
-        };
-
-        return new BadRequestObjectResult(failure);
+            Code = FailureCode.InputInvalid,
+            Message = "enum invalid",
+            Data = errorData,
+            TraceId = traceId
+        });
     }
 
     var errors = actionContext.ModelState.ToDictionary(
         p => p.Key,
         p => p.Value.Errors.Select(e => e.ErrorMessage).ToList());
-    
+
     //複寫錯誤內容
     return new BadRequestObjectResult(new Failure()
     {
-        Code = FailureCode.InputValid,
-        Message = "input valid",
+        Code = FailureCode.InputInvalid,
+        Message = "input invalid",
         Data = errors,
         TraceId = traceId
     });
