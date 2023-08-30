@@ -42,7 +42,7 @@ public class MemberService
     {
         var failure = new Failure()
         {
-            Code = FailureCode.InputValid,
+            Code = FailureCode.InputInvalid,
             Message = "view detail errors",
             Details = new List<Failure>()
             {
