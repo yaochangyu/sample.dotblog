@@ -1,4 +1,5 @@
-﻿using Lab.ModelValidation.API.Models;
+﻿using Lab.ModelValidation.API.Filters;
+using Lab.ModelValidation.API.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab.ModelValidation.API.Controllers;
@@ -14,6 +15,7 @@ public class MembersController : GenericController
         this._logger = logger;
     }
 
+    // [ModelValidation()]
     [HttpPost(Name = "CreateData")]
     public ActionResult Post(CreateMemberRequest request)
     {

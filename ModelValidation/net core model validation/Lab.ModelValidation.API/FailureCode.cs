@@ -3,7 +3,7 @@
 public enum FailureCode
 {
     Unknown = 0,
-    InputValid = 1,
+    InputInvalid = 1,
     MemberNotFound,
     MemberAlreadyExist,
     ServerError,

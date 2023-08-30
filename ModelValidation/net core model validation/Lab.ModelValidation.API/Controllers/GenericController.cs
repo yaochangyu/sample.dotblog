@@ -6,7 +6,7 @@ public class GenericController : ControllerBase
 {
     private static readonly Lazy<Dictionary<FailureCode, int>> s_failureLookupLazy = new(() => new()
     {
-        { FailureCode.InputValid, StatusCodes.Status400BadRequest },
+        { FailureCode.InputInvalid, StatusCodes.Status400BadRequest },
         { FailureCode.MemberAlreadyExist, StatusCodes.Status400BadRequest },
         { FailureCode.MemberNotFound, StatusCodes.Status404NotFound },
         { FailureCode.DataNotFound, StatusCodes.Status404NotFound },
