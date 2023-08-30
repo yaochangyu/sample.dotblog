@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Lab.ModelValidation.API.Controllers;
 
@@ -21,6 +22,11 @@ public class GenericController : ControllerBase
     [NonAction]
     public FailureObjectResult GenericFailure(Failure failure)
     {
+        if (string.IsNullOrWhiteSpace(failure.TraceId))
+        {
+            failure.TraceId = Activity.Current?.Id ?? this.HttpContext.TraceIdentifier;
+        }
+
         if (FailureLookup.TryGetValue(failure.Code, out int statusCode))
         {
             return new FailureObjectResult(failure, statusCode);
