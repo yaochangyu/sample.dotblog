@@ -4,20 +4,24 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Lab.ModelValidation.API;
 using Lab.ModelValidation.API.Filters;
+using Lab.ModelValidation.API.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-
 builder.Services
     .AddControllers(p =>
     {
-        // p.Filters.Add<DataValidationAttribute>();
+        // p.ModelValidatorProviders.Clear();
     })
+    .AddFluentValidation(p => p.RegisterValidatorsFromAssemblyContaining<CreateMemberRequestValidator>())
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.MaxDepth = 10;
@@ -32,11 +36,15 @@ builder.Services
     ;
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
-    //停用 Model Validation
-    options.SuppressModelStateInvalidFilter = false;
+    //停用 Model State Invalid Filter
+    options.SuppressModelStateInvalidFilter = true;
 
-    options.InvalidModelStateResponseFactory = actionContext => ValidationErrorHandler(options, actionContext);
+    // options.InvalidModelStateResponseFactory = actionContext => ValidationErrorHandler(options, actionContext);
 });
+
+//隨便挑一個 Validator 物件來註冊 FluentValidation
+// builder.Services.AddValidatorsFromAssemblyContaining<CreateMemberRequestValidator>();
+builder.Services.AddScoped<MemberService>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

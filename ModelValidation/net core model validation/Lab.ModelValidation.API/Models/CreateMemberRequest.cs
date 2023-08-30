@@ -1,7 +1,19 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Lab.ModelValidation.API.Controllers;
+using FluentValidation;
 
 namespace Lab.ModelValidation.API.Models;
+
+public class CreateMemberRequestValidator : AbstractValidator<CreateMemberRequest>
+{
+    public CreateMemberRequestValidator()
+    {
+        this.RuleFor(p => p.Name).NotNull().NotEmpty();
+        this.RuleFor(p => p.Age).LessThanOrEqualTo(18).GreaterThan(200);
+        this.RuleFor(x => x.Type)
+            .IsInEnum()
+            .WithMessage("Type is not valid");
+    }
+}
 
 public enum MemberType
 {
@@ -20,5 +32,4 @@ public class CreateMemberRequest
 
     [Required]
     public MemberType Type { get; set; }
-    public MemberType Type1 { get; set; }
 }
