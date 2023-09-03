@@ -32,7 +32,7 @@ public class MemberService1
         }
 
         //手機格式無效
-        var validateCellphoneResult = await this.ValidateCellphoneAsync(request.Cellphone, cancel);
+        var validateCellphoneResult = await this.ValidateCellphoneAsync(getMemberResult.Data.Cellphone, cancel);
         if (validateCellphoneResult.Failure != null)
         {
             return validateCellphoneResult;

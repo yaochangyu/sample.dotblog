@@ -20,6 +20,7 @@ public class MembersController : GenericController
     [Produces("application/json")]
     [HttpPost("{memberId}/bind-cellphone", Name = "BindCellphone")]
     [ProducesResponseType(typeof(Failure), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<ActionResult> Post(int memberId,
         BindCellphoneRequest request,
         CancellationToken cancel = default)
@@ -30,7 +31,7 @@ public class MembersController : GenericController
         if (createMemberResult.Failure != null)
         {
             this._logger.LogInformation(500, "Bind cellphone failure:{@Failure}", createMemberResult.Failure);
-            return this.GenericFailure(createMemberResult.Failure);
+            return this.FailureContent(createMemberResult.Failure);
         }
 
         return this.NoContent();
