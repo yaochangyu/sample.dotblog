@@ -5,7 +5,8 @@ namespace Lab.ErrorHandler.API.Controllers;
 
 public class GenericController : ControllerBase
 {
-    public static readonly Dictionary<FailureCode, int> FailureCodeLookup = s_failureCodeLookupLazy.Value;
+    public Dictionary<FailureCode, int> FailureCodeLookup => s_failureCodeLookupLazy.Value;
+
     private static readonly Lazy<Dictionary<FailureCode, int>> s_failureCodeLookupLazy = new(CreateFailureCodeLookup);
 
     private static Dictionary<string, int> CreateFailureCodeMappings()

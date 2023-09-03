@@ -15,76 +15,75 @@ public class MemberService
     }
 
     //一個方法有多種可能的 Failure
-    public async Task<(Failure Failure, bool Data)> BindCellphoneAsync(BindCellphoneRequest request,
+    public async Task<bool> BindCellphoneAsync(BindCellphoneRequest request,
         CancellationToken cancel = default)
     {
         var validationResult = await this._validator.ValidateAsync(request, cancel);
         if (validationResult.IsValid == false)
         {
-            return (validationResult.ToFailure(), false);
+            return false;
         }
 
-        //找不到會員
-        var getMemberResult = await this.GetMemberAsync(request.MemberId, cancel);
-        if (getMemberResult.Failure != null)
+        try
         {
-            return getMemberResult;
+            //找不到會員
+            var getMemberResult = await this.GetMemberAsync(request.MemberId, cancel);
         }
-
-        //手機格式無效
-        var validateCellphoneResult = await this.ValidateCellphoneAsync(request.Cellphone, cancel);
-        if (validateCellphoneResult.Failure != null)
+        catch (Exception e)
         {
-            return getMemberResult;
         }
 
-        //資料衝突，手機已經被綁定
-        var saveChangeResult = await this.SaveChangeAsync(request, cancel);
+        try
+        {
+            //手機格式無效
+            var validateCellphoneResult = await this.ValidateCellphoneAsync(request.Cellphone, cancel);
+        }
+        catch (Exception e)
+        {
+        }
 
-        return saveChangeResult;
+        try
+        {
+            //資料衝突，手機已經被綁定
+            var saveChangeResult = await this.SaveChangeAsync(request, cancel);
+        }
+        catch (Exception e)
+        {
+        }
+
+        return true;
     }
 
     public async Task<(Failure Failure, bool Data)> SaveChangeAsync(BindCellphoneRequest request,
         CancellationToken cancel = default)
     {
-        try
-        {
-            throw new DBConcurrencyException("insert data row concurrency error.");
-        }
-        catch (Exception e)
-        {
-            return (new Failure
-            {
-                Code = FailureCode.DataConcurrency,
-                Message = e.Message,
-                Exception = e,
-                Data = request
-            }, false);
-        }
+        throw new DBConcurrencyException("insert data row concurrency error.");
     }
 
-    public async Task<(Failure Failure, bool Data)> ValidateCellphoneAsync(string cellphone,
+    public async Task<bool> ValidateCellphoneAsync(string cellphone,
         CancellationToken cancel = default)
     {
-        return (new Failure
-        {
-            Code = FailureCode.CellphoneFormatInvalid,
-            Message = "Cellphone format invalid.",
-            Data = cellphone
-        }, false);
+        throw new Exception("Cellphone format invalid.");
     }
 
-    public async Task<(Failure Failure, bool Data)> GetMemberAsync(int memberId,
+    // public async Task<GetMemberResult> GetMemberAsync(int memberId,
+    //     CancellationToken cancel = default)
+    // {
+    //     try
+    //     {
+    //         throw new Exception("Member not found.");
+    //     }
+    //     catch (Exception e)
+    //     {
+    //         throw;
+    //     }
+    // }
+    public async Task<(Failure Failure,GetMemberResult Data)> GetMemberAsync(int memberId,
         CancellationToken cancel = default)
     {
         try
         {
-            return (new Failure
-            {
-                Code = FailureCode.MemberNotFound,
-                Message = "Member not found.",
-                Data = memberId
-            }, false);
+            throw new Exception("Member not found.");
         }
         catch (Exception e)
         {
@@ -94,7 +93,7 @@ public class MemberService
                 Message = e.Message,
                 Data = memberId,
                 Exception = e,
-            }, false);
+            }, null);
         }
     }
 

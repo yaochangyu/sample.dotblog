@@ -82,7 +82,7 @@ public class MemberService3
     {
         try
         {
-            throw new Exception("member not found.");
+            throw new Exception($"can not connect db.");
         }
         catch (Exception e)
         {

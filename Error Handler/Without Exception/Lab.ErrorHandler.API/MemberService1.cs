@@ -79,12 +79,7 @@ public class MemberService1
     {
         try
         {
-            return (new Failure
-            {
-                Code = FailureCode.MemberNotFound,
-                Message = "Member not found.",
-                Data = memberId
-            }, null);
+            throw new Exception($"can not connect db.");
         }
         catch (Exception e)
         {
@@ -99,7 +94,8 @@ public class MemberService1
     }
 
     //具有多個 Detail 的 Failure
-    public (Failure Failure, bool Data) GetMember1()
+    public async Task<(Failure Failure, bool Data)> CreateMemberAsync(CreateMemberRequest request,
+        CancellationToken cancel = default)
     {
         var failure = new Failure()
         {
@@ -107,8 +103,9 @@ public class MemberService1
             Message = "view detail errors",
             Details = new List<Failure>()
             {
-                new(code: FailureCode.MemberNotFound, message: "Member not found."),
-                new(code: FailureCode.MemberAlreadyExist, message: "Member already exist.")
+                new(code: FailureCode.InputInvalid, message: "Input invalid."),
+                new(code: FailureCode.CellphoneFormatInvalid, message: "Cellphone format invalid."),
+                new(code: FailureCode.DataConflict, message: "Member already exist."),
             }
         };
         return (failure, false);
