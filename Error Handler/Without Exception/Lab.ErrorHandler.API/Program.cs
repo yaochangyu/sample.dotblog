@@ -42,7 +42,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddScoped<MemberService1>();
 builder.Services.AddScoped<MemberService2.MemberWorkflow>();
 builder.Services.AddScoped<MemberService2>();
-// builder.Services.AddScoped<MemberService3>();
+builder.Services.AddScoped<MemberService3>();
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
