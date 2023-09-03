@@ -18,6 +18,11 @@ public class MemberService2
     public async Task<(Failure Failure, bool Data)> BindCellphoneAsync(BindCellphoneRequest request,
         CancellationToken cancel = default)
     {
+        // var result =
+        //     await (await (await (await this._workflow.ValidateModelAsync(request, cancel))
+        //             .GetMemberAsync(request.MemberId, cancel))
+        //         .ValidateCellphone(request.Cellphone, cancel)).SaveChangeAsync(request, cancel);
+
         var result = await _workflow.ValidateModelAsync(request, cancel)
                 .ThenAnyAsync(p => _workflow.GetMemberAsync(request.MemberId, cancel))
                 .ThenAnyAsync(p => _workflow.ValidateCellphone(request.Cellphone, cancel))
@@ -107,12 +112,7 @@ public class MemberService2
 
             try
             {
-                this.Failure = new Failure
-                {
-                    Code = FailureCode.MemberNotFound,
-                    Message = "Member not found.",
-                    Data = memberId
-                };
+                throw new Exception($"can not connect db.");
             }
             catch (Exception e)
             {
