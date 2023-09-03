@@ -8,10 +8,10 @@ namespace Lab.ErrorHandler.API.Controllers;
 public class MembersController : GenericController
 {
     private readonly ILogger<MembersController> _logger;
-    private readonly MemberService1 _memberService;
+    private readonly MemberService3 _memberService;
 
     public MembersController(ILogger<MembersController> logger,
-        MemberService1 memberService)
+        MemberService3 memberService)
     {
         this._logger = logger;
         this._memberService = memberService;

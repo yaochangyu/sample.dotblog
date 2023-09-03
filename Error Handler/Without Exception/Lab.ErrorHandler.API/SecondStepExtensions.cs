@@ -2,12 +2,6 @@ namespace Lab.ErrorHandler.API;
 
 public static class SecondStepExtensions
 {
-    // public static async Task<T2> Then<T1, T2>(this T1 first, Func<T1, Task<T2>> second)
-    // {
-    //     return await second(first).ConfigureAwait(false);
-    // }
-    //
-
     /// <summary>
     /// 接續執行第二個方法
     /// </summary>
@@ -42,24 +36,4 @@ public static class SecondStepExtensions
 
         return await second(result.Data).ConfigureAwait(false);
     }
-
-    // public static async Task<TResult> ThenAsync<TSource, TResult>(this Task<TSource> first,
-    //     Func<TSource, TResult> second)
-    // {
-    //     return second(await first.ConfigureAwait(false));
-    // }
-
-    // public static Task<T2> Then<T1, T2>(this T1 first, Func<T1, T2> second)
-    // {
-    //     return Task.FromResult(second(first));
-    // }
-
-    // public static TResult Pipe<TSource, TResult>(this TSource target, Func<TSource, TResult> func) =>
-    //     func(target);
-    //
-    // public static async Task<TR> PipeAsync<T, TR>(this Task<T> target, Func<T, TR> func) =>
-    //     func(await target);
-    //
-    // public static async Task<TR> PipeAsync<T, TR>(this Task<T> target, Func<T, Task<TR>> func) =>
-    //     await func(await target);
 }
