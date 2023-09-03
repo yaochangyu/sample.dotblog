@@ -32,7 +32,7 @@ public class MemberService3
         CancellationToken cancel = default) =>
         await this.ValidateModelAsync(request, cancel)
             .ThenAsyncIfNoFailure(p => this.GetMemberAsync(request.MemberId, cancel))
-            .ThenAsyncIfNoFailure(p => this.ValidateCellphoneAsync(request.Cellphone, cancel))
+            .ThenAsyncIfNoFailure(p => this.ValidateCellphoneAsync(p.Cellphone, cancel))
             .ThenAsyncIfNoFailure(p => this.SaveChangeAsync(request, cancel));
 
     public async Task<(Failure Failure, bool Data)> ValidateModelAsync(BindCellphoneRequest request,
@@ -82,12 +82,7 @@ public class MemberService3
     {
         try
         {
-            return (new Failure
-            {
-                Code = FailureCode.MemberNotFound,
-                Message = "Member not found.",
-                Data = memberId
-            }, null);
+            throw new Exception("member not found.");
         }
         catch (Exception e)
         {
