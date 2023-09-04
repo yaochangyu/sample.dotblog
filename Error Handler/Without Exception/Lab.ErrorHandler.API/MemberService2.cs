@@ -24,9 +24,9 @@ public class MemberService2
         //         .ValidateCellphone(request.Cellphone, cancel)).SaveChangeAsync(request, cancel);
 
         var result = await _workflow.ValidateModelAsync(request, cancel)
-                .ThenAnyAsync(p => _workflow.GetMemberAsync(request.MemberId, cancel))
-                .ThenAnyAsync(p => _workflow.ValidateCellphone(request.Cellphone, cancel))
-                .ThenAnyAsync(p => _workflow.SaveChangeAsync(request, cancel))
+                .Then(p => _workflow.GetMemberAsync(request.MemberId, cancel))
+                .Then(p => _workflow.ValidateCellphone(request.Cellphone, cancel))
+                .Then(p => _workflow.SaveChangeAsync(request, cancel))
             ;
         if (result.Failure != null)
         {
