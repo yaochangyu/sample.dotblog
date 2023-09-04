@@ -26,12 +26,12 @@ public class MembersController : GenericController
         CancellationToken cancel = default)
     {
         request.MemberId = memberId;
-        var createMemberResult =
+        var bindCellphoneResult =
             await this._memberService.BindCellphoneAsync(request, cancel);
-        if (createMemberResult.Failure != null)
+        if (bindCellphoneResult.Failure != null)
         {
-            this._logger.LogInformation(500, "Bind cellphone failure:{@Failure}", createMemberResult.Failure);
-            return this.FailureContent(createMemberResult.Failure);
+            this._logger.LogInformation(500, "Bind cellphone failure:{@Failure}", bindCellphoneResult.Failure);
+            return this.FailureContent(bindCellphoneResult.Failure);
         }
 
         return this.NoContent();
