@@ -31,9 +31,9 @@ public class MemberService3
     public async Task<(Failure Failure, bool Data)> BindCellphoneAsync(BindCellphoneRequest request,
         CancellationToken cancel = default) =>
         await this.ValidateModelAsync(request, cancel)
-            .ThenAsyncIfNoFailure(p => this.GetMemberAsync(request.MemberId, cancel))
-            .ThenAsyncIfNoFailure(p => this.ValidateCellphoneAsync(p.Cellphone, cancel))
-            .ThenAsyncIfNoFailure(p => this.SaveChangeAsync(request, cancel));
+            .WhenSuccess(p => this.GetMemberAsync(request.MemberId, cancel))
+            .WhenSuccess(p => this.ValidateCellphoneAsync(p.Cellphone, cancel))
+            .WhenSuccess(p => this.SaveChangeAsync(request, cancel));
 
     public async Task<(Failure Failure, bool Data)> ValidateModelAsync(BindCellphoneRequest request,
         CancellationToken cancel = default)

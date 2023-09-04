@@ -10,7 +10,7 @@ public static class SecondStepExtensions
     /// <typeparam name="TSource"></typeparam>
     /// <typeparam name="TResult"></typeparam>
     /// <returns></returns>
-    public static async Task<TResult> ThenAnyAsync<TSource, TResult>(this Task<TSource> first,
+    public static async Task<TResult> Then<TSource, TResult>(this Task<TSource> first,
         Func<TSource, Task<TResult>> second)
     {
         return await second(await first.ConfigureAwait(false)).ConfigureAwait(false);
@@ -24,7 +24,7 @@ public static class SecondStepExtensions
     /// <typeparam name="TSource"></typeparam>
     /// <typeparam name="TResult"></typeparam>
     /// <returns></returns>
-    public static async Task<(Failure Failure, TResult Data)> ThenAsyncIfNoFailure<TSource, TResult>(
+    public static async Task<(Failure Failure, TResult Data)> WhenSuccess<TSource, TResult>(
         this Task<(Failure Failure, TSource Data)> first,
         Func<TSource, Task<(Failure, TResult)>> second)
     {
