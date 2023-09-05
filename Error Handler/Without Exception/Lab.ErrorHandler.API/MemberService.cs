@@ -78,11 +78,20 @@ public class MemberService
     //         throw;
     //     }
     // }
-    public async Task<(Failure Failure,GetMemberResult Data)> GetMemberAsync(int memberId,
+    public async Task<(Failure Failure, GetMemberResult Data)> GetMemberAsync(int memberId,
         CancellationToken cancel = default)
     {
         try
         {
+            if (memberId == 1)
+            {
+                return (new Failure
+                {
+                    Code = FailureCode.MemberNotFound,
+                    Message = "member not found.",
+                }, null);
+            }
+
             throw new Exception("Member not found.");
         }
         catch (Exception e)

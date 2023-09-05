@@ -1,4 +1,4 @@
-﻿namespace Lab.ErrorHandler.API;
+namespace Lab.ErrorHandler.API.Models;
 
 public enum FailureCode
 {

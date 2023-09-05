@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using Lab.ErrorHandler.API.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab.ErrorHandler.API.Controllers;
