@@ -1,4 +1,5 @@
 ﻿using FluentValidation.Results;
+using Lab.ErrorHandler.API.Models;
 
 namespace Lab.ErrorHandler.API.Extensions;
 

@@ -112,6 +112,16 @@ public class MemberService2
 
             try
             {
+                if (memberId == 1)
+                {
+                    this.Failure = new Failure
+                    {
+                        Code = FailureCode.MemberNotFound,
+                        Message = "member not found.",
+                    };
+                    return this;
+                }
+
                 throw new Exception($"can not connect db.");
             }
             catch (Exception e)

@@ -1,3 +1,5 @@
+using Lab.ErrorHandler.API.Models;
+
 namespace Lab.ErrorHandler.API;
 
 public static class SecondStepExtensions

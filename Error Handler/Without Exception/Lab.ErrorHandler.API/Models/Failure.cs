@@ -1,6 +1,6 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
-namespace Lab.ErrorHandler.API;
+namespace Lab.ErrorHandler.API.Models;
 
 public class Failure
 {
@@ -35,13 +35,14 @@ public class Failure
     public string TraceId { get; set; }
 
     /// <summary>
-    /// 例外
+    /// 例外，不回傳給 Web API 
     /// </summary>
     [JsonIgnore]
     public Exception Exception { get; set; }
 
     public List<Failure> Details { get; init; } = new();
 
+    //用了 [JsonIgnore] 似乎就不需要它了 QQ，寫完了才想到可以 Ignore，不過這仍然可以適用在其他場景，例如 CLI、Console App
     public Failure WithoutException()
     {
         List<Failure> details = new();
