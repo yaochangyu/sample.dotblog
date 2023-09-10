@@ -54,4 +54,37 @@ public class UnitTest1
         command.Connection = connection;
         command.CommandText = "SELECT 1";
     }
+
+    [TestMethod]
+    public async Task CreateImage()
+    {
+        var solutionDirectory = CommonDirectoryPath.GetSolutionDirectory();
+        var dockerFilePath = "Lab.TestContainers.WebApi/Dockerfile";
+        var imageBuilder = new ImageFromDockerfileBuilder()
+            .WithDockerfileDirectory(solutionDirectory, string.Empty)
+            .WithDockerfile(dockerFilePath)
+            .WithName("my.aspnet.core.7")
+            .Build();
+
+        await imageBuilder.CreateAsync()
+            .ConfigureAwait(false);
+        var container = new ContainerBuilder()
+                .WithImage("my.aspnet.core.7")
+                .WithName("my.aspnet.core.7")
+                .WithPortBinding(80)
+                .Build()
+            ;
+        await container.StartAsync()
+            .ConfigureAwait(false);
+        ;
+        var scheme = "http";
+        var host = "localhost";
+        var port = container.GetMappedPublicPort(80);
+        var url = "demo";
+        
+        var httpClient = new HttpClient();
+        var requestUri = new UriBuilder(scheme, host, port, url).Uri;
+        var actual = await httpClient.GetStringAsync(requestUri);
+        Assert.AreEqual("OK~", actual);
+    }
 }
