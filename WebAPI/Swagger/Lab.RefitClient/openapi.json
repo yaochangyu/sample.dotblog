@@ -832,6 +832,24 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "x-idempotency-key",
+            "in": "header",
+            "description": "idempotency key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "description": "api key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
