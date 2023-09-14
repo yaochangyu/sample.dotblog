@@ -1,11 +1,5 @@
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using Lab.RefitClient.GeneratedCode.PetStore;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.FileProviders;
-using Microsoft.Net.Http.Headers;
 using Refit;
 
 namespace Lab.RefitClient.TestProject;
@@ -30,7 +24,10 @@ public class UnitTest2
                     IdempotencyKey = "1234567890",
                     ApiKey = "1234567890"
                 });
-                return new DefaultHeaderHandler(contextAccessor);
+                return new DefaultHeaderHandler(contextAccessor)
+                {
+                    InnerHandler = new SocketsHttpHandler()
+                };
             },
         };
         var client = RestService.For<ISwaggerPetstoreOpenAPI30>(httpClient, settings);
@@ -47,22 +44,23 @@ public class UnitTest2
         var baseUrl = "https://localhost:7285/api/v3";
 
         var services = new ServiceCollection();
+        
         services.AddSingleton<ContextAccessor<HeaderContext>>();
         services.AddSingleton<IContextSetter<HeaderContext>>(p => p.GetService<ContextAccessor<HeaderContext>>());
-        services.AddSingleton<IContextGetter<HeaderContext>>(p => p.GetService<ContextAccessor<HeaderContext>>());
+        services.AddSingleton<IContextGetter<HeaderContext>>(p =>
+        {
+            var context = p.GetService<ContextAccessor<HeaderContext>>();
+            context.Set(new HeaderContext
+            {
+                IdempotencyKey = "1234567890",
+                ApiKey = "1234567890"
+            });
+            return context;
+        });
 
         services.AddRefitClient<ISwaggerPetstoreOpenAPI30>()
             .ConfigureHttpClient(p => { p.BaseAddress = new Uri(baseUrl); })
-            .AddHttpMessageHandler(p =>
-            {
-                var contextSetter = p.GetService<IContextSetter<HeaderContext>>();
-                contextSetter.Set(new HeaderContext
-                {
-                    IdempotencyKey = "1234567890",
-                    ApiKey = "1234567890"
-                });
-                return new DefaultHeaderHandler(p.GetService<IContextGetter<HeaderContext>>());
-            });
+            .AddHttpMessageHandler(p => new DefaultHeaderHandler(p.GetService<IContextGetter<HeaderContext>>()));
 
         var serviceProvider = services.BuildServiceProvider();
         var client = serviceProvider.GetService<ISwaggerPetstoreOpenAPI30>();
