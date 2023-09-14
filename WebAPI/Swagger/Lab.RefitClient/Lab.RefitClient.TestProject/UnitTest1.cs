@@ -1,30 +1,14 @@
-using System.Text.Encodings.Web;
-using System.Text.Json;
 using Lab.RefitClient.GeneratedCode.PetStore;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.FileProviders;
 using Refit;
 
 namespace Lab.RefitClient.TestProject;
-
-public static class HttpClientExtensions
-{
-    public static void AddHeaders(this HttpRequestMessage requestMessage, Dictionary<string, string> headers)
-    {
-        foreach (var header in headers)
-        {
-            requestMessage.Headers.Add(header.Key, header.Value);
-        }
-    }
-}
 
 [TestClass]
 public class UnitTest1
 {
     [TestMethod]
-    public async Task 自動化測試()
+    public async Task RestServiceFor()
     {
         var server = new PetStoreTestServer();
         var httpClient = server.CreateClient();
@@ -39,8 +23,11 @@ public class UnitTest1
         Assert.AreEqual(username, content.Username);
     }
 
+    /// <summary>
+    /// F5執行WebApi專案_再呼叫WebApi
+    /// </summary>
     [TestMethod]
-    public async Task 手動建立API()
+    public async Task AddRefitClient()
     {
         var baseUrl = "https://localhost:7285/api/v3";
         var services = new ServiceCollection();
