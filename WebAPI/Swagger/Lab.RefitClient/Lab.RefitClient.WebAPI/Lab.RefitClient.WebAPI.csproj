@@ -17,4 +17,8 @@
       <Folder Include="Middlewares\" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Lab.RefitClient\Lab.RefitClient.csproj" />
+    </ItemGroup>
+
 </Project>
