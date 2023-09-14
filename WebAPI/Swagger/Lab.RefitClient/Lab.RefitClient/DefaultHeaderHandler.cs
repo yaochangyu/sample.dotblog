@@ -2,7 +2,7 @@
 
 public class DefaultHeaderHandler : DelegatingHandler
 {
-    private IContextGetter<HeaderContext> _contextGetter;
+    private readonly IContextGetter<HeaderContext> _contextGetter;
 
     public DefaultHeaderHandler(IContextGetter<HeaderContext> contextGetter)
     {
