@@ -4,10 +4,13 @@ namespace Lab.RefitClient.WebAPI.Controllers;
 
 public class PetStoreControllerImpl : IPetStoreController
 {
+    private readonly IContextGetter<HeaderContext> _contextGetter;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public PetStoreControllerImpl(IHttpContextAccessor httpContextAccessor)
+    public PetStoreControllerImpl(IContextGetter<HeaderContext> contextGetter, 
+        IHttpContextAccessor httpContextAccessor)
     {
+        this._contextGetter = contextGetter;
         this._httpContextAccessor = httpContextAccessor;
     }
 
@@ -95,13 +98,12 @@ public class PetStoreControllerImpl : IPetStoreController
 
     public async Task<ActionResult<User>> GetUserByNameAsync(string username, CancellationToken cancellationToken = default(CancellationToken))
     {
-        var headers = this._httpContextAccessor.HttpContext.Request.Headers;
-        var idempotencyKey = headers[PetStoreHeaderNames.IdempotencyKey];
-        var apiKey = headers[PetStoreHeaderNames.ApiKey];
-        
+        // 透過一個 Filter 處理 Header 並轉呈 HeaderContext 物件
+        var headerContext = this._contextGetter.Get();
+
         var response = this._httpContextAccessor.HttpContext.Response;
-        response.Headers.Add(PetStoreHeaderNames.IdempotencyKey,idempotencyKey);
-        response.Headers.Add(PetStoreHeaderNames.ApiKey,apiKey);
+        response.Headers.Add(PetStoreHeaderNames.IdempotencyKey,headerContext.IdempotencyKey);
+        response.Headers.Add(PetStoreHeaderNames.ApiKey,headerContext.ApiKey);
         return new User
         {
             Id = 0,

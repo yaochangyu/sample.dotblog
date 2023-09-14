@@ -1,4 +1,5 @@
-﻿using Lab.RefitClient.WebAPI.Controllers;
+﻿using Lab.RefitClient.WebAPI;
+using Lab.RefitClient.WebAPI.Controllers;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
