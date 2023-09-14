@@ -1,3 +1,5 @@
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using Lab.RefitClient.GeneratedCode.PetStore;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,7 +28,8 @@ public class UnitTest1
     {
         var server = new PetStoreTestServer();
         var httpClient = server.CreateClient();
-        httpClient.DefaultRequestHeaders.Add("x-idempotency-key", "1234567890");
+        httpClient.DefaultRequestHeaders.Add(PetStoreHeaderNames.IdempotencyKey, "1234567890");
+        httpClient.DefaultRequestHeaders.Add(PetStoreHeaderNames.ApiKey, "1234567890");
         httpClient.BaseAddress = new Uri(httpClient.BaseAddress, "api/v3");
         var client = RestService.For<ISwaggerPetstoreOpenAPI30>(httpClient);
         var username = "yao";
@@ -42,7 +45,12 @@ public class UnitTest1
         var baseUrl = "https://localhost:7285/api/v3";
         var services = new ServiceCollection();
         services.AddRefitClient<ISwaggerPetstoreOpenAPI30>()
-            .ConfigureHttpClient(c => { c.BaseAddress = new Uri(baseUrl); });
+            .ConfigureHttpClient(p =>
+            {
+                p.DefaultRequestHeaders.Add(PetStoreHeaderNames.IdempotencyKey, "1234567890");
+                p.DefaultRequestHeaders.Add(PetStoreHeaderNames.ApiKey, "1234567890");
+                p.BaseAddress = new Uri(baseUrl);
+            });
         var serviceProvider = services.BuildServiceProvider();
         var client = serviceProvider.GetService<ISwaggerPetstoreOpenAPI30>();
         var username = "yao";

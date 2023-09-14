@@ -34,7 +34,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>Successful operation</returns>
 
-        System.Threading.Tasks.Task<Pet> UpdatePetAsync(Pet body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<Pet>> UpdatePetAsync(Pet body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Add a new pet to the store
@@ -48,7 +48,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>Successful operation</returns>
 
-        System.Threading.Tasks.Task<Pet> AddPetAsync(Pet body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<Pet>> AddPetAsync(Pet body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Finds Pets by status
@@ -62,7 +62,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>successful operation</returns>
 
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<Pet>> FindPetsByStatusAsync(Status status, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.ICollection<Pet>>> FindPetsByStatusAsync(Status status, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Finds Pets by tags
@@ -76,7 +76,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>successful operation</returns>
 
-        System.Threading.Tasks.Task<System.Collections.Generic.ICollection<Pet>> FindPetsByTagsAsync(System.Collections.Generic.IEnumerable<string> tags, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.ICollection<Pet>>> FindPetsByTagsAsync(System.Collections.Generic.IEnumerable<string> tags, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Find pet by ID
@@ -90,7 +90,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>successful operation</returns>
 
-        System.Threading.Tasks.Task<Pet> GetPetByIdAsync(long petId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<Pet>> GetPetByIdAsync(long petId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Updates a pet in the store with form data
@@ -102,7 +102,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <param name="status">Status of pet that needs to be updated</param>
 
-        System.Threading.Tasks.Task UpdatePetWithFormAsync(long petId, string name, string status, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> UpdatePetWithFormAsync(long petId, string name, string status, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Deletes a pet
@@ -111,7 +111,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <param name="petId">Pet id to delete</param>
 
-        System.Threading.Tasks.Task DeletePetAsync(string api_key, long petId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> DeletePetAsync(string api_key, long petId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// uploads an image
@@ -124,7 +124,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>successful operation</returns>
 
-        System.Threading.Tasks.Task<ApiResponse> UploadFileAsync(long petId, string additionalMetadata, Microsoft.AspNetCore.Http.IFormFile body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<ApiResponse>> UploadFileAsync(long petId, string additionalMetadata, Microsoft.AspNetCore.Http.IFormFile body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Returns pet inventories by status
@@ -136,7 +136,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>successful operation</returns>
 
-        System.Threading.Tasks.Task<System.Collections.Generic.IDictionary<string, int>> GetInventoryAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.IDictionary<string, int>>> GetInventoryAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Place an order for a pet
@@ -148,7 +148,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>successful operation</returns>
 
-        System.Threading.Tasks.Task<Order> PlaceOrderAsync(Order body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<Order>> PlaceOrderAsync(Order body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Find purchase order by ID
@@ -162,7 +162,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>successful operation</returns>
 
-        System.Threading.Tasks.Task<Order> GetOrderByIdAsync(long orderId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<Order>> GetOrderByIdAsync(long orderId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Delete purchase order by ID
@@ -174,7 +174,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <param name="orderId">ID of the order that needs to be deleted</param>
 
-        System.Threading.Tasks.Task DeleteOrderAsync(long orderId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> DeleteOrderAsync(long orderId, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Create user
@@ -188,7 +188,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>successful operation</returns>
 
-        System.Threading.Tasks.Task<User> CreateUserAsync(User body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<User>> CreateUserAsync(User body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Creates list of users with given input array
@@ -200,7 +200,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>Successful operation</returns>
 
-        System.Threading.Tasks.Task<User> CreateUsersWithListInputAsync(System.Collections.Generic.IEnumerable<User> body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<User>> CreateUsersWithListInputAsync(System.Collections.Generic.IEnumerable<User> body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Logs user into the system
@@ -212,7 +212,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>successful operation</returns>
 
-        System.Threading.Tasks.Task<string> LoginUserAsync(string username, string password, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<string>> LoginUserAsync(string username, string password, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Logs out current logged in user session
@@ -220,7 +220,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>successful operation</returns>
 
-        System.Threading.Tasks.Task LogoutUserAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> LogoutUserAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Get user by user name
@@ -230,7 +230,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>successful operation</returns>
 
-        System.Threading.Tasks.Task<User> GetUserByNameAsync(string username, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<User>> GetUserByNameAsync(string username, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Update user
@@ -246,7 +246,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <returns>successful operation</returns>
 
-        System.Threading.Tasks.Task UpdateUserAsync(string username, User body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> UpdateUserAsync(string username, User body, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <summary>
         /// Delete user
@@ -258,7 +258,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
 
         /// <param name="username">The name that needs to be deleted</param>
 
-        System.Threading.Tasks.Task DeleteUserAsync(string username, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> DeleteUserAsync(string username, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
     }
 
@@ -283,7 +283,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// <param name="body">Update an existent pet in the store</param>
         /// <returns>Successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpPut, Microsoft.AspNetCore.Mvc.Route("pet")]
-        public System.Threading.Tasks.Task<Pet> UpdatePet([Microsoft.AspNetCore.Mvc.FromBody] Pet body, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<Pet>> UpdatePet([Microsoft.AspNetCore.Mvc.FromBody] Pet body, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.UpdatePetAsync(body, cancellationToken);
@@ -298,7 +298,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// <param name="body">Create a new pet in the store</param>
         /// <returns>Successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpPost, Microsoft.AspNetCore.Mvc.Route("pet")]
-        public System.Threading.Tasks.Task<Pet> AddPet([Microsoft.AspNetCore.Mvc.FromBody] Pet body, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<Pet>> AddPet([Microsoft.AspNetCore.Mvc.FromBody] Pet body, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.AddPetAsync(body, cancellationToken);
@@ -313,7 +313,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// <param name="status">Status values that need to be considered for filter</param>
         /// <returns>successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpGet, Microsoft.AspNetCore.Mvc.Route("pet/findByStatus")]
-        public System.Threading.Tasks.Task<System.Collections.Generic.ICollection<Pet>> FindPetsByStatus([Microsoft.AspNetCore.Mvc.FromQuery] Status? status, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.ICollection<Pet>>> FindPetsByStatus([Microsoft.AspNetCore.Mvc.FromQuery] Status? status, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.FindPetsByStatusAsync(status ?? Lab.RefitClient.WebAPI.Controllers.Status.Available, cancellationToken);
@@ -328,7 +328,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// <param name="tags">Tags to filter by</param>
         /// <returns>successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpGet, Microsoft.AspNetCore.Mvc.Route("pet/findByTags")]
-        public System.Threading.Tasks.Task<System.Collections.Generic.ICollection<Pet>> FindPetsByTags([Microsoft.AspNetCore.Mvc.FromQuery] System.Collections.Generic.IEnumerable<string> tags, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.ICollection<Pet>>> FindPetsByTags([Microsoft.AspNetCore.Mvc.FromQuery] System.Collections.Generic.IEnumerable<string> tags, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.FindPetsByTagsAsync(tags, cancellationToken);
@@ -343,7 +343,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// <param name="petId">ID of pet to return</param>
         /// <returns>successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpGet, Microsoft.AspNetCore.Mvc.Route("pet/{petId}")]
-        public System.Threading.Tasks.Task<Pet> GetPetById(long petId, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<Pet>> GetPetById(long petId, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.GetPetByIdAsync(petId, cancellationToken);
@@ -356,7 +356,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// <param name="name">Name of pet that needs to be updated</param>
         /// <param name="status">Status of pet that needs to be updated</param>
         [Microsoft.AspNetCore.Mvc.HttpPost, Microsoft.AspNetCore.Mvc.Route("pet/{petId}")]
-        public System.Threading.Tasks.Task UpdatePetWithForm(long petId, [Microsoft.AspNetCore.Mvc.FromQuery] string name, [Microsoft.AspNetCore.Mvc.FromQuery] string status, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> UpdatePetWithForm(long petId, [Microsoft.AspNetCore.Mvc.FromQuery] string name, [Microsoft.AspNetCore.Mvc.FromQuery] string status, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.UpdatePetWithFormAsync(petId, name, status, cancellationToken);
@@ -367,7 +367,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// </summary>
         /// <param name="petId">Pet id to delete</param>
         [Microsoft.AspNetCore.Mvc.HttpDelete, Microsoft.AspNetCore.Mvc.Route("pet/{petId}")]
-        public System.Threading.Tasks.Task DeletePet([Microsoft.AspNetCore.Mvc.FromHeader] string api_key, long petId, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> DeletePet([Microsoft.AspNetCore.Mvc.FromHeader] string api_key, long petId, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.DeletePetAsync(api_key, petId, cancellationToken);
@@ -380,7 +380,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// <param name="additionalMetadata">Additional Metadata</param>
         /// <returns>successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpPost, Microsoft.AspNetCore.Mvc.Route("pet/{petId}/uploadImage")]
-        public System.Threading.Tasks.Task<ApiResponse> UploadFile(long petId, [Microsoft.AspNetCore.Mvc.FromQuery] string additionalMetadata, Microsoft.AspNetCore.Http.IFormFile body, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<ApiResponse>> UploadFile(long petId, [Microsoft.AspNetCore.Mvc.FromQuery] string additionalMetadata, Microsoft.AspNetCore.Http.IFormFile body, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.UploadFileAsync(petId, additionalMetadata, body, cancellationToken);
@@ -394,7 +394,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// </remarks>
         /// <returns>successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpGet, Microsoft.AspNetCore.Mvc.Route("store/inventory")]
-        public System.Threading.Tasks.Task<System.Collections.Generic.IDictionary<string, int>> GetInventory(System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<System.Collections.Generic.IDictionary<string, int>>> GetInventory(System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.GetInventoryAsync(cancellationToken);
@@ -408,7 +408,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// </remarks>
         /// <returns>successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpPost, Microsoft.AspNetCore.Mvc.Route("store/order")]
-        public System.Threading.Tasks.Task<Order> PlaceOrder([Microsoft.AspNetCore.Mvc.FromBody] Order body, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<Order>> PlaceOrder([Microsoft.AspNetCore.Mvc.FromBody] Order body, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.PlaceOrderAsync(body, cancellationToken);
@@ -423,7 +423,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// <param name="orderId">ID of order that needs to be fetched</param>
         /// <returns>successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpGet, Microsoft.AspNetCore.Mvc.Route("store/order/{orderId}")]
-        public System.Threading.Tasks.Task<Order> GetOrderById(long orderId, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<Order>> GetOrderById(long orderId, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.GetOrderByIdAsync(orderId, cancellationToken);
@@ -437,7 +437,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// </remarks>
         /// <param name="orderId">ID of the order that needs to be deleted</param>
         [Microsoft.AspNetCore.Mvc.HttpDelete, Microsoft.AspNetCore.Mvc.Route("store/order/{orderId}")]
-        public System.Threading.Tasks.Task DeleteOrder(long orderId, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> DeleteOrder(long orderId, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.DeleteOrderAsync(orderId, cancellationToken);
@@ -452,7 +452,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// <param name="body">Created user object</param>
         /// <returns>successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpPost, Microsoft.AspNetCore.Mvc.Route("user")]
-        public System.Threading.Tasks.Task<User> CreateUser([Microsoft.AspNetCore.Mvc.FromBody] User body, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<User>> CreateUser([Microsoft.AspNetCore.Mvc.FromBody] User body, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.CreateUserAsync(body, cancellationToken);
@@ -466,7 +466,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// </remarks>
         /// <returns>Successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpPost, Microsoft.AspNetCore.Mvc.Route("user/createWithList")]
-        public System.Threading.Tasks.Task<User> CreateUsersWithListInput([Microsoft.AspNetCore.Mvc.FromBody] System.Collections.Generic.IEnumerable<User> body, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<User>> CreateUsersWithListInput([Microsoft.AspNetCore.Mvc.FromBody] System.Collections.Generic.IEnumerable<User> body, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.CreateUsersWithListInputAsync(body, cancellationToken);
@@ -479,7 +479,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// <param name="password">The password for login in clear text</param>
         /// <returns>successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpGet, Microsoft.AspNetCore.Mvc.Route("user/login")]
-        public System.Threading.Tasks.Task<string> LoginUser([Microsoft.AspNetCore.Mvc.FromQuery] string username, [Microsoft.AspNetCore.Mvc.FromQuery] string password, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<string>> LoginUser([Microsoft.AspNetCore.Mvc.FromQuery] string username, [Microsoft.AspNetCore.Mvc.FromQuery] string password, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.LoginUserAsync(username, password, cancellationToken);
@@ -490,7 +490,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// </summary>
         /// <returns>successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpGet, Microsoft.AspNetCore.Mvc.Route("user/logout")]
-        public System.Threading.Tasks.Task LogoutUser(System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> LogoutUser(System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.LogoutUserAsync(cancellationToken);
@@ -502,7 +502,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// <param name="username">The name that needs to be fetched. Use user1 for testing.</param>
         /// <returns>successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpGet, Microsoft.AspNetCore.Mvc.Route("user/{username}")]
-        public System.Threading.Tasks.Task<User> GetUserByName(string username, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.ActionResult<User>> GetUserByName(string username, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.GetUserByNameAsync(username, cancellationToken);
@@ -518,7 +518,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// <param name="body">Update an existent user in the store</param>
         /// <returns>successful operation</returns>
         [Microsoft.AspNetCore.Mvc.HttpPut, Microsoft.AspNetCore.Mvc.Route("user/{username}")]
-        public System.Threading.Tasks.Task UpdateUser(string username, [Microsoft.AspNetCore.Mvc.FromBody] User body, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> UpdateUser(string username, [Microsoft.AspNetCore.Mvc.FromBody] User body, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.UpdateUserAsync(username, body, cancellationToken);
@@ -532,7 +532,7 @@ namespace Lab.RefitClient.WebAPI.Controllers
         /// </remarks>
         /// <param name="username">The name that needs to be deleted</param>
         [Microsoft.AspNetCore.Mvc.HttpDelete, Microsoft.AspNetCore.Mvc.Route("user/{username}")]
-        public System.Threading.Tasks.Task DeleteUser(string username, System.Threading.CancellationToken cancellationToken)
+        public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> DeleteUser(string username, System.Threading.CancellationToken cancellationToken)
         {
 
             return _implementation.DeleteUserAsync(username, cancellationToken);
