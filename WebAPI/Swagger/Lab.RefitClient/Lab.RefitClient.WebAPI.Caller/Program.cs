@@ -22,13 +22,9 @@ builder.Services.AddSingleton(p =>
 {
     var settings = new RefitSettings
     {
-        HttpMessageHandlerFactory = () =>
+        HttpMessageHandlerFactory = () => new DefaultHeaderHandler(p.GetService<IContextGetter<HeaderContext>>())
         {
-            var contextGetter = p.GetService<IContextGetter<HeaderContext>>();
-            return new DefaultHeaderHandler(contextGetter)
-            {
-                InnerHandler = new SocketsHttpHandler()
-            };
+            InnerHandler = new SocketsHttpHandler()
         },
     };
     return settings;
