@@ -10,20 +10,20 @@ public class UnitTest1
 {
     private static MongoDbContainer MongoDbContainer;
     private static MongoClient MongoClient;
-    private string TestData = "出發吧，讓我們航向偉大的航道";
+    private readonly string TestData = "出發吧，讓我們航向偉大的航道";
 
     [ClassInitialize]
     public static async Task ClassInitialize(TestContext context)
     {
-        // MongoDbContainer = new MongoDbBuilder()
-        //     .WithPortBinding(27017, true)
-        //     .Build();
-        // await MongoDbContainer.StartAsync().ConfigureAwait(false);
-        // var mongoClientSettings = MongoClientSettings.FromConnectionString(MongoDbContainer.GetConnectionString());
-        var mongoClientSettings = new MongoClientSettings()
-        {
-            Server = new MongoServerAddress("localhost", 27017),
-        };
+        MongoDbContainer = new MongoDbBuilder()
+            .WithPortBinding(27017, true)
+            .Build();
+        await MongoDbContainer.StartAsync();
+        var mongoClientSettings = MongoClientSettings.FromConnectionString(MongoDbContainer.GetConnectionString());
+        // var mongoClientSettings = new MongoClientSettings()
+        // {
+        //     Server = new MongoServerAddress("localhost", 27017),
+        // };
 
         MongoClient = new MongoClient(mongoClientSettings);
     }
@@ -31,7 +31,7 @@ public class UnitTest1
     [ClassCleanup]
     public static async Task ClassCleanup()
     {
-        // await MongoDbContainer.DisposeAsync().ConfigureAwait(false);
+        // await MongoDbContainer.DisposeAsync();
     }
 
     [TestCleanup]
