@@ -39,7 +39,7 @@ public class TraceContextMiddleware
         var userId = httpContext.User.Identity.Name;
 
         // 寫入 trace context 到 object context setter
-        var contextSetter = httpContext.RequestServices.GetService<IObjectContextSetter<TraceContext>>();
+        var contextSetter = httpContext.RequestServices.GetService<IContextSetter<TraceContext>>();
         contextSetter.Set(new TraceContext
         {
             TraceId = traceId,
@@ -51,7 +51,7 @@ public class TraceContextMiddleware
             "TW", traceId, userId);
 
         // 附加 traceId 到 response header 中
-        var contextGetter = httpContext.RequestServices.GetService<IObjectContextGetter<TraceContext>>();
+        IContextGetter<TraceContext?>? contextGetter = httpContext.RequestServices.GetService<IContextGetter<TraceContext>>();
         var traceContext = contextGetter.Get();
         httpContext.Response.Headers.TryAdd(SysHeaderNames.TraceId, traceContext.TraceId);
 

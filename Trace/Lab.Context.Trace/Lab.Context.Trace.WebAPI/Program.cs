@@ -31,9 +31,9 @@ try
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
-    builder.Services.AddSingleton<ObjectContextAccessor<TraceContext>>();
-    builder.Services.AddSingleton<IObjectContextGetter<TraceContext>>(p => p.GetService<ObjectContextAccessor<TraceContext>>());
-    builder.Services.AddSingleton<IObjectContextSetter<TraceContext>>(p => p.GetService<ObjectContextAccessor<TraceContext>>());
+    builder.Services.AddSingleton<ContextAccessor<TraceContext>>();
+    builder.Services.AddSingleton<IContextGetter<TraceContext>>(p => p.GetService<ContextAccessor<TraceContext>>());
+    builder.Services.AddSingleton<IContextSetter<TraceContext>>(p => p.GetService<ContextAccessor<TraceContext>>());
     var app = builder.Build();
 
     // Configure the HTTP request pipeline.

@@ -8,10 +8,10 @@ namespace Lab.Context.Trace.WebAPI.Controllers;
 public class DemoController : ControllerBase
 {
     private readonly ILogger<DemoController> _logger;
-    private readonly IObjectContextGetter<TraceContext> _contextGetter;
+    private readonly IContextGetter<TraceContext?> _contextGetter;
 
     public DemoController(ILogger<DemoController> logger,
-        IObjectContextGetter<TraceContext> contextGetter)
+        IContextGetter<TraceContext?> contextGetter)
     {
         _logger = logger;
         this._contextGetter = contextGetter;
