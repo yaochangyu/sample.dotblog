@@ -1,6 +1,6 @@
 namespace Lab.Context.Trace;
 
-public interface IObjectContextSetter<T>
+public interface IContextSetter<T>
 {
     void Set(T value);
 }
