@@ -36,9 +36,9 @@ try
     // builder.Services.AddScoped<IContextGetter<AuthContext>>(p => p.GetService<ContextAccessor<AuthContext>>());
     // builder.Services.AddScoped<IContextSetter<AuthContext>>(p => p.GetService<ContextAccessor<AuthContext>>());
     
-    builder.Services.AddSingleton<ContextAccessor<AuthContext>>();
-    builder.Services.AddSingleton<IContextGetter<AuthContext>>(p => p.GetService<ContextAccessor<AuthContext>>());
-    builder.Services.AddSingleton<IContextSetter<AuthContext>>(p => p.GetService<ContextAccessor<AuthContext>>());
+    builder.Services.AddSingleton<ContextAccessor2<AuthContext>>();
+    builder.Services.AddSingleton<IContextGetter<AuthContext>>(p => p.GetService<ContextAccessor2<AuthContext>>());
+    builder.Services.AddSingleton<IContextSetter<AuthContext>>(p => p.GetService<ContextAccessor2<AuthContext>>());
     
     var app = builder.Build();
 
@@ -49,11 +49,11 @@ try
         app.UseSwaggerUI();
     }
     
+    app.UseSerilogRequestLogging();
     app.UseHttpsRedirection();
 
     app.UseAuthorization();
     app.UseMiddleware<TraceContextMiddleware>();
-
     app.MapControllers();
     app.Run();
     return 0;
@@ -67,3 +67,5 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+public partial class Program { }

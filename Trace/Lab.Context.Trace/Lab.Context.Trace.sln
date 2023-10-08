@@ -9,6 +9,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		docker-compose.yml = docker-compose.yml
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Context.Trace.WebAPI.TestProject", "Lab.Context.Trace.WebAPI.TestProject\Lab.Context.Trace.WebAPI.TestProject.csproj", "{072B154D-149F-416C-AC1A-E009FED7706E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Context.Trace.ConsoleApp", "Lab.Context.Trace.ConsoleApp\Lab.Context.Trace.ConsoleApp.csproj", "{395822D5-7405-41B8-AC00-9106BF00EB76}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,5 +27,13 @@ Global
 		{04987A3C-032F-49CB-B59A-80D188BF1372}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{04987A3C-032F-49CB-B59A-80D188BF1372}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{04987A3C-032F-49CB-B59A-80D188BF1372}.Release|Any CPU.Build.0 = Release|Any CPU
+		{072B154D-149F-416C-AC1A-E009FED7706E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{072B154D-149F-416C-AC1A-E009FED7706E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{072B154D-149F-416C-AC1A-E009FED7706E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{072B154D-149F-416C-AC1A-E009FED7706E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{395822D5-7405-41B8-AC00-9106BF00EB76}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{395822D5-7405-41B8-AC00-9106BF00EB76}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{395822D5-7405-41B8-AC00-9106BF00EB76}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{395822D5-7405-41B8-AC00-9106BF00EB76}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
