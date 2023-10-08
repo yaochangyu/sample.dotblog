@@ -9,12 +9,12 @@ public class TraceContextMiddleware
 
     public TraceContextMiddleware(RequestDelegate next)
     {
-        _next = next;
+        this._next = next;
     }
 
     public async Task Invoke(HttpContext httpContext, ILogger<TraceContextMiddleware> logger)
     {
-        var traceId = httpContext.Request.Headers[SysHeaderNames.TraceId].FirstOrDefault();
+      var traceId = httpContext.Request.Headers[SysHeaderNames.TraceId].FirstOrDefault();
 
         //// 若調用端沒有傳入 traceId，則產生一個新的 traceId
         if (string.IsNullOrWhiteSpace(traceId))
@@ -39,8 +39,8 @@ public class TraceContextMiddleware
         var userId = httpContext.User.Identity.Name;
 
         // 寫入 trace context 到 object context setter
-        var contextSetter = httpContext.RequestServices.GetService<IContextSetter<TraceContext>>();
-        contextSetter.Set(new TraceContext
+        var authContextSetter = httpContext.RequestServices.GetService<IContextSetter<AuthContext>>();
+        authContextSetter.Set(new AuthContext
         {
             TraceId = traceId,
             UserId = userId
@@ -51,7 +51,7 @@ public class TraceContextMiddleware
             "TW", traceId, userId);
 
         // 附加 traceId 到 response header 中
-        IContextGetter<TraceContext?>? contextGetter = httpContext.RequestServices.GetService<IContextGetter<TraceContext>>();
+        IContextGetter<AuthContext?>? contextGetter = httpContext.RequestServices.GetService<IContextGetter<AuthContext>>();
         var traceContext = contextGetter.Get();
         httpContext.Response.Headers.TryAdd(SysHeaderNames.TraceId, traceContext.TraceId);
 

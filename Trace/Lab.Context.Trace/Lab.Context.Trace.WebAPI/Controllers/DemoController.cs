@@ -8,21 +8,20 @@ namespace Lab.Context.Trace.WebAPI.Controllers;
 public class DemoController : ControllerBase
 {
     private readonly ILogger<DemoController> _logger;
-    private readonly IContextGetter<TraceContext?> _contextGetter;
+    private readonly IContextGetter<AuthContext?> _authContextGetter;
 
     public DemoController(ILogger<DemoController> logger,
-        IContextGetter<TraceContext?> contextGetter)
+        IContextGetter<AuthContext?> authContextGetter)
     {
-        _logger = logger;
-        this._contextGetter = contextGetter;
+        this._logger = logger;
+        this._authContextGetter = authContextGetter;
     }
 
     [HttpGet(Name = "GetDemo")]
     public ActionResult Get()
     {
-        var traceContext = this._contextGetter.Get();
-        var userId = traceContext.UserId;
-
+        var authContext = this._authContextGetter.Get();
+        var userId = authContext.UserId;
         // 由 Context 取得 UserId
         var member = Member.GetFakeMembers().FirstOrDefault(p => p.UserId == userId);
 

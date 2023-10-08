@@ -1,6 +1,6 @@
 ﻿namespace Lab.Context.Trace;
 
-public record TraceContext
+public record AuthContext
 {
     public string TraceId { get; init; }
 
