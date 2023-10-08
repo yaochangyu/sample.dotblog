@@ -31,9 +31,15 @@ try
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
-    builder.Services.AddSingleton<ContextAccessor<TraceContext>>();
-    builder.Services.AddSingleton<IContextGetter<TraceContext>>(p => p.GetService<ContextAccessor<TraceContext>>());
-    builder.Services.AddSingleton<IContextSetter<TraceContext>>(p => p.GetService<ContextAccessor<TraceContext>>());
+ 
+    // builder.Services.AddScoped<ContextAccessor<AuthContext>>();
+    // builder.Services.AddScoped<IContextGetter<AuthContext>>(p => p.GetService<ContextAccessor<AuthContext>>());
+    // builder.Services.AddScoped<IContextSetter<AuthContext>>(p => p.GetService<ContextAccessor<AuthContext>>());
+    
+    builder.Services.AddSingleton<ContextAccessor<AuthContext>>();
+    builder.Services.AddSingleton<IContextGetter<AuthContext>>(p => p.GetService<ContextAccessor<AuthContext>>());
+    builder.Services.AddSingleton<IContextSetter<AuthContext>>(p => p.GetService<ContextAccessor<AuthContext>>());
+    
     var app = builder.Build();
 
     // Configure the HTTP request pipeline.
