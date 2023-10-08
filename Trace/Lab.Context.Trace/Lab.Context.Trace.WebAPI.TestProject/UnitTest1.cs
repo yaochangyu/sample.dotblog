@@ -17,7 +17,7 @@ public class UnitTest1
         var url = "https://localhost:7004/demo";
 
         var tasks = new List<Task<Data>>();
-        for (var i = 0; i < 100; i++)
+        for (var i = 0; i < 10000; i++)
         {
             tasks.Add(SendAsync(httpClient, url));
         }
