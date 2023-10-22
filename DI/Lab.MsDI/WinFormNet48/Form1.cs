@@ -6,6 +6,7 @@ namespace WinFormNet48
 {
     public partial class Form1 : Form
     {
+        int _counter = 1;
         public Form1()
         {
             this.InitializeComponent();
@@ -15,7 +16,9 @@ namespace WinFormNet48
         {
             var serviceProvider = DependencyInjectionConfig.ServiceProvider;
             var work            = serviceProvider.GetRequiredService<Worker>();
-            Console.WriteLine(work.Get());
+            Console.WriteLine($"{this._counter}=>\r\n"+work.Get());
+            
+            this._counter++;
         }
     }
 }
