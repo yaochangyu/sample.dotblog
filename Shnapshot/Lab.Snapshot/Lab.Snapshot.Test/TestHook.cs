@@ -31,6 +31,7 @@ public class TestHook
 
         // drop database
         using var dbContext = s_serviceProvider.GetService<IDbContextFactory<MemberDbContext>>().CreateDbContext();
-        dbContext.Database.EnsureDeleted();
+
+        // dbContext.Database.EnsureDeleted();
     }
 }
