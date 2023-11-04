@@ -27,7 +27,7 @@ public class UnitTest1
     IDbContextFactory<MemberDbContext> DbContextFactory =>
         _serviceProvider.GetService<IDbContextFactory<MemberDbContext>>();
 
-    static JsonSerializerOptions Options = new()
+    static JsonSerializerOptions JsonSerializerOptions = new()
     {
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         PropertyNameCaseInsensitive = true,
@@ -67,7 +67,7 @@ public class UnitTest1
     /// <param name="dbContext"></param>
     private void CleanAllRecord(DbContext dbContext)
     {
-        // dbContext.Database.ExecuteSqlRaw(NpgsqlGenerateScript.ClearAllRecord());
+        dbContext.Database.ExecuteSqlRaw(NpgsqlGenerateScript.ClearAllRecord());
     }
 
     [TestMethod]
@@ -238,8 +238,8 @@ public class UnitTest1
             Version = 2
         };
 
-        var oldData = JsonSerializer.Serialize(oldMember, Options);
-        var newData = JsonSerializer.Serialize(newMember, Options);
+        var oldData = JsonSerializer.Serialize(oldMember, JsonSerializerOptions);
+        var newData = JsonSerializer.Serialize(newMember, JsonSerializerOptions);
 
         var diff = JsonDiffPatcher.Diff(oldData, newData, new JsonDiffOptions
         {
@@ -252,86 +252,81 @@ public class UnitTest1
         });
         var result = JsonNode.Parse(oldData);
         JsonDiffPatcher.Patch(ref result, diff);
-        var actual = result.Deserialize<MemberDataEntity>(Options);
+        var actual = result.Deserialize<MemberDataEntity>(JsonSerializerOptions);
         actual.Should().BeEquivalentTo(newMember);
     }
 
+    /// <summary>
+    /// 集合內容一樣，但順序不一樣
+    /// </summary>
     [TestMethod]
-    public async Task SystemTextJson_DiffPatch_1()
+    public async Task SystemTextJson_Diff_ListSortDiff()
     {
-        var original = """
-                      {
-                          "id": "1",
-                          "profile": {
-                              "age": 18,
-                              "name": "yao-chang"
-                          },
-                          "version": 1,
-                          "accounts": [
-                              {
-                                  "id": "yao",
-                                  "type": "VIP"
-                              }
-                          ],
-                          "createdAt": "2023-11-01T16:25:29.5966704+00:00",
-                          "createdBy": "@@TestUser@@",
-                          "updatedAt": "2023-11-01T16:25:29.5966704+00:00",
-                          "updatedBy": "@@TestUser@@"
-                      }
-                      """;
-        var diffText = """
-                      {
-                          "profile": {
-                              "age": [
-                                  18,
-                                  20
-                              ],
-                              "name": [
-                                  "yao-chang",
-                                  "jordan"
-                              ]
-                          },
-                          "version": [
-                              1,
-                              0
-                          ],
-                          "accounts": {
-                              "1": [
-                                  {
-                                      "id": "yao1",
-                                      "type": "VIP1"
-                                  }
-                              ],
-                              "2": [
-                                  {
-                                      "id": "jordan1",
-                                      "type": "VVVIP"
-                                  }
-                              ],
-                              "_t": "a"
-                          },
-                          "createdAt": [
-                              "2023-11-01T16:25:29.59667+00:00",
-                              "2023-11-01T16:25:30.2735717+00:00"
-                          ],
-                          "createdBy": [
-                              "@@TestUser@@",
-                              "test"
-                          ],
-                          "updatedAt": [
-                              "2023-11-01T16:25:29.59667+00:00",
-                              "2023-11-01T16:25:30.2735718+00:00"
-                          ],
-                          "updatedBy": [
-                              "@@TestUser@@",
-                              "test"
-                          ]
-                      }
-                      """;
-        var result = JsonNode.Parse(original);
-        var diff = JsonNode.Parse(diffText);
+        var first = GenerateMember(20, "jordan", new Account
+        {
+            Id = "jordan1",
+            Type = "VVVIP"
+        }, 1);
+        first.Accounts = first.Accounts.OrderBy(p => p.Id).ToList();
+        var second = GenerateMember(20, "jordan", new Account
+        {
+            Id = "jordan1",
+            Type = "VVVIP"
+        }, 1);
+        second.Accounts = second.Accounts.OrderByDescending(p => p.Id).ToList();
+        var options = new JsonDiffOptions
+        {
+            JsonElementComparison = JsonElementComparison.Semantic,
+        };
+        var jsonPatchDeltaFormatter = new JsonPatchDeltaFormatter();
+        var left = JsonSerializer.Serialize(first.Accounts, JsonSerializerOptions);
+        var right = JsonSerializer.Serialize(second.Accounts, JsonSerializerOptions);
+
+        var diff = JsonDiffPatcher.Diff(left
+          , right
+          // , jsonPatchDeltaFormatter
+          , options
+        );
+
+        first.Accounts.Should().BeEquivalentTo(second.Accounts);
+
+        var result = JsonNode.Parse(left);
+
         JsonDiffPatcher.Patch(ref result, diff);
-        var actual = result.Deserialize<MemberDataEntity>(Options);
+        var actual = result.Deserialize<List<Account>>(JsonSerializerOptions);
+        actual.Should().BeEquivalentTo(second.Accounts);
+
+        result = JsonNode.Parse(right);
+        JsonDiffPatcher.Patch(ref result, diff);
+        actual = result.Deserialize<List<Account>>(JsonSerializerOptions);
+        actual.Should().BeEquivalentTo(second.Accounts);
+    }
+
+    /// <summary>
+    /// 集合內容一樣，順序一樣
+    /// </summary>
+    [TestMethod]
+    public async Task SystemTextJson_Diff_ListSortSame()
+    {
+        var first = GenerateMember(20, "jordan", new Account
+        {
+            Id = "jordan1",
+            Type = "VVVIP"
+        }, 1);
+        first.Accounts = first.Accounts.OrderBy(p => p.Id).ToList();
+        var left = JsonSerializer.Serialize(first.Accounts, JsonSerializerOptions);
+        var right = JsonSerializer.Serialize(first.Accounts, JsonSerializerOptions);
+        var options = new JsonDiffOptions
+        {
+            JsonElementComparison = JsonElementComparison.Semantic
+        };
+        var jsonPatchDeltaFormatter = new JsonPatchDeltaFormatter();
+        var diff = JsonDiffPatcher.Diff(left
+          , right
+          , jsonPatchDeltaFormatter
+          , options
+        );
+        diff.AsArray().Count.Should().Be(0);
     }
 
     [TestMethod]
@@ -393,8 +388,8 @@ public class UnitTest1
             Version = 2
         };
 
-        var oldData = JsonSerializer.Serialize(oldMember, Options);
-        var newData = JsonSerializer.Serialize(newMember, Options);
+        var oldData = JsonSerializer.Serialize(oldMember, JsonSerializerOptions);
+        var newData = JsonSerializer.Serialize(newMember, JsonSerializerOptions);
 
         var diff = JsonDiffPatcher.Diff(oldData, newData, new JsonDiffOptions
         {
@@ -407,21 +402,26 @@ public class UnitTest1
         });
         var result = JsonNode.Parse(oldData);
         JsonDiffPatcher.Patch(ref result, diff);
-        var actual = result.Deserialize<MemberDataEntity>(Options);
+        var actual = result.Deserialize<MemberDataEntity>(JsonSerializerOptions);
         actual.Should().BeEquivalentTo(newMember);
     }
 
     [TestMethod]
     public async Task SystemTextJson_RestoreInDb()
     {
-        await this.InsertOrGetAsync();
+        await this.InsertOrGetAsync(1);
         await this.Update(GenerateMember(20, "jordan", new Account
         {
             Id = "jordan1",
             Type = "VVVIP"
-        }));
-        await this.Update(GenerateMember(18, "yao", null));
-        await this.Update(GenerateMember(32, "yao-chang", null));
+        }, 2));
+        await this.Update(GenerateMember(18, "yao", null, 3));
+        await this.Update(GenerateMember(30, "yao1", new Account
+        {
+            Id = "chang",
+            Type = "Normal"
+        }, 4));
+        await this.Update(GenerateMember(32, "yao-chang", null, 5));
 
         await using var dbContext = await this.DbContextFactory.CreateDbContextAsync();
         var snapshots = await dbContext.Snapshots
@@ -433,18 +433,18 @@ public class UnitTest1
         JsonNode full = null;
         foreach (var snapshot in snapshots)
         {
-            if (snapshot.Version==1)
+            if (snapshot.Version == 1)
             {
                 full = snapshot.Data;
                 continue;
             }
-            JsonDiffPatcher.Patch(ref full, snapshot.Data);
 
-            // var diff = new JsonDiffPatch().Diff(oldData, newData);
-            // var patchData = new JsonDiffPatch().Patch(oldData, diff);
+            JsonDiffPatcher.Patch(ref full, snapshot.Data);
         }
 
-        var jsonString = full.ToJsonString();
+        var actual = full.Deserialize<MemberDataEntity>(JsonSerializerOptions);
+        var expected = await dbContext.Members.FirstOrDefaultAsync(p => p.Id == "1");
+        actual.Should().BeEquivalentTo(expected);
     }
 
     private static string ToJsonString(JsonDocument doc)
@@ -458,6 +458,7 @@ public class UnitTest1
 
     private async Task Update(MemberDataEntity newMember)
     {
+        var now = TestAssistant.Now;
         await using var dbContext = await this.DbContextFactory.CreateDbContextAsync();
 
         // 取得資料 sub query
@@ -474,9 +475,14 @@ public class UnitTest1
         var oldMember = data.member;
 
         // 比對差異
-        var oldData = JsonSerializer.Serialize(oldMember, Options);
-        var newData = JsonSerializer.Serialize(newMember, Options);
-        var diff = JsonDiffPatcher.Diff(oldData, newData);
+        var oldData = JsonSerializer.Serialize(oldMember, JsonSerializerOptions);
+        var newData = JsonSerializer.Serialize(newMember, JsonSerializerOptions);
+        var diff = JsonDiffPatcher.Diff(oldData, newData,
+            // new JsonPatchDeltaFormatter(),
+            new JsonDiffOptions
+            {
+                JsonElementComparison = JsonElementComparison.Semantic,
+            });
 
         // var oldData = JsonConvert.SerializeObject(oldMember);
         // var newData = JsonConvert.SerializeObject(newMember);
@@ -496,7 +502,7 @@ public class UnitTest1
             Data = diff,
             DataType = typeof(MemberDataEntity).ToString(),
             DataFormat = DataFormat.Diff.ToString(),
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = now,
             CreatedBy = "test",
             Version = newVersion
         };
@@ -505,8 +511,9 @@ public class UnitTest1
         var changes = await dbContext.SaveChangesAsync();
     }
 
-    private static MemberDataEntity GenerateMember(int age, string name, Account account)
+    private static MemberDataEntity GenerateMember(int age, string name, Account account, int version)
     {
+        var now = TestAssistant.Now;
         var newMember = new MemberDataEntity()
         {
             Id = "1",
@@ -528,10 +535,11 @@ public class UnitTest1
                     Type = "VIP1"
                 }
             },
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = now,
             CreatedBy = "test",
-            UpdatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = now,
             UpdatedBy = "test",
+            Version = version
         };
         if (account != null)
         {
@@ -544,7 +552,7 @@ public class UnitTest1
     [TestMethod]
     public async Task 更新資料產生差異快照()
     {
-        var oldMember = await this.InsertOrGetAsync();
+        var oldMember = await this.InsertOrGetAsync(1);
         var newMember = new MemberDataEntity()
         {
             Id = "1",
@@ -618,7 +626,7 @@ public class UnitTest1
     [TestMethod]
     public async Task ORM查詢Jsonb()
     {
-        await this.InsertOrGetAsync();
+        await this.InsertOrGetAsync(1);
 
         var now = TestAssistant.Now;
         var userId = TestAssistant.UserId;
@@ -651,7 +659,7 @@ public class UnitTest1
         data.member.Id.Should().Be("1");
     }
 
-    private async Task<MemberDataEntity> InsertOrGetAsync()
+    private async Task<MemberDataEntity> InsertOrGetAsync(int version)
     {
         await using var dbContext = await this.DbContextFactory.CreateDbContextAsync();
 
@@ -683,14 +691,14 @@ public class UnitTest1
             CreatedBy = userId,
             UpdatedAt = now,
             UpdatedBy = userId,
-            Version = 1
+            Version = version
         };
         dbContext.Members.Add(member);
 
         dbContext.Snapshots.Add(new SnapshotDataEntity
         {
             Id = member.Id,
-            Data = JsonNode.Parse(JsonSerializer.Serialize(member, Options)),
+            Data = JsonNode.Parse(JsonSerializer.Serialize(member, JsonSerializerOptions)),
             DataType = typeof(MemberDataEntity).ToString(),
             DataFormat = "Full",
             CreatedAt = now,
