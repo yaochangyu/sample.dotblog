@@ -1,6 +1,6 @@
-﻿namespace Lab.Snapshot.DB;
+namespace Lab.Snapshot.WebAPI.ServiceModels;
 
-public record Profile
+public class Profile
 {
     public int Age { get; set; }
 

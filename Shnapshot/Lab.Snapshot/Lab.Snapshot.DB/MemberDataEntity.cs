@@ -1,6 +1,6 @@
 namespace Lab.Snapshot.DB;
 
-public class MemberDataEntity
+public record MemberDataEntity
 {
     public string Id { get; set; }
 

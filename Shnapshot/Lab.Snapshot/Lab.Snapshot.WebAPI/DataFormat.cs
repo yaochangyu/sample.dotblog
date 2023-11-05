@@ -1,4 +1,4 @@
-﻿namespace Lab.Snapshot.Test;
+﻿namespace Lab.Snapshot.WebAPI;
 
 public enum DataFormat
 {
