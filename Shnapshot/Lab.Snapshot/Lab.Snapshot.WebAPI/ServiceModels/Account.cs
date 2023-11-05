@@ -1,6 +1,6 @@
-namespace Lab.Snapshot.DB;
+﻿namespace Lab.Snapshot.WebAPI.ServiceModels;
 
-public record Account
+public class Account
 {
     public string Id { get; set; }
 

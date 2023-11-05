@@ -27,6 +27,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Lab.Snapshot.DB\Lab.Snapshot.DB.csproj"/>
+        <ProjectReference Include="..\Lab.Snapshot.WebAPI\Lab.Snapshot.WebAPI.csproj" />
     </ItemGroup>
 
     <ItemGroup>
