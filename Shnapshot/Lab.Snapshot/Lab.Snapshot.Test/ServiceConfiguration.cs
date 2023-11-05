@@ -1,4 +1,5 @@
 ﻿using Lab.Snapshot.DB;
+using Lab.Snapshot.WebAPI;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

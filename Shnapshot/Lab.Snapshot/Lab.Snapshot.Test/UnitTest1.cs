@@ -9,6 +9,7 @@ using FluentAssertions;
 using JsonDiffPatchDotNet;
 using JsonDiffPatchDotNet.Formatters.JsonPatch;
 using Lab.Snapshot.DB;
+using Lab.Snapshot.WebAPI;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -284,7 +285,8 @@ public class UnitTest1
 
         var diff = JsonDiffPatcher.Diff(left
           , right
-          // , jsonPatchDeltaFormatter
+
+            // , jsonPatchDeltaFormatter
           , options
         );
 
@@ -422,6 +424,7 @@ public class UnitTest1
             Type = "Normal"
         }, 4));
         await this.Update(GenerateMember(32, "yao-chang", null, 5));
+        await this.Update(GenerateMember(32, "yao-chang", null, 5));
 
         await using var dbContext = await this.DbContextFactory.CreateDbContextAsync();
         var snapshots = await dbContext.Snapshots
@@ -473,29 +476,27 @@ public class UnitTest1
                         };
         var data = await queryable.FirstOrDefaultAsync();
         var oldMember = data.member;
+        newMember.Version = oldMember.Version;
 
         // 比對差異
         var oldData = JsonSerializer.Serialize(oldMember, JsonSerializerOptions);
         var newData = JsonSerializer.Serialize(newMember, JsonSerializerOptions);
         var diff = JsonDiffPatcher.Diff(oldData, newData,
+
             // new JsonPatchDeltaFormatter(),
             new JsonDiffOptions
             {
                 JsonElementComparison = JsonElementComparison.Semantic,
             });
+        if (diff == null)
+        {
+            return;
+        }
 
-        // var oldData = JsonConvert.SerializeObject(oldMember);
-        // var newData = JsonConvert.SerializeObject(newMember);
-        // var jsonDiffPatch = new JsonDiffPatch();
-        // var diff = jsonDiffPatch.Diff(oldData, newData);
-        // if (string.IsNullOrWhiteSpace(diff))
-        // {
-        //     return;
-        // }
+        // 有異動，進版號
+        newMember.Version = oldMember.Version + 1;
 
-        var newVersion = oldMember.Version + 1;
         dbContext.Entry(oldMember).CurrentValues.SetValues(newMember);
-        oldMember.Version = newVersion;
         var entity = new SnapshotDataEntity
         {
             Id = oldMember.Id,
@@ -504,7 +505,7 @@ public class UnitTest1
             DataFormat = DataFormat.Diff.ToString(),
             CreatedAt = now,
             CreatedBy = "test",
-            Version = newVersion
+            Version = newMember.Version
         };
         dbContext.Snapshots.Add(entity);
 
@@ -539,7 +540,6 @@ public class UnitTest1
             CreatedBy = "test",
             UpdatedAt = now,
             UpdatedBy = "test",
-            Version = version
         };
         if (account != null)
         {
