@@ -5,6 +5,8 @@ using AutoMapper;
 using Lab.Snapshot.DB;
 using Lab.Snapshot.WebAPI.ServiceModels;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Profile = Lab.Snapshot.WebAPI.ServiceModels.Profile;
 
 namespace Lab.Snapshot.WebAPI;
 
@@ -84,21 +86,22 @@ public class MemberRepository
         var newMember = this.DeepClone(oldMember);
 
         this.UpdateAccounts(request.Accounts, newMember);
+        this.UpdateAccounts(request.Profile, newMember);
 
-        // 比對 member 欄位是否有異動
-        if (this.IsDiff(oldMember, newMember) == false)
+        // 比對兩個 member 內容是否有差異
+        if (this.Diff(oldMember, newMember).Result == false)
         {
-            // 沒有異動，不做任何事
+            // 沒有差異，不做任何事
             return (null, true);
         }
 
-        // 有異動，進版號
+        // 有差異，進版號
         newMember.UpdatedAt = authContext.Now;
         newMember.UpdatedBy = authContext.UserId;
         newMember.Version = oldMember.Version + 1;
 
-        // 差異內容
-        var diff = this.JsonDiff(oldMember, newMember);
+        // 產生差異內容
+        var diff = this.Diff(oldMember, newMember).Data;
 
         var snapshot = new SnapshotDataEntity
         {
@@ -111,26 +114,16 @@ public class MemberRepository
             Version = newMember.Version
         };
 
+        // 更新時，可以使用樂觀鎖定，Update Where Version=oldMember.Version，這裡我沒有實作
         var entry = dbContext.Members.Entry(oldMember);
         entry.CurrentValues.SetValues(newMember);
+
         await dbContext.Snapshots.AddAsync(snapshot);
         await dbContext.SaveChangesAsync();
         return (null, true);
     }
 
-    private JsonNode? JsonDiff(MemberDataEntity oldMember, MemberDataEntity newMember)
-    {
-        var oldData = JsonSerializer.Serialize(oldMember, this._jsonSerializerOptions);
-        var newData = JsonSerializer.Serialize(newMember, this._jsonSerializerOptions);
-        var diff = JsonDiffPatcher.Diff(oldData, newData,
-            new JsonDiffOptions
-            {
-                JsonElementComparison = JsonElementComparison.Semantic,
-            });
-        return diff;
-    }
-
-    private bool IsDiff(MemberDataEntity oldMember, MemberDataEntity newMember)
+    private (JsonNode Data, bool Result) Diff(MemberDataEntity oldMember, MemberDataEntity newMember)
     {
         var oldData = JsonSerializer.Serialize(oldMember, this._jsonSerializerOptions);
         var newData = JsonSerializer.Serialize(newMember, this._jsonSerializerOptions);
@@ -142,10 +135,10 @@ public class MemberRepository
 
         if (diff == null)
         {
-            return true;
+            return (null, false);
         }
 
-        return false;
+        return (diff, true);
     }
 
     private MemberDataEntity UpdateAccounts(List<ServiceModels.Account> srcAccounts, MemberDataEntity destMember)
@@ -171,6 +164,16 @@ public class MemberRepository
         }
 
         return destMember;
+    }
+
+    private void UpdateAccounts(Profile srcProfile, MemberDataEntity destMember)
+    {
+        if (srcProfile.Equals(destMember.Profile))
+        {
+            return;
+        }
+
+        destMember.Profile = this._mapper.Map<DB.Profile>(srcProfile);
     }
 
     public MemberDataEntity DeepClone(MemberDataEntity oldMember)
