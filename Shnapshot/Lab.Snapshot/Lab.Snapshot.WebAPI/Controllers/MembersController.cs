@@ -40,10 +40,10 @@ public class MembersController : ControllerBase
     [HttpPut("{currentAccount}/bind", Name = "BindMember")]
     public async Task<ActionResult<MemberResponse>> Bind(string currentAccount, UpdateMemberRequest request)
     {
-        var insertMemberResult = await this._memberRepository.BindMemberAsync(currentAccount, request);
-        if (insertMemberResult.Failure != null)
+        var bindMemberResult = await this._memberRepository.BindMemberAsync(currentAccount, request);
+        if (bindMemberResult.Failure != null)
         {
-            return new ObjectResult(insertMemberResult.Failure)
+            return new ObjectResult(bindMemberResult.Failure)
             {
                 ContentTypes = new MediaTypeCollection()
                 {
