@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using System.Text.Json.JsonDiffPatch;
-using System.Text.Json.JsonDiffPatch.Diffs;
 using System.Text.Json.Nodes;
 using AutoMapper;
 using Lab.Snapshot.DB;
@@ -82,59 +81,24 @@ public class MemberRepository
             return (new Failure(FailureCode.MemberNotExist, $"Member({currentAccount}) not exist"), false);
         }
 
-        var newMember = oldMember with
+        var newMember = this.DeepClone(oldMember);
+
+        this.UpdateAccounts(request.Accounts, newMember);
+
+        // 比對 member 欄位是否有異動
+        if (this.IsDiff(oldMember, newMember) == false)
         {
-            Accounts = this._mapper.Map<List<DB.Account>>(oldMember.Accounts),
-            Profile = this._mapper.Map<DB.Profile>(oldMember.Profile)
-        };
-
-        newMember.Profile = this._mapper.Map<DB.Profile>(request.Profile);
-
-        // 帳號不存在才加入
-        foreach (var srcAccount in request.Accounts)
-        {
-            var accountExist = false;
-            foreach (var destAccount in newMember.Accounts)
-            {
-                if (srcAccount.Id == destAccount.Id)
-                {
-                    accountExist = true;
-                    break;
-                }
-            }
-
-            if (accountExist == false)
-            {
-                var map = this._mapper.Map<DB.Account>(srcAccount);
-                newMember.Accounts.Add(map);
-            }
-        }
-
-        var oldData = JsonSerializer.Serialize(oldMember, this._jsonSerializerOptions);
-        var newData = JsonSerializer.Serialize(newMember, this._jsonSerializerOptions);
-        var diff = JsonDiffPatcher.Diff(oldData, newData,
-            new JsonDiffOptions
-            {
-                JsonElementComparison = JsonElementComparison.Semantic,
-            });
-
-        if (diff == null)
-        {
+            // 沒有異動，不做任何事
             return (null, true);
         }
 
-        // 不納入比對的欄位，最後再更新成最新狀態
+        // 有異動，進版號
         newMember.UpdatedAt = authContext.Now;
         newMember.UpdatedBy = authContext.UserId;
         newMember.Version = oldMember.Version + 1;
 
-        oldData = JsonSerializer.Serialize(oldMember, this._jsonSerializerOptions);
-        newData = JsonSerializer.Serialize(newMember, this._jsonSerializerOptions);
-        diff = JsonDiffPatcher.Diff(oldData, newData,
-            new JsonDiffOptions
-            {
-                JsonElementComparison = JsonElementComparison.Semantic,
-            });
+        // 差異內容
+        var diff = this.JsonDiff(oldMember, newMember);
 
         var snapshot = new SnapshotDataEntity
         {
@@ -154,11 +118,77 @@ public class MemberRepository
         return (null, true);
     }
 
+    private JsonNode? JsonDiff(MemberDataEntity oldMember, MemberDataEntity newMember)
+    {
+        var oldData = JsonSerializer.Serialize(oldMember, this._jsonSerializerOptions);
+        var newData = JsonSerializer.Serialize(newMember, this._jsonSerializerOptions);
+        var diff = JsonDiffPatcher.Diff(oldData, newData,
+            new JsonDiffOptions
+            {
+                JsonElementComparison = JsonElementComparison.Semantic,
+            });
+        return diff;
+    }
+
+    private bool IsDiff(MemberDataEntity oldMember, MemberDataEntity newMember)
+    {
+        var oldData = JsonSerializer.Serialize(oldMember, this._jsonSerializerOptions);
+        var newData = JsonSerializer.Serialize(newMember, this._jsonSerializerOptions);
+        var diff = JsonDiffPatcher.Diff(oldData, newData,
+            new JsonDiffOptions
+            {
+                JsonElementComparison = JsonElementComparison.Semantic,
+            });
+
+        if (diff == null)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private MemberDataEntity UpdateAccounts(List<ServiceModels.Account> srcAccounts, MemberDataEntity destMember)
+    {
+        foreach (var srcAccount in srcAccounts)
+        {
+            var accountExist = false;
+            foreach (var destAccount in destMember.Accounts)
+            {
+                if (srcAccount.Id == destAccount.Id)
+                {
+                    accountExist = true;
+                    break;
+                }
+            }
+
+            // 帳號不存在才加入
+            if (accountExist == false)
+            {
+                var map = this._mapper.Map<DB.Account>(srcAccount);
+                destMember.Accounts.Add(map);
+            }
+        }
+
+        return destMember;
+    }
+
+    public MemberDataEntity DeepClone(MemberDataEntity oldMember)
+    {
+        var newMember = oldMember with
+        {
+            Accounts = this._mapper.Map<List<DB.Account>>(oldMember.Accounts),
+            Profile = this._mapper.Map<DB.Profile>(oldMember.Profile)
+        };
+        return newMember;
+    }
+
     public async Task<MemberResponse> GetMemberAsync(string account, int? version)
     {
-        var search = $"[{{\"Id\": \"{account}\"}}]";
-
+        var search = $"[{{\"id\": \"{account}\"}}]";
         await using var dbContext = await this._memberDbContextFactory.CreateDbContextAsync();
+
+        // 讀取最新資料
         if (version.HasValue == false)
         {
             var queryable = from member in dbContext.Members
@@ -173,13 +203,16 @@ public class MemberRepository
             return this._mapper.Map<MemberResponse>(data.member);
         }
 
-        // 處理快照
-        var entities = dbContext.Snapshots
-                .Where(p => p.Version <= version)
-                .OrderBy(p => p.Version)
+        // 讀取快照
+        var query = "select * from \"Snapshot\" where \"Data\" -> 'accounts' @> '[{{\"id\": \"yao3\"}}]' ::jsonb";
+        var snapshots = await dbContext.Snapshots
+                .FromSqlRaw(query)
+                .ToListAsync()
             ;
-        var snapshots = await entities.AsNoTracking().ToListAsync();
+
         JsonNode finial = null;
+
+        // 依序合併快照
         foreach (var snapshot in snapshots)
         {
             if (snapshot.Version == 1)
