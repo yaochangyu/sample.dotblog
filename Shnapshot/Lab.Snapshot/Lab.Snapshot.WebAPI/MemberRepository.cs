@@ -5,8 +5,6 @@ using AutoMapper;
 using Lab.Snapshot.DB;
 using Lab.Snapshot.WebAPI.ServiceModels;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Profile = Lab.Snapshot.WebAPI.ServiceModels.Profile;
 
 namespace Lab.Snapshot.WebAPI;
 
@@ -86,7 +84,7 @@ public class MemberRepository
         var newMember = this.DeepClone(oldMember);
 
         this.UpdateAccounts(request.Accounts, newMember);
-        this.UpdateAccounts(request.Profile, newMember);
+        this.UpdateProfile(request.Profile, newMember);
 
         // 比對兩個 member 內容是否有差異
         if (this.Diff(oldMember, newMember).Result == false)
@@ -166,7 +164,7 @@ public class MemberRepository
         return destMember;
     }
 
-    private void UpdateAccounts(Profile srcProfile, MemberDataEntity destMember)
+    private void UpdateProfile(ServiceModels.Profile srcProfile, MemberDataEntity destMember)
     {
         if (srcProfile.Equals(destMember.Profile))
         {
