@@ -227,7 +227,12 @@ public class MemberRepository
         }
 
         // search account in JsonNode
-        var accounts = finial!["accounts"]!.AsArray();
+        if (finial == null)
+        {
+            return null;
+        }
+
+        var accounts = finial["accounts"]!.AsArray();
         foreach (var item in accounts)
         {
             var id = item["id"]!.GetValue<string>();
