@@ -186,7 +186,7 @@ public class MemberRepository
 
     public async Task<MemberResponse> GetMemberAsync(string account, int? version)
     {
-        var search = $"[{{\"id\": \"{account}\"}}]";
+        var search = $"'[{{{{\"id\": \"{account}\"}}}}]'";
         await using var dbContext = await this._memberDbContextFactory.CreateDbContextAsync();
 
         // 讀取最新資料
@@ -205,7 +205,8 @@ public class MemberRepository
         }
 
         // 讀取快照
-        var query = "select * from \"Snapshot\" where \"Data\" -> 'accounts' @> '[{{\"id\": \"yao3\"}}]' ::jsonb";
+        var query = $@"select * from ""Snapshot"" where ""Data"" -> 'accounts' @> {search}::jsonb";
+
         var snapshots = await dbContext.Snapshots
                 .FromSqlRaw(query)
                 .ToListAsync()
