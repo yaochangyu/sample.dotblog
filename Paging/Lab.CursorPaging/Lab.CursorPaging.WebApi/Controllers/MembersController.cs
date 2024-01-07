@@ -86,6 +86,43 @@ public partial class MembersController : ControllerBase
         return this.Ok(results);
     }
 
+    [HttpGet]
+    [Route("/api/members:cursor2")]
+    public async Task<ActionResult<IEnumerable<MemberDataEntity>>> GetCursor2()
+    {
+        var pageSize = this.TryGetPageSize();
+        long? nextPageId = this.Request.Headers.TryGetValue("X-Next-Page-Id", out var data)
+            ? long.TryParse(data.FirstOrDefault(), out var id)
+                ? id
+                : null
+            : null;
+
+        await using var dbContext = await this._memberDbContextFactory.CreateDbContextAsync();
+        var query = dbContext.Members.Select(p => p);
+
+        if (nextPageId.HasValue)
+        {
+            query = query.Where(p => p.SequenceId > nextPageId);
+        }
+
+        query = query.Take(pageSize + 1);
+        var results = await query.AsNoTracking().ToListAsync();
+
+        // 是否有下一頁
+        bool hasNextPage = results.Count > pageSize;
+
+        if (hasNextPage)
+        {
+            // 有下一頁，刪除最後一筆
+            results.RemoveAt(results.Count - 1);
+
+            var after = results.LastOrDefault();
+            this.Response.Headers.Add("X-Next-Page-Id", after.SequenceId.ToString());
+        }
+
+        return this.Ok(results);
+    }
+
     private int TryGetPageSize() =>
         this.Request.Headers.TryGetValue("X-Page-Size", out var sizes)
             ? int.Parse(sizes.FirstOrDefault() ?? string.Empty)
