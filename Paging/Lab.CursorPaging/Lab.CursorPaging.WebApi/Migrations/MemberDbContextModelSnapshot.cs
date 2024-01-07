@@ -65,6 +65,9 @@ namespace Lab.CursorPaging.WebApi.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SequenceId")
+                        .IsUnique();
+
                     b.ToTable("Member", (string)null);
                 });
 #pragma warning restore 612, 618

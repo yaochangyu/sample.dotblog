@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 
 namespace Lab.CursorPaging.WebApi.Member.Repository;
 
@@ -30,6 +29,7 @@ public class MemberDbContext : DbContext
 
         modelBuilder.Entity<MemberDataEntity>(builder =>
         {
+            //property
             builder.ToTable("Member");
             builder.HasKey(x => x.Id);
             builder.Property(x => x.Name).IsRequired();
@@ -39,6 +39,9 @@ public class MemberDbContext : DbContext
             builder.Property(x => x.UpdatedAt).IsRequired();
             builder.Property(x => x.UpdatedBy).IsRequired();
             builder.Property(p => p.SequenceId).ValueGeneratedOnAdd();
+
+            //index            
+            builder.HasIndex(x => x.SequenceId).IsUnique();
         });
     }
 }

@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Lab.CursorPaging.WebApi.Migrations
 {
     [DbContext(typeof(MemberDbContext))]
-    [Migration("20240106135936_InitialCreate")]
+    [Migration("20240107142909_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -67,6 +67,9 @@ namespace Lab.CursorPaging.WebApi.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SequenceId")
+                        .IsUnique();
 
                     b.ToTable("Member", (string)null);
                 });

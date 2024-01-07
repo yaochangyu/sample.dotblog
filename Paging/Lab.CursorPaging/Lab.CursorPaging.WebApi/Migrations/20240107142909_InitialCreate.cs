@@ -33,6 +33,12 @@ namespace Lab.CursorPaging.WebApi.Migrations
                 {
                     table.PrimaryKey("PK_Member", x => x.Id);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Member_SequenceId",
+                table: "Member",
+                column: "SequenceId",
+                unique: true);
         }
 
         /// <inheritdoc />
