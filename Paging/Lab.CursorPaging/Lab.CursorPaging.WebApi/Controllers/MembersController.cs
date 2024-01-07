@@ -18,8 +18,33 @@ public partial class MembersController : ControllerBase
     }
 
     [HttpGet]
-    [Route("/api/members")]
-    public async Task<ActionResult<IEnumerable<MemberDataEntity>>> Get()
+    [Route("/api/members:page-index")]
+    public async Task<ActionResult<IEnumerable<MemberDataEntity>>> GetPageIndex()
+    {
+        int pageIndex = this.Request.Headers.TryGetValue("X-Page-Index", out var pages)
+            ? int.TryParse(pages.FirstOrDefault(), out var parsedPageIndex)
+                ? parsedPageIndex
+                : 1
+            : 1;
+        var pageSize = this.TryGetPageSize();
+
+        await using var dbContext = await this._memberDbContextFactory.CreateDbContextAsync();
+        var query = dbContext.Members.Select(p => p);
+        var totalCount = await dbContext.Members.CountAsync();
+        query = query
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize);
+        query = query.Take(pageSize + 1);
+
+        var results = await query.AsNoTracking().ToListAsync();
+        this.Response.Headers.Add("X-Total-Count", totalCount.ToString());
+
+        return this.Ok(results);
+    }
+
+    [HttpGet]
+    [Route("/api/members:cursor")]
+    public async Task<ActionResult<IEnumerable<MemberDataEntity>>> GetCursor()
     {
         var pageSize = this.TryGetPageSize();
         var pageTokenResult = this.TryGetPageToken();
@@ -78,7 +103,7 @@ public partial class MembersController : ControllerBase
     }
 
     // 將 Id 和 SequenceId 轉換為下一頁的令牌
-    private static string EncodePageToken(string? lastId, long? lastSequenceId)
+    public static string EncodePageToken(string? lastId, long? lastSequenceId)
     {
         if (lastId == null || lastSequenceId == null)
         {
@@ -90,7 +115,7 @@ public partial class MembersController : ControllerBase
     }
 
     // 將下一頁的令牌解碼為 Id 和 SequenceId
-    private static (string lastId, long lastSequenceId) DecodePageToken(string nextToken)
+    public static (string lastId, long lastSequenceId) DecodePageToken(string nextToken)
     {
         if (string.IsNullOrEmpty(nextToken))
         {
@@ -102,7 +127,8 @@ public partial class MembersController : ControllerBase
         var base64Bytes = Convert.FromBase64String(nextToken);
         var json = Encoding.UTF8.GetString(base64Bytes);
         var jsonNode = JsonNode.Parse(json);
-        var jsonObject = jsonNode.AsObject();
+        JsonObject jsonObject = jsonNode.AsObject();
+
         if (jsonObject.TryGetPropertyValue("lastSequenceId", out var lastSequenceIdNode))
         {
             lastSequenceId = lastSequenceIdNode.GetValue<long>();
