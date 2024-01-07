@@ -4,7 +4,6 @@ using System.Text.Json.Nodes;
 using Lab.CursorPaging.WebApi.Member.Repository;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Primitives;
 
 namespace Lab.CursorPaging.WebApi.Controllers;
 
@@ -78,7 +77,7 @@ public partial class MembersController : ControllerBase
         return (null, null);
     }
 
-    // 將 Id 和 Version 轉換為下一頁的令牌
+    // 將 Id 和 SequenceId 轉換為下一頁的令牌
     private static string EncodePageToken(string? lastId, long? lastSequenceId)
     {
         if (lastId == null || lastSequenceId == null)
@@ -90,7 +89,7 @@ public partial class MembersController : ControllerBase
         return Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
     }
 
-    // 將下一頁的令牌解碼為 Id 和 Version
+    // 將下一頁的令牌解碼為 Id 和 SequenceId
     private static (string lastId, long lastSequenceId) DecodePageToken(string nextToken)
     {
         if (string.IsNullOrEmpty(nextToken))
