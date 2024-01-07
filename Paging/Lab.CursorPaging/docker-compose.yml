@@ -1,0 +1,8 @@
+﻿services:
+  db:
+    image: postgres
+    container_name: postgres-latest
+    environment:
+      - POSTGRES_PASSWORD=guest
+    ports:
+      - 5432:5432
