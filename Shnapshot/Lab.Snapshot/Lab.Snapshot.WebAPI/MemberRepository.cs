@@ -87,7 +87,8 @@ public class MemberRepository
         this.UpdateProfile(request.Profile, newMember);
 
         // 比對兩個 member 內容是否有差異
-        if (this.Diff(oldMember, newMember).Result == false)
+        var diffResult = this.Diff(oldMember, newMember);
+        if (diffResult.Result == false)
         {
             // 沒有差異，不做任何事
             return (null, true);
@@ -99,20 +100,20 @@ public class MemberRepository
         newMember.Version = oldMember.Version + 1;
 
         // 產生差異內容
-        var diff = this.Diff(oldMember, newMember).Data;
+        var diffData = diffResult.Data;
 
         var snapshot = new SnapshotDataEntity
         {
             Id = newMember.Id,
             DataType = typeof(MemberDataEntity).ToString(),
-            Data = diff,
+            Data = diffData,
             DataFormat = DataFormat.Diff.ToString(),
             CreatedAt = newMember.UpdatedAt,
             CreatedBy = newMember.UpdatedBy,
             Version = newMember.Version
         };
 
-        // 更新時，可以使用樂觀鎖定，Update Where Version=oldMember.Version，這裡我沒有實作
+        // 更新時，可以使用樂觀鎖定，Update Where Version=oldMember.Version，或是悲觀鎖，這裡我沒有實作
         var entry = dbContext.Members.Entry(oldMember);
         entry.CurrentValues.SetValues(newMember);
 
@@ -128,7 +129,7 @@ public class MemberRepository
         var diff = JsonDiffPatcher.Diff(oldData, newData,
             new JsonDiffOptions
             {
-                JsonElementComparison = JsonElementComparison.Semantic,
+                JsonElementComparison = JsonElementComparison.RawText,
             });
 
         if (diff == null)
@@ -184,34 +185,32 @@ public class MemberRepository
         return newMember;
     }
 
-    public async Task<MemberResponse> GetMemberAsync(string account, int? version)
+    public async Task<MemberResponse> QueryMemberByAccountAsync(string account, int? version)
     {
-        var search = $"'[{{{{\"id\": \"{account}\"}}}}]'";
+        var search = $"[{{\"Id\": \"{account}\"}}]";
         await using var dbContext = await this._memberDbContextFactory.CreateDbContextAsync();
 
         // 讀取最新資料
+        var queryable = from member in dbContext.Members
+                        where EF.Functions.JsonContains(member.Accounts, search)
+                        select new { member };
+        var latestMember = await queryable.AsNoTracking().FirstOrDefaultAsync();
+        if (latestMember == null)
+        {
+            return null;
+        }
+
         if (version.HasValue == false)
         {
-            var queryable = from member in dbContext.Members
-                            where EF.Functions.JsonContains(member.Accounts, search)
-                            select new { member };
-            var data = await queryable.AsNoTracking().FirstOrDefaultAsync();
-            if (data == null)
-            {
-                return null;
-            }
-
-            return this._mapper.Map<MemberResponse>(data.member);
+            return this._mapper.Map<MemberResponse>(latestMember.member);
         }
 
         // 讀取快照
-        var query = $@"select * from ""Snapshot"" where ""Data"" -> 'accounts' @> {search}::jsonb";
-
-        var snapshots = await dbContext.Snapshots
-                .FromSqlRaw(query)
-                .ToListAsync()
+        var query = dbContext.Snapshots
+                .Where(p => p.Id == latestMember.member.Id)
+                .Where(p => p.Version <= version.Value)
             ;
-
+        var snapshots = await query.AsNoTracking().ToListAsync();
         JsonNode finial = null;
 
         // 依序合併快照
@@ -232,17 +231,65 @@ public class MemberRepository
             return null;
         }
 
-        var accounts = finial["accounts"]!.AsArray();
-        foreach (var item in accounts)
-        {
-            var id = item["id"]!.GetValue<string>();
-            if (id == account)
-            {
-                var result = finial.Deserialize<MemberResponse>(this._jsonSerializerOptions);
-                return result;
-            }
-        }
+        var lastSnapshot = snapshots.Last();
+        var result = finial.Deserialize<MemberResponse>(this._jsonSerializerOptions);
+        result.CreatedAt = latestMember.member.CreatedAt;
+        result.CreatedBy = latestMember.member.CreatedBy;
+        result.UpdatedAt = lastSnapshot.CreatedAt;
+        result.UpdatedBy = lastSnapshot.CreatedBy;
+        result.Version = lastSnapshot.Version;
+        return result;
+    }
 
-        return null;
+    public async Task<MemberResponse> GetMemberAsync(string id, int? version)
+    {
+        await using var dbContext = await this._memberDbContextFactory.CreateDbContextAsync();
+        if (version.HasValue == false)
+        {
+            var query = dbContext.Members.Where(p => p.Id == id)
+                ;
+            var data = await query.AsNoTracking().FirstOrDefaultAsync();
+            if (data == null)
+            {
+                return null;
+            }
+
+            return this._mapper.Map<MemberResponse>(data);
+        }
+        else
+        {
+            var query = dbContext.Snapshots.Where(p => p.Id == id)
+                    .Where(p => p.Version <= version.Value)
+                ;
+            var snapshots = await query.AsNoTracking().ToListAsync();
+
+            JsonNode finial = null;
+
+            // 依序合併快照
+            foreach (var snapshot in snapshots)
+            {
+                if (snapshot.Version == 1)
+                {
+                    finial = snapshot.Data;
+                    continue;
+                }
+
+                JsonDiffPatcher.Patch(ref finial, snapshot.Data);
+            }
+
+            if (finial == null)
+            {
+                return null;
+            }
+
+            return finial.Deserialize<MemberResponse>(this._jsonSerializerOptions);
+        }
+    }
+
+    public async Task<IEnumerable<MemberResponse>> GetMembersAsync()
+    {
+        await using var dbContext = await this._memberDbContextFactory.CreateDbContextAsync();
+        var data = await dbContext.Members.AsNoTracking().ToListAsync();
+        return this._mapper.Map<IEnumerable<MemberResponse>>(data);
     }
 }

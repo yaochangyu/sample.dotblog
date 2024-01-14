@@ -11,9 +11,31 @@ public class MemberDbContext : DbContext
 
     public DbSet<SnapshotDataEntity> Snapshots { get; set; }
 
+    private static readonly bool[] s_migrated = { false };
+
     public MemberDbContext(DbContextOptions<MemberDbContext> options)
         : base(options)
     {
+        if (!s_migrated[0])
+        {
+            lock (s_migrated)
+            {
+                if (!s_migrated[0])
+                {
+                    var migrations = this.Database.GetMigrations();
+                    if (migrations.Any())
+                    {
+                        this.Database.Migrate();
+                    }
+                    else
+                    {
+                        this.Database.EnsureCreated();
+                    }
+
+                    s_migrated[0] = true;
+                }
+            }
+        }
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

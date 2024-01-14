@@ -56,10 +56,35 @@ public class MembersController : ControllerBase
         return this.NoContent();
     }
 
-    [HttpGet("{account}", Name = "GetMemberByAccount")]
-    public async Task<ActionResult<MemberResponse>> Get(string account, int? version)
+    [HttpGet("{account}:query-account-id", Name = "QueryMemberByAccount")]
+    public async Task<ActionResult<MemberResponse>> QueryMemberByAccountAsync(string account, int? version)
     {
-        var getMemberResult = await this._memberRepository.GetMemberAsync(account, version);
+        var queryMemberResult = await this._memberRepository.QueryMemberByAccountAsync(account, version);
+        if (queryMemberResult == null)
+        {
+            return this.NotFound();
+        }
+
+        return this.Ok(queryMemberResult);
+    }
+
+    [HttpGet(Name = "GetMembers")]
+    //todo:待實作分頁
+    public async Task<ActionResult<MemberResponse>> GetMembersAsync()
+    {
+        var getMemberResult = await this._memberRepository.GetMembersAsync();
+        if (getMemberResult == null)
+        {
+            return this.NotFound();
+        }
+
+        return this.Ok(getMemberResult);
+    }
+
+    [HttpGet("{id}", Name = "GetMember")]
+    public async Task<ActionResult<MemberResponse>> GetMemberAsync(string id, int? version)
+    {
+        var getMemberResult = await this._memberRepository.GetMemberAsync(id, version);
         if (getMemberResult == null)
         {
             return this.NotFound();
