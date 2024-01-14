@@ -449,16 +449,7 @@ public class UnitTest1
         var expected = await dbContext.Members.FirstOrDefaultAsync(p => p.Id == "1");
         actual.Should().BeEquivalentTo(expected);
     }
-
-    private static string ToJsonString(JsonDocument doc)
-    {
-        using var stream = new MemoryStream();
-        var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true });
-        doc.WriteTo(writer);
-        writer.Flush();
-        return Encoding.UTF8.GetString(stream.ToArray());
-    }
-
+    
     private async Task Update(MemberDataEntity newMember)
     {
         var now = TestAssistant.Now;
