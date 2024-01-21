@@ -20,13 +20,14 @@ public class Demo2Controller : ControllerBase
     [Route("/api/demo2")]
     public async Task<ActionResult> Get()
     {
-        var requestId = this.HttpContext.TraceIdentifier;
+        var identifier = this.HttpContext.TraceIdentifier;
 
         var cookies = this.ShouldWithoutCookies();
         var headers = this.ShouldWithoutHeaders();
         if (cookies.Any()
             || headers.Any())
         {
+            // 找到非預期的 header/cookie 則回傳
             return this.Ok(new
             {
                 Headers = headers.Any() ? headers : null,
@@ -36,7 +37,6 @@ public class Demo2Controller : ControllerBase
 
         if (this.Request.Headers.TryGetValue("A", out var context))
         {
-            var identifier = this.HttpContext.TraceIdentifier;
             var data = context.FirstOrDefault();
 
             //取得 Request Id
