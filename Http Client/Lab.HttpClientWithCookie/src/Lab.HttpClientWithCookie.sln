@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAppA", "WebAppA\WebAppA.csproj", "{CF4A808A-1217-4CD6-9B14-483E218C7497}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebAppB", "WebAppB\WebAppB.csproj", "{C54987B2-7F8B-400E-B210-C4EE5460F1B7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "global", "global", "{2076DDF6-5000-4E44-8CE1-4320085633D4}"
+	ProjectSection(SolutionItems) = preProject
+		..\Taskfile.yml = ..\Taskfile.yml
+		..\.gitignore = ..\.gitignore
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CF4A808A-1217-4CD6-9B14-483E218C7497}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF4A808A-1217-4CD6-9B14-483E218C7497}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF4A808A-1217-4CD6-9B14-483E218C7497}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF4A808A-1217-4CD6-9B14-483E218C7497}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C54987B2-7F8B-400E-B210-C4EE5460F1B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C54987B2-7F8B-400E-B210-C4EE5460F1B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C54987B2-7F8B-400E-B210-C4EE5460F1B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C54987B2-7F8B-400E-B210-C4EE5460F1B7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

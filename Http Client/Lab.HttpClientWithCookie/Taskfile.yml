@@ -1,0 +1,27 @@
+# Taskfile.yml
+
+version: "3"
+
+tasks:
+  demo:
+    desc: WebApi Development
+    cmds:
+      - task: demo1
+      - task: demo2
+        
+  WebAppA:
+    desc: WebApi Development
+    dir: "src/WebAppA"
+    cmds:
+      - dotnet run --environment Staging
+  
+  WebAppB:
+    desc: WebApi Development
+    dir: "src/WebAppB"
+    cmds:
+      - dotnet run --environment Staging
+      
+  seq-start:
+    desc: start seq service
+    cmds:
+      - docker run --name seq -d --restart unless-stopped -e ACCEPT_EULA=Y -p 5341:80 datalust/seq:latest
