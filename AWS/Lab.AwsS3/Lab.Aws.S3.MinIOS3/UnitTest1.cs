@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Text;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
+using Amazon.S3.Transfer;
 
 namespace Lab.Aws.S3.MinIOS3;
 
@@ -83,15 +85,148 @@ public class UnitTest1
     {
         await WriteObjectDataAsync("上傳.csv");
     }
+
     [TestMethod]
     public async Task 分批下載檔案()
     {
-        await WriteObjectDataAsync("上傳.csv");
+        await ReadObjectDataAsync2("上傳.csv", "下載.csv");
+    }
+
+    static async Task ReadObjectDataAsync2(string sourceFile, string outFile)
+    {
+        var bucketName = "test-bucket";
+        var key = sourceFile;
+
+        try
+        {
+            var s3Client = CreateS3Client();
+
+            long startPosition = 0;
+            long chunkSize = 4096; // 每次讀取的大小為 4096 bytes
+
+            // 確定檔案的大小
+            long fileSize = await GetFileSizeAsync(s3Client, bucketName, key);
+
+            using (var outputStream = new StreamWriter(outFile))
+            {
+                while (startPosition < fileSize)
+                {
+                    long endPosition = Math.Min(startPosition + chunkSize, fileSize) - 1;
+
+                    // 設定 ByteRange
+                    var getObjectRequest = new GetObjectRequest
+                    {
+                        BucketName = bucketName,
+                        Key = key,
+                        ByteRange = new ByteRange(startPosition, endPosition)
+                    };
+
+                    using (var response = await s3Client.GetObjectAsync(getObjectRequest))
+                    using (var reader = new StreamReader(response.ResponseStream))
+                    {
+                        // 處理部分檔案內容
+                        var buffer = new char[chunkSize];
+                        int bytesRead;
+                        string line = string.Empty;
+                        while ((bytesRead = await reader.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                        {
+                            line += new string(buffer, 0, bytesRead);
+                            int newlineIndex = line.IndexOf('\n');
+                            if (newlineIndex >= 0)
+                            {
+                                await outputStream.WriteAsync(line.Substring(0, newlineIndex + 1));
+                                line = line.Substring(newlineIndex + 1);
+                            }
+                        }
+
+                        // 處理剩餘的部分，如果有
+                        if (!string.IsNullOrEmpty(line))
+                        {
+                            await outputStream.WriteLineAsync(line); // 添加換行符號
+                        }
+                    }
+
+                    startPosition += chunkSize;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+    }
+
+    private static async Task<long> GetFileSizeAsync(IAmazonS3 s3Client, string bucketName, string objectKey)
+    {
+        var metadataRequest = new GetObjectMetadataRequest
+        {
+            BucketName = bucketName,
+            Key = objectKey
+        };
+
+        var response = await s3Client.GetObjectMetadataAsync(metadataRequest);
+        return response.ContentLength;
+    }
+
+    static async Task ReadObjectDataAsync(string filePath)
+    {
+        var s3Client = CreateS3Client();
+        var bucketName = "test-bucket";
+
+        var fileTransferUtilityRequest = new TransferUtilityUploadRequest()
+        {
+        };
+        var transferUtilityDownloadRequest = new TransferUtilityDownloadRequest
+        {
+            BucketName = null,
+            Key = null,
+            VersionId = null,
+            ModifiedSinceDateUtc = default,
+            UnmodifiedSinceDateUtc = default,
+            ChecksumMode = null,
+            ServerSideEncryptionCustomerProvidedKey = null,
+            ServerSideEncryptionCustomerProvidedKeyMD5 = null,
+            ServerSideEncryptionCustomerMethod = null,
+            FilePath = null
+        };
+        var getObjectRequest = new GetObjectRequest
+        {
+            BucketName = bucketName,
+            Key = filePath,
+
+            // PartNumber = 1,
+            ByteRange = new ByteRange(0, 14096),
+        };
+        var retryCount = 0;
+        while (true)
+        {
+            using var response = await s3Client.GetObjectAsync(getObjectRequest);
+            using var reader = new StreamReader(response.ResponseStream);
+            while (true)
+            {
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrEmpty(line))
+                {
+                    retryCount++;
+                    break;
+                }
+
+                // Process the line
+                Console.WriteLine(line);
+                retryCount = 0;
+            }
+
+            if (retryCount >= 2)
+            {
+                break;
+            }
+        }
     }
 
     static async Task WriteObjectDataAsync(string filePath)
     {
         var s3Client = CreateS3Client();
+        var bucketName = "test-bucket";
         var writerStream = new MemoryStream();
         var writer = new StreamWriter(writerStream)
         {
@@ -105,8 +240,8 @@ public class UnitTest1
             var lineLimit = 10;
             var putRequest = new PutObjectRequest()
             {
-                BucketName = "test-bucket",
-                Key = $"test.csv",
+                BucketName = bucketName,
+                Key = filePath,
                 UseChunkEncoding = true,
                 AutoCloseStream = false,
                 AutoResetStreamPosition = true,
@@ -129,7 +264,7 @@ public class UnitTest1
             Console.WriteLine("Unknown encountered on server. Message:'{0}' when writing object", e.Message);
         }
     }
-    
+
     static AmazonS3Client CreateS3Client()
     {
         var credentials = new BasicAWSCredentials("AKIAIOSFODNN7EXAMPLE",
