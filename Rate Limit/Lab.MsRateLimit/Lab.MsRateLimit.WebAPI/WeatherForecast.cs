@@ -1,4 +1,4 @@
-namespace Lab.RefitClient.WebAPI;
+namespace Lab.MsRateLimit.WebAPI;
 
 public class WeatherForecast
 {

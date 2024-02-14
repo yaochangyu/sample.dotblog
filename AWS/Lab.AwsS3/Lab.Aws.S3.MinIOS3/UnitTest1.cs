@@ -1,10 +1,10 @@
 using System.Collections.Concurrent;
 using System.Reflection;
-using System.Text;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
+using Testcontainers.Minio;
 
 namespace Lab.Aws.S3.MinIOS3;
 
@@ -78,6 +78,67 @@ public class UnitTest1
         {
             BucketName = "test-bucket",
         });
+    }
+
+    [TestMethod]
+    public async Task 新增一個儲存桶_For_TestContainer()
+    {
+        var s3Container = await CreateS3Container();
+        var connectionString = s3Container.GetConnectionString();
+        var s3Client = CreateS3Client(connectionString);
+        var response = await s3Client.PutBucketAsync(new PutBucketRequest
+        {
+            BucketName = "test-bucket",
+        });
+    }
+    [TestMethod]
+    public async Task 上傳檔案到儲存桶_For_TestContainer()
+    {
+        var s3Container = await CreateS3Container();
+        var connectionString = s3Container.GetConnectionString();
+        var s3Client = CreateS3Client(connectionString);
+        var bucketName = "test-bucket";
+        var createBucket = await s3Client.PutBucketAsync(new PutBucketRequest
+        {
+            BucketName = bucketName,
+        });
+
+        var inputMemory = new MemoryStream();
+        await File.Open("上傳.csv", FileMode.Open).CopyToAsync(inputMemory);
+        var putObjectResponse = await s3Client.PutObjectAsync(new PutObjectRequest
+        {
+            BucketName = bucketName,
+            Key = "上傳.csv",
+            InputStream = inputMemory,
+            AutoCloseStream = false,
+            AutoResetStreamPosition = true,
+        });
+        var getObjectResponse = await s3Client.GetObjectAsync(new GetObjectRequest
+        {
+            BucketName = bucketName,
+            Key = "上傳.csv",
+        });
+        await using var outputStream = File.Create("下載.csv");
+        await getObjectResponse.ResponseStream.CopyToAsync(outputStream);
+    }
+
+    private static async Task<MinioContainer> CreateS3Container()
+    {
+        var username = "AKIAIOSFODNN7EXAMPLE";
+        var password = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
+        var minioBuilder = new MinioBuilder()
+                .WithName("minio")
+                .WithHostname("localhost")
+                // .WithImage("quay.io/minio/minio:latest")
+                // .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(9000))   
+                .WithUsername(username)
+                .WithPassword(password)
+                .WithPortBinding(9000, assignRandomHostPort: true)
+            // .WithPortBinding(9001, assignRandomHostPort: false)
+            ;
+        var minioContainer = minioBuilder.Build();
+        await minioContainer.StartAsync().ConfigureAwait(false);
+        return minioContainer;
     }
 
     [TestMethod]
@@ -265,14 +326,14 @@ public class UnitTest1
         }
     }
 
-    static AmazonS3Client CreateS3Client()
+    static AmazonS3Client CreateS3Client(string url = "http://localhost:9000")
     {
         var credentials = new BasicAWSCredentials("AKIAIOSFODNN7EXAMPLE",
             "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
 
         var s3Config = new AmazonS3Config
         {
-            ServiceURL = "http://localhost:9000",
+            ServiceURL = url,
             ForcePathStyle = true
         };
         return new AmazonS3Client(credentials, s3Config);
