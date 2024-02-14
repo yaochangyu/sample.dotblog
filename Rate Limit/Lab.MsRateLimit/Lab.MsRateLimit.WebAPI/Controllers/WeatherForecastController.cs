@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace Lab.Test.Container.WebApi.Controllers;
+namespace Lab.MsRateLimit.WebAPI.Controllers;
 
 [ApiController]
 [Route("[controller]")]

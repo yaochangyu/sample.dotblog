@@ -1,3 +1,4 @@
+using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
@@ -15,15 +16,15 @@ public class UnitTest1
     [ClassInitialize]
     public static async Task ClassInitialize(TestContext context)
     {
-        MongoDbContainer = new MongoDbBuilder()
-            .WithPortBinding(27017, true)
-            .Build();
-        await MongoDbContainer.StartAsync();
-        var mongoClientSettings = MongoClientSettings.FromConnectionString(MongoDbContainer.GetConnectionString());
-        // var mongoClientSettings = new MongoClientSettings()
-        // {
-        //     Server = new MongoServerAddress("localhost", 27017),
-        // };
+        // MongoDbContainer = new MongoDbBuilder()
+        //     .WithPortBinding(27017, true)
+        //     .Build();
+        // await MongoDbContainer.StartAsync();
+        // var mongoClientSettings = MongoClientSettings.FromConnectionString(MongoDbContainer.GetConnectionString());
+        var mongoClientSettings = new MongoClientSettings()
+        {
+            Server = new MongoServerAddress("localhost", 27017),
+        };
 
         MongoClient = new MongoClient(mongoClientSettings);
     }
@@ -58,7 +59,11 @@ public class UnitTest1
 
         //新增一筆資料
         await mongoCollection.InsertOneAsync(expected);
-
+        mongoCollection.InsertOne(expected,new InsertOneOptions
+        {
+            BypassDocumentValidation = null,
+            Comment = null
+        });
         //驗證
         var actual = await mongoCollection.AsQueryable().FirstOrDefaultAsync(p => p.Id == "1");
         Assert.AreEqual(expected, actual);
@@ -79,13 +84,13 @@ public class UnitTest1
         //產生資料
         var products = this.GenerateProducts();
         await mongoCollection.InsertManyAsync(products);
-
+        
         var filter = Builders<Product>.Filter
             .Eq(restaurant => restaurant.Id, "1");
 
         var update = Builders<Product>.Update
             .Set(restaurant => restaurant.Name, "TV");
-        
+
         //更新資料
         await mongoCollection.UpdateOneAsync(filter, update);
 
@@ -106,7 +111,7 @@ public class UnitTest1
 
         var filter = Builders<Product>.Filter
             .Eq(restaurant => restaurant.Id, "1");
-        
+
         //更新資料
         await mongoCollection.DeleteOneAsync(filter);
 
@@ -148,27 +153,37 @@ public class UnitTest1
         Assert.AreEqual(expected, data2);
     }
 
+
+    [TestMethod]
+    public async Task AA()
+    {
+        var database = MongoClient.GetDatabase("example");
+        var mongoCollection = database.GetCollection<Product>("counters");
+        var sequenceGenerator = new        SequenceGenerator (database);
+        var sequenceValue = sequenceGenerator.GetNextSequenceValue("_id");
+    }
+
     private List<Product> GenerateProducts()
     {
         var products = new List<Product>()
         {
             new()
             {
-                Id = "1",
+                // Id = "1",
                 Name = "Air jordan 11",
                 Price = 33.11m,
                 Remark = this.TestData
             },
             new()
             {
-                Id = "2",
+                // Id = "1",
                 Name = "Air jordan 12",
                 Price = 33.12m,
                 Remark = this.TestData
             },
             new()
             {
-                Id = "3",
+                // Id = "3",
                 Name = "Air jordan 13",
                 Price = 33.13m,
                 Remark = this.TestData
@@ -177,9 +192,12 @@ public class UnitTest1
         return products;
     }
 
-    
     public record Product
     {
+        [BsonId]
+        [BsonRepresentation(BsonType.ObjectId)]
+
+        // [BsonElement("Id1")]
         public string Id { get; init; }
 
         public string Name { get; init; }
@@ -188,4 +206,37 @@ public class UnitTest1
 
         public string Remark { get; init; }
     }
+
+    public class SequenceGenerator
+    {
+        private IMongoCollection<BsonDocument> countersCollection;
+
+        public SequenceGenerator(IMongoDatabase database)
+        {
+            countersCollection = database.GetCollection<BsonDocument>("counters");
+        }
+
+        public int GetNextSequenceValue(string sequenceName)
+        {
+            var filter = Builders<BsonDocument>.Filter.Eq("_id", sequenceName);
+            var update = Builders<BsonDocument>.Update.Inc("sequence_value", 1);
+
+            var result = countersCollection.FindOneAndUpdate(filter, update);
+
+            if (result == null)
+            {
+                // If the document doesn't exist, create it with initial value 1
+                var newCounterDocument = new BsonDocument
+                {
+                    { "_id", sequenceName },
+                    { "sequence_value", 1 }
+                };
+                countersCollection.InsertOne(newCounterDocument);
+                return 1;
+            }
+
+            return result["sequence_value"].AsInt32;
+        }
+    }
+
 }

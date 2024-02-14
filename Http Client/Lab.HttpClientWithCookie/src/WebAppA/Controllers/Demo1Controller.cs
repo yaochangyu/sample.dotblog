@@ -119,7 +119,7 @@ public class Demo1Controller : ControllerBase
                 requestId,
                 responseContent);
         }
-
+     
         // if (response.Headers.TryGetValues("A", out var a2))
         // {
         //     this._logger.LogInformation("Id={RequestId},Response Header 'A'={Data}", requestId, a2);
