@@ -1,0 +1,9 @@
+﻿services:
+  mockServer:
+    image: mockserver/mockserver:latest
+    container_name: mockServer
+    ports:
+      - 1080:1080
+#    environment:
+#      MOCKSERVER_MAX_EXPECTATIONS: 100
+#      MOCKSERVER_MAX_HEADER_SIZE: 8192
