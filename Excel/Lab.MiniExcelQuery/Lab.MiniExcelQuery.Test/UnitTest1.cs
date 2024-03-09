@@ -64,6 +64,7 @@ public class UnitTest1
         var results = new List<Data>();
 
         // chunk read the data
+        // var inputRows = await MiniExcel.QueryAsync<Data>(inputPath);
         var inputRows = await inputStream.QueryAsync<Data>();
         foreach (var chunks in inputRows.Chunk(chunkSize))
         {
@@ -166,5 +167,37 @@ public class UnitTest1
             }
         };
         await MiniExcel.SaveAsByTemplateAsync(outputPath, templatePath, value);
+    }
+
+    [Fact]
+    public async Task 強型別另存會員表()
+    {
+        var outputPath = "MemberResult.xlsx";
+
+        await using var outputStream = File.Open(outputPath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+        var value = new List<Member>()
+        {
+            new()
+            {
+                Id = "1",
+                Name = "Alice",
+                Birthday = DateTime.Now,
+                Age = 25,
+                Phone = "1234567890",
+                Reason = null,
+            },
+            new()
+            {
+                Id = "2",
+                Name = "Bob",
+                Birthday = DateTime.Now,
+                Age = 35,
+                Phone = "1234567890",
+                Reason = "年齡超過30",
+            }
+        };
+
+        // await MiniExcel.SaveAsAsync(outputPath, value, overwriteFile: true);
+        await outputStream.SaveAsAsync(value);
     }
 }
