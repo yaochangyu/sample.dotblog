@@ -45,7 +45,10 @@
       <None Update="Template\Member.xlsx">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
-      <None Update="修改策略範例_20230518093153_10萬.xlsx">
+      <None Update="10萬.xlsx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Template\Member2.xlsx">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>
