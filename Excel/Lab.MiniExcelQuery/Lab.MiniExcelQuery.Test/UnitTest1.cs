@@ -15,6 +15,9 @@ public class UnitTest1
         [ExcelColumnName(excelColumnName: "姓名", aliases: ["FullName"])]
         public string Name { get; set; }
 
+        [ExcelColumnName(excelColumnName: "生日")]
+        public DateTime Birthday { get; set; }
+
         // [ExcelColumnName(excelColumnName: "年齡", aliases: ["Age"])]
         [DisplayName("年齡")]
         public int Age { get; set; }
@@ -30,94 +33,93 @@ public class UnitTest1
     class Data
     {
         [ExcelColumnIndex("A")]
-        public string A { get; set; }
+        [ExcelColumnName("商品名稱")]
+        public string SaleName { get; set; }
 
         [ExcelColumnIndex("B")]
-        public string B { get; set; }
+        [ExcelColumnName("規格")]
+        public string Option { get; set; }
 
         [ExcelColumnIndex("C")]
-        public string C { get; set; }
+        [ExcelColumnName("編號")]
+        public string Id { get; set; }
 
         [ExcelColumnIndex("D")]
-        public string D { get; set; }
+        [ExcelColumnName("Code")]
+        public string Code { get; set; }
 
         [ExcelColumnIndex("E")]
-        public string E { get; set; }
-
-        [ExcelColumnIndex("F")]
-        public string F { get; set; }
-
-        [ExcelColumnIndex("G")]
-        public string G { get; set; }
+        [ExcelColumnName("庫存")]
+        public string StockQty { get; set; }
     }
 
     [Fact]
-    public async Task 讀取大檔案()
+    public async Task 批次匯入大檔案()
     {
-        //import excel file
-        var inputPath = "修改策略範例_20230518093153_10萬.xlsx";
+        //import large excel file
+        var inputPath = "10萬.xlsx";
         var chunkSize = 1024;
 
         await using var inputStream = File.OpenRead(inputPath);
-
-        // await using var templateStream = File.OpenWrite(templatePath);
-        // await using var outputStream = File.Create(outputPath);
-
-        var inputRows = await inputStream.QueryAsync<Data>();
         var results = new List<Data>();
+
+        // chunk read the data
+        var inputRows = await inputStream.QueryAsync<Data>();
         foreach (var chunks in inputRows.Chunk(chunkSize))
         {
             results.AddRange(chunks);
         }
+
+        // var lookup = new List<IDictionary<string, object>>();
+        // foreach (IDictionary<string, object> row in await MiniExcel.QueryAsync(inputPath))
+        // {
+        //     lookup.Add(row);
+        // }
     }
 
     [Fact]
-    public async Task 批次匯入後另存()
+    public async Task 批次匯入後批次填充範本()
     {
         //import excel file
         var inputPath = "Import.xlsx";
-        var outputPath = "Data.xlsx";
+        var outputPath = "MemberResult.xlsx";
         var templatePath = "Template/Member.xlsx";
         var chunkSize = 2;
 
         await using var inputStream = File.OpenRead(inputPath);
-
-        // await using var templateStream = File.OpenWrite(templatePath);
-        // await using var outputStream = File.Create(outputPath);
-
         var inputRows = await inputStream.QueryAsync<Member>();
         var results = new List<Member>();
         foreach (var chunks in inputRows.Chunk(chunkSize))
         {
             foreach (var row in chunks)
             {
-                if (row.Age > 30)
+                var age = (DateTime.Now - row.Birthday).TotalDays / 365.25;
+                if (age > 30)
                 {
                     row.Reason = "年齡超過30";
                 }
+
+                row.Age = (int)age;
             }
 
             results.AddRange(chunks);
-        }
+            var value = new
+            {
+                Members = results
+            };
 
-        var value = new
-        {
-            Members = results
-        };
-        
-        
-        //結果會被覆蓋
-        await MiniExcel.SaveAsByTemplateAsync(outputPath, templatePath, value);
+            //Append to the same file
+            await MiniExcel.SaveAsByTemplateAsync(outputPath, templatePath, value);
+        }
     }
 
     [Fact]
-    public async Task 填充員工表()
+    public async Task 匿名型別填充員工表()
     {
         var templatePath = "Template/Employee.xlsx";
 
         // var templatePath = "Template/ImportWithError.xltx";
-        var outputPath = "data.xlsx";
-
+        var outputPath = "EmployeeResult.xlsx";
         var value = new
         {
             employees = new[]
@@ -134,12 +136,12 @@ public class UnitTest1
     }
 
     [Fact]
-    public async Task 填充會員表()
+    public async Task 強型別填充會員表()
     {
         var templatePath = "Template/Member.xlsx";
 
         // var templatePath = "Template/ImportWithError.xltx";
-        var outputPath = "data.xlsx";
+        var outputPath = "MemberResult.xlsx";
 
         var value = new
         {
