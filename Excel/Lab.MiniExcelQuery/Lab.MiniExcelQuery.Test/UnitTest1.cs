@@ -200,17 +200,17 @@ public class UnitTest1
         // await MiniExcel.SaveAsAsync(outputPath, value, overwriteFile: true);
         await outputStream.SaveAsAsync(value);
     }
-    
+
     [Fact]
-    public async Task 產生大資料填充範本()
+    public async Task 產生大資料後填充範本()
     {
         //import excel file
         var outputPath = "MemberResult.xlsx";
         var templatePath = "Template/Member.xlsx";
         var chunkSize = 128;
-        
+
         //generate 10000000 member row
-        var inputRows = Enumerable.Range(1, 600000).Select(x => new Member
+        var inputRows = Enumerable.Range(1, 800000).Select(x => new Member
         {
             Id = x.ToString(),
             Name = "Name" + x,
@@ -243,4 +243,39 @@ public class UnitTest1
         MiniExcel.SaveAsByTemplate(outputPath, templatePath, value);
     }
 
+    [Fact]
+    public async Task 產生大資料後匯出()
+    {
+        //import excel file
+        var outputPath = "MemberResult.xlsx";
+        var chunkSize = 128;
+
+        //generate 10000000 member row
+        var inputRows = Enumerable.Range(1, 800000).Select(x => new Member
+        {
+            Id = x.ToString(),
+            Name = "Name" + x,
+            Birthday = DateTime.Now,
+            Phone = "1234567890"
+        });
+        var results = new List<Member>();
+        foreach (var chunks in inputRows.Chunk(chunkSize))
+        {
+            foreach (var row in chunks)
+            {
+                var age = (DateTime.Now - row.Birthday).TotalDays / 365.25;
+                if (age > 30)
+                {
+                    row.Reason = "年齡超過30";
+                }
+
+                row.Age = (int)age;
+            }
+
+            results.AddRange(chunks);
+        }
+
+        //Append to the same file
+        MiniExcel.SaveAs(outputPath, results, overwriteFile: true);
+    }
 }
