@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -135,6 +136,47 @@ namespace NETCore31
                 var rowData = rowInfo.Value;
                 Console.WriteLine(JsonConvert.SerializeObject(rowData));
             }
+        }
+
+        [TestMethod]
+        public void 讀取範本檔後另存新檔()
+        {
+            var inputStream = File.Open("Template.xlsx", FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+
+            // var mapper = new Mapper("Template.xlsx");
+            var mapper = new Mapper(inputStream);
+            var employees = new List<Employee>
+            {
+                new Employee
+                {
+                    Id = 1,
+                    LocationId = "A",
+                    DepartmentId = "S000",
+                    DepartmentName = "廣告部",
+                    EmployeeId = "S001",
+                    Name = "余小章",
+                    DomainName = "TEST",
+                    Birthdaty = new DateTime(1988, 9, 11),
+                    ErrorMessage = null
+                },
+                new Employee
+                {
+                    Id = 2,
+                    LocationId = "A",
+                    DepartmentId = "A000",
+                    DepartmentName = "公關部",
+                    EmployeeId = "A001",
+                    Name = "小章魚",
+                    DomainName = "TEST",
+                    Birthdaty = new DateTime(1976, 8, 22),
+                    ErrorMessage = "我錯了"
+                },
+            };
+
+            mapper.Put(employees, overwrite: true);
+            // mapper.Save("Output.xlsx");
+            var outputStream = File.Open("Output.xlsx", FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read);
+            mapper.Save(outputStream);
         }
     }
 }

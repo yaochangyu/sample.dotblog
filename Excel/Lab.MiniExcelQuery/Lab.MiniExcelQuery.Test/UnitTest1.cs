@@ -9,10 +9,10 @@ public class UnitTest1
 {
     class Member
     {
-        [ExcelColumnName(excelColumnName: "編號", aliases: ["MemberId"])]
+        [ExcelColumnName(excelColumnName: "編號")]
         public string Id { get; set; }
 
-        [ExcelColumnName(excelColumnName: "姓名", aliases: ["FullName"])]
+        [ExcelColumnName(excelColumnName: "姓名")]
         public string Name { get; set; }
 
         [ExcelColumnName(excelColumnName: "生日")]
