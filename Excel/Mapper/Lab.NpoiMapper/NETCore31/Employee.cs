@@ -10,7 +10,7 @@ namespace NETCore31
         public string LocationId { get; set; }
 
         //[Column("DeptID")]
-        [Display(Name = "DeptID")]
+        [Display(Name = "DeptID")]//對應Excel欄位
         public string DepartmentId { get; set; }
 
         [Column("DeptName")]
