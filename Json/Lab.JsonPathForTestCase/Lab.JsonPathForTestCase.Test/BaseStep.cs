@@ -37,14 +37,12 @@ public class BaseStep : Steps
     }
 
     private const string StringEquals = "字串等於";
-    private const string StringMatch = "字串匹配";
     private const string NumberEquals = "數值等於";
     private const string BoolEquals = "布林值等於";
     private const string JsonEquals = "Json等於";
     private const string DateTimeEquals = "時間等於";
 
     private const string OperationTypes = StringEquals
-                                          + "|" + StringMatch
                                           + "|" + NumberEquals
                                           + "|" + BoolEquals
                                           + "|" + JsonEquals
@@ -101,14 +99,6 @@ public class BaseStep : Steps
                 var errorReason =
                     $"{nameof(operationType)}: [{operationType}], {nameof(selectPath)}: [{selectPath}], {nameof(expected)}: [{expected}], {nameof(actual)}: [{actual}]";
                 (actual ?? string.Empty).Should().Be(expected, errorReason);
-                break;
-            }
-            case StringMatch:
-            {
-                var actual = jsonPath.Evaluate(srcInstance).Matches.FirstOrDefault()?.Value?.GetValue<string>();
-                var errorReason =
-                    $"{nameof(operationType)}: [{operationType}], {nameof(selectPath)}: [{selectPath}], {nameof(expected)}: [{expected}], {nameof(actual)}: [{actual}]";
-                new Regex(expected).IsMatch(actual ?? string.Empty).Should().BeTrue(errorReason);
                 break;
             }
             case NumberEquals:
