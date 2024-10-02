@@ -30,6 +30,17 @@ public class UnitTest1
         await connection.OpenAsync();
         command.Connection = connection;
         command.CommandText = "SELECT 1";
+        var reader = await command.ExecuteReaderAsync();
+        while (true)
+        {
+            var hasData = await reader.ReadAsync();
+            if (hasData == false)
+            {
+                break;
+            }
+
+            var value = reader.GetValue(0);
+        }
     }
 
     [TestMethod]
@@ -81,7 +92,7 @@ public class UnitTest1
         var host = "localhost";
         var port = container.GetMappedPublicPort(80);
         var url = "demo";
-        
+
         var httpClient = new HttpClient();
         var requestUri = new UriBuilder(scheme, host, port, url).Uri;
         var actual = await httpClient.GetStringAsync(requestUri);
