@@ -6,10 +6,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Lab.ODBC.PG.Test;
 
 [TestClass]
-public class UnitTest1
+public class PostgreSqlOdbcTest
 {
     [TestMethod]
-    public async Task Read()
+    public async Task ReadForAdoNet()
     {
         var connectionString =
             "Driver={PostgreSQL Unicode};Server=localhost;Port=5432;Database=employee;Uid=postgres;Pwd=postgres;";
@@ -51,7 +51,18 @@ public class UnitTest1
     }
 
     [TestMethod]
-    public async Task ReadForEFODBC()
+    public async Task ReadForDsn()
+    {
+        var dsn = "PostgreSQL";
+        var connectionString = $"DSN={dsn}";
+        await using var connection = new OdbcConnection(connectionString);
+        var sql = @"select * from ""Employee""";
+        var data = connection.Query<Employee>(sql).ToList();
+        await connection.CloseAsync();
+    }
+
+    [TestMethod]
+    public async Task ReadForEF()
     {
         await using var dbContext = CreateDbContext();
 
