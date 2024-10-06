@@ -10,24 +10,7 @@ namespace Lab.HashiCorpVault.Test;
 [TestClass]
 public class UnitTest1
 {
-    private readonly string VaultToken = "hvs.X75F3khrl1h6hqCHB8BZbqkf";
-
-    [TestMethod]
-    public async Task 建立KV_V2()
-    {
-        // 設定 Vault Server 和 Token
-        var vaultServer = "http://127.0.0.1:8200";
-
-        // 初始化 Vault Client
-        var authMethod = new TokenAuthMethodInfo(this.VaultToken);
-        var vaultClientSettings = new VaultClientSettings(vaultServer, authMethod);
-        var vaultClient = new VaultClient(vaultClientSettings);
-
-        // 啟用 KV V2 存儲引擎
-        var path = "chechia-net/sre/workshop"; // 要啟用的路徑
-        await CreateKvV2Path(vaultClient, path);
-        Console.WriteLine($"KV V2 secrets engine enabled at path: {path}");
-    }
+    private readonly string VaultToken = "hvs.6Nshnuo1bCUq70nEGfAz6Mz8";
 
     [TestMethod]
     public async Task 讀寫KV_V1()
@@ -48,13 +31,32 @@ public class UnitTest1
         };
 
         var secretPath = "my-secret";
-        var mount = "chechia-net/sre/workshop";
+        var mountPath = "chechia-net/sre/workshop";
 
-        await vaultClient.V1.Secrets.KeyValue.V1.WriteSecretAsync(secretPath, secretData, mount);
-        var secret = await vaultClient.V1.Secrets.KeyValue.V1.ReadSecretAsync(secretPath, mount);
+        await vaultClient.V1.Secrets.KeyValue.V1.WriteSecretAsync(secretPath, secretData, mountPath);
         Console.WriteLine("Secrets 已成功寫入！");
+
+        Console.WriteLine("讀取KV-V1：");
+        var secret = await vaultClient.V1.Secrets.KeyValue.V1.ReadSecretAsync(secretPath, mountPath);
         Console.WriteLine($"username={secret.Data["username"]}");
         Console.WriteLine($"password={secret.Data["password"]}");
+    }
+
+    [TestMethod]
+    public async Task 建立KV_V2()
+    {
+        // 設定 Vault Server 和 Token
+        var vaultServer = "http://127.0.0.1:8200";
+
+        // 初始化 Vault Client
+        var authMethod = new TokenAuthMethodInfo(this.VaultToken);
+        var vaultClientSettings = new VaultClientSettings(vaultServer, authMethod);
+        var vaultClient = new VaultClient(vaultClientSettings);
+
+        // 啟用 KV V2 存儲引擎
+        var mountPath = "job/dream-team"; // 要啟用的路徑
+        await CreateKvV2Path(vaultClient, mountPath);
+        Console.WriteLine($"KV V2 secrets engine enabled at path: {mountPath}");
     }
 
     [TestMethod]
@@ -76,13 +78,40 @@ public class UnitTest1
         };
 
         var secretPath = "my-secret";
-        var mount = "chechia-net/sre/workshop";
+        var mountPath = "job/dream-team";
 
-        await vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(secretPath, secretData, mountPoint: mount);
+        await vaultClient.V1.Secrets.KeyValue.V2.WriteSecretAsync(secretPath, secretData, mountPoint: mountPath);
         Console.WriteLine("Secrets 已成功寫入！");
-        var secret = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(secretPath, mountPoint: mount);
+
+        Console.WriteLine("讀取KV-V2：");
+        var secret = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(secretPath, mountPoint: mountPath);
         Console.WriteLine($"username={secret.Data.Data["username"]}");
         Console.WriteLine($"password={secret.Data.Data["password"]}");
+    }
+
+    [TestMethod]
+    public async Task 停用KV_V2()
+    {
+        // 設定 Vault Server 和 Token
+        var vaultServer = "http://127.0.0.1:8200";
+
+        // 初始化 Vault Client
+        var authMethod = new TokenAuthMethodInfo(this.VaultToken);
+        var vaultClientSettings = new VaultClientSettings(vaultServer, authMethod);
+        var vaultClient = new VaultClient(vaultClientSettings);
+
+        var secretPath = "my-secret";
+        var mountPath = "job/dream-team";
+        await vaultClient.V1.System.UnmountSecretBackendAsync(mountPath);
+
+        try
+        {
+            var secret = await vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(secretPath, mountPoint: mountPath);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
     }
 
     [TestMethod]
