@@ -10,7 +10,7 @@ namespace Lab.HashiCorpVault.Test;
 [TestClass]
 public class UnitTest1
 {
-    private readonly string VaultToken = "hvs.6Nshnuo1bCUq70nEGfAz6Mz8";
+    private readonly string VaultToken = "你的 token";
 
     [TestMethod]
     public async Task 讀寫KV_V1()
