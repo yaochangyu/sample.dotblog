@@ -15,11 +15,11 @@ namespace Lab.HashiCorpVault.Test;
 [TestClass]
 public class DynamicCredentialsTest
 {
-    private readonly string VaultToken = "hvs.Wst5O7xSTLt8lMzAmtsB3vG1";
+    private readonly string VaultToken = "你的驗證";
     private readonly string VaultServer = "http://127.0.0.1:8200";
 
     [TestMethod]
-    public async Task EnableDatabaseEngine()
+    public async Task _01_啟用資料庫()
     {
         var vaultClient = this.CreateVaultClient();
 
@@ -35,7 +35,7 @@ public class DynamicCredentialsTest
     }
 
     [TestMethod]
-    public async Task ConfigureConnectionAsync()
+    public async Task _02_配置資料庫連線()
     {
         var vaultClient = this.CreateVaultClient();
 
@@ -59,7 +59,7 @@ public class DynamicCredentialsTest
     }
 
     [TestMethod]
-    public async Task CreateRoleAsync()
+    public async Task _03_建立角色()
     {
         var vaultClient = this.CreateVaultClient();
 
@@ -87,7 +87,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO ""{{name}}"";
     }
 
     [TestMethod]
-    public async Task ReadRoleAsync()
+    public async Task _04_取得角色資訊()
     {
         var vaultClient = this.CreateVaultClient();
 
@@ -102,7 +102,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO ""{{name}}"";
     }
 
     [TestMethod]
-    public async Task GetCredentialsAsync()
+    public async Task _05_建立憑證()
     {
         var vaultClient = this.CreateVaultClient();
 
@@ -117,7 +117,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO ""{{name}}"";
     }
 
     [TestMethod]
-    public async Task RenewLeaseAsync()
+    public async Task _06_續約憑證()
     {
         var vaultClient = this.CreateVaultClient();
 
@@ -131,7 +131,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO ""{{name}}"";
     }
 
     [TestMethod]
-    public async Task RevokeLeaseAsync()
+    public async Task _07_撤銷憑證()
     {
         var vaultClient = this.CreateVaultClient();
 
@@ -141,17 +141,28 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO ""{{name}}"";
         await vaultClient.V1.System.RevokeLeaseAsync(leaseId);
         Console.WriteLine("租約已成功撤銷！");
     }
-
+    
     [TestMethod]
-    public async Task GetAllLeasesAsync()
+    public async Task _08_取得所有憑證()
     {
+        // 初始化 Vault Client
         var vaultClient = this.CreateVaultClient();
 
+        // 指定要查詢的角色名稱
+        var roleName = "my-db-role";
 
-        // 續期租約
-        
-        var secrets = await vaultClient.V1.System.GetAllLeasesAsync("");
-        Console.WriteLine("租約已成功撤銷！");
+        // var lease = await vaultClient.V1.System.GetLeaseAsync("database/creds/my-db-role/cpMIwcic5bwm0yTcI8UE5OUy");
+
+        try
+        {
+            var leases = await vaultClient.V1.System.GetAllLeasesAsync("database/creds/" + roleName);
+            var json = JsonSerializer.Serialize(leases);
+            Console.WriteLine(json);
+        }
+        catch (VaultApiException e)
+        {
+            Console.WriteLine(e.ToString());
+        }
     }
 
     private VaultClient CreateVaultClient()
