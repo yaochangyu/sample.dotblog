@@ -11,17 +11,13 @@ namespace Lab.HashiCorpVault.Test;
 public class UnitTest1
 {
     private readonly string VaultToken = "你的 token";
+    private readonly string vaultServer = "http://127.0.0.1:8200";
 
     [TestMethod]
     public async Task 讀寫KV_V1()
     {
-        // 設定 Vault Server 和 Token
-        var vaultServer = "http://127.0.0.1:8200";
-
         // 初始化 Vault Client
-        var authMethod = new TokenAuthMethodInfo(this.VaultToken);
-        var vaultClientSettings = new VaultClientSettings(vaultServer, authMethod);
-        var vaultClient = new VaultClient(vaultClientSettings);
+        var vaultClient = this.CreateVaultClient();
 
         // 寫入 Secrets (等同於 vault kv put)
         var secretData = new Dictionary<string, object>
@@ -45,13 +41,8 @@ public class UnitTest1
     [TestMethod]
     public async Task 建立KV_V2()
     {
-        // 設定 Vault Server 和 Token
-        var vaultServer = "http://127.0.0.1:8200";
-
         // 初始化 Vault Client
-        var authMethod = new TokenAuthMethodInfo(this.VaultToken);
-        var vaultClientSettings = new VaultClientSettings(vaultServer, authMethod);
-        var vaultClient = new VaultClient(vaultClientSettings);
+        var vaultClient = this.CreateVaultClient();
 
         // 啟用 KV V2 存儲引擎
         var mountPath = "job/dream-team"; // 要啟用的路徑
@@ -62,13 +53,8 @@ public class UnitTest1
     [TestMethod]
     public async Task 讀寫KV_V2()
     {
-        // 設定 Vault Server 和 Token
-        var vaultServer = "http://127.0.0.1:8200";
-
         // 初始化 Vault Client
-        var authMethod = new TokenAuthMethodInfo(this.VaultToken);
-        var vaultClientSettings = new VaultClientSettings(vaultServer, authMethod);
-        var vaultClient = new VaultClient(vaultClientSettings);
+        var vaultClient = this.CreateVaultClient();
 
         // 寫入 Secrets (等同於 vault kv put)
         var secretData = new Dictionary<string, object>
@@ -92,13 +78,8 @@ public class UnitTest1
     [TestMethod]
     public async Task 停用KV_V2()
     {
-        // 設定 Vault Server 和 Token
-        var vaultServer = "http://127.0.0.1:8200";
-
         // 初始化 Vault Client
-        var authMethod = new TokenAuthMethodInfo(this.VaultToken);
-        var vaultClientSettings = new VaultClientSettings(vaultServer, authMethod);
-        var vaultClient = new VaultClient(vaultClientSettings);
+        var vaultClient = this.CreateVaultClient();
 
         var secretPath = "my-secret";
         var mountPath = "job/dream-team";
@@ -117,13 +98,8 @@ public class UnitTest1
     [TestMethod]
     public async Task 讀寫KV_SecureString()
     {
-        // 設定 Vault Server 和 Token
-        var vaultServer = "http://127.0.0.1:8200";
-
         // 初始化 Vault Client
-        var authMethod = new TokenAuthMethodInfo(this.VaultToken);
-        var vaultClientSettings = new VaultClientSettings(vaultServer, authMethod);
-        var vaultClient = new VaultClient(vaultClientSettings);
+        var vaultClient = this.CreateVaultClient();
 
         // 寫入安全數據
         var secureData = new Dictionary<string, SecureString>
@@ -209,6 +185,14 @@ public class UnitTest1
         {
             Marshal.ZeroFreeGlobalAllocUnicode(unmanagedString);
         }
+    }
+
+    private VaultClient CreateVaultClient()
+    {
+        var authMethod = new TokenAuthMethodInfo(this.VaultToken);
+        var vaultClientSettings = new VaultClientSettings(this.vaultServer, authMethod);
+        var vaultClient = new VaultClient(vaultClientSettings);
+        return vaultClient;
     }
 
     private static async Task CreateKvV2Path(IVaultClient vaultClient, string path)
