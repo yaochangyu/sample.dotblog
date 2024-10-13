@@ -1,5 +1,4 @@
-using Lab.MassTransit.WebAPI;
-using Lab.MassTransit.WebAPI.Order;
+using Lab.MassTransit.Producer.Order;
 using MassTransit;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,9 +9,6 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddMassTransit(x =>
 {
-    // 註冊消費者
-    x.AddConsumer<OrderCreatedConsumer>();
-
     // 配置 MassTransit 使用 RabbitMQ
     x.UsingRabbitMq((context, config) =>
     {
@@ -25,7 +21,6 @@ builder.Services.AddMassTransit(x =>
         // 註冊消費者
         config.ReceiveEndpoint("order-created-event", e =>
         {
-            e.ConfigureConsumer<OrderCreatedConsumer>(context);
         });
     });
 });

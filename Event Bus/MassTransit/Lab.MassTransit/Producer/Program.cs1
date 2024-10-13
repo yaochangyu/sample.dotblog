@@ -1,0 +1,38 @@
+﻿using MassTransit;
+using Message;
+
+namespace Producer;
+
+public class Program
+{
+    public static async Task Main(string[] args)
+    {
+        var busControl = Bus.Factory.CreateUsingRabbitMq(config =>
+        {
+            config.Host("rabbitmq://localhost", h =>
+            {
+                h.Username("guest");
+                h.Password("guest");
+            });
+            
+        });
+
+        var sendEndpoint = await busControl.GetSendEndpoint(new Uri("rabbitmq://localhost/order-submitted-queue"));
+
+        try
+        {
+            // 發佈事件
+            await sendEndpoint.Send(new OrderSubmitted
+            {
+                OrderId = Guid.NewGuid(),
+                Timestamp = DateTime.UtcNow
+            });
+
+            Console.WriteLine("OrderSubmitted event published.");
+        }
+        finally
+        {
+            await busControl.StopAsync();
+        }
+    }
+}

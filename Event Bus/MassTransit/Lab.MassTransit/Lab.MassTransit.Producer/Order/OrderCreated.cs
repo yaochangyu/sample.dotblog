@@ -1,4 +1,4 @@
-﻿namespace Lab.MassTransit.WebAPI.Order;
+﻿namespace Lab.MassTransit.Producer.Order;
 
 // 訂單已建立
 public class OrderCreated
