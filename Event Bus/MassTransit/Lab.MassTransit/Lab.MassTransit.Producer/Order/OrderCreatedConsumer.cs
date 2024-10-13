@@ -1,6 +1,6 @@
 ﻿using MassTransit;
 
-namespace Lab.MassTransit.WebAPI.Order;
+namespace Lab.MassTransit.Producer.Order;
 
 public class OrderCreatedConsumer : IConsumer<OrderCreated>
 {
