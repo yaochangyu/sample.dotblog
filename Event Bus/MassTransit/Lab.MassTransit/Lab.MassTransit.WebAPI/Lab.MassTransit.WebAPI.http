@@ -1,0 +1,6 @@
+@Lab.MassTransit.WebAPI_HostAddress = http://localhost:5089
+
+GET {{Lab.MassTransit.WebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

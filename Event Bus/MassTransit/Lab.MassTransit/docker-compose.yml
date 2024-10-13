@@ -1,0 +1,11 @@
+﻿version: '3.8'
+services:
+  rabbitmq:
+    container_name: rabbitmq.3
+    image: "rabbitmq:3-management"
+    ports:
+      - "5672:5672"   # RabbitMQ 主要連接埠
+      - "15672:15672" # 管理介面連接埠
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
