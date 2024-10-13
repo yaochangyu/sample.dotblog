@@ -1,13 +1,14 @@
-﻿using Consumer;
-using MassTransit;
+﻿using MassTransit;
 using Microsoft.Extensions.Hosting;
+
+namespace Consumer2;
 
 public class Program
 {
     public static async Task Main(string[] args)
     {
         var host = Host.CreateDefaultBuilder(args)
-            .ConfigureServices((hostContext, services) =>
+            .ConfigureServices((_, services) =>
             {
                 services.AddMassTransit(x =>
                 {
@@ -22,7 +23,7 @@ public class Program
                         });
 
                         // 設置接收端點，並消費 `OrderSubmitted`
-                        config.ReceiveEndpoint("order-submitted-queue", endpoint =>
+                        config.ReceiveEndpoint("order-submitted-queue2", endpoint =>
                         {
                             endpoint.ConfigureConsumer<OrderSubmittedConsumer>(context);
                         });
