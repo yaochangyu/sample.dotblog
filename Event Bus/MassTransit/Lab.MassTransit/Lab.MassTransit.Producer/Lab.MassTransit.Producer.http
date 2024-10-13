@@ -1,6 +1,0 @@
-@Lab.MassTransit.Producer_HostAddress = http://localhost:5193
-
-GET {{Lab.MassTransit.Producer_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
