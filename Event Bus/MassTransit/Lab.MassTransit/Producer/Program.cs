@@ -26,7 +26,7 @@ public class Program
 
                 // 將 MessageSenderService 註冊為 IHostedService
                 // services.AddHostedService<MessageSenderService>();
-                services.AddHostedService<MessagePublishService>();
+                services.AddHostedService<MessagePublishService3>();
             })
             .Build();
 
