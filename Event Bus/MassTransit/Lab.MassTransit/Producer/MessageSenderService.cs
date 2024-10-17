@@ -18,7 +18,7 @@ public class MessageSenderService : IHostedService
         // 取得 SendEndpoint 並發送訊息到指定佇列
         var sendEndpoint =
 
-            // await this._sendEndpointProvider.GetSendEndpoint(new Uri("rabbitmq://localhost/order-submitted-queue"));
+            // await this._sendEndpointProvider.GetSendEndpoint(new Uri("queue:order-submitted-queue"));
             await this._sendEndpointProvider.GetSendEndpoint(new Uri("rabbitmq://localhost/order-submitted-queue"));
 
         await sendEndpoint.Send(new OrderSubmitted
