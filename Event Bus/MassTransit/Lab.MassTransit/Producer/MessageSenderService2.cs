@@ -13,7 +13,6 @@ public class MessageSenderService2 : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        // 使用 Publish 發佈事件，所有訂閱者都能接收此事件
         var orderSubmitted = new OrderSubmitted
         {
             OrderId = Guid.NewGuid(),
@@ -21,6 +20,7 @@ public class MessageSenderService2 : IHostedService
         };
 
         // ===Publish===
+        // 使用 Publish 發佈事件，所有訂閱者都能接收此事件
         // await this._bus.Publish(orderSubmitted, cancellationToken);
         // Console.WriteLine("OrderSubmitted event published.");
 
