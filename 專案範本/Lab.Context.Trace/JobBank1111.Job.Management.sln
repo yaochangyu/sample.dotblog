@@ -1,0 +1,33 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{47606710-3952-41C4-8B80-57FB42EF000C}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobBank1111.Job.WebAPI.Test", "JobBank1111.Job.WebAPI.Test\JobBank1111.Job.WebAPI.Test.csproj", "{072B154D-149F-416C-AC1A-E009FED7706E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobBank1111.Infrastructure", "JobBank1111.Infrastructure\JobBank1111.Infrastructure.csproj", "{F9C2045E-64DE-417A-BCC7-FE20B982153B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobBank1111.Job.WebAPI", "JobBank1111.Job.WebAPI\JobBank1111.Job.WebAPI.csproj", "{5BB4C0EB-337D-44F4-BE0A-0694CAF47890}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{072B154D-149F-416C-AC1A-E009FED7706E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{072B154D-149F-416C-AC1A-E009FED7706E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{072B154D-149F-416C-AC1A-E009FED7706E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{072B154D-149F-416C-AC1A-E009FED7706E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9C2045E-64DE-417A-BCC7-FE20B982153B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9C2045E-64DE-417A-BCC7-FE20B982153B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9C2045E-64DE-417A-BCC7-FE20B982153B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9C2045E-64DE-417A-BCC7-FE20B982153B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BB4C0EB-337D-44F4-BE0A-0694CAF47890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BB4C0EB-337D-44F4-BE0A-0694CAF47890}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BB4C0EB-337D-44F4-BE0A-0694CAF47890}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BB4C0EB-337D-44F4-BE0A-0694CAF47890}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
