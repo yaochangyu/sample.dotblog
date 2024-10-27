@@ -1,0 +1,16 @@
+# Taskfile.yml
+
+version: "3"
+
+tasks:
+  codegen-api-doc:
+    desc: codegen api doc
+      安裝 Redocly CLI
+      npm install -g @redocly/openapi-cli
+    cmds:
+      - redocly build-docs ./petstore.yaml --output ./petstore.html
+
+  api-preview:
+    desc: preview
+    cmds:
+      - redocly preview-docs ./petstore.yaml
