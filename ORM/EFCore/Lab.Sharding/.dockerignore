@@ -1,0 +1,11 @@
+k8s
+README.md
+.gitignore
+.vscode
+.gitlab-ci.yml
+ci.custom.script.sh
+
+**/bin/
+**/obj/
+
+node_modules
