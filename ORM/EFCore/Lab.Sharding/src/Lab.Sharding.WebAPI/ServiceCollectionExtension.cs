@@ -17,7 +17,7 @@ public static class ServiceCollectionExtension
 	public static IServiceCollection AddDatabase(this IServiceCollection services)
 	{
 		services
-			.AddSingleton<IDynamicDbContextFactory<DynamicMemberDbContext>, DynamicDbContextFactory<DynamicMemberDbContext>>();
+			.AddSingleton<IDynamicDbContextFactory<DynamicMemberDbContext>, RequestScopedDynamicDbContextFactory<DynamicMemberDbContext>>();
 		services.AddSingleton<IConnectionStringProvider, ConnectionStringProvider>(p =>
 		{
 			var connectionStringProvider = new ConnectionStringProvider();
