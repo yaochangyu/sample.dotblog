@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Lab.Sharding.Infrastructure;
 using Lab.Sharding.Infrastructure.TraceContext;
 
 namespace Lab.Sharding.WebAPI;

@@ -2,7 +2,7 @@
 
 public interface IConnectionStringProvider
 {
-	string GetConnectionString(string databaseIdentifier);
+	string GetConnectionString(string serverName, string databaseName);
 
 	void SetConnectionStrings(Dictionary<string, string> connectionStrings);
 }
@@ -11,20 +11,20 @@ public class ConnectionStringProvider : IConnectionStringProvider
 {
 	private Dictionary<string, string> _connectionStrings;
 
-	public ConnectionStringProvider()
-	{
-	
-	}
-
 	public void SetConnectionStrings(Dictionary<string, string> connectionStrings)
 	{
 		this._connectionStrings = connectionStrings;
 	}
 
-	public string GetConnectionString(string databaseIdentifier)
+	public string GetConnectionString(string serverName, string databaseName)
 	{
-		return this._connectionStrings.TryGetValue(databaseIdentifier, out var connectionString)
-			? connectionString
-			: throw new ArgumentException("Unknown database identifier");
+		if (this._connectionStrings.TryGetValue(serverName, out var connectionString) == false)
+		{
+			throw new ArgumentException("Unknown database identifier");
+		}
+
+		connectionString = $"{connectionString};Database={databaseName}";
+
+		return connectionString;
 	}
 }
