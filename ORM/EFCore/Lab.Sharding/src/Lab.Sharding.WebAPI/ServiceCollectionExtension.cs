@@ -1,5 +1,6 @@
-﻿using Lab.Sharding.Infrastructure.TraceContext;
-using Microsoft.EntityFrameworkCore;
+﻿using Lab.Sharding.DB;
+using Lab.Sharding.Infrastructure;
+using Lab.Sharding.Infrastructure.TraceContext;
 
 namespace Lab.Sharding.WebAPI;
 
@@ -15,14 +16,23 @@ public static class ServiceCollectionExtension
 
 	public static void AddDatabase(this IServiceCollection services)
 	{
-		services.AddDbContextFactory<DynamicMemberDbContext>((provider, builder) =>
+		services
+			.AddSingleton<IDynamicDbContextFactory<DynamicMemberDbContext>, DynamicDbContextFactory<DynamicMemberDbContext>>();
+		services.AddSingleton<IConnectionStringProvider, ConnectionStringProvider>(p =>
 		{
-			var environment = provider.GetService<SYS_DATABASE_CONNECTION_STRING1>();
-			var connectionString = environment.Value;
-			builder.UseSqlServer(connectionString)
-				.UseLoggerFactory(provider.GetService<ILoggerFactory>())
-				.EnableSensitiveDataLogging()
-				;
+			var connectionStringProvider = new ConnectionStringProvider();
+			connectionStringProvider.SetConnectionStrings(new Dictionary<string, string>
+			{
+				{
+					ServerNames.Server01.ToString(),
+					p.GetService<SYS_DATABASE_CONNECTION_STRING1>().Value
+				},
+				{
+					ServerNames.Server02.ToString(),
+					p.GetService<SYS_DATABASE_CONNECTION_STRING2>().Value
+				}
+			});
+			return connectionStringProvider;
 		});
 	}
 
