@@ -1,4 +1,4 @@
-﻿namespace Lab.Sharding.WebAPI;
+﻿namespace Lab.Sharding.Infrastructure;
 
 enum MyEnum
 {
@@ -14,9 +14,9 @@ public class PaginatedList<T>
 
     public int TotalPages { get; }
 
-    public bool HasPreviousPage => PageIndex > 1;
+    public bool HasPreviousPage => this.PageIndex > 1;
 
-    public bool HasNextPage => PageIndex < TotalPages;
+    public bool HasNextPage => this.PageIndex < this.TotalPages;
 
     public PaginatedList()
     {
@@ -26,8 +26,8 @@ public class PaginatedList<T>
     {
         var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
-        Items = items;
-        PageIndex = pageIndex;
-        TotalPages = totalPages;
+        this.Items = items;
+        this.PageIndex = pageIndex;
+        this.TotalPages = totalPages;
     }
 }

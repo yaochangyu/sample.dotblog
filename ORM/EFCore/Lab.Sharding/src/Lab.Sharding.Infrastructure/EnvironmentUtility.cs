@@ -1,7 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-
-namespace Lab.Sharding.Infrastructure
+﻿namespace Lab.Sharding.Infrastructure
 {
     public static class EnvironmentUtility
     {

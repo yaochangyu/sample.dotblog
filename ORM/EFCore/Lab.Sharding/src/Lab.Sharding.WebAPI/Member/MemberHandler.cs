@@ -1,4 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
+using Lab.Sharding.Infrastructure;
 using Lab.Sharding.Infrastructure.TraceContext;
 
 namespace Lab.Sharding.WebAPI.Member;
@@ -8,48 +9,6 @@ public class MemberHandler(
     IContextGetter<TraceContext?> traceContextGetter,
     ILogger<MemberHandler> logger)
 {
-    // public async Task<Result<Member, Failure>>
-    //     InsertAsync(InsertMemberRequest request,
-    //                 CancellationToken cancel = default)
-    // {
-    //     var traceContext = traceContextGetter.Get();
-    //     var srcMember = await repository.QueryEmailAsync(request.Email, cancel);
-    //
-    //     //前置條件檢查，可以用 Fluent Pattern 重構
-    //     var validateResult = Result.Success<Member, Failure>(srcMember);
-    //     validateResult = ValidateEmail(validateResult, request);
-    //     validateResult = ValidateName(validateResult, request);
-    //     if (validateResult.IsFailure)
-    //     {
-    //         return validateResult;
-    //     }
-    //
-    //     try
-    //     {
-    //         var count = await repository.InsertAsync(request, cancel);
-    //         var success = Result.Success<Member, Failure>(srcMember);
-    //         return success;
-    //
-    //         //發送 Event 給 MQ
-    //     }
-    //     catch (Exception e)
-    //     {
-    //         //各自處理例外，處理過就不要再次 throw
-    //         //模擬插資料失敗
-    //         var failure = new Failure
-    //         {
-    //             Code = nameof(FailureCode.DbError),
-    //             Message = "資料庫錯誤",
-    //             Data = request,
-    //             Exception = e,
-    //             TraceId = traceContext.TraceId
-    //         };
-    //
-    //         logger.LogError($"{failure}", e);
-    //         var failed = Result.Failure<Member, Failure>(failure);
-    //         return failed;
-    //     }
-    // }
 
     // 檢查是否有重複的 Email
     private static Result<Member, Failure>
@@ -115,11 +74,4 @@ public class MemberHandler(
         var result = await repository.GetMembersAsync(pageIndex, pageSize, noCache, cancel);
         return result;
     }
-
-    // public async Task<CursorPaginatedList<GetMemberResponse>>
-    //     GetMembersAsync(int pageSize, string nextPageToken, bool noCache = true, CancellationToken cancel = default)
-    // {
-    //     var result = await repository.GetMembersAsync(pageSize, nextPageToken, noCache, cancel);
-    //     return result;
-    // }
 }

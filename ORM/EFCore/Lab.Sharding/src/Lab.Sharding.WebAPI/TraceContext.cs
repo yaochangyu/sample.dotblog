@@ -1,4 +1,6 @@
-﻿namespace Lab.Sharding.WebAPI;
+﻿using Lab.Sharding.Infrastructure;
+
+namespace Lab.Sharding.WebAPI;
 
 public record TraceContext
 {
