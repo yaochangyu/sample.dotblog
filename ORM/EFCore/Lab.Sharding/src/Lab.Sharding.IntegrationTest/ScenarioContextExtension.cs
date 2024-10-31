@@ -25,9 +25,9 @@ public static class ScenarioContextExtension
         return context.Get<IServiceProvider>();
     }
 
-    public static IDbContextFactory<MemberDbContext> GetMemberDbContextFactory(this ScenarioContext context)
+    public static IDbContextFactory<DynamicMemberDbContext> GetMemberDbContextFactory(this ScenarioContext context)
     {
-        return GetServiceProvider(context).GetService<IDbContextFactory<MemberDbContext>>();
+        return GetServiceProvider(context).GetService<IDbContextFactory<DynamicMemberDbContext>>();
     }
 
     public static string? GetUserId(this ScenarioContext context)
