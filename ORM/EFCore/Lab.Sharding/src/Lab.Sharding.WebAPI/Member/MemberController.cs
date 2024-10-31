@@ -27,7 +27,7 @@ public class MemberController(
 
 		if (this.Request.Headers.TryGetValue("cache-control", out var noCacheText))
 		{
-			bool.TryParse(noCacheText, out noCache);
+			noCache = string.Compare(noCacheText, "no-cache", StringComparison.InvariantCultureIgnoreCase) == 0;
 		}
 
 		var result = await memberHandler.GetMembersAsync(pageIndex, pageSize, noCache, cancel);
