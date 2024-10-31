@@ -1,4 +1,4 @@
-namespace Lab.Sharding.WebAPI;
+namespace Lab.Sharding.Infrastructure;
 
 public enum FailureCode
 {

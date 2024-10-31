@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Lab.Sharding.WebAPI;
+namespace Lab.Sharding.Infrastructure;
 
 public class Failure
 {
