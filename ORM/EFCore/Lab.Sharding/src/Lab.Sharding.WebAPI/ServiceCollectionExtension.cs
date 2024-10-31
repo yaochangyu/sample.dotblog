@@ -14,7 +14,7 @@ public static class ServiceCollectionExtension
 		return services;
 	}
 
-	public static void AddDatabase(this IServiceCollection services)
+	public static IServiceCollection AddDatabase(this IServiceCollection services)
 	{
 		services
 			.AddSingleton<IDynamicDbContextFactory<DynamicMemberDbContext>, DynamicDbContextFactory<DynamicMemberDbContext>>();
@@ -34,6 +34,7 @@ public static class ServiceCollectionExtension
 			});
 			return connectionStringProvider;
 		});
+		return services;
 	}
 
 	public static IServiceCollection AddEnvironments(this IServiceCollection services)
