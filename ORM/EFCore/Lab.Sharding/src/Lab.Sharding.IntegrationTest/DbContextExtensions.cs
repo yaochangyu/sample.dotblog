@@ -8,13 +8,13 @@ namespace JobBank1111.Job.WebAPI.IntegrationTest;
 
 public static class DbContextExtensions
 {
-    public static void ClearAllData(this MemberDbContext dbContext)
+    public static void ClearAllData(this DynamicMemberDbContext dbContext)
     {
         SqlServerGenerateScript.OnlySupportLocal(dbContext.Database.GetConnectionString());
         dbContext.Database.ExecuteSqlRaw(SqlServerGenerateScript.ClearAllRecord());
     }
 
-    public static async Task Initial(this MemberDbContext dbContext)
+    public static async Task Initial(this DynamicMemberDbContext dbContext)
     {
         SqlServerGenerateScript.OnlySupportLocal(dbContext.Database.GetConnectionString());
         // dbContext.Database.EnsureDeleted();
@@ -32,7 +32,7 @@ public static class DbContextExtensions
         await dbContext.Seed();
     }
 
-    public static async Task Seed(this MemberDbContext dbContext)
+    public static async Task Seed(this DynamicMemberDbContext dbContext)
     {
         SqlServerGenerateScript.OnlySupportLocal(dbContext.Database.GetConnectionString());
 

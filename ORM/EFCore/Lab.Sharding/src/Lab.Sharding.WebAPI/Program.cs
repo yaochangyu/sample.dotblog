@@ -48,7 +48,7 @@ try
 	});
 	var configuration = builder.Configuration;
 
-	builder.Services.AddStackExchangeRedisCache((options) =>
+	builder.Services.AddStackExchangeRedisCache(options =>
 	{
 		var connectionString = configuration.GetValue<string>(nameof(SYS_REDIS_URL));
 
@@ -77,7 +77,8 @@ try
 	builder.Services.AddExternalApiHttpClient();
 	builder.Services.AddDatabase();
 	builder.Services
-		.AddScoped<IDynamicDbContextFactory<DynamicMemberDbContext>, DynamicDbContextFactory<DynamicMemberDbContext>>();
+		.AddSingleton<IDynamicDbContextFactory<DynamicMemberDbContext>,
+			DynamicDbContextFactory<DynamicMemberDbContext>>();
 	builder.Services.AddSingleton<IConnectionStringProvider, ConnectionStringProvider>(p =>
 	{
 		var connectionStringProvider = new ConnectionStringProvider();
@@ -152,7 +153,7 @@ finally
 
 namespace Lab.Sharding.WebAPI
 {
-	public partial class Program
+	public class Program
 	{
 	}
 }

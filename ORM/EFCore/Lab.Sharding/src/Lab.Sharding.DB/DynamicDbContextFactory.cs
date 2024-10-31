@@ -1,10 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-
-namespace Lab.Sharding.DB;
-
-public abstract class DynamicDbContext : DbContext
-{
-}
+﻿namespace Lab.Sharding.DB;
 
 public interface IDynamicDbContextFactory<TContext>
 	where TContext : DynamicDbContext
