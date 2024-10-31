@@ -63,7 +63,7 @@ public class BaseStep : Steps
         
         async Task InitialDatabase(IServiceProvider serviceProvider)
         {
-            var dbContextFactory = serviceProvider.GetService<IDbContextFactory<MemberDbContext>>();
+            var dbContextFactory = serviceProvider.GetService<IDbContextFactory<DynamicMemberDbContext>>();
             await using var dbContext = await dbContextFactory.CreateDbContextAsync();
             await dbContext.Initial();
         }
@@ -103,7 +103,7 @@ public class BaseStep : Steps
 
     private void ClearData(IServiceProvider serviceProvider)
     {
-        var contextFactory = serviceProvider.GetRequiredService<IDbContextFactory<MemberDbContext>>();
+        var contextFactory = serviceProvider.GetRequiredService<IDbContextFactory<DynamicMemberDbContext>>();
         using var dbContext = contextFactory.CreateDbContext();
         dbContext.ClearAllData();
     }
