@@ -76,25 +76,7 @@ try
 	builder.Services.AddScoped<MemberRepository>();
 	builder.Services.AddExternalApiHttpClient();
 	builder.Services.AddDatabase();
-	builder.Services
-		.AddSingleton<IDynamicDbContextFactory<DynamicMemberDbContext>,
-			DynamicDbContextFactory<DynamicMemberDbContext>>();
-	builder.Services.AddSingleton<IConnectionStringProvider, ConnectionStringProvider>(p =>
-	{
-		var connectionStringProvider = new ConnectionStringProvider();
-		connectionStringProvider.SetConnectionStrings(new Dictionary<string, string>
-		{
-			{
-				ServerNames.Server01.ToString(),
-				p.GetService<SYS_DATABASE_CONNECTION_STRING1>().Value
-			},
-			{
-				ServerNames.Server02.ToString(),
-				p.GetService<SYS_DATABASE_CONNECTION_STRING2>().Value
-			}
-		});
-		return connectionStringProvider;
-	});
+
 	var app = builder.Build();
 
 	// Configure the HTTP request pipeline.
