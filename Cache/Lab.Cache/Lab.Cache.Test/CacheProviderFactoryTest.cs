@@ -29,7 +29,7 @@ public class CacheProviderFactoryTest
         var cacheProviderFactory = CreateCacheProviderFactory();
         var cacheProvider = cacheProviderFactory.Create(CacheProviderType.Redis);
 
-        var key = "Cache:Member:1";
+        var key = "CacheProviderFactoryTest:Member:1";
         var expected = JsonSerializer.Serialize(new { Name = "小心肝" });
         await cacheProvider.SetAsync(key, expected);
 
@@ -43,7 +43,7 @@ public class CacheProviderFactoryTest
         var cacheProviderFactory = CreateCacheProviderFactory();
         var cacheProvider = cacheProviderFactory.Create(CacheProviderType.Redis);
 
-        var key = "Cache:Member:2";
+        var key = "CacheProviderFactoryTest:Member:2";
         var expected = "小心肝";
         await cacheProvider.SetAsync(key, expected);
 
@@ -57,7 +57,7 @@ public class CacheProviderFactoryTest
         var cacheProviderFactory = CreateCacheProviderFactory();
         var cacheProvider = cacheProviderFactory.Create(CacheProviderType.Memory);
 
-        var key = "Cache:Member:1";
+        var key = "CacheProviderFactoryTest:Member:1";
         var expected = JsonSerializer.Serialize(new { Name = "小心肝" });
         await cacheProvider.SetAsync(key, expected);
 
@@ -71,7 +71,7 @@ public class CacheProviderFactoryTest
         var cacheProviderFactory = CreateCacheProviderFactory();
         var cacheProvider = cacheProviderFactory.Create(CacheProviderType.Memory);
 
-        var key = "Cache:Member:2";
+        var key = "CacheProviderFactoryTest:Member:2";
         var expected = "小心肝";
         await cacheProvider.SetAsync(key, expected);
 

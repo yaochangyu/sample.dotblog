@@ -44,7 +44,7 @@ public class DistributeCacheTest
         var cache = serviceProvider.GetService<IDistributedCache>();
         var options = serviceProvider.GetService<DistributedCacheEntryOptions>();
 
-        var key = "Cache:Member:1";
+        var key = $"{nameof(DistributeCacheTest)}:Member:1";
         var expected = JsonSerializer.Serialize(new { Name = "小心肝" });
         await cache.SetStringAsync(key, expected, options);
 
@@ -59,7 +59,7 @@ public class DistributeCacheTest
         var cache = serviceProvider.GetService<IDistributedCache>();
         var options = serviceProvider.GetService<DistributedCacheEntryOptions>();
 
-        var key = "Cache:Member:2";
+        var key = $"{nameof(DistributeCacheTest)}:Member:2";
         var expected = "小心肝";
         await cache.SetStringAsync(key, expected, options);
 
