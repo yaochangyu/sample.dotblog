@@ -38,7 +38,7 @@ public class MemoryCacheTest
         var cache = serviceProvider.GetService<IMemoryCache>();
         var options = serviceProvider.GetService<MemoryCacheEntryOptions>();
 
-        var key = "Cache:Member:1";
+        var key = $"{nameof(MemoryCacheTest)}:Member:1";
         var expected = JsonSerializer.Serialize(new { Name = "小心肝" });
         cache.Set(key, expected, options);
 
@@ -53,7 +53,7 @@ public class MemoryCacheTest
         var cache = serviceProvider.GetService<IMemoryCache>();
         var options = serviceProvider.GetService<MemoryCacheEntryOptions>();
 
-        var key = "Cache:Member:2";
+        var key = $"{nameof(MemoryCacheTest)}:Member:2";
         var expected = "小心肝";
         cache.Set(key, expected, options);
 
