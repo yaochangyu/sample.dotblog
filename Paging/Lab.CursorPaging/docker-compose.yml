@@ -4,5 +4,6 @@
     container_name: postgres-latest
     environment:
       - POSTGRES_PASSWORD=guest
+      - POSTGRES_USER=postgres
     ports:
       - 5432:5432
