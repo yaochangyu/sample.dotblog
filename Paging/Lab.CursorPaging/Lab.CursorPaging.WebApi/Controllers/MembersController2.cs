@@ -39,54 +39,63 @@ public partial class MembersController2 : ControllerBase
             var decodePageToken = DecodePageToken(nextCursorToken);
             var sequenceId = decodePageToken.sequenceId;
 
-            query = query.Where(x => x.SequenceId < sequenceId)
+            query = query.Where(x => x.SequenceId > sequenceId)
                 ;
         }
         else if (string.IsNullOrWhiteSpace(previousCursorToken) == false)
         {
             var decodePageToken = DecodePageToken(previousCursorToken);
             var sequenceId = decodePageToken.sequenceId;
-
-            query = query.Where(x => x.SequenceId > sequenceId)
-                ;
+            var start = sequenceId - pageSize;
+            query = query.Where(x => x.SequenceId > start);
+            query = query.Where(x => x.SequenceId <= sequenceId);
         }
-
+        
         query = query.Take(pageSize + 1);
         var items = await query.AsNoTracking().ToListAsync();
 
         if (nextCursorToken != null)
         {
-            var next = items.Last();
-
-            items.RemoveAt(items.Count - 1);
-            if (next != null)
+            var hasNextPage = items.Count > pageSize;
+            if (hasNextPage)
             {
-                var nextToken = EncodePageToken(next.Id, next.SequenceId);
-                this.Response.Headers.Add("X-Next-Cursor-Token", nextToken);
-                result.NextCursorToken = nextToken;
+                items.RemoveAt(items.Count - 1);
+                var next = items.Last();
+                var encodedToken = EncodePageToken(next.Id, next.SequenceId);
+                this.Response.Headers.Add("X-Next-Cursor-Token", encodedToken);
+                result.NextCursorToken = encodedToken;
             }
+            else
+            {
+                result.NextCursorToken = null;
+            }
+
+            result.PreviousCursorToken = nextCursorToken;
         }
         else if (previousCursorToken != null)
         {
             var prev = items.First();
-            items.RemoveAt(items.Count - 1);
-            if (prev != null)
-            {
-                var prevToken = EncodePageToken(prev.Id, prev.SequenceId);
-                this.Response.Headers.Add("X-Previous-CursorToken", prevToken);
-                result.PreviousCursorToken = prevToken;
-            }
+            var prevToken = EncodePageToken(prev.Id, prev.SequenceId);
+            this.Response.Headers.Add("X-Previous-Cursor-Token", prevToken);
+            result.PreviousCursorToken = prevToken;
+            result.NextCursorToken = previousCursorToken;
         }
         else
         {
-            var next = items.Last();
-
-            items.RemoveAt(items.Count - 1);
-            if (next != null)
+            // 第一頁
+            var hasNextPage = items.Count > pageSize;
+            if (hasNextPage)
             {
-                var nextToken = EncodePageToken(next.Id, next.SequenceId);
-                this.Response.Headers.Add("X-Next-Cursor-Token", nextToken);
-                result.NextCursorToken = nextToken;
+                items.RemoveAt(items.Count - 1);
+                var next = items.Last();
+                var encodedToken = EncodePageToken(next.Id, next.SequenceId);
+                this.Response.Headers.Add("X-Next-Cursor-Token", encodedToken);
+                result.NextCursorToken = encodedToken;
+                result.PreviousCursorToken = null;
+            }
+            else
+            {
+                result.NextCursorToken = null;
             }
         }
 
