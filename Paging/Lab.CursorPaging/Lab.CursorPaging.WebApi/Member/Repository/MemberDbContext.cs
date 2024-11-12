@@ -46,7 +46,7 @@ public class MemberDbContext : DbContext
     }
 }
 
-public class MemberDataEntity
+public class MemberDataEntity : BaseEntity
 {
     public string Id { get; set; }
 
@@ -69,5 +69,10 @@ public class MemberDataEntity
     public string UpdatedBy { get; set; }
 
     // [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+    public long SequenceId { get; set; }
+}
+
+public class BaseEntity
+{
     public long SequenceId { get; set; }
 }
