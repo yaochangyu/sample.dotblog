@@ -30,26 +30,31 @@ public partial class MembersController2 : ControllerBase
             PreviousCursorToken = previousCursorToken,
             PageSize = pageSize
         };
-        
+
         await using var dbContext = await this._memberDbContextFactory.CreateDbContextAsync();
         var query = dbContext.Members.Select(p => p);
 
-        if (!string.IsNullOrWhiteSpace(nextCursorToken))
+        if (string.IsNullOrWhiteSpace(nextCursorToken) == false)
         {
             var decodePageToken = DecodePageToken(nextCursorToken);
             var sequenceId = decodePageToken.sequenceId;
 
             query = query.Where(x => x.SequenceId > sequenceId);
+            query = query.Take(pageSize + 1);
         }
-        else if (!string.IsNullOrWhiteSpace(previousCursorToken))
+        else if (string.IsNullOrWhiteSpace(previousCursorToken) == false)
         {
             var decodePageToken = DecodePageToken(previousCursorToken);
             var sequenceId = decodePageToken.sequenceId;
             var start = sequenceId - pageSize;
             query = query.Where(x => x.SequenceId > start && x.SequenceId <= sequenceId);
         }
+        else
+        {
+            // 第一頁
+            query = query.Take(pageSize + 1);
+        }
 
-        query = query.Take(pageSize + 1);
         var items = await query.AsNoTracking().ToListAsync();
 
         if (nextCursorToken != null)
