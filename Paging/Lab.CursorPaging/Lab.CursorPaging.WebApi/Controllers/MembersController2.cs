@@ -22,35 +22,33 @@ public partial class MembersController2 : ControllerBase
     public async Task<ActionResult<CursorPagination<MemberDataEntity>>> GetCursor()
     {
         var pageSize = this.TryGetPageSize();
-
-        // var isPreviousPage = this.TryGetPrevious();
         var nextCursorToken = this.TryGetNextCursorToken();
         var previousCursorToken = this.TryGetPreviousCursorToken();
-        var result = new CursorPagination<MemberDataEntity>()
+        var result = new CursorPagination<MemberDataEntity>
         {
             NextCursorToken = nextCursorToken,
-            PreviousCursorToken = previousCursorToken
+            PreviousCursorToken = previousCursorToken,
+            PageSize = pageSize
         };
+        
         await using var dbContext = await this._memberDbContextFactory.CreateDbContextAsync();
         var query = dbContext.Members.Select(p => p);
 
-        if (string.IsNullOrWhiteSpace(nextCursorToken) == false)
+        if (!string.IsNullOrWhiteSpace(nextCursorToken))
         {
             var decodePageToken = DecodePageToken(nextCursorToken);
             var sequenceId = decodePageToken.sequenceId;
 
-            query = query.Where(x => x.SequenceId > sequenceId)
-                ;
+            query = query.Where(x => x.SequenceId > sequenceId);
         }
-        else if (string.IsNullOrWhiteSpace(previousCursorToken) == false)
+        else if (!string.IsNullOrWhiteSpace(previousCursorToken))
         {
             var decodePageToken = DecodePageToken(previousCursorToken);
             var sequenceId = decodePageToken.sequenceId;
             var start = sequenceId - pageSize;
-            query = query.Where(x => x.SequenceId > start);
-            query = query.Where(x => x.SequenceId <= sequenceId);
+            query = query.Where(x => x.SequenceId > start && x.SequenceId <= sequenceId);
         }
-        
+
         query = query.Take(pageSize + 1);
         var items = await query.AsNoTracking().ToListAsync();
 
@@ -64,6 +62,9 @@ public partial class MembersController2 : ControllerBase
                 var encodedToken = EncodePageToken(next.Id, next.SequenceId);
                 this.Response.Headers.Add("X-Next-Cursor-Token", encodedToken);
                 result.NextCursorToken = encodedToken;
+
+                this.Response.Headers.Add("X-Previous-Cursor-Token", nextCursorToken);
+                result.PreviousCursorToken = nextCursorToken;
             }
             else
             {
@@ -76,9 +77,11 @@ public partial class MembersController2 : ControllerBase
         {
             var prev = items.First();
             var prevToken = EncodePageToken(prev.Id, prev.SequenceId);
+            this.Response.Headers.Add("X-Next-Cursor-Token", previousCursorToken);
+            result.NextCursorToken = previousCursorToken;
+
             this.Response.Headers.Add("X-Previous-Cursor-Token", prevToken);
             result.PreviousCursorToken = prevToken;
-            result.NextCursorToken = previousCursorToken;
         }
         else
         {
@@ -91,6 +94,8 @@ public partial class MembersController2 : ControllerBase
                 var encodedToken = EncodePageToken(next.Id, next.SequenceId);
                 this.Response.Headers.Add("X-Next-Cursor-Token", encodedToken);
                 result.NextCursorToken = encodedToken;
+
+                this.Response.Headers.Remove("X-Previous-Cursor-Token");
                 result.PreviousCursorToken = null;
             }
             else

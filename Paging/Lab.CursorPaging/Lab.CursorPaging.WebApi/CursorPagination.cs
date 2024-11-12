@@ -11,4 +11,6 @@ public class CursorPagination<T>
     public bool HasNext => string.IsNullOrWhiteSpace(this.NextCursorToken) == false;
 
     public bool HasPrevious => string.IsNullOrWhiteSpace(this.PreviousCursorToken) == false;
+
+    public int PageSize { get; set; }
 }
