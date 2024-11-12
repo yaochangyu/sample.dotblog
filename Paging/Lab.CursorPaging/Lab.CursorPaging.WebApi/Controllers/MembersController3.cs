@@ -1,7 +1,4 @@
-﻿using System.Text;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using Lab.CursorPaging.WebApi.Member.Repository;
+﻿using Lab.CursorPaging.WebApi.Member.Repository;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,7 +16,7 @@ public partial class MembersController3 : ControllerBase
 
     [HttpGet]
     [Route("/api/v3/members:cursor")]
-    public async Task<ActionResult<CursorPagination<MemberDataEntity>>> GetCursor()
+    public async Task<ActionResult<CursorPagination<MemberDataEntity>>> GetCursor3()
     {
         var pageSize = this.TryGetPageSize();
         var cursorToken = this.TryGetCursorToken();
@@ -44,17 +41,6 @@ public partial class MembersController3 : ControllerBase
         return result;
     }
 
-    private string TryGetPreviousCursorToken()
-    {
-        string result = null;
-        if (this.Request.Headers.TryGetValue("X-Previous-Cursor-Token", out var data))
-        {
-            result = data.FirstOrDefault();
-        }
-
-        return result;
-    }
-
     private bool TryGetPrevious()
     {
         var isPreviousPage = false;
@@ -71,7 +57,7 @@ public partial class MembersController3 : ControllerBase
             ? int.Parse(sizes.FirstOrDefault() ?? string.Empty)
             : 10;
 
-    public async Task<CursorPagination<MemberDataEntity>> GetPaginatedResultsAsync(IQueryable<MemberDataEntity> query,
+    private async Task<CursorPagination<MemberDataEntity>> GetPaginatedResultsAsync(IQueryable<MemberDataEntity> query,
         int pageSize,
         string cursor = null,
         bool isPreviousPage = false)
@@ -81,26 +67,40 @@ public partial class MembersController3 : ControllerBase
             var cursorValue = Convert.FromBase64String(cursor);
             var cursorId = BitConverter.ToInt32(cursorValue, 0);
 
-            query = isPreviousPage
-                    ? query.Where(x => x.SequenceId < cursorId)
-                    : query.Where(x => x.SequenceId > cursorId)
-                ;
+            if (isPreviousPage)
+            {
+                query = query.Where(x => x.SequenceId < cursorId).OrderByDescending(x => x.SequenceId);
+            }
+            else
+            {
+                query = query.Where(x => x.SequenceId > cursorId).OrderBy(x => x.SequenceId);
+            }
+        }
+        else
+        {
+            query = query.OrderBy(x => x.Id);
         }
 
+        // 取得查詢結果並確保順序
         var items = await query.Take(pageSize).ToListAsync();
+        if (isPreviousPage)
+        {
+            items.Reverse(); // 反轉以符合遞增順序
+        }
 
-        var nextCursorToken = items.Any()
+        // 計算下一頁和上一頁的游標
+        var nextCursor = items.Any()
             ? Convert.ToBase64String(BitConverter.GetBytes(items.Last().SequenceId))
             : null;
-        var prevCursorToken = items.Any()
+        var prevCursor = items.Any()
             ? Convert.ToBase64String(BitConverter.GetBytes(items.First().SequenceId))
             : null;
 
         return new CursorPagination<MemberDataEntity>
         {
             Items = items,
-            NextCursorToken = nextCursorToken,
-            PreviousCursorToken = prevCursorToken,
+            NextCursorToken = nextCursor,
+            PreviousCursorToken = prevCursor,
             PageSize = pageSize
         };
     }
