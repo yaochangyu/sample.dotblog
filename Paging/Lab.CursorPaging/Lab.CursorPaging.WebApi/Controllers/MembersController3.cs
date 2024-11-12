@@ -57,14 +57,15 @@ public partial class MembersController3 : ControllerBase
             ? int.Parse(sizes.FirstOrDefault() ?? string.Empty)
             : 10;
 
-    private async Task<CursorPagination<MemberDataEntity>> GetPaginatedResultsAsync(IQueryable<MemberDataEntity> query,
-        int pageSize,
-        string cursor = null,
-        bool isPreviousPage = false)
+    private async Task<CursorPagination<T>> GetPaginatedResultsAsync<T>(IQueryable<T> query,
+                                                                        int pageSize,
+                                                                        string cursorToken = null,
+                                                                        bool isPreviousPage = false)
+        where T : BaseEntity
     {
-        if (!string.IsNullOrEmpty(cursor))
+        if (!string.IsNullOrEmpty(cursorToken))
         {
-            var cursorValue = Convert.FromBase64String(cursor);
+            var cursorValue = Convert.FromBase64String(cursorToken);
             var cursorId = BitConverter.ToInt32(cursorValue, 0);
 
             if (isPreviousPage)
@@ -78,14 +79,14 @@ public partial class MembersController3 : ControllerBase
         }
         else
         {
-            query = query.OrderBy(x => x.Id);
+            query = query.OrderBy(x => x.SequenceId);
         }
 
         // 取得查詢結果並確保順序
         var items = await query.Take(pageSize).ToListAsync();
         if (isPreviousPage)
         {
-            items.Reverse(); // 反轉以符合遞增順序
+            items.Reverse();
         }
 
         // 計算下一頁和上一頁的游標
@@ -96,7 +97,7 @@ public partial class MembersController3 : ControllerBase
             ? Convert.ToBase64String(BitConverter.GetBytes(items.First().SequenceId))
             : null;
 
-        return new CursorPagination<MemberDataEntity>
+        return new CursorPagination<T>
         {
             Items = items,
             NextCursorToken = nextCursor,
