@@ -134,18 +134,7 @@ public partial class MembersController2 : ControllerBase
 
         return result;
     }
-
-    private bool TryGetPrevious()
-    {
-        var isPreviousPage = false;
-        if (this.Request.Headers.TryGetValue("X-Previous", out var previousData))
-        {
-            bool.TryParse(previousData.FirstOrDefault(), out isPreviousPage);
-        }
-
-        return isPreviousPage;
-    }
-
+    
     private int TryGetPageSize() =>
         this.Request.Headers.TryGetValue("X-Page-Size", out var sizes)
             ? int.Parse(sizes.FirstOrDefault() ?? string.Empty)
