@@ -1,0 +1,6 @@
+﻿services:
+  lab.nexus.docker.webapi:
+    image: lab.nexus.docker.webapi
+    build:
+      context: .
+      dockerfile: Lab.Nexus.Docker.WebApi/Dockerfile
