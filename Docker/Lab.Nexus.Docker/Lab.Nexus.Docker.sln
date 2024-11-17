@@ -7,6 +7,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Nexus.Docker.WebApi", "Lab.Nexus.Docker.WebApi\Lab.Nexus.Docker.WebApi.csproj", "{DBE5CBDD-78A6-4A49-A301-6FFF8249E27B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Nexus.Docker.Library", "Lab.Nexus.Docker.Library\Lab.Nexus.Docker.Library.csproj", "{E8146C06-7807-4745-8ACB-C06BC036620C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,5 +19,9 @@ Global
 		{DBE5CBDD-78A6-4A49-A301-6FFF8249E27B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DBE5CBDD-78A6-4A49-A301-6FFF8249E27B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DBE5CBDD-78A6-4A49-A301-6FFF8249E27B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8146C06-7807-4745-8ACB-C06BC036620C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8146C06-7807-4745-8ACB-C06BC036620C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8146C06-7807-4745-8ACB-C06BC036620C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8146C06-7807-4745-8ACB-C06BC036620C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
