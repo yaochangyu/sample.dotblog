@@ -1,0 +1,6 @@
+@Lab.Nexus.Docker.WebApi_HostAddress = http://localhost:5133
+
+GET {{Lab.Nexus.Docker.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
