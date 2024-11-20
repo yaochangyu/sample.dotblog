@@ -1,0 +1,24 @@
+# Taskfile.yml
+
+version: "3"
+
+dotenv: [ ".env" ]
+
+tasks:
+  seq-start:
+    desc: start seq service
+    cmds:
+      - docker run --name seq -d --restart unless-stopped -e ACCEPT_EULA=Y -p 5341:80 datalust/seq:latest
+  
+  api-docker-build:
+    desc: docker build
+    dir: "."
+    cmds:
+      - docker build -t lab-loki-webapi -f Lab.Loki.WebApi/Dockerfile .
+  
+  api-docker-run:
+    desc: docker run
+    dir: "."
+    cmds:
+#      - docker run --name lab.loki.webapi -d --restart unless-stopped -p 9527:8080 lab-loki-webapi:latest
+      - docker-compose up -d

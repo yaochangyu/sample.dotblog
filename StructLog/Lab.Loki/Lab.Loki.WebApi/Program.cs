@@ -1,5 +1,6 @@
 using Serilog;
 using Serilog.Events;
+using Serilog.Formatting.Json;
 using Serilog.Sinks.Grafana.Loki;
 
 Log.Logger = new LoggerConfiguration()
@@ -20,12 +21,13 @@ try
     // Add services to the container.
     builder.Services.AddControllers()
         ;
+    var jsonFormatter = new JsonFormatter();
     builder.Host
         .UseSerilog((context, services, config) =>
                         config.ReadFrom.Configuration(context.Configuration)
                             .ReadFrom.Services(services)
                             .Enrich.FromLogContext()
-                            .WriteTo.Console() //正式環境不要用 Console，除非有 Log Provider 專門用來收集 Console Log
+                            .WriteTo.Console(jsonFormatter) //正式環境不要用 Console，除非有 Log Provider 專門用來收集 Console Log
                             .WriteTo.Seq("http://localhost:5341") //log server
                             .WriteTo.File("logs/aspnet-.txt", rollingInterval: RollingInterval.Minute) //正式環境不要用 File
         );
@@ -49,12 +51,13 @@ try
     // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
     {
-        app.UseSwagger();
-        app.UseSwaggerUI(options =>
-                             options.SwaggerEndpoint("/swagger/v1/swagger.yaml",
-                                                     "Swagger Demo Documentation v1"));
+        // app.UseSwagger();
+        // app.UseSwaggerUI(options =>
+        //                      options.SwaggerEndpoint("/swagger/v1/swagger.yaml",
+        //                                              "Swagger Demo Documentation v1"));
     }
-
+    app.UseSwagger();
+    app.UseSwaggerUI();
     app.UseAuthorization();
     app.MapDefaultControllerRoute();
     app.UseRouting();

@@ -1,0 +1,13 @@
+2024-11-07 22:45:02.379 +08:00 [INF] Now listening on: https://localhost:7276
+2024-11-07 22:45:02.384 +08:00 [INF] Now listening on: http://localhost:5050
+2024-11-07 22:45:02.386 +08:00 [INF] Application started. Press Ctrl+C to shut down.
+2024-11-07 22:45:02.386 +08:00 [INF] Hosting environment: Development
+2024-11-07 22:45:02.388 +08:00 [INF] Content root path: D:\lab\sample.dotblog\StructLog\Lab.Loki\Lab.Loki.WebApi
+2024-11-07 22:45:02.770 +08:00 [INF] Request starting HTTP/2 GET https://localhost:7276/swagger/index.html - null null
+2024-11-07 22:45:02.840 +08:00 [INF] Request finished HTTP/2 GET https://localhost:7276/swagger/index.html - 200 null text/html;charset=utf-8 70.8654ms
+2024-11-07 22:45:03.631 +08:00 [INF] Request starting HTTP/2 GET https://localhost:7276/robots.txt - null null
+2024-11-07 22:45:03.636 +08:00 [INF] Request starting HTTP/2 GET https://localhost:7276/swagger/v1/swagger.yaml - null null
+2024-11-07 22:45:03.649 +08:00 [INF] HTTP GET /robots.txt responded 404 in 0.5208 ms
+2024-11-07 22:45:03.651 +08:00 [INF] Request finished HTTP/2 GET https://localhost:7276/robots.txt - 404 0 null 20.3056ms
+2024-11-07 22:45:03.656 +08:00 [INF] Request reached the end of the middleware pipeline without being handled by application code. Request path: GET https://localhost:7276/robots.txt, Response status code: 404
+2024-11-07 22:45:03.764 +08:00 [INF] Request finished HTTP/2 GET https://localhost:7276/swagger/v1/swagger.yaml - 200 null text/yaml;charset=utf-8 127.4191ms
