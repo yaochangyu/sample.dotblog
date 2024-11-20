@@ -20,5 +20,5 @@ tasks:
     desc: docker run
     dir: "."
     cmds:
-#      - docker run --name lab.loki.webapi -d --restart unless-stopped -p 9527:8080 lab-loki-webapi:latest
-      - docker-compose up -d
+#      - docker compose -p lab-loki up -d api
+      - docker compose -p lab-loki up
