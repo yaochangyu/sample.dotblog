@@ -1,30 +1,35 @@
 version: "3"
 
 networks:
-  loki:
+  loki_network:
 
 services:
-  seq:
-    image: datalust/seq:latest
+  api:
+    image: lab-loki-webapi:latest
+    env_file:
+      - .env
     ports:
-      - "5341:80"
-    environment:
-      - ACCEPT_EULA=Y
+      - "9527:8080"
+    networks:
+      - loki_network
   loki:
-    image: grafana/loki:2.9.2
+    image: grafana/loki:2.8.0
     ports:
       - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./loki-config.yml:/etc/loki/local-config.yml
+    command: -config.file=/etc/loki/local-config.yml
     networks:
-      - loki
+      - loki_network
 
   promtail:
-    image: grafana/promtail:2.9.2
+    image: grafana/promtail:2.8.0
     volumes:
-      - /var/log:/var/log
+      - ./logs:/var/log
+      - ./promtail-config.yml:/etc/promtail/config.yml:ro
     command: -config.file=/etc/promtail/config.yml
     networks:
-      - loki
+      - loki_network
 
   grafana:
     environment:
@@ -50,14 +55,17 @@ services:
           editable: false
         EOF
         /run.sh
-    image: grafana/grafana:latest
+    image: grafana/grafana:10.0.3
     ports:
       - "3000:3000"
     networks:
-      - loki
-
-#  lab.loki.webapi:
-#    image: lab.loki.webapi
-#    build:
-#      context: .
-#      dockerfile: Lab.Loki.WebApi/Dockerfile
+      - loki_network
+  
+  seq:
+    image: datalust/seq:latest
+    ports:
+      - "5341:80"
+    environment:
+      - ACCEPT_EULA=Y
+    networks:
+      - loki_network
