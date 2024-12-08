@@ -5,10 +5,21 @@ tolgee:
     initial-username: admin
 #    jwt-secret: my_jwt_secret
   machine-translation:
-#    google:
-#      api-key: my_google_api_key
+    google:
+      api-key: my_google_api_key
     deepl:
       auth-key: my_deepl_api_key
+    tolgee:
+      enabled: true
+      default-primary: true
+  content-delivery:
+    public-url-prefix: demo
+    storage:
+      s3:
+        access-key: my_s3_access_key
+        bucket-name: my_s3_bucket_name
+        region: my_s3_region
+        secret-key: my_s3_secret_key
   smtp:
     auth: true
     from: Tolgee <no-reply@mydomain.com>
