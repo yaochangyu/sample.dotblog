@@ -1,0 +1,11 @@
+{
+    "page": {
+        "title": "Dies ist ein übersetzter Seitentitel"
+    },
+    "about": {
+        "description": "Dies ist die Beschreibung der About-Seite deiner Homepage.",
+        "renderedOn": "Diese Datei wurde am {{date, dd.mm.yyyy}} generiert.",
+        "additionalInformation": "zusätzliche Informationen",
+        "infoText": "Verwende diesen Bereich um $t(about.additionalInformation) bereitzustellen."
+    }
+}

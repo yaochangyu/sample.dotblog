@@ -1,0 +1,6 @@
+@Lab.i18N.WebApi_HostAddress = http://localhost:5092
+
+GET {{Lab.i18N.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
