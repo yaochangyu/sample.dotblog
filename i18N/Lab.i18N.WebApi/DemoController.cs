@@ -11,10 +11,12 @@ public class DemoController(IStringLocalizer<DemoController> localizer) : Contro
     public IActionResult Get()
     {
         var desc = localizer["about.description"];
+        var key = localizer["exampleKey"];
 
         return Ok(new
         {
-            desc
+            desc,
+            key
         });
     }
 }

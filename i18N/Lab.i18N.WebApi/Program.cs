@@ -23,7 +23,15 @@ builder.Services.AddI18NextLocalization(i18N =>
     });
 
     i18N.IntegrateToAspNetCore()
-        .AddBackend(new JsonFileBackend("wwwroot/locales"));
+        .AddBackend(new JsonFileBackend("wwwroot/locales"))
+        .AddBackend<InMemoryBackend>(p =>
+        {
+            var memoryBackend = new InMemoryBackend();
+            memoryBackend.AddTranslation("en", "translation", "exampleKey", "My English text.");
+            memoryBackend.AddTranslation("zh", "translation", "exampleKey", "我的中文字");
+            return memoryBackend;
+        })
+        ;
 });
 var app = builder.Build();
 
@@ -34,14 +42,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseRequestLocalization(options => { options.AddSupportedCultures("de", "en"); });
-
-var supportedCultures = new[] { "en-US", "zh-TW" };
+// var supportedCultures = new[] { "en-US", "de-DE", "zh-TW" };
+var supportedCultures = new[] { "en", "de", "zh" };
 var cultureInfos = supportedCultures.Select(c => new CultureInfo(c)).ToList();
 
 app.UseRequestLocalization(p =>
 {
-    p.DefaultRequestCulture = new RequestCulture("en-US");
+    p.DefaultRequestCulture = new RequestCulture("zh-TW");
     p.SupportedCultures = cultureInfos;
     p.SupportedUICultures = cultureInfos;
     p.RequestCultureProviders.Insert(0, new HeaderRequestCultureProvider());
