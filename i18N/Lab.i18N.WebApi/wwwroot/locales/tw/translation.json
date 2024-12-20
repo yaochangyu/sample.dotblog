@@ -1,0 +1,11 @@
+{
+    "page": {
+        "title": "這是一個翻譯後的頁面標題"
+    },
+    "about": {
+        "description": "這是關於頁面的描述。",
+        "renderedOn": "此頁面生成於 {{date, yyyy/mm/dd}}。",
+        "additionalInformation": "額外資訊",
+        "infoText": "使用此區域提供 $t(about.additionalInformation)。"
+    }
+}
