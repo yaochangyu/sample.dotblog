@@ -18,7 +18,7 @@ builder.Services.AddI18NextLocalization(i18N =>
     i18N.Configure(options =>
     {
         options.DefaultNamespace = "translation";
-        options.DefaultLanguage = "de";
+        options.DefaultLanguage = "en";
         options.FallbackLanguages = new[] { "en" };
     });
 
@@ -42,20 +42,22 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// var supportedCultures = new[] { "en-US", "de-DE", "zh-TW" };
-var supportedCultures = new[] { "en", "de", "zh" };
-var cultureInfos = supportedCultures.Select(c => new CultureInfo(c)).ToList();
-
 app.UseRequestLocalization(p =>
 {
-    p.DefaultRequestCulture = new RequestCulture("zh");
+    // var supportedCultures = new[] { "en-US", "de-DE", "zh-TW" };
+    var supportedCultures = new[] { "en", "de", "zh" };
+    var cultureInfos = supportedCultures.Select(c => new CultureInfo(c)).ToList();
+    p.DefaultRequestCulture = new RequestCulture(supportedCultures[0]);
     p.SupportedCultures = cultureInfos;
     p.SupportedUICultures = cultureInfos;
-    p.RequestCultureProviders.Insert(0, new HeaderRequestCultureProvider());
 });
+
 app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.MapDefaultControllerRoute();
 app.UseRouting();
 
+// var cultureInfo = new CultureInfo("en");
+// Thread.CurrentThread.CurrentCulture = cultureInfo;
+// Thread.CurrentThread.CurrentUICulture = cultureInfo;
 app.Run();
