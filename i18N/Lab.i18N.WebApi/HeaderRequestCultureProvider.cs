@@ -13,7 +13,6 @@ public class HeaderRequestCultureProvider : RequestCultureProvider
             return await Task.FromResult<ProviderCultureResult?>(null);
         }
 
-        // 解析 Header 值，取第一個語言
         var languages = acceptLanguage.ToString()
                 .Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(lang => lang.Split(';').FirstOrDefault())

@@ -48,7 +48,7 @@ var cultureInfos = supportedCultures.Select(c => new CultureInfo(c)).ToList();
 
 app.UseRequestLocalization(p =>
 {
-    p.DefaultRequestCulture = new RequestCulture("zh-TW");
+    p.DefaultRequestCulture = new RequestCulture("zh");
     p.SupportedCultures = cultureInfos;
     p.SupportedUICultures = cultureInfos;
     p.RequestCultureProviders.Insert(0, new HeaderRequestCultureProvider());
