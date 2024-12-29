@@ -1,0 +1,71 @@
+---
+id: add-a-new-product
+title: "Add a new product"
+description: "Create a new product entry."
+sidebar_label: "Add a new product"
+hide_title: true
+hide_table_of_contents: true
+api: eJyFU8tu2zAQ/BVizqwfvVk3t+ghh6JGnaIHwwdaWltMJJIhV04MQf9eLKUkTlK0ukhczS6HM8MeFaUy2sDWOxT4GskwKaMcPaoQfdWVrMhxvMygEemho8RffHVB0eeljVSh4NiRRukdk2P5ZUJobGlk6vwuyegeqaypNfLFl0Ao4A93VDI0QvSBIltK8tdWV5jE0boTNOjJtKGR0maxWGLQcKalfyN/2+pErNaCDtGW13DXtQeK0Dj62BpGgWPjDV/3L1ez1WrQsG7Lvry/aj5435Bx12CRYBg02PLIchQPwyDVSCl4l8YDfl4s5fVW+QmvyuxApVJXlpTSsWuaC2RES1z7CgWCT1k0wzUKzCeXEjQSxTPFhGLXo4sNCtTMIRXzuQl2NlGdlb6dn5fQfydgvVPbPAfDXkPM+/lq+7fn4442jV48W/Gq94vcWcIrBbNKsj76LOdbsdR348yJWnKs1pubDxTXmxt19FG1ArPu9JzQpKxTXJOy7kyO/ZhWkWLsW84Ws0UOgU/cmpzGifK6qt6m/f2m/Wus/3M7pmwwPfE8NMY62THb0E9m7fBi1l6jFh+LHfr+YBL9is0wSPmho3hBsdtrnE205iAK7faDRk2mopjdvaeL8BmZfbqVnQXedMLgw+UTI1/is/mxvYXGYbrEra+kJ5pHueDmEQWg4fPpc1pzrUdj3KkzJ8GOM+X5A004cP8=
+sidebar_class_name: "post api-method"
+info_path: docs/api/product/product-management-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Add a new product"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/products"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Create a new product entry.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={undefined}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"id":{"type":"string","example":"P001"},"name":{"type":"string","example":"Widget A"},"price":{"type":"number","format":"float","example":19.99},"inStock":{"type":"boolean","example":true}},"title":"Product"}}}}}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"201":{"description":"Product created successfully"}}}
+>
+  
+</StatusCodes>
+
+
+      

@@ -1,0 +1,72 @@
+openapi: 3.0.1
+info:
+  title: Product Management API
+  description: API for managing products in the inventory.
+  version: 1.0.0
+servers:
+  - url: https://api.example.com/v1
+    description: Production Server
+paths:
+  /products:
+    get:
+      summary: Get all products
+      description: Retrieve a list of all available products.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+    post:
+      summary: Add a new product
+      description: Create a new product entry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        '201':
+          description: Product created successfully
+  /products/{id}:
+    get:
+      summary: Get product by ID
+      description: Retrieve details of a specific product by its ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID of the product
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Product retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          example: P001
+        name:
+          type: string
+          example: Widget A
+        price:
+          type: number
+          format: float
+          example: 19.99
+        inStock:
+          type: boolean
+          example: true

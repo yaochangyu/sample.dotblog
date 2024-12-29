@@ -1,0 +1,71 @@
+---
+id: create-a-user
+title: "Create a user"
+description: "Add a new user to the system."
+sidebar_label: "Create a user"
+hide_title: true
+hide_table_of_contents: true
+api: eJyFk01v2zAMhv+K8J61OOm2i07LPg4dMCxY21OQg2IzsTJbUiU5qWH4vw9U0iZLh84XSxRFUg9fDqgolsH4ZJyFwryqhBaWDqKLFERyItUkYh8TtRNIBHrsKKbPruqhhrw1gSqoFDqSKJ1NZBMfae8bU2qOW+wiBx8Qy5pazavUe4KCW++oTJDwwXkKyVDkU1Nd+MQUjN1Cgp506xuCmt28//BxlLC6pTcd8d3VVnx1hFGCWm2at913rraVo08ny6R0LcZRIpmUzx8iBYwjmwJF72w81nsznfHvb5TsLMpAOlElYleWFOOma5o+h2wp1a6CgncxA9CphkLB2CMkIoU9r9RyQBcaKNQp+aiKQnszuSiw2M8gr1Ivgqu6kjfiLsfBuJLgLvw69+/b87OPvDPUZ6ZncC/c/g1HwtiNy1QvGIkf2uottWSTmC9uX9U3X9yKjQuiZTdjt1lsURh7pTYmcLwxm0wnU07HuFqd1XQq9UtGLHQOcp1qOEvyv9o+6SLRUyp8o43lfJn9cGrPEsf2rCRqbptaYhjWOtJDaMaRzY8dhR5quZLY62D0mpksV6NETbqikPv5m3qu+1jYu3tOy+5Nx+lfzQ237kUti59395BYn+avdRXfCfrAs6kPUICEy4/Pysy2AY22205vs8ZzTP7+ABtnWng=
+sidebar_class_name: "post api-method"
+info_path: docs/api/member/user-management-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Create a user"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/users"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Add a new user to the system.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={undefined}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"id":{"type":"string","example":12345},"name":{"type":"string","example":"John Doe"},"email":{"type":"string","example":"johndoe@example.com"}},"title":"User"}}}}}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"201":{"description":"User created successfully"}}}
+>
+  
+</StatusCodes>
+
+
+      
