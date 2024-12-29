@@ -1,0 +1,71 @@
+---
+id: get-user-by-id
+title: "Get user by ID"
+description: "Retrieve a specific user by their ID."
+sidebar_label: "Get user by ID"
+hide_title: true
+hide_table_of_contents: true
+api: eJyNU8Fu2zAM/RWBpw0Q4rTrLjqtQIYiAwYE3XoKclAkOlZmS6pEBw0M/ftAx+uyZCt2skWJj498jwNYzCa5SC54UPCIlBweUGiRIxpXOyP6jElsj4IadEksFzOQEHXSHRKmDGo9gNcdggJnQYJjnKipAQkJn3uX0IKi1KO8KLZciFAz7FgCJGTTYKdBDUDHyICZkvM7KGXDWDkGnzHz/e18zp8/8Z6YaJo6sCL3xmDOdd+2R5Bggif0xGk6xtYZzWnVPnPucF07bPdoiHtNIWIid6rs7DU/Cfiiu9giqJvbD3cfi5wm8sZD+BIaLxYBoUjATrv27ef70Hgb8NMUmZnQQSkSyNF4z81DKRy6m9/9Yzg+kKhD7+2Y2iE1wYKCHY59smYKKhYjV4OzhSXBdPilcp9aUNAQxayqSkc3OyNTHW7gUuBVCrY3fBDfRhxgIZ2vw9jrGXPxVXu9ww49ifvV8grpfrUUdUii42fO70bHZOH8aJ98zIQd+5K5njJuZvPZnGcbQ6ZOjxpPNn1AejX1cnFZa/jtlP9eh0k2wheqYqud58LjuIZprGsYGYME5SxsJDQhE4eHYaszPqW2FA4/95iOoNYbCQednN7yiNYDWJf534KqdZsvV+mc87vHaenei6sF+yvPKag9b8lBtz2fQMIPPJ52umyKhAa1xTRyOV3cG4ORzlKutorFfvXYw+fvUMpPYRJ/zQ==
+sidebar_class_name: "get api-method"
+info_path: docs/api/member/user-management-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Get user by ID"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/users/{id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Retrieve a specific user by their ID.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"name":"id","in":"path","required":true,"description":"ID of the user","schema":{"type":"string"}}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"description":"User retrieved successfully","content":{"application/json":{"schema":{"type":"object","properties":{"id":{"type":"string","example":12345},"name":{"type":"string","example":"John Doe"},"email":{"type":"string","example":"johndoe@example.com"}},"title":"User"}}}},"404":{"description":"User not found"}}}
+>
+  
+</StatusCodes>
+
+
+      
