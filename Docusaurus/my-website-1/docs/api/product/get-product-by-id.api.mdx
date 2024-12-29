@@ -1,0 +1,71 @@
+---
+id: get-product-by-id
+title: "Get product by ID"
+description: "Retrieve details of a specific product by its ID."
+sidebar_label: "Get product by ID"
+hide_title: true
+hide_table_of_contents: true
+api: eJydVD1v2zAQ/SvETS1AWHKRxdoMpAg8FDCSFh0MDzR5sphIJEOejBgC/3txstw6dtqhk6T7fPfunQYwmHS0gax3UMEjUrR4QGGQlG2T8LVQIgXUtrZahOhNr0nsjsJSEqv7GUgIKqoOCWOCajOAUx1CBdaABMs1g6IGJER87W1EAxXFHuVV49U9t6IGzz1AQtINdgqqAegYuGaiaN0ect5yuRS8S5jY/6Us+fG+5HoCG6eZjEi91phS3bftESRo7wgdcaYKobVacWbxnDh9uG3vd884AgvRB4xkT82tuYUoAd9UF1o2rctyDllOxPwr8qc1eySx5OgQrb4Md323wwgSah87RVBB3XpFl/nzxWyxyMz6E3n9cpG8875F5S6DeQk5SyBLJ5QT7Tmz9a68+zuhzpOofe8McGiH1HgDFexx5Ia3XUExrTEVgzWZl4nxcJZIH1uooCEKqSoKFexsgjXTvisOc7hWx9TZeieexjrAErCu9uOQ70cQ35RTe+zQkViuVzfFluuVqH0UHYdZtz8rLgnrRgVad0BHPh5Z3Qz6lDeflbNyXI1P1KlRI5PYH5Aub2N1f910+CO2/7qxaY+Eb1SEVlnHOEYah4nxDZzHAAmVNbCV0PhE7BmGnUr4I7Y5s/m1x3iEarOVcFDRqh2ztxnA2MTvBqpaten6RC9H+PQ4HfNn8dHhfoh2MirHp3dQbc9fIOEFj6ffRd5mCQ0qg3GEc3IstcZAFyk3p8pS+C3Ch6/fIedfnc6ktw==
+sidebar_class_name: "get api-method"
+info_path: docs/api/product/product-management-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Get product by ID"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/products/{id}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Retrieve details of a specific product by its ID.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+  children={"Request"}
+>
+</Heading>
+
+<ParamsDetails
+  parameters={[{"name":"id","in":"path","required":true,"description":"ID of the product","schema":{"type":"string"}}]}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  title={"Body"}
+  body={undefined}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  id={undefined}
+  label={undefined}
+  responses={{"200":{"description":"Product retrieved successfully","content":{"application/json":{"schema":{"type":"object","properties":{"id":{"type":"string","example":"P001"},"name":{"type":"string","example":"Widget A"},"price":{"type":"number","format":"float","example":19.99},"inStock":{"type":"boolean","example":true}},"title":"Product"}}}},"404":{"description":"Product not found"}}}
+>
+  
+</StatusCodes>
+
+
+      
