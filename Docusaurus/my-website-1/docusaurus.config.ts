@@ -161,6 +161,7 @@ const config: Config = {
   } satisfies Preset.ThemeConfig,
   plugins: [ // <--- 加這個
     generateOpenApiPlugins(),
+    "@cmfcmf/docusaurus-search-local"
   ],
   // plugins: [ // <--- 加這個
   //   [
@@ -188,6 +189,16 @@ const config: Config = {
   //     },
   //   ],
   // ],
-  themes: ["docusaurus-theme-openapi-docs"], // <--- 加這個
+  themes: ["docusaurus-theme-openapi-docs",
+    [
+      "@easyops-cn/docusaurus-search-local",
+      {
+        hashed: true,
+        // language: ["en", "zh"],
+        // highlightSearchTermsOnTargetPage: true,
+        // explicitSearchResultPath: true,
+      },
+    ],
+  ],
 };
 export default config;
