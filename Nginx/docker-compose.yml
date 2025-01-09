@@ -1,14 +1,30 @@
 version: '3.8'
-name: myapp
 services:
   app1:
     build:
       context: ./app1
-    ports:
-      - "8081:80" # 將容器的 80 端口映射到主機的 8081 端口
+#    ports:
+#      - "8081:80" # 將容器的 80 端口映射到主機的 8081 端口
+    networks:
+      - myapp
 
   app2:
     build:
       context: ./app2
+#    ports:
+#      - "8082:80" # 將容器的 80 端口映射到主機的 8082 端口
+    networks:
+      - myapp
+
+  nginx:
+    image: nginx:latest
     ports:
-      - "8082:80" # 將容器的 80 端口映射到主機的 8082 端口
+      - "9527:80" # 將主機的 9527 端口映射到 Nginx 容器的 80 端口
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro # 挂载自定义的 Nginx 配置文件
+    networks:
+      - myapp
+
+networks:
+  myapp:
+    driver: bridge
