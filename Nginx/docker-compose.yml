@@ -7,6 +7,16 @@ services:
 #      - "8081:80" # 將容器的 80 端口映射到主機的 8081 端口
     networks:
       - myapp
+      
+  webapi:
+    image: webapi
+    build:
+      context: ./WebApi
+      dockerfile: ./WebApi/Dockerfile
+    ports:
+      - "8080:8080" # 將主機的 9527 端口映射到 Nginx 容器的 80 端口
+    networks:
+      - myapp
 
   app2:
     build:
@@ -22,6 +32,7 @@ services:
       - "9527:80" # 將主機的 9527 端口映射到 Nginx 容器的 80 端口
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro # 挂载自定义的 Nginx 配置文件
+      - ./nginx:/etc/nginx
     networks:
       - myapp
 
