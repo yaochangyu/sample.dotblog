@@ -43,6 +43,7 @@ public class Program
             })
             .WithName("GetWeatherForecast")
             .WithOpenApi();
+        app.UseDefaultFiles();
         app.UseStaticFiles();
         app.Run();
     }
