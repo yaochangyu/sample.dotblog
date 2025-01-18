@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.Loki.WebApi", "Lab.Loki.WebApi\Lab.Loki.WebApi.csproj", "{D18685EA-F933-464C-801D-6B92EA3B7DA5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D18685EA-F933-464C-801D-6B92EA3B7DA5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D18685EA-F933-464C-801D-6B92EA3B7DA5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D18685EA-F933-464C-801D-6B92EA3B7DA5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D18685EA-F933-464C-801D-6B92EA3B7DA5}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
