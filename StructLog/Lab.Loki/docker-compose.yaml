@@ -1,0 +1,73 @@
+version: "3"
+
+networks:
+  loki:
+    driver: bridge
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Lab.Loki.WebApi/Dockerfile
+    ports:
+      - "8080:8080"
+    #labels:
+    #  logging: "promtail-be-job-nest"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    networks:
+      - loki
+
+  seq:
+    image: datalust/seq:latest
+    ports:
+      - "5341:5341"
+    environment:
+      - ACCEPT_EULA=Y
+
+  loki:
+    image: grafana/loki:2.9.2
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki:/etc/loki
+    command: -config.file=/etc/loki/loki-config.yaml  # 修正配置檔名稱
+    networks:
+      - loki
+       
+  promtail:
+    image: grafana/promtail:2.9.2
+    volumes:
+      - /var/log:/var/log
+      - ./promtail/log:/var/log
+      - ./promtail:/etc/promtail
+      - ./promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      # Windows 環境下的容器日誌路徑
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - //./pipe/docker_engine://./pipe/docker_engine # 修正的 npipe 配置
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    depends_on:
+      - loki
+    networks:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - ./grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning  # 添加 provisioning 映射
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - loki
+    networks:
+      - loki
