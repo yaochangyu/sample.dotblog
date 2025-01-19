@@ -21,9 +21,9 @@ scrape_configs:
       - source_labels: [ '__meta_docker_container_log_stream' ]
         target_label: 'stream'
     pipeline_stages:
-      - docker: { }
-      - labels:
-          job: containerlogs
+      #- docker: { }
+      #- labels:
+      #    job: containerlogs
       - timestamp:
           source: time
           format: RFC3339Nano
