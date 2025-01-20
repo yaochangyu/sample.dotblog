@@ -33,3 +33,33 @@ scrape_configs:
       - output:
           source: message
           format: "Input line: {{ .line }}"
+ 
+  - job_name: api-log
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      - source_labels: ['__meta_docker_container_name']
+        target_label: 'container'
+      # 只保留 container name 包含 api 的 log
+      - source_labels: ['__meta_docker_container_name']
+        #regex: '/?*api*'
+        regex: '/?.*api.*'
+        #regex: '/?labloki.*'
+        action: keep
+    pipeline_stages:
+      - timestamp:
+          source: time
+          format: RFC3339Nano
+      - output:
+          source: message
+          format: "Input line: {{ .line }}"
+      - json:
+          expressions:
+            RequestId: RequestId
+            RequestPath: RequestPath
+            StatusCode: StatusCode
+      - labels:
+          RequestId:
+          RequestPath:
+          StatusCode:
