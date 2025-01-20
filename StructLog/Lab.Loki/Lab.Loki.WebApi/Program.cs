@@ -12,13 +12,16 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console(formatter)                                                         // 使用 JSON 格式輸出
     .WriteTo.File(formatter, "logs/aspnet-.txt", rollingInterval: RollingInterval.Hour) //正式環境不要用 File
     .WriteTo.Seq("http://localhost:5341", payloadFormatter: formatter)
-    .WriteTo.GrafanaLoki( "http://loki:3100",
-        labels: new[] { 
-            new LokiLabel { Key = "service", Value = "api" }
-        },
-        credentials: null,
-        propertiesAsLabels: new[] { "RequestId", "RequestPath", "StatusCode" }
-    )
+    //.WriteTo.GrafanaLoki( "http://localhost:3100",//本機除錯
+    //.WriteTo.GrafanaLoki( "http://loki:3100",//Docker
+    //    labels: new[] { 
+    //        new LokiLabel { Key = "service", Value = "api" },
+    //        new LokiLabel { Key = "host", Value = "localhost" },
+    //        new LokiLabel { Key = "app", Value = "Lab.Loki.WebApi" }
+    //    },
+    //    credentials: null,
+    //    propertiesAsLabels: new[] { "RequestId", "RequestPath", "StatusCode" }
+    //)
     .CreateBootstrapLogger();
 Log.Information("Starting web host");
 
