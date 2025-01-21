@@ -44,8 +44,8 @@ scrape_configs:
       # 只保留 container name 包含 api 的 log
       - source_labels: ['__meta_docker_container_name']
         #regex: '/?*api*'
-        regex: '/?.*api.*'
-        #regex: '/?labloki.*'
+        #regex: '/?.*api.*'
+        regex: '/?labloki.*'
         action: keep
     pipeline_stages:
       - timestamp:
