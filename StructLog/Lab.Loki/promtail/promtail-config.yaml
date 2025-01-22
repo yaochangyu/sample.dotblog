@@ -47,22 +47,22 @@ scrape_configs:
       - source_labels: ['__meta_docker_container_name']
         regex: '/?api.*'
         action: keep
-      - action: replace
-        target_label: job
-        replacement: api-logs
+      #- action: replace
+      #  target_label: job
+      #  replacement: api-logs
     pipeline_stages:
       - json:
           expressions:
             RequestId: RequestId
             RequestPath: RequestPath
             StatusCode: StatusCode
-            Level: level
+            #Level: level
       - labels:
-          job: api-logs
+          #job: api-logs
           RequestId:
           RequestPath:
           StatusCode:
-          Level:
+          #Level:
       - timestamp:
           source: time
           format: RFC3339Nano
