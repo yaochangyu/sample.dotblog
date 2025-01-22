@@ -56,7 +56,7 @@ scrape_configs:
             RequestId: RequestId
             RequestPath: RequestPath
             StatusCode: StatusCode
-            Level: @l
+            Level: level
       - labels:
           job: api-logs
           RequestId:
