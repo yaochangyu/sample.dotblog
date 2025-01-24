@@ -40,23 +40,28 @@ scrape_configs:
       - host: unix:///var/run/docker.sock
         refresh_interval: 5s
     relabel_configs:
-      - source_labels: ['__meta_docker_container_name']
+      - source_labels: [ '__meta_docker_container_name' ]
         regex: '/(.*)'
         target_label: 'container'
       # 只保留符合特定名稱模式的容器
-      - source_labels: ['__meta_docker_container_name']
+      - source_labels: [ '__meta_docker_container_name' ]
+        # 只收集名稱包含 'api' 的容器
         regex: '/?api.*'
+        # 保留符合條件的容器，過濾掉其他的
         action: keep
       #- action: replace
       #  target_label: job
       #  replacement: api-logs
     pipeline_stages:
+      # JSON 解析階段 
       - json:
+          # 從 JSON 日誌中提取特定字段
           expressions:
             RequestId: RequestId
             RequestPath: RequestPath
             StatusCode: StatusCode
             #Level: level
+      # 將提取的字段設置為標籤
       - labels:
           #job: api-logs
           RequestId:
