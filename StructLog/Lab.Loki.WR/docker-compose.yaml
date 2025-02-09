@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Write Path Service
+  loki-write:
+    image: grafana/loki:3.1.2
+    container_name: loki-write
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/write-config.yaml
+    volumes:
+      - ./write-config.yaml:/etc/loki/write-config.yaml
+      - ./write-loki:/loki
+    depends_on:
+      - minio
+
+  # Read Path Service
+  loki-read:
+    image: grafana/loki:3.1.2
+    container_name: loki-read
+    ports:
+      - "3101:3100"
+    command: -config.file=/etc/loki/read-config.yaml
+    volumes:
+      - ./read-config.yaml:/etc/loki/read-config.yaml
+      - loki-data:/loki
+    depends_on:
+      - minio
+
+  # MinIO - Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+
+  # Grafana - Visualization
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - loki-read
+
+volumes:
+  minio-data:
+  loki-data:
+  grafana-data:
