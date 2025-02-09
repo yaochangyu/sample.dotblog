@@ -7,12 +7,11 @@ networks:
 services:
   seq:
     image: datalust/seq:latest
+    container_name: seq
     ports:
       - "5341:5341"
     environment:
       - ACCEPT_EULA=Y
-    networks:
-      - prometheus
   
   loki:
     image: grafana/loki:3.1.2
@@ -22,6 +21,8 @@ services:
     volumes:
       - ./config/loki:/etc/loki
     command: -config.file=/etc/loki/loki-config.yaml  # 修正配置檔名稱
+    depends_on:
+      - promtail
     networks:
       - prometheus
   
@@ -37,8 +38,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - //./pipe/docker_engine://./pipe/docker_engine # 修正的 npipe 配置
     command: -config.file=/etc/promtail/promtail-config.yaml
-    depends_on:
-      - loki
     networks:
       - prometheus
   
@@ -89,6 +88,6 @@ services:
     privileged: true
     depends_on:
       - loki
-      - prometheus
+      #- prometheus
     networks:
       - prometheus 
