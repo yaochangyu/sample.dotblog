@@ -1,49 +1,94 @@
 version: "3"
+
+networks:
+  prometheus:
+    driver: bridge
+
 services:
+  seq:
+    image: datalust/seq:latest
+    ports:
+      - "5341:5341"
+    environment:
+      - ACCEPT_EULA=Y
+    networks:
+      - prometheus
+  
+  loki:
+    image: grafana/loki:3.1.2
+    container_name: loki-v3.1.2
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./config/loki:/etc/loki
+    command: -config.file=/etc/loki/loki-config.yaml  # 修正配置檔名稱
+    networks:
+      - prometheus
+  
+  promtail:
+    image: grafana/promtail:3.1.2
+    container_name: promtail-v3.1.2
+    volumes:
+      - /var/log:/var/log
+      - ./data/promtail/log:/var/log
+      - ./config/promtail:/etc/promtail
+      - ./config/promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      # Windows 環境下的容器日誌路徑
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - //./pipe/docker_engine://./pipe/docker_engine # 修正的 npipe 配置
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    depends_on:
+      - loki
+    networks:
+      - prometheus
+  
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: cadvisor-v0.49.1
-    network_mode: "host" # 使用主機網絡模式，容器將與主機共享網絡配置。 
+    #network_mode: "host"
     ports:
       - "8080:8080"
-    volumes: #將主機的多個目錄掛載到容器內
-      - /:/rootfs
-      - /var/run:/var/run
-      - /sys:/sys
-      - /var/lib/docker/:/var/lib/docker
-      - /dev/disk/:/dev/disk
-    privileged: true # 授予容器特權模式，允許訪問主機的所有設備
-    devices: 
+    volumes:
+      - "/:/rootfs"
+      - "/var/run:/var/run"
+      - "/sys:/sys"
+      - "/var/lib/docker/:/var/lib/docker"
+      - "/dev/disk/:/dev/disk"
+    privileged: true
+    devices:
       - "/dev/kmsg"
-
+    networks:
+      - prometheus
+  
   prometheus:
     image: prom/prometheus:v3.1.0
     container_name: prometheus-v3.1.0
-    network_mode: "host"
+    #network_mode: "host"
     ports:
       - "9090:9090"
-    volumes: 
+    volumes:
       - ./config/prometheus:/etc/prometheus
     privileged: true
-    depends_on:
-      - cadvisor
-
+    networks:
+      - prometheus
+  
   grafana:
-    image: grafana/grafana:11.5.1
-    container_name: grafana-v11.5.1
-    network_mode: "host"
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
-      - DS_PROMETHEUS=prometheus
+    image: grafana/grafana:11.4.0
+    container_name: grafana-v11.4.0
+    #network_mode: "host"
     volumes:
       - ./data/grafana:/var/lib/grafana
-      - ./config/grafana/dashboards:/etc/grafana/dashboards      # 添加 dashboards 映射
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards/
       - ./config/grafana/provisioning:/etc/grafana/provisioning  # 添加 provisioning 映射
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    ports:
+      - "3000:3000"
     privileged: true
     depends_on:
+      - loki
       - prometheus
-
-volumes:
-  data/grafana:
+    networks:
+      - prometheus 
