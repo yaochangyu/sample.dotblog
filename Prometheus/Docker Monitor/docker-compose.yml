@@ -38,7 +38,7 @@ services:
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
       - DS_PROMETHEUS=prometheus
     volumes:
-      - ./grafana-data:/var/lib/grafana
+      - ./data/grafana:/var/lib/grafana
       - ./config/grafana/dashboards:/etc/grafana/dashboards      # 添加 dashboards 映射
       - ./config/grafana/provisioning:/etc/grafana/provisioning  # 添加 provisioning 映射
     privileged: true
@@ -46,4 +46,4 @@ services:
       - prometheus
 
 volumes:
-  grafana-data:
+  data/grafana:
