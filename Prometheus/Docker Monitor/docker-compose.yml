@@ -3,16 +3,16 @@ services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: cadvisor-v0.49.1
-    network_mode: "host"
+    network_mode: "host" # 使用主機網絡模式，容器將與主機共享網絡配置。 
     ports:
       - "8080:8080"
-    volumes: 
+    volumes: #將主機的多個目錄掛載到容器內
       - "/:/rootfs"
       - "/var/run:/var/run"
       - "/sys:/sys"
       - "/var/lib/docker/:/var/lib/docker"
       - "/dev/disk/:/dev/disk"
-    privileged: true
+    privileged: true # 授予容器特權模式，允許訪問主機的所有設備
     devices: 
       - "/dev/kmsg"
 
@@ -29,8 +29,8 @@ services:
       - cadvisor
 
   grafana:
-    image: grafana/grafana:11.4.0
-    container_name: grafana-v11.4.0
+    image: grafana/grafana:11.5.1
+    container_name: grafana-v11.5.1
     network_mode: "host"
     ports:
       - "3000:3000"
