@@ -35,7 +35,7 @@ services:
     ports:
       - "3100:3100"
     volumes:
-      - ./loki:/etc/loki
+      - ./config/loki:/etc/loki
     command: -config.file=/etc/loki/loki-config.yaml  # 修正配置檔名稱
     networks:
       - loki
@@ -44,9 +44,9 @@ services:
     image: grafana/promtail:3.1.2
     volumes:
       - /var/log:/var/log
-      - ./promtail/log:/var/log
-      - ./promtail:/etc/promtail
-      - ./promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      - ./data/promtail/log:/var/log
+      - ./config/promtail:/etc/promtail
+      - ./config/promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
       # Windows 環境下的容器日誌路徑
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - //./pipe/docker_engine://./pipe/docker_engine # 修正的 npipe 配置
@@ -59,8 +59,8 @@ services:
   grafana:
     image: grafana/grafana:11.4.0
     volumes:
-      - ./grafana:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning  # 添加 provisioning 映射
+      - ./data/grafana:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning  # 添加 provisioning 映射
     environment:
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
       - GF_AUTH_ANONYMOUS_ENABLED=true
