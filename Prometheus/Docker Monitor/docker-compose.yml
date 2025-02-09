@@ -1,8 +1,8 @@
 version: "3"
 services:
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
-    container_name: cadvisor
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor-v0.49.1
     network_mode: "host"
     ports:
       - "8080:8080"
@@ -17,33 +17,33 @@ services:
       - "/dev/kmsg"
 
   prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
+    image: prom/prometheus:v3.1.0
+    container_name: prometheus-v3.1.0
     network_mode: "host"
     ports:
       - "9090:9090"
     volumes: 
-      - ./prometheus:/etc/prometheus
+      - ./prometheus-config:/etc/prometheus
     privileged: true
     depends_on:
       - cadvisor
 
   grafana:
     image: grafana/grafana:11.4.0
-    container_name: grafana
+    container_name: grafana-v11.4.0
     network_mode: "host"
     ports:
       - "3000:3000"
     environment:
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
       - DS_PROMETHEUS=prometheus
-    volumes: 
-      - ./grafana:/var/lib/grafana
-      - ./grafana/dashboards:/etc/grafana/dashboards      # 添加 dashboards 映射
-      - ./grafana/provisioning:/etc/grafana/provisioning  # 添加 provisioning 映射
+    volumes:
+      - ./grafana-data:/var/lib/grafana
+      - ./grafana-config/dashboards:/etc/grafana/dashboards      # 添加 dashboards 映射
+      - ./grafana-config/provisioning:/etc/grafana/provisioning  # 添加 provisioning 映射
     privileged: true
     depends_on:
       - prometheus
 
-#volumes:
-#  grafana-data:
+volumes:
+  grafana-data:
