@@ -9,13 +9,15 @@ services:
     image: datalust/seq:latest
     container_name: seq
     ports:
-      - "5341:5341"
+      - "5341:80"
     environment:
       - ACCEPT_EULA=Y
+    networks:
+      - prometheus
   
   loki:
     image: grafana/loki:3.1.2
-    container_name: loki-v3.1.2
+    container_name: loki
     ports:
       - "3100:3100"
     volumes:
@@ -28,7 +30,7 @@ services:
   
   promtail:
     image: grafana/promtail:3.1.2
-    container_name: promtail-v3.1.2
+    container_name: promtail
     volumes:
       - /var/log:/var/log
       - ./data/promtail/log:/var/log
@@ -43,16 +45,16 @@ services:
   
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.49.1
-    container_name: cadvisor-v0.49.1
+    container_name: cadvisor
     #network_mode: "host"
     ports:
       - "8080:8080"
     volumes:
-      - "/:/rootfs"
-      - "/var/run:/var/run"
-      - "/sys:/sys"
-      - "/var/lib/docker/:/var/lib/docker"
-      - "/dev/disk/:/dev/disk"
+      - /:/rootfs
+      - /var/run:/var/run
+      - /sys:/sys
+      - /var/lib/docker/:/var/lib/docker
+      - /dev/disk/:/dev/disk
     privileged: true
     devices:
       - "/dev/kmsg"
@@ -61,7 +63,7 @@ services:
   
   prometheus:
     image: prom/prometheus:v3.1.0
-    container_name: prometheus-v3.1.0
+    container_name: prometheus
     #network_mode: "host"
     ports:
       - "9090:9090"
@@ -73,7 +75,7 @@ services:
   
   grafana:
     image: grafana/grafana:11.4.0
-    container_name: grafana-v11.4.0
+    container_name: grafana
     #network_mode: "host"
     volumes:
       - ./data/grafana:/var/lib/grafana
@@ -88,6 +90,6 @@ services:
     privileged: true
     depends_on:
       - loki
-      #- prometheus
+      - prometheus
     networks:
       - prometheus 
