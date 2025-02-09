@@ -7,11 +7,11 @@ services:
     ports:
       - "8080:8080"
     volumes: #將主機的多個目錄掛載到容器內
-      - "/:/rootfs"
-      - "/var/run:/var/run"
-      - "/sys:/sys"
-      - "/var/lib/docker/:/var/lib/docker"
-      - "/dev/disk/:/dev/disk"
+      - /:/rootfs
+      - /var/run:/var/run
+      - /sys:/sys
+      - /var/lib/docker/:/var/lib/docker
+      - /dev/disk/:/dev/disk
     privileged: true # 授予容器特權模式，允許訪問主機的所有設備
     devices: 
       - "/dev/kmsg"
@@ -23,7 +23,7 @@ services:
     ports:
       - "9090:9090"
     volumes: 
-      - ./prometheus-config:/etc/prometheus
+      - ./config/prometheus:/etc/prometheus
     privileged: true
     depends_on:
       - cadvisor
@@ -39,8 +39,8 @@ services:
       - DS_PROMETHEUS=prometheus
     volumes:
       - ./grafana-data:/var/lib/grafana
-      - ./grafana-config/dashboards:/etc/grafana/dashboards      # 添加 dashboards 映射
-      - ./grafana-config/provisioning:/etc/grafana/provisioning  # 添加 provisioning 映射
+      - ./config/grafana/dashboards:/etc/grafana/dashboards      # 添加 dashboards 映射
+      - ./config/grafana/provisioning:/etc/grafana/provisioning  # 添加 provisioning 映射
     privileged: true
     depends_on:
       - prometheus
