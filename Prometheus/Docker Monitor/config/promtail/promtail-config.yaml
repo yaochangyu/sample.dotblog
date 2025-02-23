@@ -61,10 +61,6 @@ scrape_configs:
             RequestPath: RequestPath
             StatusCode: StatusCode
             #Level: level
-            action_on_failure: skip
-            on_error:
-              action: replace
-              replacement: "unknown"
       # 將提取的字段設置為標籤
       - labels:
           #job: api-logs
