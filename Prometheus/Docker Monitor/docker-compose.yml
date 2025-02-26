@@ -85,7 +85,6 @@ services:
       - "9090:9090"
     volumes:
       - ./config/prometheus:/etc/prometheus
-    privileged: true
     networks:
       - prometheus
   
@@ -102,7 +101,6 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
     ports:
       - "3000:3000"
-    privileged: true
     depends_on:
       - loki
       - prometheus
