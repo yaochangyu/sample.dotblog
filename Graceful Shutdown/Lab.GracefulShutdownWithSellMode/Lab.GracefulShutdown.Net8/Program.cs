@@ -8,10 +8,12 @@ using Serilog.Formatting.Json;
 
 var sigintReceived = false;
 
+var formatter = new JsonFormatter();
+
 Log.Logger = new LoggerConfiguration()
         .MinimumLevel.Information()
         .Enrich.FromLogContext()
-        .WriteTo.Console()
+        .WriteTo.Console(formatter)
         .WriteTo.File("logs/host-.txt", rollingInterval: RollingInterval.Day)
         .CreateBootstrapLogger()
     ;
@@ -57,15 +59,7 @@ await Host.CreateDefaultBuilder(args)
         services.AddHostedService<GracefulShutdownService1>();
         // services.AddHostedService<GracefulShutdownService_Fail>();
     })
-    .UseSerilog((context, services, config) =>
-    {
-        var formatter = new JsonFormatter();
-        config.ReadFrom.Configuration(context.Configuration)
-            .ReadFrom.Services(services)
-            .Enrich.FromLogContext()
-            .WriteTo.Console(formatter)
-            .WriteTo.File(formatter, "logs/app-.txt", rollingInterval: RollingInterval.Minute);
-    })
+    .UseSerilog()
     .RunConsoleAsync();
 
 Log.Information("下次再來唷~");
