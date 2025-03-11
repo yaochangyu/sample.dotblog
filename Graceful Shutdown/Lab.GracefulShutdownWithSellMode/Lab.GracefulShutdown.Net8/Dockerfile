@@ -18,5 +18,5 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 #ENTRYPOINT ["dotnet", "Lab.GracefulShutdown.Net8.dll"]
-#CMD ["dotnet","Lab.GracefulShutdown.Net8.dll"]
-CMD dotnet /app/Lab.GracefulShutdown.Net8.dll
+#CMD ["dotnet","Lab.GracefulShutdown.Net8.dll"] #exec mode
+CMD dotnet /app/Lab.GracefulShutdown.Net8.dll #shell mode
