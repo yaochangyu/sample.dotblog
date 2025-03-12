@@ -17,6 +17,6 @@ RUN dotnet publish "Lab.GracefulShutdown.Net8.csproj" -c $BUILD_CONFIGURATION -o
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-#ENTRYPOINT ["dotnet", "Lab.GracefulShutdown.Net8.dll"]
+ENTRYPOINT ["dotnet", "Lab.GracefulShutdown.Net8.dll"]
 #CMD ["dotnet","Lab.GracefulShutdown.Net8.dll"] #exec mode
-CMD dotnet /app/Lab.GracefulShutdown.Net8.dll #shell mode
+#CMD dotnet /app/Lab.GracefulShutdown.Net8.dll #shell mode
