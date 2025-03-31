@@ -14,6 +14,7 @@ class TestDatabases:
             password=_password,
             dbname=_dbname
         )
+
         try:
             # 啟動容器
             postgres_container.start()
