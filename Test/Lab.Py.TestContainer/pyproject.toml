@@ -3,4 +3,8 @@ name = "lab-py-testcontainer"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "pytest>=8.3.5",
+    "testcontainers-postgres>=0.0.1rc1",
+    "testcontainers-redis>=0.0.1rc1",
+]
