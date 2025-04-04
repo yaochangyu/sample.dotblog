@@ -1,4 +1,4 @@
-﻿# test_calculator.py
+﻿# calculator_test.py
 import pytest
 from calculator import Calculator
 
