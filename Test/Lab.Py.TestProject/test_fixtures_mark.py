@@ -21,7 +21,8 @@ class TestCalculator:
         target = Calculator()
         assert target.divide(10, 2) == 5
 
-    @pytest.mark.skip
+    # @pytest.mark.skip
+    @pytest.mark.skip(reason="搞不定，先跳過")
     def test_divide_by_zero(self):
         target = Calculator()
         with pytest.raises(ValueError):
