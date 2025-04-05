@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "allure-pytest>=2.14.0",
     "pytest>=8.3.5",
     "pytest-cov>=6.1.0",
     "pytest-html>=4.1.1",
