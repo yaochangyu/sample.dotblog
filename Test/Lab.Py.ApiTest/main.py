@@ -1,5 +1,6 @@
-# 主程式入口點
-from app.main import app
+def main():
+    print("Hello from Lab.Py.ApiTest!")
+
+
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    main()
