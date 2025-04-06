@@ -1,21 +1,21 @@
 from fastapi import APIRouter, HTTPException, status
 from typing import List
-from app.models.member import Member, MemberCreate, MemberUpdate
-from app.db.memory_db import member_db
+from app.models.member import Member, MemberCreate, UpdateMemberRequest
+from app.db.memory_db import member_repository
 
 router = APIRouter(prefix="/members", tags=["members"])
 
 @router.get("", response_model=List[Member])
 async def get_all_members():
-    return member_db.get_all()
+    return member_repository.get_all()
 
 @router.post("", response_model=Member, status_code=status.HTTP_201_CREATED)
 async def create_member(member_create: MemberCreate):
-    return member_db.create(member_create)
+    return member_repository.create(member_create)
 
 @router.get("/{member_id}", response_model=Member)
 async def get_member_by_id(member_id: str):
-    member = member_db.get_by_id(member_id)
+    member = member_repository.get_by_id(member_id)
     if member is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -24,8 +24,8 @@ async def get_member_by_id(member_id: str):
     return member
 
 @router.put("/{member_id}", response_model=Member)
-async def update_member(member_id: str, member_update: MemberUpdate):
-    member = member_db.update(member_id, member_update)
+async def update_member(member_id: str, member_update: UpdateMemberRequest):
+    member = member_repository.update(member_id, member_update)
     if member is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -35,7 +35,7 @@ async def update_member(member_id: str, member_update: MemberUpdate):
 
 @router.delete("/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_member(member_id: str):
-    success = member_db.delete(member_id)
+    success = member_repository.delete(member_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

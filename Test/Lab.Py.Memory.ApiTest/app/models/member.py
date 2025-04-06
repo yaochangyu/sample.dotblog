@@ -13,7 +13,7 @@ class MemberBase(BaseModel):
 class MemberCreate(MemberBase):
     pass
 
-class MemberUpdate(BaseModel):
+class UpdateMemberRequest(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     age: Optional[int] = None
