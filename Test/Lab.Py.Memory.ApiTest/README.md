@@ -15,10 +15,13 @@ lab-py-memory-apitest/
 │   ├── models/
 │   │   └── member.py     # 會員資料模型
 │   ├── openapi.yml       # OpenAPI 規範文件
-│   └── main.py           # 應用程式入口
-├── main.py               # 程式啟動入口
-├── pyproject.toml        # 專案配置和依賴
-└── README.md             # 專案說明文件
+│   └── main.py          # 應用程式入口
+├── tests/
+│   ├── conftest.py      # 測試配置
+│   └── test_members_api.py # 會員 API 測試
+├── main.py              # 程式啟動入口
+├── pyproject.toml       # 專案配置和依賴
+└── README.md            # 專案說明文件
 ```
 
 ## 技術棧
