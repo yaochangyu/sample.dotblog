@@ -1,8 +1,8 @@
 from typing import Dict, List, Optional
-from app.models.member import Member, MemberCreate, MemberUpdate
+from app.models.member import Member, MemberCreate, UpdateMemberRequest
 from datetime import datetime
 
-class MemberDB:
+class MemberRepository:
     def __init__(self):
         self.members: Dict[str, Member] = {}
     
@@ -13,16 +13,17 @@ class MemberDB:
         return self.members.get(member_id)
     
     def create(self, member_create: MemberCreate) -> Member:
-        member = Member(**member_create.model_dump())
+        dump = member_create.model_dump()
+        member = Member(**dump)
         self.members[member.id] = member
         return member
     
-    def update(self, member_id: str, member_update: MemberUpdate) -> Optional[Member]:
+    def update(self, member_id: str, update_member_request: UpdateMemberRequest) -> Optional[Member]:
         if member_id not in self.members:
             return None
         
         current_member = self.members[member_id]
-        update_data = member_update.model_dump(exclude_unset=True)
+        update_data = update_member_request.model_dump(exclude_unset=True)
         
         for key, value in update_data.items():
             if value is not None:
@@ -38,4 +39,4 @@ class MemberDB:
         return True
 
 # 單例模式，確保整個應用程序中只有一個 MemberDB 實例
-member_db = MemberDB()
+member_repository = MemberRepository()
