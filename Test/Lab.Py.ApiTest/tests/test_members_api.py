@@ -4,7 +4,7 @@ from datetime import date
 import uuid
 
 from app.main import app
-from app.db.memory_db import member_repository
+from app.db.memory_db import member_memory_repository
 
 # 創建測試客戶端
 client = TestClient(app)
@@ -13,9 +13,9 @@ client = TestClient(app)
 # 在每次測試前清空會員數據庫
 @pytest.fixture(autouse=True)
 def clear_db():
-    member_repository.members = {}
+    member_memory_repository.members = {}
     yield
-    member_repository.members = {}
+    member_memory_repository.members = {}
 
 
 # 測試數據
