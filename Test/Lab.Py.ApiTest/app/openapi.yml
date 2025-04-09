@@ -1,0 +1,136 @@
+openapi: 3.0.0
+info:
+  title: Member API
+  description: RESTful API for managing members with Memory DB
+  version: 0.1.0
+servers:
+  - url: /api/v1
+paths:
+  /members:
+    get:
+      summary: Get all members
+      operationId: getAllMembers
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Member'
+    post:
+      summary: Create a new member
+      operationId: createMember
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberCreate'
+      responses:
+        '201':
+          description: Member created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+  /members/{member_id}:
+    get:
+      summary: Get member by ID
+      operationId: getMemberById
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '404':
+          description: Member not found
+    put:
+      summary: Update member
+      operationId: updateMember
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemberUpdate'
+      responses:
+        '200':
+          description: Member updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Member'
+        '404':
+          description: Member not found
+    delete:
+      summary: Delete member
+      operationId: deleteMember
+      parameters:
+        - name: member_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Member deleted
+        '404':
+          description: Member not found
+components:
+  schemas:
+    MemberBase:
+      type: object
+      properties:
+        first_name:
+          type: string
+        last_name:
+          type: string
+        age:
+          type: integer
+          format: int32
+        address:
+          type: string
+        birthday:
+          type: string
+          format: date
+    MemberCreate:
+      allOf:
+        - $ref: '#/components/schemas/MemberBase'
+      required:
+        - first_name
+        - last_name
+        - birthday
+    MemberUpdate:
+      allOf:
+        - $ref: '#/components/schemas/MemberBase'
+    Member:
+      allOf:
+        - $ref: '#/components/schemas/MemberBase'
+        - type: object
+          properties:
+            id:
+              type: string
+            created_by:
+              type: string
+            created_at:
+              type: string
+              format: date-time
+          required:
+            - id
+            - created_at
