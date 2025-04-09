@@ -1,7 +1,20 @@
 from fastapi import APIRouter, HTTPException, status
 from typing import List
 from app.models.member import Member, MemberCreate, UpdateMemberRequest
-from app.db.memory_db import member_repository
+from app.db.memory_db import member_memory_repository
+import os
+from dotenv import load_dotenv
+
+# 讀取環境變數
+load_dotenv()
+
+# 依據環境變數決定使用哪個 repository，預設使用 MemoryMemberRepository
+if os.getenv("USE_POSTGRES", "false").lower() == "true":
+    from app.db.postgres_db import member_db_repository
+    member_repository = member_db_repository
+else:
+    from app.db.memory_db import member_memory_repository
+    member_repository = member_memory_repository
 
 router = APIRouter(prefix="/members", tags=["members"])
 
