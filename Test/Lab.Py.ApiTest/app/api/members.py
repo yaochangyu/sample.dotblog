@@ -1,33 +1,33 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List
 from app.models.member import Member, MemberCreate, UpdateMemberRequest
-from app.db.member_memory_repository import member_memory_repository
-import os
-from dotenv import load_dotenv
-
-# 讀取環境變數
-load_dotenv()
-
-# 依據環境變數決定使用哪個 repository，預設使用 MemoryMemberRepository
-if os.getenv("USE_POSTGRES", "false").lower() == "true":
-    from app.db.member_postgres_repository import member_db_repository
-    member_repository = member_db_repository
-else:
-    from app.db.member_memory_repository import member_memory_repository
-    member_repository = member_memory_repository
+from app.db.member_repository import MemberRepositoryInterface
+from fastapi import Request
 
 router = APIRouter(prefix="/members", tags=["members"])
 
+# 依赖函数，从容器中获取 member_repository
+def get_member_repository(request: Request) -> MemberRepositoryInterface:
+    return request.app.state.container.member_repository()
+
 @router.get("", response_model=List[Member])
-async def get_all_members():
+async def get_all_members(
+    member_repository: MemberRepositoryInterface = Depends(get_member_repository)
+):
     return member_repository.get_all()
 
 @router.post("", response_model=Member, status_code=status.HTTP_201_CREATED)
-async def create_member(member_create: MemberCreate):
+async def create_member(
+    member_create: MemberCreate,
+    member_repository: MemberRepositoryInterface = Depends(get_member_repository)
+):
     return member_repository.create(member_create)
 
 @router.get("/{member_id}", response_model=Member)
-async def get_member_by_id(member_id: str):
+async def get_member_by_id(
+    member_id: str,
+    member_repository: MemberRepositoryInterface = Depends(get_member_repository)
+):
     member = member_repository.get_by_id(member_id)
     if member is None:
         raise HTTPException(
@@ -37,7 +37,11 @@ async def get_member_by_id(member_id: str):
     return member
 
 @router.put("/{member_id}", response_model=Member)
-async def update_member(member_id: str, member_update: UpdateMemberRequest):
+async def update_member(
+    member_id: str,
+    member_update: UpdateMemberRequest,
+    member_repository: MemberRepositoryInterface = Depends(get_member_repository)
+):
     member = member_repository.update(member_id, member_update)
     if member is None:
         raise HTTPException(
@@ -47,7 +51,10 @@ async def update_member(member_id: str, member_update: UpdateMemberRequest):
     return member
 
 @router.delete("/{member_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_member(member_id: str):
+async def delete_member(
+    member_id: str,
+    member_repository: MemberRepositoryInterface = Depends(get_member_repository)
+):
     success = member_repository.delete(member_id)
     if not success:
         raise HTTPException(

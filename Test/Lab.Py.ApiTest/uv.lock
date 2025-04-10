@@ -55,6 +55,23 @@ wheels = [
 ]
 
 [[package]]
+name = "dependency-injector"
+version = "4.46.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/86/4b571dbd26c06d2492176ed533d8af744bc536a98fb47d5a5e59a8593920/dependency_injector-4.46.0.tar.gz", hash = "sha256:14da7974b0a749e4f7616247e8adcbaf86556989084958b08f66e782e8e14edf", size = 1112411 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/68/5c/a052c83321dc7404a09eb2daf6e618655354fd287bec13b3bb2ac89975a9/dependency_injector-4.46.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:6e7704d6286f4371dff5db56c124c1eac22922ecac7c9e96ef87a3842c21b9e2", size = 1843456 },
+    { url = "https://files.pythonhosted.org/packages/a2/da/d07a74d678474c32c291813671ccc5bbd563459ff3f268053b7d574dd71e/dependency_injector-4.46.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:3dcc19b41f78a62bb1c566c1885bba34a9228e51b65d993f3ac3b192935c48de", size = 6780631 },
+    { url = "https://files.pythonhosted.org/packages/fb/85/84846f63950cf0dd885ce40e5249f43e67eff20bebc950ae3765ac0c62ee/dependency_injector-4.46.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4732b68af723a1ce014540b7662cbf53388608600add34b558d32f698504de95", size = 6912886 },
+    { url = "https://files.pythonhosted.org/packages/55/8e/621c7ada63e691d8eba70d36ce5e11a55b601e15f7a7d6c41c1d13f65437/dependency_injector-4.46.0-cp313-cp313-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:02be5d2c6309a514b5164c05b8be7357a763bd42c503960d40c346dbf1f47faa", size = 6362736 },
+    { url = "https://files.pythonhosted.org/packages/eb/df/c26c47e65c288ed7e3419859c35c3ff97c93fefdfcf7c9a3e4e502d55851/dependency_injector-4.46.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:538b039bb11ec95edd993a8bf1862166ab299fc0fe44d8cbde37d4b0c2676267", size = 6503442 },
+    { url = "https://files.pythonhosted.org/packages/0c/ba/ac6827fdccb1b3cd1764e356aa903837c4b3087277249e572e4c8fb6a823/dependency_injector-4.46.0-cp313-cp313-musllinux_1_2_i686.whl", hash = "sha256:b5302b31ec9327421a4f311d9839f1d639b6419a0dbe3f11af15e2728cb46073", size = 6293894 },
+    { url = "https://files.pythonhosted.org/packages/c2/98/20b25dff08c18f0926b7df1f1f3fc9d826e23451128cc3b9c805b301cccf/dependency_injector-4.46.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:a7838e1e1ca35b88ba456484a9c28107197b208144042d2bba6435429dc84c27", size = 6712383 },
+    { url = "https://files.pythonhosted.org/packages/16/1c/d3dd9c80a4b365d2f51e637611b0b0fdc126fa2735bd3e471503d6dd841f/dependency_injector-4.46.0-cp313-cp313-win32.whl", hash = "sha256:e201905263b08e7fa52aac92596be45b76739218c799790d9687e33dd62aed60", size = 1648007 },
+    { url = "https://files.pythonhosted.org/packages/27/e1/da261f8a8f0fb2dac6589a585010640ed55198edc12e3ccb89eccfee9406/dependency_injector-4.46.0-cp313-cp313-win_amd64.whl", hash = "sha256:360c0ece97c37ddb1742028f7b96081d3331f37dfeb96a5514827fc65ddbead4", size = 1762580 },
+]
+
+[[package]]
 name = "fastapi"
 version = "0.115.12"
 source = { registry = "https://pypi.org/simple" }
@@ -128,6 +145,7 @@ name = "lab-py-memory-apitest"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "dependency-injector" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "pydantic" },
@@ -138,6 +156,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "dependency-injector", specifier = ">=4.46.0" },
     { name = "fastapi", specifier = ">=0.115.12" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "pydantic", specifier = ">=2.11.2" },

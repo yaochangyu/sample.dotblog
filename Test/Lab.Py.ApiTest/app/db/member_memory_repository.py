@@ -4,10 +4,6 @@ from app.db.member_repository import MemberRepositoryInterface
 from app.models.member import Member, MemberCreate, UpdateMemberRequest
 
 
-# 定義 Repository 合約（接口）
-
-
-# 內存實現
 class MemoryMemberRepository(MemberRepositoryInterface):
     def __init__(self):
         self.members: Dict[str, Member] = {}
@@ -43,6 +39,3 @@ class MemoryMemberRepository(MemberRepositoryInterface):
 
         del self.members[member_id]
         return True
-
-
-member_memory_repository: MemberRepositoryInterface = MemoryMemberRepository()
