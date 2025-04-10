@@ -118,8 +118,3 @@ class PostgresMemberRepository(MemberRepositoryInterface):
             created_by=db_member.created_by,
             created_at=db_member.created_at
         )
-
-
-# 創建 PostgreSQL Repository 實例
-# postgres_member_repository = PostgresMemberRepository()
-member_db_repository: MemberRepositoryInterface = PostgresMemberRepository()
