@@ -3,7 +3,8 @@ from fastapi import FastAPI
 from app.api import api_router
 from dotenv import load_dotenv
 import os
-from app.db.memory_db import member_memory_repository, MemberRepositoryInterface
+from app.db.member_memory_repository import member_memory_repository
+from app.db.member_repository import MemberRepositoryInterface
 
 # 讀取環境變數
 # load_dotenv()

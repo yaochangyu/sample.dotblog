@@ -4,7 +4,7 @@ from datetime import date
 import uuid
 
 from app.main import app
-from app.db.memory_db import member_memory_repository
+from app.db.member_memory_repository import member_memory_repository
 
 # 創建測試客戶端
 client = TestClient(app)

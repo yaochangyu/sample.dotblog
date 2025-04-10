@@ -1,30 +1,10 @@
-from abc import ABC, abstractmethod
 from typing import Dict, List, Optional
+
+from app.db.member_repository import MemberRepositoryInterface
 from app.models.member import Member, MemberCreate, UpdateMemberRequest
-from datetime import datetime
 
 
 # 定義 Repository 合約（接口）
-class MemberRepositoryInterface(ABC):
-    @abstractmethod
-    def get_all(self) -> List[Member]:
-        pass
-
-    @abstractmethod
-    def get_by_id(self, member_id: str) -> Optional[Member]:
-        pass
-
-    @abstractmethod
-    def create(self, member_create: MemberCreate) -> Member:
-        pass
-
-    @abstractmethod
-    def update(self, member_id: str, update_member_request: UpdateMemberRequest) -> Optional[Member]:
-        pass
-
-    @abstractmethod
-    def delete(self, member_id: str) -> bool:
-        pass
 
 
 # 內存實現

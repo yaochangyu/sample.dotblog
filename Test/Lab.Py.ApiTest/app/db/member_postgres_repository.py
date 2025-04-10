@@ -7,7 +7,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from app.models.member import Member, MemberCreate, UpdateMemberRequest
-from app.db.memory_db import MemberRepositoryInterface
+from app.db.member_repository import MemberRepositoryInterface
 from dotenv import load_dotenv
 
 # 讀取環境變數
