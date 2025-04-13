@@ -1,21 +1,14 @@
 from typing import List, Optional
 from datetime import datetime, date
 import uuid
-import os
 from sqlalchemy import create_engine, Column, String, Integer, Date, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
 from app.models.member import Member, MemberCreate, UpdateMemberRequest
 from app.db.member_repository import MemberRepositoryInterface
-from dotenv import load_dotenv
+from app.config import DATABASE_URL
 
-# 讀取環境變數
-load_dotenv()
-# 從環境變數獲取數據庫連接信息，或使用默認值
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-# 創建 SQLAlchemy 引擎和會話
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

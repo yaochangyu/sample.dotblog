@@ -6,7 +6,7 @@ from fastapi import Request
 
 router = APIRouter(prefix="/members", tags=["members"])
 
-# 依赖函数，从容器中获取 member_repository
+# 從容器取得 member_repository
 def get_member_repository(request: Request) -> MemberRepositoryInterface:
     return request.app.state.container.member_repository()
 
