@@ -1,14 +1,17 @@
 [project]
-name = "lab-py-memory-apitest"
+name = "lab-py-apitest"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.13"
 dependencies = [
     "dependency-injector>=4.46.0",
+    "dotenv>=0.9.9",
     "fastapi>=0.115.12",
     "httpx>=0.28.1",
+    "psycopg2>=2.9.10",
     "pydantic>=2.11.2",
     "pytest>=8.3.5",
     "python-dateutil>=2.9.0.post0",
+    "sqlalchemy>=2.0.40",
     "uvicorn>=0.34.0",
 ]
