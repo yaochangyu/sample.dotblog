@@ -2,9 +2,13 @@ import pytest
 from fastapi.testclient import TestClient
 from datetime import date
 import uuid
+import os
+
+# 設置測試環境變數
+os.environ['TESTING'] = 'True'
 
 from app.main import app
-from app.db.member_memory_repository import member_memory_repository
+from app.db.member_memory_repository import MemoryMemberRepository
 
 # 創建測試客戶端
 client = TestClient(app)
@@ -13,9 +17,9 @@ client = TestClient(app)
 # 在每次測試前清空會員數據庫
 @pytest.fixture(autouse=True)
 def clear_db():
-    member_memory_repository.members = {}
+    MemoryMemberRepository.members = {}
     yield
-    member_memory_repository.members = {}
+    MemoryMemberRepository.members = {}
 
 
 # 測試數據
