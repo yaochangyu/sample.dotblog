@@ -7,7 +7,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from dotenv import load_dotenv
-from tests.create_test_db import create_test_database, drop_test_database
 
 load_dotenv()
 
@@ -27,6 +26,8 @@ client = TestClient(app)
 
 @pytest.fixture(scope="session")
 def test_initial():
+    from tests.create_test_db import create_test_database, drop_test_database
+
     """創建並管理測試資料庫的生命週期"""
     print("\nSetting up test database...")
     create_test_database()
@@ -35,7 +36,7 @@ def test_initial():
 
     # 測試結束後刪除整個測試資料庫
     print("\nCleaning up test database...")
-    drop_test_database()
+    # drop_test_database()
 
 
 @pytest.fixture(scope="session")
@@ -61,13 +62,16 @@ def test_db_session_local(test_db_engine):
 
 
 @pytest.fixture(scope="module", autouse=True)
-def setup_database(test_db_engine, test_db_base):
+def setup_database(test_db_engine):
     """設置測試資料庫環境"""
+    # 導入應用程序中定義的 Base
+    from app.db.member_postgres_repository import Base, MemberModel
+
     # 創建所有表格
-    test_db_base.metadata.create_all(bind=test_db_engine)
+    Base.metadata.create_all(bind=test_db_engine)
     yield
     # 測試完成後刪除所有表格
-    test_db_base.metadata.drop_all(bind=test_db_engine)
+    # Base.metadata.drop_all(bind=test_db_engine)
 
 
 @pytest.fixture(autouse=True)
