@@ -4,7 +4,8 @@ from datetime import date
 import uuid
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.ext.declarative import DeclarativeMeta
 from dotenv import load_dotenv
 from tests.create_test_db import create_test_database, drop_test_database
 
@@ -14,41 +15,68 @@ load_dotenv()
 os.environ['USE_POSTGRES'] = 'True'  # 強制使用 PostgreSQL
 
 # 設置測試用的臨時資料庫
-os.environ['DATABASE_URL'] = 'postgresql://postgres:postgres@localhost:5432/test_members_db'
+TEST_DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/test_members_db'
+os.environ['DATABASE_URL'] = TEST_DATABASE_URL
+
+# 導入被測目標物
+from app.main import app
+
+# 創建被測目標的客戶端
+client = TestClient(app)
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_database():
-    """在所有測試開始前創建測試數據庫"""
+@pytest.fixture(scope="session")
+def test_initial():
+    """創建並管理測試資料庫的生命週期"""
     print("\nSetting up test database...")
     create_test_database()
+
     yield
+
     # 測試結束後刪除整個測試資料庫
     print("\nCleaning up test database...")
     drop_test_database()
 
 
-from app.main import app
-from app.db.member_postgres_repository import Base, engine, SessionLocal, MemberModel
+@pytest.fixture(scope="session")
+def test_db_engine(test_initial):
+    """創建並返回測試資料庫引擎"""
+    # 創建測試專用的 SQLAlchemy 引擎
+    engine = create_engine(TEST_DATABASE_URL)
+    yield engine
 
-# 創建測試客戶端
-client = TestClient(app)
+
+@pytest.fixture(scope="session")
+def test_db_base(test_db_engine):
+    """創建並返回測試資料庫的 Base 類"""
+    test_db_base = declarative_base()
+    yield test_db_base
+
+
+@pytest.fixture(scope="session")
+def test_db_session_local(test_db_engine):
+    """創建並返回測試資料庫的 SessionLocal"""
+    test_db_session_local = sessionmaker(autocommit=False, autoflush=False, bind=test_db_engine)
+    yield test_db_session_local
 
 
 @pytest.fixture(scope="module", autouse=True)
-def setup_database():
+def setup_database(test_db_engine, test_db_base):
     """設置測試資料庫環境"""
     # 創建所有表格
-    Base.metadata.create_all(bind=engine)
+    test_db_base.metadata.create_all(bind=test_db_engine)
     yield
     # 測試完成後刪除所有表格
-    Base.metadata.drop_all(bind=engine)
+    test_db_base.metadata.drop_all(bind=test_db_engine)
 
 
 @pytest.fixture(autouse=True)
-def clear_db():
+def clear_db(test_db_session_local):
     """在每次測試前清空會員數據庫"""
-    with SessionLocal() as db:
+    # 導入被測目標物 - 在這裡導入以確保使用正確的環境變數
+    from app.db.member_postgres_repository import MemberModel
+
+    with test_db_session_local() as db:
         db.query(MemberModel).delete()
         db.commit()
     yield
@@ -66,8 +94,10 @@ class TestPostgresMemberApi:
         "birthday": str(date(1993, 5, 15))
     }
 
-    def test_create_member_postgres(self):
+    def test_create_member_postgres(self, test_db_session_local):
         """測試創建會員功能 (PostgreSQL)"""
+        from app.db.member_postgres_repository import MemberModel
+
         response = client.post("/api/v1/members", json=self.test_member_data)
         assert response.status_code == 201
         data = response.json()
@@ -81,7 +111,7 @@ class TestPostgresMemberApi:
         assert data["created_by"] == "system"
 
         # 驗證資料確實存儲在 PostgreSQL 中
-        with SessionLocal() as db:
+        with test_db_session_local() as db:
             member = db.query(MemberModel).filter(MemberModel.id == data["id"]).first()
             assert member is not None
             assert member.first_name == self.test_member_data["first_name"]
@@ -131,8 +161,10 @@ class TestPostgresMemberApi:
         assert response.status_code == 404
         assert f"Member with ID {non_existent_id} not found" in response.json()["detail"]
 
-    def test_update_member_postgres(self):
+    def test_update_member_postgres(self, test_db_session_local):
         """測試更新會員功能 (PostgreSQL)"""
+        from app.db.member_postgres_repository import MemberModel
+
         # 先創建一個會員
         create_response = client.post("/api/v1/members", json=self.test_member_data)
         member_id = create_response.json()["id"]
@@ -152,7 +184,7 @@ class TestPostgresMemberApi:
         assert data["age"] == update_data["age"]  # 已更新
 
         # 驗證資料確實在 PostgreSQL 中更新
-        with SessionLocal() as db:
+        with test_db_session_local() as db:
             member = db.query(MemberModel).filter(MemberModel.id == member_id).first()
             assert member is not None
             assert member.first_name == update_data["first_name"]
@@ -168,8 +200,10 @@ class TestPostgresMemberApi:
         assert response.status_code == 404
         assert f"Member with ID {non_existent_id} not found" in response.json()["detail"]
 
-    def test_delete_member_postgres(self):
+    def test_delete_member_postgres(self, test_db_session_local):
         """測試刪除會員功能 (PostgreSQL)"""
+        from app.db.member_postgres_repository import MemberModel
+
         # 先創建一個會員
         create_response = client.post("/api/v1/members", json=self.test_member_data)
         member_id = create_response.json()["id"]
@@ -184,7 +218,7 @@ class TestPostgresMemberApi:
         assert get_response.status_code == 404
 
         # 驗證資料確實從 PostgreSQL 中刪除
-        with SessionLocal() as db:
+        with test_db_session_local() as db:
             member = db.query(MemberModel).filter(MemberModel.id == member_id).first()
             assert member is None
 
