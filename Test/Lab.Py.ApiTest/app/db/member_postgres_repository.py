@@ -29,7 +29,7 @@ class MemberModel(Base):
 
 
 # 創建數據庫表格（如果不存在）
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 
 class PostgresMemberRepository(MemberRepositoryInterface):
