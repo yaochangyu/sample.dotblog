@@ -65,7 +65,7 @@ def test_db_session_local(test_db_engine):
 def setup_database(test_db_engine):
     """設置測試資料庫環境"""
     # 導入應用程序中定義的 Base
-    from app.db.member_postgres_repository import Base, MemberModel
+    from app.db.member_entity import Base,MemberModel
 
     # 創建所有表格
     Base.metadata.create_all(bind=test_db_engine)

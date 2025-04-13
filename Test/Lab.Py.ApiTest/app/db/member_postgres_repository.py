@@ -1,32 +1,16 @@
 from typing import List, Optional
-from datetime import datetime, date
+from datetime import datetime
 import uuid
-from sqlalchemy import create_engine, Column, String, Integer, Date, DateTime
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.models.member import Member, MemberCreate, UpdateMemberRequest
 from app.db.member_repository import MemberRepositoryInterface
 from app.config import DATABASE_URL
+from app.db.member_entity import MemberModel  # 從 entities/member_entity.py 導入 MemberModel
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-
-# 定義 SQLAlchemy ORM 模型
-class MemberModel(Base):
-    __tablename__ = "members"
-
-    id = Column(String, primary_key=True, index=True)
-    first_name = Column(String, nullable=False)
-    last_name = Column(String, nullable=False)
-    age = Column(Integer, nullable=True)
-    address = Column(String, nullable=True)
-    birthday = Column(Date, nullable=False)
-    created_by = Column(String, default="system")
-    created_at = Column(DateTime, default=datetime.now)
-
 
 # 創建數據庫表格（如果不存在）
 # Base.metadata.create_all(bind=engine)
