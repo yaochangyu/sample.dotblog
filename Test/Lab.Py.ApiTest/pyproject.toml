@@ -13,5 +13,7 @@ dependencies = [
     "pytest>=8.3.5",
     "python-dateutil>=2.9.0.post0",
     "sqlalchemy>=2.0.40",
+    "testcontainers-postgres>=0.0.1rc1",
+    "testcontainers-redis>=0.0.1rc1",
     "uvicorn>=0.34.0",
 ]
