@@ -63,11 +63,14 @@ lab-py-memory-apitest/
 ### 使用 uv 安裝依賴
 
 ```bash
+# 建立虛擬環境
+uv venv --seed --link-mode=copy
+
 # 安裝所有依賴
-uv add -e .
+uv pip install -e . --link-mode=copy
 
 # 或者單獨安裝依賴
-uv add fastapi uvicorn pydantic python-dateutil
+uv add "dependency-injector>=4.46.0" "dotenv>=0.9.9" "fastapi>=0.115.12" "httpx>=0.28.1" "psycopg2>=2.9.10" "pydantic>=2.11.2" "pytest>=8.3.5" "python-dateutil>=2.9.0.post0" "sqlalchemy>=2.0.40" "testcontainers-postgres>=0.0.1rc1" "testcontainers-redis>=0.0.1rc1" "uvicorn>=0.34.0"
 ```
 
 ## 執行
