@@ -17,3 +17,6 @@ dependencies = [
     "testcontainers-redis>=0.0.1rc1",
     "uvicorn>=0.34.0",
 ]
+
+[tool.setuptools]
+packages = ["app", "tests"]
