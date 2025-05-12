@@ -42,10 +42,10 @@ public class MessagePublishService4 : IHostedService
         await busControl.Publish(orderSubmitted, cancellationToken);
         Console.WriteLine($"OrderSubmitted event published: {orderSubmitted.OrderId} at {orderSubmitted.Timestamp}");
 
-        // ===Send===
-        EndpointConvention.Map<OrderSubmitted>(new Uri("rabbitmq://localhost/order-submitted-queue"));
-        await busControl.Send(orderSubmitted, cancellationToken);
-        Console.WriteLine("OrderSubmitted event sent.");
+        // // ===Send===
+        // EndpointConvention.Map<OrderSubmitted>(new Uri("rabbitmq://localhost/order-submitted-queue"));
+        // await busControl.Send(orderSubmitted, cancellationToken);
+        // Console.WriteLine("OrderSubmitted event sent.");
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
