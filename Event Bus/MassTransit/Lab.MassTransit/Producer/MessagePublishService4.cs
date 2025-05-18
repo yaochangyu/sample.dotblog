@@ -30,22 +30,22 @@ public class MessagePublishService4 : IHostedService
             Timestamp = DateTime.UtcNow
         };
 
-        // 發佈事件
-        await busControl.Publish(new OrderSubmitted
-        {
-            OrderId = Guid.NewGuid(),
-            Timestamp = DateTime.UtcNow
-        }, cancellationToken); 
+        // // 發佈事件
+        // await busControl.Publish(new OrderSubmitted
+        // {
+        //     OrderId = Guid.NewGuid(),
+        //     Timestamp = DateTime.UtcNow
+        // }, cancellationToken); 
 
         // ===Publish===
         // 使用 Publish 發佈事件，所有訂閱者都能接收此事件
         await busControl.Publish(orderSubmitted, cancellationToken);
-        Console.WriteLine("OrderSubmitted event published.");
+        Console.WriteLine($"OrderSubmitted event published: {orderSubmitted.OrderId} at {orderSubmitted.Timestamp}");
 
-        // ===Send===
-        EndpointConvention.Map<OrderSubmitted>(new Uri("rabbitmq://localhost/order-submitted-queue"));
-        await busControl.Send(orderSubmitted, cancellationToken);
-        Console.WriteLine("OrderSubmitted event sent.");
+        // // ===Send===
+        // EndpointConvention.Map<OrderSubmitted>(new Uri("rabbitmq://localhost/order-submitted-queue"));
+        // await busControl.Send(orderSubmitted, cancellationToken);
+        // Console.WriteLine("OrderSubmitted event sent.");
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
