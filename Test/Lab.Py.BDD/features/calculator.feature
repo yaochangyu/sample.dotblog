@@ -8,6 +8,7 @@ Feature: 計算機基本運算
     When 我輸入第一個數字 <num1>
     And 我輸入第二個數字 <num2>
     And 我選擇運算符號 <operator>
+    And 我按下 = 鍵
     Then 我應該得到結果 <result>
 
     Examples:
@@ -22,4 +23,5 @@ Feature: 計算機基本運算
     When 我輸入第一個數字 10
     And 我輸入第二個數字 0
     And 我選擇運算符號 /
+    And 我按下 = 鍵
     Then 我應該看到錯誤訊息 "除數不能為零"
