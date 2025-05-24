@@ -31,28 +31,29 @@ def 我選擇運算符號(context, operator):
 
 
 @when("我按下 = 鍵")
-def step_impl(context):
+def 我按下鍵(context):
     num1 = context['num1']
     num2 = context['num2']
     operator = context['operator']
     calculator = context['calculator']
 
-    if operator == '+':
-        result = calculator.add(num1, num2)
-    elif operator == '-':
-        result = calculator.subtract(num1, num2)
-    elif operator == '*':
-        result = calculator.multiply(num1, num2)
-    elif operator == '/':
-        try:
-            result = calculator.divide(num1, num2)
-        except ValueError as e:
-            context['error'] = str(e)
-            return
-    else:
-        raise ValueError(f"Unsupported operator: {operator}")
-    context['result'] = result
+    # 定義運算符對應的計算機方法
+    operatorMap = {
+        '+': calculator.add,
+        '-': calculator.subtract,
+        '*': calculator.multiply,
+        '/': calculator.divide
+    }
 
+    if operator not in operatorMap:
+        raise ValueError(f"不支援的運算符號: {operator}")
+
+    try:
+        # 直接從字典取得對應的方法並執行
+        result = operatorMap[operator](num1, num2)
+        context['result'] = result
+    except ValueError as e:
+        context['error'] = str(e)
 
 @then(parsers.parse("我應該得到結果 {result:d}"))
 def 我應該得到結果(context, result):
