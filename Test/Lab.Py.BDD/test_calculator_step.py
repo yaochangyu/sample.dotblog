@@ -11,7 +11,7 @@ def calculator():
 
 
 @given('我有一個計算機', target_fixture='context')
-def step_impl(calculator):
+def 我有一個計算機(calculator):
     return {'calculator': calculator}
 
 
