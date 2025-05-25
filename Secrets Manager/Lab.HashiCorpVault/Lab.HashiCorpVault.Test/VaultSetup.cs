@@ -105,7 +105,7 @@ public class VaultSetup
         Console.WriteLine("Creating tokens...");
         foreach (var (tokenName, policyName) in _tokens)
         {
-            var result = await ExecuteVaultCommandAsync($"token create -policy={policyName} -format=json");
+            var result = await ExecuteVaultCommandAsync($"token create -policy={policyName} -format=json -ttl=0s");
             var tokenData = JsonDocument.Parse(result);
             var clientToken = tokenData.RootElement.GetProperty("auth").GetProperty("client_token").GetString();
             await File.WriteAllTextAsync($"{tokenName}-token.txt", clientToken);
