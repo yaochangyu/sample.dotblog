@@ -15,6 +15,13 @@ public class UnitTest1
     private readonly string vaultServer = "http://127.0.0.1:8200";
 
     [TestMethod]
+    public async Task 設定多個原則()
+    {
+        var setup = new VaultSetup();
+        await setup.SetupVaultAsync();
+    }
+
+    [TestMethod]
     public async Task 讀寫KV_V1()
     {
         // 初始化 Vault Client
@@ -109,7 +116,6 @@ public class UnitTest1
                           path "job/dream-team/*" {
                               capabilities = ["create", "read", "update", "delete", "list"]
                           }
-                          
                           """;
         // 創建或更新策略
         await vaultClient.V1.System.WritePolicyAsync(new Policy
@@ -132,7 +138,7 @@ public class UnitTest1
         });
         string clientToken = tokenResponse.AuthInfo.ClientToken;
         Console.WriteLine($"token created: {clientToken}");
-        
+
         // 使用新建立的 Token 來創建新的 Vault Client
         var newVaultClient = new VaultClient(new VaultClientSettings(this.vaultServer, new TokenAuthMethodInfo(clientToken)));
 
