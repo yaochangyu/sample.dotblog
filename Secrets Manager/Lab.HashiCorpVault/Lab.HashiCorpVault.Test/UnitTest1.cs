@@ -4,6 +4,7 @@ using VaultSharp;
 using VaultSharp.Core;
 using VaultSharp.V1.AuthMethods.Token;
 using VaultSharp.V1.SecretsEngines;
+using VaultSharp.V1.SystemBackend;
 
 namespace Lab.HashiCorpVault.Test;
 
@@ -39,7 +40,7 @@ public class UnitTest1
     }
 
     [TestMethod]
-    public async Task 建立KV_V2()
+    public async Task 建立KV_V2_Engine()
     {
         // 初始化 Vault Client
         var vaultClient = this.CreateVaultClient();
@@ -51,7 +52,7 @@ public class UnitTest1
     }
 
     [TestMethod]
-    public async Task 讀寫KV_V2()
+    public async Task 讀寫KV_V2_Secret()
     {
         // 初始化 Vault Client
         var vaultClient = this.CreateVaultClient();
@@ -76,7 +77,7 @@ public class UnitTest1
     }
 
     [TestMethod]
-    public async Task 停用KV_V2()
+    public async Task 停用KV_V2_Secret()
     {
         // 初始化 Vault Client
         var vaultClient = this.CreateVaultClient();
@@ -93,6 +94,55 @@ public class UnitTest1
         {
             Console.WriteLine(e.Message);
         }
+    }
+
+    [TestMethod]
+    public async Task 建立Policy()
+    {
+        // 初始化 Vault Client
+        var vaultClient = this.CreateVaultClient();
+        var path = "job/dream-team/my-secret";
+
+        // 定義策略
+        var policyName = "my-policy1";
+        var policyRules = """
+                          path "job/dream-team/*" {
+                              capabilities = ["create", "read", "update", "delete", "list"]
+                          }
+                          
+                          """;
+        // 創建或更新策略
+        await vaultClient.V1.System.WritePolicyAsync(new Policy
+        {
+            Name = policyName,
+            Rules = policyRules
+        });
+    }
+
+    [TestMethod]
+    public async Task 建立TokenAuth()
+    {
+        // 初始化 Vault Client
+        var vaultClient = this.CreateVaultClient();
+
+        // 建立 Token 認證方法
+        var tokenResponse = await vaultClient.V1.Auth.Token.CreateTokenAsync(new CreateTokenRequest()
+        {
+            Policies = new List<string> { "my-policy1" },
+        });
+        string clientToken = tokenResponse.AuthInfo.ClientToken;
+        Console.WriteLine($"token created: {clientToken}");
+        
+        // 使用新建立的 Token 來創建新的 Vault Client
+        var newVaultClient = new VaultClient(new VaultClientSettings(this.vaultServer, new TokenAuthMethodInfo(clientToken)));
+
+        // 驗證新 Vault Client 是否能夠讀取 Secret
+        var secretPath = "my-secret";
+        var mountPath = "job/dream-team";
+
+        var secret = await newVaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(secretPath, mountPoint: mountPath);
+        Console.WriteLine($"username={secret.Data.Data["username"]}");
+        Console.WriteLine($"password={secret.Data.Data["password"]}");
     }
 
     [TestMethod]
