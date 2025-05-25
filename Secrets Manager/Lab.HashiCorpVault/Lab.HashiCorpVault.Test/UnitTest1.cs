@@ -17,7 +17,7 @@ public class UnitTest1
     [TestMethod]
     public async Task 設定多個原則()
     {
-        var setup = new VaultSetup();
+        var setup = new VaultSetup(VaultServer, VaultToken);
         await setup.SetupVaultAsync();
     }
 
