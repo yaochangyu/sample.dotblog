@@ -12,7 +12,7 @@ namespace Lab.HashiCorpVault.Test;
 public class UnitTest1
 {
     private readonly string VaultToken = "你的 token";
-    private readonly string vaultServer = "http://127.0.0.1:8200";
+    private readonly string VaultServer = "http://127.0.0.1:8200";
 
     [TestMethod]
     public async Task 設定多個原則()
@@ -140,7 +140,7 @@ public class UnitTest1
         Console.WriteLine($"token created: {clientToken}");
 
         // 使用新建立的 Token 來創建新的 Vault Client
-        var newVaultClient = new VaultClient(new VaultClientSettings(this.vaultServer, new TokenAuthMethodInfo(clientToken)));
+        var newVaultClient = new VaultClient(new VaultClientSettings(this.VaultServer, new TokenAuthMethodInfo(clientToken)));
 
         // 驗證新 Vault Client 是否能夠讀取 Secret
         var secretPath = "my-secret";
@@ -246,7 +246,7 @@ public class UnitTest1
     private VaultClient CreateVaultClient()
     {
         var authMethod = new TokenAuthMethodInfo(this.VaultToken);
-        var vaultClientSettings = new VaultClientSettings(this.vaultServer, authMethod);
+        var vaultClientSettings = new VaultClientSettings(this.VaultServer, authMethod);
         var vaultClient = new VaultClient(vaultClientSettings);
         return vaultClient;
     }
