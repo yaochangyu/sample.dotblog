@@ -105,7 +105,12 @@ public class VaultSetup
         Console.WriteLine("Creating tokens...");
         foreach (var (tokenName, policyName) in _tokens)
         {
-            var result = await ExecuteVaultCommandAsync($"token create -policy={policyName} -format=json -ttl=0s");
+            // child token 的 ttl 跟著 root token 設定(Max Lease TTL)
+            var result = await ExecuteVaultCommandAsync($"token create -policy={policyName} -format=json -ttl=360d");
+            /* 
+            列舉目前的 token：vault list auth/token/accessors
+            查看特定 token：vault token lookup -accessor <accessor-id>
+            */
             var tokenData = JsonDocument.Parse(result);
             var clientToken = tokenData.RootElement.GetProperty("auth").GetProperty("client_token").GetString();
             await File.WriteAllTextAsync($"{tokenName}-token.txt", clientToken);
