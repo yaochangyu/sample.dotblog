@@ -34,7 +34,7 @@ public class VaultAppRoleSetup
         Environment.SetEnvironmentVariable("VAULT_ADDR", _vaultServer);
         Environment.SetEnvironmentVariable("VAULT_TOKEN", _rootToken);
 
-        // 啟用 kv v2 秘密引擎
+        // 管理者啟用 kv v2 秘密引擎
         try
         {
             Console.WriteLine("Enabling kv v2 secret engine...");
@@ -47,7 +47,7 @@ public class VaultAppRoleSetup
             Console.WriteLine(e.Message);
         }
 
-        // 建立 Secrets
+        // 管理者建立 Secrets
         Console.WriteLine("Writing secrets to kv v2...");
 
         await ExecuteVaultCommandAsync("kv put dev/db/connection/identity Account=user Password=1111");
@@ -55,7 +55,7 @@ public class VaultAppRoleSetup
 
         try
         {
-            // 啟用 AppRole 認證方式
+            // 管理者啟用 AppRole 認證方式
             Console.WriteLine("Enabling AppRole auth method...");
             await ExecuteVaultCommandAsync("auth enable approle");
         }
@@ -64,7 +64,7 @@ public class VaultAppRoleSetup
             Console.WriteLine(e);
         }
 
-        // 建立 Policies
+        // 管理者建立 Policies
         Console.WriteLine("Creating AppRole policies...");
         foreach (var (policyName, policyContent) in _policies)
         {
@@ -74,7 +74,7 @@ public class VaultAppRoleSetup
             File.Delete(policyFile);
         }
 
-        // 建立 AppRoles
+        // 管理者建立 AppRoles
         Console.WriteLine("Creating AppRoles...");
         foreach (var (roleName, _) in _policies)
         {
