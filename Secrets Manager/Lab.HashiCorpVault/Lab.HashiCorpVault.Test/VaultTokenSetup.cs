@@ -3,11 +3,11 @@ using System.Text.Json;
 
 namespace Lab.HashiCorpVault.Test;
 
-public class VaultSetup
+public class VaultTokenSetup
 {
     private string _vaultServer;
     private string _rootToken;
-    public VaultSetup(string vaultServer, string rootToken)
+    public VaultTokenSetup(string vaultServer, string rootToken)
     {
         _vaultServer = vaultServer;
         _rootToken = rootToken;
