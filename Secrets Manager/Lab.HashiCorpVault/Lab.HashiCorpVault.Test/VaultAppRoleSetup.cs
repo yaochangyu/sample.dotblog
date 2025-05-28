@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace Lab.HashiCorpVault.Test;
@@ -79,38 +78,30 @@ public class VaultAppRoleSetup
         Console.WriteLine("Creating AppRoles...");
         foreach (var (roleName, _) in _policies)
         {
-            // 建立 AppRole
             await ExecuteVaultCommandAsync($"write auth/approle/role/{roleName} token_policies={roleName} token_ttl=1h token_max_ttl=4h");
+        }
 
+        Console.WriteLine("Read Secret Data...");
+        foreach (var (roleName, _) in _policies)
+        {
             // 取得 Role ID
             var roleResult = await ExecuteVaultCommandAsync($"read -format=json auth/approle/role/{roleName}/role-id");
             var roleJsonObject = JsonNode.Parse(roleResult).AsObject();
             var roleId = roleJsonObject["data"]?["role_id"]?.GetValue<string>();
-            await File.WriteAllTextAsync($"{roleName}-role-id.txt", roleId);
 
-            // 產生 Secret ID
+            // 取得 Secret ID
             var secretResult = await ExecuteVaultCommandAsync($"write -format=json -f auth/approle/role/{roleName}/secret-id");
             var secretJsonObject = JsonNode.Parse(secretResult).AsObject();
             var secretId = secretJsonObject["data"]?["secret_id"]?.GetValue<string>();
-            await File.WriteAllTextAsync($"{roleName}-secret-id.txt", secretId);
-
-            Console.WriteLine($"AppRole {roleName} created. Role ID and Secret ID saved to files.");
-        }
-        
-        Console.WriteLine("Read Secret Data...");
-        foreach (var (policyName, _) in _policies)
-        {
-            await LoginAppRole(policyName);
+            
+            // 使用 AppRole 登入，並取得機敏性資料
+            await LoginAppRole(roleName, roleId, secretId);
         }
     }
 
-    private async Task LoginAppRole(string roleName)
+    private async Task LoginAppRole(string roleName, string roleId, string secretId)
     {
         Console.WriteLine($"\nTesting AppRole login for {roleName}...");
-
-        // 讀取 Role ID 和 Secret ID
-        var roleId = await File.ReadAllTextAsync($"{roleName}-role-id.txt");
-        var secretId = await File.ReadAllTextAsync($"{roleName}-secret-id.txt");
 
         // 使用 AppRole 登入
         var tokenResult = await ExecuteVaultCommandAsync($"write -format=json auth/approle/login role_id={roleId} secret_id={secretId}");
