@@ -16,11 +16,11 @@ public class VaultAppRoleSetup
 
     private readonly Dictionary<string, string> _policies = new()
     {
-        // ["app-dev"] = """
-        //               path "dev/data/db/connection/*" {
-        //                 capabilities = ["read"]
-        //               }
-        //               """,
+        ["app-dev"] = """
+                      path "dev/data/db/connection/*" {
+                        capabilities = ["read"]
+                      }
+                      """,
         ["app-prod"] = """
                        path "prod/data/db/connection/*" {
                          capabilities = ["read"]
@@ -78,6 +78,8 @@ public class VaultAppRoleSetup
         Console.WriteLine("Creating AppRoles...");
         foreach (var (roleName, _) in _policies)
         {
+            Environment.SetEnvironmentVariable("VAULT_TOKEN", _rootToken);
+
             // 建立 AppRole
             await ExecuteVaultCommandAsync($"write auth/approle/role/{roleName} token_policies={roleName} token_ttl=1h token_max_ttl=4h");
 
@@ -102,39 +104,32 @@ public class VaultAppRoleSetup
 
     private async Task AppRoleLogin(string roleName)
     {
-        try
+        Console.WriteLine($"\nTesting AppRole login for {roleName}...");
+
+        // 讀取 Role ID 和 Secret ID
+        var roleId = await File.ReadAllTextAsync($"{roleName}-role-id.txt");
+        var secretId = await File.ReadAllTextAsync($"{roleName}-secret-id.txt");
+
+        // 使用 AppRole 登入
+        var loginResult = await ExecuteVaultCommandAsync($"write -format=json auth/approle/login role_id={roleId} secret_id={secretId}");
+
+        var loginJson = JsonDocument.Parse(loginResult);
+        var clientToken = loginJson.RootElement.GetProperty("auth").GetProperty("client_token").GetString();
+
+        // 使用獲得的 token 測試存取
+        Environment.SetEnvironmentVariable("VAULT_TOKEN", clientToken);
+
+        if (roleName == "app-dev")
         {
-            Console.WriteLine($"\nTesting AppRole login for {roleName}...");
-
-            // 讀取 Role ID 和 Secret ID
-            var roleId = await File.ReadAllTextAsync($"{roleName}-role-id.txt");
-            var secretId = await File.ReadAllTextAsync($"{roleName}-secret-id.txt");
-
-            // 使用 AppRole 登入
-            var loginResult = await ExecuteVaultCommandAsync($"write -format=json auth/approle/login role_id={roleId} secret_id={secretId}");
-
-            var loginJson = JsonDocument.Parse(loginResult);
-            var clientToken = loginJson.RootElement.GetProperty("auth").GetProperty("client_token").GetString();
-
-            // 使用獲得的 token 測試存取
-            Environment.SetEnvironmentVariable("VAULT_TOKEN", clientToken);
-
-            if (roleName == "app-dev")
-            {
-                var readResult = await ExecuteVaultCommandAsync("kv get -format=json dev/db/connection/identity");
-                Console.WriteLine($"Read result with {roleName} token:");
-                Console.WriteLine(readResult);
-            }
-            else if (roleName == "app-prod")
-            {
-                var readResult = await ExecuteVaultCommandAsync("kv get -format=json prod/db/connection/identity");
-                Console.WriteLine($"Read result with {roleName} token:");
-                Console.WriteLine(readResult);
-            }
+            var readResult = await ExecuteVaultCommandAsync("kv get -format=json dev/db/connection/identity");
+            Console.WriteLine($"Read result with {roleName} token:");
+            Console.WriteLine(readResult);
         }
-        catch (Exception e)
+        else if (roleName == "app-prod")
         {
-            Console.WriteLine($"Error testing AppRole {roleName}: {e.Message}");
+            var readResult = await ExecuteVaultCommandAsync("kv get -format=json prod/db/connection/identity");
+            Console.WriteLine($"Read result with {roleName} token:");
+            Console.WriteLine(readResult);
         }
     }
 
