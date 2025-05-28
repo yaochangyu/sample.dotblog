@@ -15,9 +15,16 @@ public class UnitTest1
     private readonly string VaultServer = "http://127.0.0.1:8200";
 
     [TestMethod]
-    public async Task 設定多個原則()
+    public async Task 設定多個原則_使用Token驗證()
     {
-        var setup = new VaultSetup(VaultServer, VaultToken);
+        var setup = new VaultTokenSetup(VaultServer, VaultToken);
+        await setup.SetupVaultAsync();
+    }
+
+    [TestMethod]
+    public async Task 設定多個原則_使用AppRole驗證()
+    {
+        var setup = new VaultAppRoleSetup(VaultServer, VaultToken);
         await setup.SetupVaultAsync();
     }
 
