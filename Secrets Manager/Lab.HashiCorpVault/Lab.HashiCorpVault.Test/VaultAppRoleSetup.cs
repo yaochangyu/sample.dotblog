@@ -79,8 +79,6 @@ public class VaultAppRoleSetup
         Console.WriteLine("Creating AppRoles...");
         foreach (var (roleName, _) in _policies)
         {
-            Environment.SetEnvironmentVariable("VAULT_TOKEN", _rootToken);
-
             // 建立 AppRole
             await ExecuteVaultCommandAsync($"write auth/approle/role/{roleName} token_policies={roleName} token_ttl=1h token_max_ttl=4h");
 
@@ -90,7 +88,6 @@ public class VaultAppRoleSetup
             var roleId = roleJsonObject["data"]?["role_id"]?.GetValue<string>();
             await File.WriteAllTextAsync($"{roleName}-role-id.txt", roleId);
 
-
             // 產生 Secret ID
             var secretResult = await ExecuteVaultCommandAsync($"write -format=json -f auth/approle/role/{roleName}/secret-id");
             var secretJsonObject = JsonNode.Parse(secretResult).AsObject();
@@ -98,13 +95,16 @@ public class VaultAppRoleSetup
             await File.WriteAllTextAsync($"{roleName}-secret-id.txt", secretId);
 
             Console.WriteLine($"AppRole {roleName} created. Role ID and Secret ID saved to files.");
-
-            // 測試使用 AppRole 登入
-            await AppRoleLogin(roleName);
+        }
+        
+        Console.WriteLine("Read Secret Data...");
+        foreach (var (policyName, _) in _policies)
+        {
+            await LoginAppRole(policyName);
         }
     }
 
-    private async Task AppRoleLogin(string roleName)
+    private async Task LoginAppRole(string roleName)
     {
         Console.WriteLine($"\nTesting AppRole login for {roleName}...");
 
