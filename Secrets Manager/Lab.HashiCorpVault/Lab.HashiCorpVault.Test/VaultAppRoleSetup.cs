@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace Lab.HashiCorpVault.Test;
 
@@ -84,15 +85,16 @@ public class VaultAppRoleSetup
             await ExecuteVaultCommandAsync($"write auth/approle/role/{roleName} token_policies={roleName} token_ttl=1h token_max_ttl=4h");
 
             // 取得 Role ID
-            var roleIdResult = await ExecuteVaultCommandAsync($"read -format=json auth/approle/role/{roleName}/role-id");
-            var roleIdJson = JsonDocument.Parse(roleIdResult);
-            var roleId = roleIdJson.RootElement.GetProperty("data").GetProperty("role_id").GetString();
+            var roleResult = await ExecuteVaultCommandAsync($"read -format=json auth/approle/role/{roleName}/role-id");
+            var roleJsonObject = JsonNode.Parse(roleResult).AsObject();
+            var roleId = roleJsonObject["data"]?["role_id"]?.GetValue<string>();
             await File.WriteAllTextAsync($"{roleName}-role-id.txt", roleId);
 
+
             // 產生 Secret ID
-            var secretIdResult = await ExecuteVaultCommandAsync($"write -format=json -f auth/approle/role/{roleName}/secret-id");
-            var secretIdJson = JsonDocument.Parse(secretIdResult);
-            var secretId = secretIdJson.RootElement.GetProperty("data").GetProperty("secret_id").GetString();
+            var secretResult = await ExecuteVaultCommandAsync($"write -format=json -f auth/approle/role/{roleName}/secret-id");
+            var secretJsonObject = JsonNode.Parse(secretResult).AsObject();
+            var secretId = secretJsonObject["data"]?["secret_id"]?.GetValue<string>();
             await File.WriteAllTextAsync($"{roleName}-secret-id.txt", secretId);
 
             Console.WriteLine($"AppRole {roleName} created. Role ID and Secret ID saved to files.");
@@ -111,10 +113,9 @@ public class VaultAppRoleSetup
         var secretId = await File.ReadAllTextAsync($"{roleName}-secret-id.txt");
 
         // 使用 AppRole 登入
-        var loginResult = await ExecuteVaultCommandAsync($"write -format=json auth/approle/login role_id={roleId} secret_id={secretId}");
-
-        var loginJson = JsonDocument.Parse(loginResult);
-        var clientToken = loginJson.RootElement.GetProperty("auth").GetProperty("client_token").GetString();
+        var tokenResult = await ExecuteVaultCommandAsync($"write -format=json auth/approle/login role_id={roleId} secret_id={secretId}");
+        var tokenJsonObject = JsonNode.Parse(tokenResult).AsObject();
+        var clientToken = tokenJsonObject["auth"]?["client_token"]?.GetValue<string>();
 
         // 使用獲得的 token 測試存取
         Environment.SetEnvironmentVariable("VAULT_TOKEN", clientToken);
