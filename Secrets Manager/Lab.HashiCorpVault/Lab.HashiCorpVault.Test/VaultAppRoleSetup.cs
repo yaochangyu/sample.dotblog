@@ -13,11 +13,28 @@ public class VaultAppRoleSetup
         _vaultServer = vaultServer;
         _rootToken = rootToken;
     }
+    private readonly Dictionary<string, string> _adminPolicies = new()
+    {
+        ["app-admin"] = """
+                        # 允許為特定 AppRole 產生 secret id/role id
+                        path "auth/approle/role/+/secret-id" {
+                          capabilities = ["create", "update"]
+                        }
 
-    private readonly Dictionary<string, string> _policies = new()
+                        path "auth/approle/role/+/role-id" {
+                          capabilities = ["read"]
+                        }
+                        """
+    };
+
+    private readonly Dictionary<string, string> _clientPolicies = new()
     {
         ["app-dev"] = """
                       path "dev/data/db/connection/*" {
+                        capabilities = ["read"]
+                      }
+
+                      path "auth/approle/role/app-dev/role-id" {
                         capabilities = ["read"]
                       }
                       """,
@@ -25,7 +42,11 @@ public class VaultAppRoleSetup
                        path "prod/data/db/connection/*" {
                          capabilities = ["read"]
                        }
-                       """
+                       path "auth/approle/role/app-dev/role-id" {
+                         capabilities = ["read"]
+                       }
+                       """,
+
     };
 
     public async Task SetupVaultAsync()
@@ -66,7 +87,7 @@ public class VaultAppRoleSetup
 
         // 管理者建立 Policies
         Console.WriteLine("Creating AppRole policies...");
-        foreach (var (policyName, policyContent) in _policies)
+        foreach (var (policyName, policyContent) in _clientPolicies)
         {
             string policyFile = $"{policyName}-policy.hcl";
             await File.WriteAllTextAsync(policyFile, policyContent);
@@ -76,14 +97,25 @@ public class VaultAppRoleSetup
 
         // 管理者建立 AppRoles
         Console.WriteLine("Creating AppRoles...");
-        foreach (var (roleName, _) in _policies)
+        foreach (var (roleName, _) in _clientPolicies)
         {
             await ExecuteVaultCommandAsync($"write auth/approle/role/{roleName} token_policies={roleName} token_ttl=1h token_max_ttl=4h");
         }
 
-        Console.WriteLine("Read Secret Data...");
-        foreach (var (roleName, _) in _policies)
+        foreach (var (roleName, _) in _adminPolicies)
         {
+            await ExecuteVaultCommandAsync($"write auth/approle/role/{roleName} token_policies={roleName} token_ttl=1h token_max_ttl=4h");
+        }
+
+        // 建立一個具有產生 secret id 權限的 admin token
+        string adminToken = await CreateClientToken("app-admin", _rootToken);
+
+        //=====================================================================================
+
+        Console.WriteLine("Read Secret Data...");
+        foreach (var (roleName, _) in _clientPolicies)
+        {
+            Environment.SetEnvironmentVariable("VAULT_TOKEN", adminToken);
             // 取得 Role ID
             var roleResult = await ExecuteVaultCommandAsync($"read -format=json auth/approle/role/{roleName}/role-id");
             var roleJsonObject = JsonNode.Parse(roleResult).AsObject();
@@ -93,10 +125,20 @@ public class VaultAppRoleSetup
             var secretResult = await ExecuteVaultCommandAsync($"write -format=json -f auth/approle/role/{roleName}/secret-id");
             var secretJsonObject = JsonNode.Parse(secretResult).AsObject();
             var secretId = secretJsonObject["data"]?["secret_id"]?.GetValue<string>();
-            
+
             // 使用 AppRole 登入，並取得機敏性資料
             await LoginAppRole(roleName, roleId, secretId);
         }
+    }
+
+    private async Task<string> CreateClientToken(string policyName, string token)
+    {
+        Environment.SetEnvironmentVariable("VAULT_TOKEN", token);
+
+        var tokenResult = await ExecuteVaultCommandAsync($"token create -policy={policyName} -format=json -ttl=360d");
+        var tokenJsonObject = JsonNode.Parse(tokenResult).AsObject();
+        var result = tokenJsonObject["auth"]?["client_token"]?.GetValue<string>();
+        return result;
     }
 
     private async Task LoginAppRole(string roleName, string roleId, string secretId)
