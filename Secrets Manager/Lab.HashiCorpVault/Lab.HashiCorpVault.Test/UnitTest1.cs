@@ -11,20 +11,20 @@ namespace Lab.HashiCorpVault.Test;
 [TestClass]
 public class UnitTest1
 {
-    private readonly string VaultToken = "你的 token";
+    private readonly string VaultRootToken = "你的 token";
     private readonly string VaultServer = "http://127.0.0.1:8200";
 
     [TestMethod]
     public async Task 設定多個原則_使用Token驗證()
     {
-        var setup = new VaultTokenSetup(VaultServer, VaultToken);
+        var setup = new VaultTokenSetup(VaultServer, VaultRootToken);
         await setup.SetupVaultAsync();
     }
 
     [TestMethod]
     public async Task 設定多個原則_使用AppRole驗證()
     {
-        var setup = new VaultAppRoleSetup(VaultServer, VaultToken);
+        var setup = new VaultAppRoleSetup(VaultServer, VaultRootToken);
         await setup.SetupVaultAsync();
     }
 
@@ -252,7 +252,7 @@ public class UnitTest1
 
     private VaultClient CreateVaultClient()
     {
-        var authMethod = new TokenAuthMethodInfo(this.VaultToken);
+        var authMethod = new TokenAuthMethodInfo(this.VaultRootToken);
         var vaultClientSettings = new VaultClientSettings(this.VaultServer, authMethod);
         var vaultClient = new VaultClient(vaultClientSettings);
         return vaultClient;

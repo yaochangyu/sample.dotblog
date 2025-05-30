@@ -6,12 +6,12 @@ namespace Lab.HashiCorpVault.Test;
 
 public class VaultTokenSetup
 {
-    private string _vaultServer;
-    private string _rootToken;
-    public VaultTokenSetup(string vaultServer, string rootToken)
+    private readonly string _vaultServer;
+    private readonly string _vaultToken;
+    public VaultTokenSetup(string vaultServer, string vaultToken)
     {
         _vaultServer = vaultServer;
-        _rootToken = rootToken;
+        _vaultToken = vaultToken;
     }
 
     private readonly Dictionary<string, string> _policies = new()
@@ -81,7 +81,7 @@ public class VaultTokenSetup
     {
         // 設定環境變數
         Environment.SetEnvironmentVariable("VAULT_ADDR", _vaultServer);
-        Environment.SetEnvironmentVariable("VAULT_TOKEN", _rootToken);
+        Environment.SetEnvironmentVariable("VAULT_TOKEN", _vaultToken);
 
         // 啟用 kv v2 秘密引擎
         try
