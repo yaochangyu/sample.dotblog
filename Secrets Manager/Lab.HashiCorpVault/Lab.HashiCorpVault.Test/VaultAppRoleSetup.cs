@@ -148,6 +148,16 @@ public class VaultAppRoleSetup
 
         // 管理者建立 Policies
         Console.WriteLine("Creating AppRole policies...");
+        foreach (var (policyName, policyContent) in _adminPolicies)
+        {
+            string policyFile = $"{policyName}-policy.hcl";
+            await File.WriteAllTextAsync(policyFile, policyContent);
+            await ExecuteVaultCommandAsync($"policy write {policyName} {policyFile}");
+            File.Delete(policyFile);
+        }
+
+        // 管理者建立 Policies
+        Console.WriteLine("Creating AppRole policies...");
         foreach (var (policyName, policyContent) in _clientPolicies)
         {
             string policyFile = $"{policyName}-policy.hcl";
