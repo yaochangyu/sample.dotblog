@@ -55,6 +55,67 @@ public class VaultAppRoleSetup
         Environment.SetEnvironmentVariable("VAULT_ADDR", _vaultServer);
         Environment.SetEnvironmentVariable("VAULT_TOKEN", _rootToken);
 
+        // =====================================================================================
+        // 管理者的操作
+        // =====================================================================================
+        await AdminSetup();
+
+        // 建立一個具有產生 secret id 權限的 admin token
+        string adminToken = await CreateClientToken("app-admin", _rootToken);
+
+        // =====================================================================================
+        // 用戶端的操作
+        // =====================================================================================
+        // adminToken 需要保存在用戶端的環境
+        Console.WriteLine("Read Secret Data...");
+        foreach (var (roleName, _) in _clientPolicies)
+        {
+            Environment.SetEnvironmentVariable("VAULT_TOKEN", adminToken);
+            // 取得 Role ID
+            var roleResult = await ExecuteVaultCommandAsync($"read -format=json auth/approle/role/{roleName}/role-id");
+            var roleJsonObject = JsonNode.Parse(roleResult).AsObject();
+            var roleId = roleJsonObject["data"]?["role_id"]?.GetValue<string>();
+
+            // 取得 Secret ID
+            var secretResult = await ExecuteVaultCommandAsync($"write -format=json -f auth/approle/role/{roleName}/secret-id");
+            var secretJsonObject = JsonNode.Parse(secretResult).AsObject();
+            var secretId = secretJsonObject["data"]?["secret_id"]?.GetValue<string>();
+
+            // 使用 AppRole 登入，並取得機敏性資料
+            await LoginAppRole(roleName, roleId, secretId);
+        }
+
+        Console.WriteLine("Unwrap Read Secret Data...");
+        foreach (var (roleName, _) in _clientPolicies)
+        {
+            Environment.SetEnvironmentVariable("VAULT_TOKEN", adminToken);
+
+            // 使用 wrap-ttl 參數來包裝 Role ID
+            var roleResult = await ExecuteVaultCommandAsync($"read -format=json -wrap-ttl=60s auth/approle/role/{roleName}/role-id");
+            var roleJsonObject = JsonNode.Parse(roleResult).AsObject();
+            var wrappedRoleToken = roleJsonObject["wrap_info"]?["token"]?.GetValue<string>();
+
+            // 使用 wrap-ttl 參數來包裝 Secret ID
+            var secretResult = await ExecuteVaultCommandAsync($"write -format=json -wrap-ttl=60s -f auth/approle/role/{roleName}/secret-id");
+            var secretJsonObject = JsonNode.Parse(secretResult).AsObject();
+            var wrappedSecretToken = secretJsonObject["wrap_info"]?["token"]?.GetValue<string>();
+
+            // 解 Role ID（模擬客戶端操作）
+            var unwrappedRoleResult = await ExecuteVaultCommandAsync($"unwrap -format=json {wrappedRoleToken}");
+            var unwrappedRoleJson = JsonNode.Parse(unwrappedRoleResult).AsObject();
+            var roleId = unwrappedRoleJson["data"]?["role_id"]?.GetValue<string>();
+
+            // 解 Secret ID（模擬客戶端操作）
+            var unwrappedSecretResult = await ExecuteVaultCommandAsync($"unwrap -format=json {wrappedSecretToken}");
+            var unwrappedSecretJson = JsonNode.Parse(unwrappedSecretResult).AsObject();
+            var secretId = unwrappedSecretJson["data"]?["secret_id"]?.GetValue<string>();
+
+            // 使用 AppRole 登入，並取得機敏性資料
+            await LoginAppRole(roleName, roleId, secretId);
+        }
+    }
+    private async Task AdminSetup()
+    {
         // 管理者啟用 kv v2 秘密引擎
         try
         {
@@ -105,29 +166,6 @@ public class VaultAppRoleSetup
         foreach (var (roleName, _) in _adminPolicies)
         {
             await ExecuteVaultCommandAsync($"write auth/approle/role/{roleName} token_policies={roleName} token_ttl=1h token_max_ttl=4h");
-        }
-
-        // 建立一個具有產生 secret id 權限的 admin token
-        string adminToken = await CreateClientToken("app-admin", _rootToken);
-
-        //=====================================================================================
-
-        Console.WriteLine("Read Secret Data...");
-        foreach (var (roleName, _) in _clientPolicies)
-        {
-            Environment.SetEnvironmentVariable("VAULT_TOKEN", adminToken);
-            // 取得 Role ID
-            var roleResult = await ExecuteVaultCommandAsync($"read -format=json auth/approle/role/{roleName}/role-id");
-            var roleJsonObject = JsonNode.Parse(roleResult).AsObject();
-            var roleId = roleJsonObject["data"]?["role_id"]?.GetValue<string>();
-
-            // 取得 Secret ID
-            var secretResult = await ExecuteVaultCommandAsync($"write -format=json -f auth/approle/role/{roleName}/secret-id");
-            var secretJsonObject = JsonNode.Parse(secretResult).AsObject();
-            var secretId = secretJsonObject["data"]?["secret_id"]?.GetValue<string>();
-
-            // 使用 AppRole 登入，並取得機敏性資料
-            await LoginAppRole(roleName, roleId, secretId);
         }
     }
 
