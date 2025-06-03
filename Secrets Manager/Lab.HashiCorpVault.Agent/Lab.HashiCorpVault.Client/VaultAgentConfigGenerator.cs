@@ -8,7 +8,7 @@ public class VaultAgentConfigGenerator
     private readonly string _roleIdPath;
     private readonly string _secretIdPath;
 
-    public VaultAgentConfigGenerator(string vaultAddress = "http://127.0.0.1:8200")
+    public VaultAgentConfigGenerator(string vaultAddress)
     {
         _vaultAddress = vaultAddress;
         _roleIdPath = "./vault-credentials/role-id";
