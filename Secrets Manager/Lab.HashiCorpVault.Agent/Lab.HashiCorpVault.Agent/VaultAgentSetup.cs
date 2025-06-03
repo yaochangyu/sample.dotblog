@@ -27,6 +27,7 @@ public class VaultAgentSetup
         var (roleId, secretId) = await GetAppRoleCredentials("app-dev");
         // 將認證信息寫入文件（實際環境中應該通過安全的方式傳遞）
         await SaveCredentialsForVaultAgent("app-dev", roleId, secretId);
+        
         (roleId, secretId) = await GetAppRoleCredentials("app-prod");
         await SaveCredentialsForVaultAgent("app-prod", roleId, secretId);
 
@@ -61,8 +62,8 @@ public class VaultAgentSetup
         }
 
         // 儲存 Role ID 和 Secret ID
-        await File.WriteAllTextAsync(Path.Combine(credentialsDir, "role-id"), roleId);
-        await File.WriteAllTextAsync(Path.Combine(credentialsDir, "secret-id"), secretId);
+        await File.WriteAllTextAsync(Path.Combine(credentialsDir, ROLE_ID_FILE), roleId);
+        await File.WriteAllTextAsync(Path.Combine(credentialsDir, SECRET_ID_FILE), secretId);
 
         Console.WriteLine($"認證資訊已儲存到 {credentialsDir} 目錄");
     }
