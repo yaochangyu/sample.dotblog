@@ -94,7 +94,7 @@ public class Program
     {
         logger.LogInformation("=== 步驟 2: 生成 Vault Agent 配置 ===");
 
-        var configGenerator = new VaultAgentConfigGenerator();
+        var configGenerator = new VaultAgentConfigGenerator(VaultServer);
         await configGenerator.GenerateConfigFilesAsync();
         configGenerator.PrintUsageInstructions();
 
