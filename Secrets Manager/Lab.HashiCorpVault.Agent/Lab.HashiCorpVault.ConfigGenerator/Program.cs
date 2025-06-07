@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Lab.HashiCorpVault.Client;
+namespace Lab.HashiCorpVault.ConfigGenerator;
 
 public class AppSettings
 {
@@ -22,7 +22,7 @@ public class VaultAgentInfo
 public class Program
 {
     static string VaultServer = "http://127.0.0.1:8200";
-    static string VaultRootToken = "你的token";
+    static string VaultRootToken = "hvs.vXoQWIvh7vXEuwrkYpjwZhx2";
 
     public static async Task Main(string[] args)
     {
