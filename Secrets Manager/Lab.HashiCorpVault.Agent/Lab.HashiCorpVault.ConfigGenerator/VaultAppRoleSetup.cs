@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text.Json.Nodes;
 
-namespace Lab.HashiCorpVault.Client;
+namespace Lab.HashiCorpVault.ConfigGenerator;
 
 public class VaultAppRoleSetup
 {

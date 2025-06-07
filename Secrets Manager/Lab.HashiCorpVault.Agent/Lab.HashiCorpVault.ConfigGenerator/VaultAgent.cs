@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
-namespace Lab.HashiCorpVault.Client;
+namespace Lab.HashiCorpVault.ConfigGenerator;
 
 public class DatabaseCredentials
 {
