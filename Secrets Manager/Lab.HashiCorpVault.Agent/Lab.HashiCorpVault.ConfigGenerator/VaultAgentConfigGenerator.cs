@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace Lab.HashiCorpVault.Client;
+namespace Lab.HashiCorpVault.ConfigGenerator;
 
 public class VaultAgentConfigGenerator
 {

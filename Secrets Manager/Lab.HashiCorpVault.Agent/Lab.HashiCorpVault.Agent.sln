@@ -2,7 +2,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HashiCorpVault.Agent", "Lab.HashiCorpVault.Agent\Lab.HashiCorpVault.Agent.csproj", "{5CB1936E-7155-4797-893E-764B5A557726}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HashiCorpVault.Client", "Lab.HashiCorpVault.Client\Lab.HashiCorpVault.Client.csproj", "{63B2D5E7-2A41-418D-9BC8-7B93EA10A77E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HashiCorpVault.ConfigGenerator", "Lab.HashiCorpVault.ConfigGenerator\Lab.HashiCorpVault.ConfigGenerator.csproj", "{63B2D5E7-2A41-418D-9BC8-7B93EA10A77E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
