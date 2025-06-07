@@ -2,8 +2,8 @@
 
 class Program
 {
-    private static string VaultRootToken = "你的token";
     private static string VaultServer = "http://127.0.0.1:8200";
+    private static string VaultRootToken = "你的 token";
 
     static async Task Main(string[] args)
     {

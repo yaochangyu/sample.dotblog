@@ -22,7 +22,7 @@ public class VaultAgentInfo
 public class Program
 {
     static string VaultServer = "http://127.0.0.1:8200";
-    static string VaultRootToken = "hvs.vXoQWIvh7vXEuwrkYpjwZhx2";
+    private static string VaultRootToken = "你的 token";
 
     public static async Task Main(string[] args)
     {
