@@ -10,7 +10,7 @@ public class VaultAppRoleSetup
     private readonly string _vaultServer;
     private readonly string _rootToken;
     private const string AppRoleName = "app-dev";
-    private const string SecretName = "dev";
+    private const string SecretRootPathName = "dev";
 
     public readonly List<Secret> Secrets =
     [
@@ -35,7 +35,7 @@ public class VaultAppRoleSetup
     public readonly Dictionary<string, string> SecretPolicies = new()
     {
         [AppRoleName] = $$"""
-                          path "{{SecretName}}/data/db/connection/*" {
+                          path "{{SecretRootPathName}}/data/db/connection/*" {
                             capabilities = ["read"]
                           }
                           """,
@@ -109,7 +109,7 @@ public class VaultAppRoleSetup
         Console.WriteLine("Writing secrets to kv v2...");
 
         string secret = string.Join(" ", Secrets.Select(s => $"{s.Key}={s.Value}"));
-        await ExecuteVaultCommandAsync($"kv put {SecretName}/db/connection/identity {secret}");
+        await ExecuteVaultCommandAsync($"kv put {SecretRootPathName}/db/connection/identity {secret}");
     }
 
     private async Task EnableSecretAsync()
@@ -117,7 +117,7 @@ public class VaultAppRoleSetup
         try
         {
             Console.WriteLine("啟用 KV v2 秘密引擎...");
-            await ExecuteVaultCommandAsync($"secrets enable -path={SecretName} kv-v2");
+            await ExecuteVaultCommandAsync($"secrets enable -path={SecretRootPathName} kv-v2");
         }
         catch (Exception e)
         {
