@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Nodes;
+using Lab.HashiCorpVault.Client;
 
 namespace Lab.HashiCorpVault.Admin;
 
@@ -6,7 +7,7 @@ class Program
 {
     private static string VaultServer = "http://127.0.0.1:8200";
     private static string VaultRootToken = "你的 Vault Root Token";
-
+    
     static async Task Main(string[] args)
     {
         Console.WriteLine("Setup Vault Starting...");
@@ -18,7 +19,15 @@ class Program
             Console.WriteLine("Error: Vault token cannot be empty.");
             return;
         }
-        var setup = new VaultAppRoleSetup(VaultServer, vaultRootToken);
+        
+        var vaultApiClient = new VaultApiClient(new HttpClient
+        {
+            BaseAddress = new Uri(VaultServer),
+        }, vaultRootToken);
+        var setup = new VaultAppRoleSetup2(vaultApiClient, vaultRootToken);
+
+        // var setup = new VaultAppRoleSetup(VaultServer, vaultRootToken);
+        
         await setup.SetupVaultAsync();
         // 建立管理者 Token
         var adminTokens = await setup.CreateAdminToken();
