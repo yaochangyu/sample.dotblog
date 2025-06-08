@@ -5,7 +5,6 @@ namespace Lab.HashiCorpVault.Admin;
 public class VaultAppRoleSetup2
 {
     private readonly string _vaultServer;
-    private readonly string _rootToken;
     private readonly VaultApiClient _vaultApiClient;
     private const string AppRoleName = "app-dev";
     private const string SecretRootPathName = "dev";
@@ -39,10 +38,9 @@ public class VaultAppRoleSetup2
                           """,
     };
 
-    public VaultAppRoleSetup2(VaultApiClient vaultApiClient, string rootToken)
+    public VaultAppRoleSetup2(VaultApiClient vaultApiClient)
     {
         _vaultApiClient = vaultApiClient;
-        _rootToken = rootToken;
     }
 
     public async Task SetupVaultAsync()
@@ -84,8 +82,8 @@ public class VaultAppRoleSetup2
 
     public async Task<(string RoleId, string SecretId)> GetAppRoleCredentialsAsync(string adminToken, string roleName)
     {
-        // 更新 token
-        _vaultApiClient.UpdateToken(adminToken);
+        // // 更新 token
+        // _vaultApiClient.UpdateToken(adminToken);
 
         // 取得 Role ID
         var roleResult = await _vaultApiClient.GetRoleIdAsync(roleName);
@@ -95,8 +93,8 @@ public class VaultAppRoleSetup2
         var secretResult = await _vaultApiClient.GenerateSecretIdAsync(roleName);
         var secretId = secretResult["data"]?["secret_id"]?.GetValue<string>();
 
-        // 恢复原始 token
-        _vaultApiClient.UpdateToken(_rootToken);
+        // // 恢复原始 token
+        // _vaultApiClient.UpdateToken(_rootToken);
 
         return (roleId, secretId);
     }

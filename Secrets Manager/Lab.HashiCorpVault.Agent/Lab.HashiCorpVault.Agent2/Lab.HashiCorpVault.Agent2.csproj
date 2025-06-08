@@ -8,6 +8,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Lab.HashiCorpVault.Client\Lab.HashiCorpVault.Client.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
       <None Update="dev-db-config.ctmpl">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
@@ -18,4 +22,5 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>
+
 </Project>

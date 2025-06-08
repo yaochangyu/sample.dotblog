@@ -1,0 +1,6 @@
+{{ with secret "dev/data/db/connection/identity" }}
+{
+    "account": "{{ .Data.data.Account }}",
+    "password": "{{ .Data.data.Password }}"
+}
+{{ end }}
