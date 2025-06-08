@@ -54,44 +54,35 @@ public class VaultAgentSetup
         Environment.SetEnvironmentVariable("VAULT_TOKEN", _rootToken);
     }
 
-    public async Task SetupVaultAgentAsync()
+    public async Task SetupVaultAsync()
     {
-        // 建立 AppRole 認證方法
-        await SetupAppRoleAsync();
-
         // 建立機敏性資料
         await SetupSecretAsync();
+        
+        // 建立 Client 的 AppRole 和 Policies
+        await SetupAppRoleAsync(_secretPolicies);
+        await SetupPolicesAsync(_secretPolicies);
+
+        // 建立 Admin 的 AppRole 和 Policies
+        await SetupAppRoleAsync(_adminPolicies);
+        await SetupPolicesAsync(_adminPolicies);
     }
 
     public async Task<Dictionary<string, string>> CreateAdminToken()
     {
         var policies = _adminPolicies;
 
-        // 建立 Policies
-        Console.WriteLine("Creating AppRole policies...");
-        foreach (var (policyName, policyContent) in policies)
-        {
-            string policyFile = $"{policyName}-policy.hcl";
-            await File.WriteAllTextAsync(policyFile, policyContent);
-            await ExecuteVaultCommandAsync($"policy write {policyName} {policyFile}");
-            File.Delete(policyFile);
-        }
-        
-        // 建立 AppRole
-        foreach (var (roleName, _) in policies)
-        {
-            await ExecuteVaultCommandAsync($"write auth/approle/role/{roleName} token_policies={roleName} token_ttl=1h token_max_ttl=4h");
-        }
-        
         // 產生 Admin Token
         var results = new Dictionary<string, string>();
         foreach (var policy in policies)
         {
+            Console.WriteLine("建立 Admin Token...");
             string policyName = policy.Key;
             var tokenResult = await ExecuteVaultCommandAsync($"token create -policy={policyName} -format=json -ttl=360d");
             var tokenJsonObject = JsonNode.Parse(tokenResult).AsObject();
             var clientToken = tokenJsonObject["auth"]?["client_token"]?.GetValue<string>();
             results.Add(policyName, clientToken);
+            Console.WriteLine("Admin Token 建立完成");
         }
 
         return results;
@@ -129,7 +120,21 @@ public class VaultAgentSetup
         await ExecuteVaultCommandAsync($"kv put dev/db/connection/identity {secret}");
     }
 
-    private async Task SetupAppRoleAsync()
+    private async Task SetupPolicesAsync(Dictionary<string, string> policies)
+    {
+        // 建立政策
+        foreach (var (policyName, policyContent) in policies)
+        {
+            Console.WriteLine($"建立 {policyName} 政策...");
+            string policyFile = $"{policyName}-policy.hcl";
+            await File.WriteAllTextAsync(policyFile, policyContent);
+            await ExecuteVaultCommandAsync($"policy write {policyName} {policyFile}");
+            File.Delete(policyFile);
+            Console.WriteLine($"政策 {policyName} 建立完成");
+        }
+    }
+
+    private async Task SetupAppRoleAsync(Dictionary<string, string> policies)
     {
         try
         {
@@ -141,26 +146,16 @@ public class VaultAgentSetup
             Console.WriteLine($"AppRole 可能已經啟用: {e.Message}");
         }
 
-        // 建立政策
-        Console.WriteLine("建立 app-dev 政策...");
-        foreach (var (policyName, policyContent) in _secretPolicies)
+        foreach (var (roleName, _) in policies)
         {
-            string policyFile = $"{policyName}-policy.hcl";
-            await File.WriteAllTextAsync(policyFile, policyContent);
-            await ExecuteVaultCommandAsync($"policy write {policyName} {policyFile}");
-            File.Delete(policyFile);
-            Console.WriteLine($"政策 {policyName} 建立完成");
+            Console.WriteLine($"建立 {roleName} 的 AppRole...");
+            await ExecuteVaultCommandAsync($"write auth/approle/role/{roleName} " +
+                                           $"token_policies={roleName} " +
+                                           $"token_ttl=1h " +
+                                           $"token_max_ttl=4h");
+            Console.WriteLine($"{roleName} 的 AppRole 建立完成");
         }
-
-        // 建立 AppRole
-        Console.WriteLine("建立 app-dev AppRole...");
-        await ExecuteVaultCommandAsync("write auth/approle/role/app-dev " +
-                                       "token_policies=app-dev " +
-                                       "token_ttl=1h " +
-                                       "token_max_ttl=4h " +
-                                       "bind_secret_id=true");
     }
-
 
     private async Task<string> ExecuteVaultCommandAsync(string arguments)
     {
