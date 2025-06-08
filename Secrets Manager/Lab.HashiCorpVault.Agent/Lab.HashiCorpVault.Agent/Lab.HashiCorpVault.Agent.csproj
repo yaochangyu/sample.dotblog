@@ -19,4 +19,8 @@
       </None>
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\Lab.HashiCorpVault.Client\Lab.HashiCorpVault.Client.csproj" />
+    </ItemGroup>
+
 </Project>
