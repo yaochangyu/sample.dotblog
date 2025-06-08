@@ -11,7 +11,7 @@ class Program
         //觀察 Vault 的進程
         await VaultAgentSetup.VerifyVaultProcessInfoAsync();
         
-        var setup = new VaultAgentSetup(VaultServer, VaultRootToken);
+        var setup = new VaultAgentSetup(VaultServer, VaultToken);
         await setup.SetupVaultAgentAsync();
         
         //觀察 Vault 的進程
