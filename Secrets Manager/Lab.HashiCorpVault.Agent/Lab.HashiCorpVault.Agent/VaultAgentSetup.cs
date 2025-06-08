@@ -6,7 +6,7 @@ namespace Lab.HashiCorpVault.Agent;
 public class VaultAgentSetup
 {
     private readonly string _vaultServer;
-    private readonly string _rootToken;
+    private readonly string _vaultToken;
     private const string ROLE_ID_FILE = "role_id";
     private const string SECRET_ID_FILE = "secret_id";
     private const string AGENT_CONFIG_FILE = "vault-agent-config.hcl";
@@ -26,24 +26,18 @@ public class VaultAgentSetup
                         """,
     };
 
-    public VaultAgentSetup(string vaultServer, string rootToken)
+    public VaultAgentSetup(string vaultServer, string vaultToken)
     {
         _vaultServer = vaultServer;
-        _rootToken = rootToken;
+        _vaultToken = vaultToken;
+
+        // 設定環境變數
+        Environment.SetEnvironmentVariable("VAULT_ADDR", _vaultServer);
+        Environment.SetEnvironmentVariable("VAULT_TOKEN", _vaultToken);
     }
 
     public async Task SetupVaultAgentAsync()
     {
-        // 設定環境變數
-        Environment.SetEnvironmentVariable("VAULT_ADDR", _vaultServer);
-        Environment.SetEnvironmentVariable("VAULT_TOKEN", _rootToken);
-
-        // 建立 AppRole 認證方法
-        await SetupAppRoleAsync();
-
-        // 建立機敏性資料
-        await SetupSecretAsync();
-
         // 取得 Role ID 和 Secret ID（這步驟通常由管理員執行）
         var (roleId, secretId) = await GetAppRoleCredentials(AppRoleName);
         // 將認證信息寫入文件（實際環境中應該通過安全的方式傳遞）

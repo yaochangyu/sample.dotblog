@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HashiCorpVault.Agent", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HashiCorpVault.ConfigGenerator", "Lab.HashiCorpVault.ConfigGenerator\Lab.HashiCorpVault.ConfigGenerator.csproj", "{63B2D5E7-2A41-418D-9BC8-7B93EA10A77E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HashiCorpVault.Admin", "Lab.HashiCorpVault.Admin\Lab.HashiCorpVault.Admin.csproj", "{57446D92-4A93-4DA9-8140-13CBAB950748}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{63B2D5E7-2A41-418D-9BC8-7B93EA10A77E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{63B2D5E7-2A41-418D-9BC8-7B93EA10A77E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{63B2D5E7-2A41-418D-9BC8-7B93EA10A77E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{57446D92-4A93-4DA9-8140-13CBAB950748}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57446D92-4A93-4DA9-8140-13CBAB950748}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57446D92-4A93-4DA9-8140-13CBAB950748}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57446D92-4A93-4DA9-8140-13CBAB950748}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

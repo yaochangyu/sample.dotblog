@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text.Json.Nodes;
 
 namespace Lab.HashiCorpVault.Admin;
 
@@ -14,8 +15,23 @@ public class VaultAgentSetup
         new Secret("Account", "root"),
         new Secret("Password", "123456"),
     ];
-    
-    private readonly Dictionary<string, string> _clientPolicies = new()
+
+    private readonly Dictionary<string, string> _adminPolicies = new()
+    {
+        ["app-admin"] = """
+                        # 允許為特定 AppRole 產生 secret id/role id
+                        path "auth/approle/role/app-dev/secret-id" {
+                          capabilities = ["create", "update"]
+                        }
+
+                        path "auth/approle/role/app-dev/role-id" {
+                          capabilities = ["read","list","create","update"]
+                        }
+                        """
+    };
+
+
+    private readonly Dictionary<string, string> _secretPolicies = new()
     {
         [AppRoleName] = """
                         path "dev/data/db/connection/*" {
@@ -32,14 +48,14 @@ public class VaultAgentSetup
     {
         _vaultServer = vaultServer;
         _rootToken = rootToken;
+
+        // 設定環境變數
+        Environment.SetEnvironmentVariable("VAULT_ADDR", _vaultServer);
+        Environment.SetEnvironmentVariable("VAULT_TOKEN", _rootToken);
     }
 
     public async Task SetupVaultAgentAsync()
     {
-        // 設定環境變數
-        Environment.SetEnvironmentVariable("VAULT_ADDR", _vaultServer);
-        Environment.SetEnvironmentVariable("VAULT_TOKEN", _rootToken);
-
         // 建立 AppRole 認證方法
         await SetupAppRoleAsync();
 
@@ -47,7 +63,56 @@ public class VaultAgentSetup
         await SetupSecretAsync();
     }
 
-    async Task SetupSecretAsync()
+    public async Task<Dictionary<string, string>> CreateAdminToken()
+    {
+        var policies = _adminPolicies;
+
+        // 建立 Policies
+        Console.WriteLine("Creating AppRole policies...");
+        foreach (var (policyName, policyContent) in policies)
+        {
+            string policyFile = $"{policyName}-policy.hcl";
+            await File.WriteAllTextAsync(policyFile, policyContent);
+            await ExecuteVaultCommandAsync($"policy write {policyName} {policyFile}");
+            File.Delete(policyFile);
+        }
+        
+        // 建立 AppRole
+        foreach (var (roleName, _) in policies)
+        {
+            await ExecuteVaultCommandAsync($"write auth/approle/role/{roleName} token_policies={roleName} token_ttl=1h token_max_ttl=4h");
+        }
+        
+        // 產生 Admin Token
+        var results = new Dictionary<string, string>();
+        foreach (var policy in policies)
+        {
+            string policyName = policy.Key;
+            var tokenResult = await ExecuteVaultCommandAsync($"token create -policy={policyName} -format=json -ttl=360d");
+            var tokenJsonObject = JsonNode.Parse(tokenResult).AsObject();
+            var clientToken = tokenJsonObject["auth"]?["client_token"]?.GetValue<string>();
+            results.Add(policyName, clientToken);
+        }
+
+        return results;
+    }
+
+    public async Task<(string RoleId, string SecretId)> GetAppRoleCredentialsAsync(string adminToken, string roleName)
+    {
+        Environment.SetEnvironmentVariable("VAULT_TOKEN", adminToken);
+        // 取得 Role ID
+        var roleResult = await ExecuteVaultCommandAsync($"read -format=json auth/approle/role/{roleName}/role-id");
+        var roleJsonObject = JsonNode.Parse(roleResult).AsObject();
+        var roleId = roleJsonObject["data"]?["role_id"]?.GetValue<string>();
+
+        // 取得 Secret ID
+        var secretResult = await ExecuteVaultCommandAsync($"write -format=json -f auth/approle/role/{roleName}/secret-id");
+        var secretJsonObject = JsonNode.Parse(secretResult).AsObject();
+        var secretId = secretJsonObject["data"]?["secret_id"]?.GetValue<string>();
+        return (roleId, secretId);
+    }
+
+    private async Task SetupSecretAsync()
     {
         try
         {
@@ -78,7 +143,7 @@ public class VaultAgentSetup
 
         // 建立政策
         Console.WriteLine("建立 app-dev 政策...");
-        foreach (var (policyName, policyContent) in _clientPolicies)
+        foreach (var (policyName, policyContent) in _secretPolicies)
         {
             string policyFile = $"{policyName}-policy.hcl";
             await File.WriteAllTextAsync(policyFile, policyContent);
