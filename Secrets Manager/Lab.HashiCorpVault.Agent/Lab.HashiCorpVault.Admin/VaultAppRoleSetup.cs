@@ -3,20 +3,21 @@ using System.Text.Json.Nodes;
 
 namespace Lab.HashiCorpVault.Admin;
 
-record Secret(string Key, string Value);
+public record Secret(string Key, string Value);
 
-public class VaultAgentSetup
+public class VaultAppRoleSetup
 {
     private readonly string _vaultServer;
     private readonly string _rootToken;
     private const string AppRoleName = "app-dev";
-    private List<Secret> Secrets { get; set; } =
+    
+    public readonly List<Secret> Secrets  =
     [
         new Secret("Account", "root"),
         new Secret("Password", "123456"),
     ];
 
-    private readonly Dictionary<string, string> _adminPolicies = new()
+    public readonly Dictionary<string, string> AdminPolicies = new()
     {
         ["app-admin"] = """
                         # 允許為特定 AppRole 產生 secret id/role id
@@ -25,13 +26,12 @@ public class VaultAgentSetup
                         }
 
                         path "auth/approle/role/app-dev/role-id" {
-                          capabilities = ["read","list","create","update"]
+                          capabilities = ["read"]
                         }
                         """
     };
 
-
-    private readonly Dictionary<string, string> _secretPolicies = new()
+    public readonly Dictionary<string, string> SecretPolicies = new()
     {
         [AppRoleName] = """
                         path "dev/data/db/connection/*" {
@@ -44,7 +44,7 @@ public class VaultAgentSetup
                         """,
     };
 
-    public VaultAgentSetup(string vaultServer, string rootToken)
+    public VaultAppRoleSetup(string vaultServer, string rootToken)
     {
         _vaultServer = vaultServer;
         _rootToken = rootToken;
@@ -60,17 +60,17 @@ public class VaultAgentSetup
         await SetupSecretAsync();
         
         // 建立 Client 的 AppRole 和 Policies
-        await SetupAppRoleAsync(_secretPolicies);
-        await SetupPolicesAsync(_secretPolicies);
+        await SetupAppRoleAsync(SecretPolicies);
+        await SetupPolicesAsync(SecretPolicies);
 
         // 建立 Admin 的 AppRole 和 Policies
-        await SetupAppRoleAsync(_adminPolicies);
-        await SetupPolicesAsync(_adminPolicies);
+        await SetupAppRoleAsync(AdminPolicies);
+        await SetupPolicesAsync(AdminPolicies);
     }
 
     public async Task<Dictionary<string, string>> CreateAdminToken()
     {
-        var policies = _adminPolicies;
+        var policies = AdminPolicies;
 
         // 產生 Admin Token
         var results = new Dictionary<string, string>();
