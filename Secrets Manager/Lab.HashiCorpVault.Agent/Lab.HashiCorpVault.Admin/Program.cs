@@ -5,13 +5,20 @@ namespace Lab.HashiCorpVault.Admin;
 class Program
 {
     private static string VaultServer = "http://127.0.0.1:8200";
-    private static string VaultRootToken = "你的 Vault Root Token，這裡替換掉";
+    private static string VaultRootToken = "你的 Vault Root Token";
 
     static async Task Main(string[] args)
     {
         Console.WriteLine("Setup Vault Starting...");
-
-        var setup = new VaultAppRoleSetup(VaultServer, VaultRootToken);
+        Console.Write("Please enter your Vault root token: ");
+        string vaultRootToken = Console.ReadLine() ?? VaultRootToken;
+        
+        if (string.IsNullOrWhiteSpace(vaultRootToken))
+        {
+            Console.WriteLine("Error: Vault token cannot be empty.");
+            return;
+        }
+        var setup = new VaultAppRoleSetup(VaultServer, vaultRootToken);
         await setup.SetupVaultAsync();
         // 建立管理者 Token
         var adminTokens = await setup.CreateAdminToken();
@@ -23,8 +30,8 @@ class Program
         Console.WriteLine($"Role ID: {id.RoleId}, Secret ID: {id.SecretId}");
         
         // 印出管理者 Token
-        string tokenString = string.Join(", ", adminTokens.Select(t => $"{t.Key}: {t.Value}"));
-        Console.WriteLine($"Token: {tokenString}");
+        string tokenString = string.Join(", ", adminTokens.Select(t => $"{t.Key} token: {t.Value}"));
+        Console.WriteLine($"{tokenString}");
         Console.WriteLine("Setup Vault Completed.");
     }
 }
