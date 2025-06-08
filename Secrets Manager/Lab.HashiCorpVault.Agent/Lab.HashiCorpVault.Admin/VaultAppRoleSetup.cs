@@ -10,8 +10,9 @@ public class VaultAppRoleSetup
     private readonly string _vaultServer;
     private readonly string _rootToken;
     private const string AppRoleName = "app-dev";
-    
-    public readonly List<Secret> Secrets  =
+    private const string SecretName = "dev";
+
+    public readonly List<Secret> Secrets =
     [
         new Secret("Account", "root"),
         new Secret("Password", "123456"),
@@ -21,11 +22,11 @@ public class VaultAppRoleSetup
     {
         ["app-admin"] = """
                         # 允許為特定 AppRole 產生 secret id/role id
-                        path "auth/approle/role/app-dev/secret-id" {
+                        path "auth/approle/role/+/secret-id" {
                           capabilities = ["create", "update"]
                         }
 
-                        path "auth/approle/role/app-dev/role-id" {
+                        path "auth/approle/role/+/role-id" {
                           capabilities = ["read"]
                         }
                         """
@@ -33,15 +34,15 @@ public class VaultAppRoleSetup
 
     public readonly Dictionary<string, string> SecretPolicies = new()
     {
-        [AppRoleName] = """
-                        path "dev/data/db/connection/*" {
-                          capabilities = ["read"]
-                        }
+        [AppRoleName] = $$"""
+                          path "{{SecretName}}/data/db/connection/*" {
+                            capabilities = ["read"]
+                          }
 
-                        path "auth/approle/role/app-dev/role-id" {
-                          capabilities = ["read"]
-                        }
-                        """,
+                          path "auth/approle/role/{{AppRoleName}}/role-id" {
+                            capabilities = ["read"]
+                          }
+                          """,
     };
 
     public VaultAppRoleSetup(string vaultServer, string rootToken)
@@ -56,9 +57,13 @@ public class VaultAppRoleSetup
 
     public async Task SetupVaultAsync()
     {
+        // 啟用 KV v2 秘密引擎和 AppRole 認證方法
+        await EnableAppRoleAsync();
+        await EnableSecretAsync();
+
         // 建立機敏性資料
         await SetupSecretAsync();
-        
+
         // 建立 Client 的 AppRole 和 Policies
         await SetupAppRoleAsync(SecretPolicies);
         await SetupPolicesAsync(SecretPolicies);
@@ -105,19 +110,23 @@ public class VaultAppRoleSetup
 
     private async Task SetupSecretAsync()
     {
+        Console.WriteLine("Writing secrets to kv v2...");
+
+        string secret = string.Join(" ", Secrets.Select(s => $"{s.Key}={s.Value}"));
+        await ExecuteVaultCommandAsync($"kv put {SecretName}/db/connection/identity {secret}");
+    }
+
+    private async Task EnableSecretAsync()
+    {
         try
         {
             Console.WriteLine("啟用 KV v2 秘密引擎...");
-            await ExecuteVaultCommandAsync("secrets enable -path=dev kv-v2");
+            await ExecuteVaultCommandAsync($"secrets enable -path={SecretName} kv-v2");
         }
         catch (Exception e)
         {
             Console.WriteLine($"KV v2 可能已經啟用: {e.Message}");
         }
-        Console.WriteLine("Writing secrets to kv v2...");
-
-        string secret = string.Join(" ", Secrets.Select(s => $"{s.Key}={s.Value}"));
-        await ExecuteVaultCommandAsync($"kv put dev/db/connection/identity {secret}");
     }
 
     private async Task SetupPolicesAsync(Dictionary<string, string> policies)
@@ -134,8 +143,9 @@ public class VaultAppRoleSetup
         }
     }
 
-    private async Task SetupAppRoleAsync(Dictionary<string, string> policies)
+    private async Task EnableAppRoleAsync()
     {
+
         try
         {
             Console.WriteLine("啟用 AppRole 認證方法...");
@@ -145,7 +155,10 @@ public class VaultAppRoleSetup
         {
             Console.WriteLine($"AppRole 可能已經啟用: {e.Message}");
         }
+    }
 
+    private async Task SetupAppRoleAsync(Dictionary<string, string> policies)
+    {
         foreach (var (roleName, _) in policies)
         {
             Console.WriteLine($"建立 {roleName} 的 AppRole...");
