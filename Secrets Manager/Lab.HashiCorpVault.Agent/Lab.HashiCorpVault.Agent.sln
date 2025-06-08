@@ -2,8 +2,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HashiCorpVault.Agent", "Lab.HashiCorpVault.Agent\Lab.HashiCorpVault.Agent.csproj", "{5CB1936E-7155-4797-893E-764B5A557726}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HashiCorpVault.ConfigGenerator", "Lab.HashiCorpVault.ConfigGenerator\Lab.HashiCorpVault.ConfigGenerator.csproj", "{63B2D5E7-2A41-418D-9BC8-7B93EA10A77E}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HashiCorpVault.Admin", "Lab.HashiCorpVault.Admin\Lab.HashiCorpVault.Admin.csproj", "{57446D92-4A93-4DA9-8140-13CBAB950748}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.HashiCorpVault.Client", "Lab.HashiCorpVault.Client\Lab.HashiCorpVault.Client.csproj", "{A782BCAD-B42C-4B9E-9E2E-8144B692B99C}"
@@ -20,10 +18,6 @@ Global
 		{5CB1936E-7155-4797-893E-764B5A557726}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5CB1936E-7155-4797-893E-764B5A557726}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5CB1936E-7155-4797-893E-764B5A557726}.Release|Any CPU.Build.0 = Release|Any CPU
-		{63B2D5E7-2A41-418D-9BC8-7B93EA10A77E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{63B2D5E7-2A41-418D-9BC8-7B93EA10A77E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{63B2D5E7-2A41-418D-9BC8-7B93EA10A77E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{63B2D5E7-2A41-418D-9BC8-7B93EA10A77E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{57446D92-4A93-4DA9-8140-13CBAB950748}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{57446D92-4A93-4DA9-8140-13CBAB950748}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{57446D92-4A93-4DA9-8140-13CBAB950748}.Release|Any CPU.ActiveCfg = Release|Any CPU
