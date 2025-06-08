@@ -69,7 +69,12 @@ public class VaultApiClient(HttpClient client, string vaultToken)
     {
         return await SendRequestAsync(HttpMethod.Get, $"/v1/auth/approle/role/{roleName}/role-id");
     }
-
+    
+    public async Task<JsonObject> GetSecretAsync(string path)
+    {
+        return await SendRequestAsync(HttpMethod.Get, $"/v1/{path}");
+    }
+    
     public async Task<JsonObject> GenerateSecretIdAsync(string roleName)
     {
         return await SendRequestAsync(HttpMethod.Post, $"/v1/auth/approle/role/{roleName}/secret-id");
