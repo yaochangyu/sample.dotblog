@@ -38,10 +38,6 @@ public class VaultAppRoleSetup
                           path "{{SecretName}}/data/db/connection/*" {
                             capabilities = ["read"]
                           }
-
-                          path "auth/approle/role/{{AppRoleName}}/role-id" {
-                            capabilities = ["read"]
-                          }
                           """,
     };
 
