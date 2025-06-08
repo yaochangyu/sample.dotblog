@@ -24,7 +24,7 @@ class Program
         {
             BaseAddress = new Uri(VaultServer),
         }, vaultRootToken);
-        var setup = new VaultAppRoleSetup2(vaultApiClient, vaultRootToken);
+        var setup = new VaultAppRoleSetup2(vaultApiClient);
 
         // var setup = new VaultAppRoleSetup(VaultServer, vaultRootToken);
         
