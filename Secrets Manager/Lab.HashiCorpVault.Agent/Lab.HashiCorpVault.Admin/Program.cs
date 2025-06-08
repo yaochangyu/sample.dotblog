@@ -11,7 +11,7 @@ class Program
     {
         Console.WriteLine("Setup Vault Starting...");
 
-        var setup = new VaultAgentSetup(VaultServer, VaultRootToken);
+        var setup = new VaultAppRoleSetup(VaultServer, VaultRootToken);
         await setup.SetupVaultAsync();
         // 建立管理者 Token
         var adminTokens = await setup.CreateAdminToken();
