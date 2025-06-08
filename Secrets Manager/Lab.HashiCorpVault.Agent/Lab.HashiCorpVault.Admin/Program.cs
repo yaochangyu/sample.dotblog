@@ -12,7 +12,7 @@ class Program
         Console.WriteLine("Setup Vault Starting...");
 
         var setup = new VaultAgentSetup(VaultServer, VaultRootToken);
-        await setup.SetupVaultAgentAsync();
+        await setup.SetupVaultAsync();
         // 建立管理者 Token
         var adminTokens = await setup.CreateAdminToken();
         
@@ -21,6 +21,7 @@ class Program
         var id = await setup.GetAppRoleCredentialsAsync(adminToken, "app-dev");
         
         Console.WriteLine($"Role ID: {id.RoleId}, Secret ID: {id.SecretId}");
+        
         // 印出管理者 Token
         string tokenString = string.Join(", ", adminTokens.Select(t => $"{t.Key}: {t.Value}"));
         Console.WriteLine($"Token: {tokenString}");
