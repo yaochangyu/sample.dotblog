@@ -4,9 +4,7 @@ namespace Lab.HashiCorpVault.Admin;
 
 public class VaultAppRoleSetup2
 {
-    private readonly string _vaultServer;
     private readonly VaultApiClient _vaultApiClient;
-    private const string AppRoleName = "app-dev";
     private const string SecretRootPathName = "dev";
 
     public readonly List<Secret> Secrets =
@@ -31,11 +29,11 @@ public class VaultAppRoleSetup2
 
     public readonly Dictionary<string, string> SecretPolicies = new()
     {
-        [AppRoleName] = $$"""
-                          path "{{SecretRootPathName}}/data/db/connection/*" {
-                            capabilities = ["read"]
-                          }
-                          """,
+        ["app-dev"] = $$"""
+                        path "{{SecretRootPathName}}/data/db/connection/*" {
+                          capabilities = ["read"]
+                        }
+                        """,
     };
 
     public VaultAppRoleSetup2(VaultApiClient vaultApiClient)
