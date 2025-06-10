@@ -20,7 +20,10 @@ public class VaultApiClient(HttpClient client, string vaultToken)
             type = authMethod
         };
 
-        return await SendRequestAsync(HttpMethod.Post, $"/v1/sys/auth/{path}", payload);
+        // 如果 path 為 null 或空字串，則使用 authMethod 作為路徑
+        string authPath = string.IsNullOrEmpty(path) ? authMethod : path;
+    
+        return await SendRequestAsync(HttpMethod.Post, $"/v1/sys/auth/{authPath}", payload);
     }
 
     public async Task<JsonObject> EnableSecretEngineAsync(string engine, string path)
