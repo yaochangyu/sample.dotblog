@@ -1,0 +1,42 @@
+@startuml
+participant "Admin\n(VaultAppRoleSetup2)" as Admin
+participant "Vault Server" as Vault
+participant "Agent\n(VaultAgentSetup2)" as Agent
+participant "Application" as App
+participant "File System" as FS
+
+== 初始化設定階段（由 Admin 執行）==
+Admin -> Vault: EnableAppRoleAsync()
+Admin -> Vault: EnableSecretAsync()
+Admin -> Vault: SetupSecretAsync()\n(寫入機敏資料)
+Admin -> Vault: SetupPolicesAsync()\n(建立 app-dev, app-admin 政策)
+Admin -> Vault: SetupAppRoleAsync()\n(建立 AppRole)
+
+== Admin Token 生成階段 ==
+Admin -> Vault: CreateAdminToken()
+Vault --> Admin: 回傳 Admin Token
+
+== AppRole 認證階段 ==
+Agent -> Admin: 請求 AppRole 認證
+Admin -> Vault: GetRoleIdAsync(roleName)
+Vault --> Admin: 回傳 Role ID
+Admin -> Vault: GenerateSecretIdAsync(roleName)
+Vault --> Admin: 回傳 Secret ID
+Admin --> Agent: 提供 Role ID 和 Secret ID
+
+== Agent 設定與啟動階段 ==
+Agent -> FS: SaveCredentialsForVaultAgent()\n(儲存 Role ID/Secret ID)
+Agent -> FS: 讀取 vault-agent-config.hcl
+Agent -> Agent: StartVaultAgent()
+
+== Agent 運行階段 ==
+Agent -> Vault: 使用 Role ID/Secret ID 認證
+Vault --> Agent: 提供 Vault Token
+Agent -> Vault: 週期性續約 Token
+Agent -> FS: 監控並更新範本文件\n(dev-db-config.json)
+
+== 應用程式使用階段 ==
+App -> FS: 讀取由 Agent 產生的設定檔
+App -> App: 使用解密後的機敏資訊
+
+@enduml

@@ -1,0 +1,24 @@
+@startuml
+participant "Admin" as Admin
+participant "Vault Server" as Vault
+participant "Agent" as Agent
+participant "Application" as App
+
+== Admin 設定階段 ==
+Admin -> Vault: 1. 啟用 AppRole 和設定政策
+Admin -> Vault: 2. 寫入機敏資料
+note right: KV v2 引擎
+
+== 認證階段 ==
+Agent -> Admin: 3. 請求 AppRole 認證
+Admin -> Vault: 4. 取得 Role ID/Secret ID
+Vault --> Admin: 5. 回傳認證資訊
+Admin --> Agent: 6. 提供認證資訊
+
+== 運行階段 ==
+Agent -> Vault: 7. 使用 Role ID/Secret ID 認證
+Vault --> Agent: 8. 提供 Token
+Agent -> Agent: 9. 產生設定檔
+App -> Agent: 10. 讀取設定檔
+
+@enduml
