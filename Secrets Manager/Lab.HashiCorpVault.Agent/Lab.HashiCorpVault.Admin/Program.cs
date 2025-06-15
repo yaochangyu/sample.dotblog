@@ -24,15 +24,15 @@ class Program
         {
             BaseAddress = new Uri(VaultServer),
         }, vaultRootToken);
-        var setup = new VaultAppRoleSetup2(vaultApiClient);
+        // var setup = new VaultAppRoleSetup2(vaultApiClient,vaultRootToken);
 
-        // var setup = new VaultAppRoleSetup(VaultServer, vaultRootToken);
+        var setup = new VaultAppRoleSetup(VaultServer, vaultRootToken);
         
         await setup.SetupVaultAsync();
         // 建立管理者 Token
         var adminTokens = await setup.CreateAdminToken();
         
-        // 使用管理者 Token 取得 app-dev 的 AppRole 認證資訊
+        // 測試使用管理者 Token 取得 app-dev 的 AppRole 認證資訊
         string adminToken = adminTokens["app-admin"];
         var id = await setup.GetAppRoleCredentialsAsync(adminToken, "app-dev");
         
