@@ -21,6 +21,9 @@ class Program
             Console.WriteLine("Error: Vault token cannot be empty.");
             return;
         }
+        
+        // 應該要有兩個 Process 
+        await VaultAgentSetup2.VerifyVaultProcessInfoAsync();
 
         // 設定 Vault Agent
         var setup = new VaultAgentSetup2(new VaultApiClient(new HttpClient
@@ -95,7 +98,7 @@ class Program
                         {
                             watcher.Dispose();
                         }
-                        
+
                         return;
 
                     default:
@@ -156,7 +159,7 @@ class Program
                 // 產生新的檔案，代表有捕捉到 vault-token 更新
                 string timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
                 string newTokenFileName = $"vault-token-updated-{timestamp}";
-                await File.WriteAllTextAsync(newTokenFileName, newToken);              
+                await File.WriteAllTextAsync(newTokenFileName, newToken);
             }
             catch (Exception ex)
             {
