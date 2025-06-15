@@ -24,7 +24,7 @@ public class VaultAgentSetup2
         await SaveCredentialsForVaultAgent(AppRoleName, roleId, secretId);
 
         // 啟動 Vault Agent
-        await StartVaultAgent();
+        await StartVaultAgentAsync();
     }
 
     private async Task<(string roleId, string secretId)> GetAppRoleCredentials(string roleName)
@@ -58,7 +58,7 @@ public class VaultAgentSetup2
         Console.WriteLine($"認證資訊已儲存到 {credentialsDir} 目錄");
     }
 
-    private async Task StartVaultAgent()
+    public async Task StartVaultAgentAsync()
     {
         Console.WriteLine("啟動 Vault Agent...");
 
