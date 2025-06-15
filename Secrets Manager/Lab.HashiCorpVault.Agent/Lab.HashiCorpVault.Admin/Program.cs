@@ -41,6 +41,8 @@ class Program
         // 印出管理者 Token
         string tokenString = string.Join(", ", adminTokens.Select(t => $"{t.Key} token: {t.Value}"));
         Console.WriteLine($"{tokenString}");
+        var fileName = $"admin-token-{DateTime.UtcNow:yyyyMMddHHmmss}";
+        await File.WriteAllTextAsync(fileName, tokenString);
         Console.WriteLine("Setup Vault Completed.");
     }
 }
