@@ -24,9 +24,9 @@ class Program
         {
             BaseAddress = new Uri(VaultServer),
         }, vaultRootToken);
-        // var setup = new VaultAppRoleSetup2(vaultApiClient,vaultRootToken);
+        var setup = new VaultAppRoleSetup2(vaultApiClient,vaultRootToken);
 
-        var setup = new VaultAppRoleSetup(VaultServer, vaultRootToken);
+        // var setup = new VaultAppRoleSetup(VaultServer, vaultRootToken);
         
         await setup.SetupVaultAsync();
         // 建立管理者 Token
