@@ -34,7 +34,7 @@ class Program
         }, vaultToken));
 
         await setup.SetupVaultAgentAsync();
-        await setup.StartVaultAgentAsync();
+        // await setup.StartVaultAgentAsync();
 
         Console.WriteLine("Vault Agent Started.");
 
