@@ -91,7 +91,9 @@ public class VaultAppRoleSetup
 
     public async Task<(string RoleId, string SecretId)> GetAppRoleCredentialsAsync(string adminToken, string roleName)
     {
+        // 更新 token
         Environment.SetEnvironmentVariable("VAULT_TOKEN", adminToken);
+        
         // 取得 Role ID
         var roleResult = await ExecuteVaultCommandAsync($"read -format=json auth/approle/role/{roleName}/role-id");
         var roleJsonObject = JsonNode.Parse(roleResult).AsObject();
@@ -101,6 +103,10 @@ public class VaultAppRoleSetup
         var secretResult = await ExecuteVaultCommandAsync($"write -format=json -f auth/approle/role/{roleName}/secret-id");
         var secretJsonObject = JsonNode.Parse(secretResult).AsObject();
         var secretId = secretJsonObject["data"]?["secret_id"]?.GetValue<string>();
+        
+        // 恢復原始 token
+        Environment.SetEnvironmentVariable("VAULT_TOKEN", _rootToken);
+
         return (roleId, secretId);
     }
 
