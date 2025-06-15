@@ -42,7 +42,7 @@ class Program
         string tokenString = string.Join(", ", adminTokens.Select(t => $"{t.Key} token: {t.Value}"));
         Console.WriteLine($"{tokenString}");
         var fileName = $"admin-token-{DateTime.UtcNow:yyyyMMddHHmmss}";
-        await File.WriteAllTextAsync(fileName, tokenString);
+        await File.WriteAllTextAsync(fileName, adminToken);
         Console.WriteLine("Setup Vault Completed.");
     }
 }
