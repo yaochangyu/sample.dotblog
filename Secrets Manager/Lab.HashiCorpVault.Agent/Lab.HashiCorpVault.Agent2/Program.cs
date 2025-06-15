@@ -8,7 +8,7 @@ class Program
     private static string VaultServer = "http://127.0.0.1:8200/";
     private static string VaultToken = "你的 token";
     private static string VaultAgentAddress = "http://127.0.0.1:8100/";
-
+    private static FileSystemWatcher watcher = null;
     static async Task Main(string[] args)
     {
         Console.WriteLine("Vault Agent Starting...");
@@ -41,7 +41,7 @@ class Program
         Console.WriteLine($"使用 Vault Agent Token: {agentToken}");
 
         await PrintSecretDataAsync(vaultApiClient);
-
+        SetupTokenWatcher();
         // 監控 token 文件變化
         var tokenFileInfo = new FileInfo("vault-token");
         var lastTokenTimeUtc = tokenFileInfo.LastWriteTimeUtc;
@@ -91,20 +91,21 @@ class Program
 
                     case '3':
                         Console.WriteLine("程序退出中...");
+                        if (watcher != null)
+                        {
+                            watcher.Dispose();
+                        }
+                        
                         return;
 
                     default:
                         Console.WriteLine("無效的選擇，請重新輸入");
                         break;
                 }
-
-                // 短暫休眠以降低 CPU 使用率
-                await Task.Delay(100);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"\n發生錯誤: {ex.Message}");
-                await Task.Delay(5000); // 發生錯誤時等待較長時間
             }
         }
     }
@@ -130,5 +131,39 @@ class Program
             Console.WriteLine("Error: Account or Password not found in secret data.");
         }
         return false;
+    }
+
+    private static void SetupTokenWatcher()
+    {
+        watcher = new FileSystemWatcher
+        {
+            Path = ".",
+            Filter = "vault-token",
+            NotifyFilter = NotifyFilters.LastWrite
+        };
+
+        watcher.Changed += async (sender, e) =>
+        {
+            try
+            {
+                // 為了確保檔案完全寫入，稍微延遲一下
+                await Task.Delay(100);
+
+                var newToken = await File.ReadAllTextAsync("vault-token");
+                Console.WriteLine($"\n[{DateTime.UtcNow}] 檢測到 Token 更新");
+                Console.WriteLine($"成功獲取新的 Token：{newToken}");
+
+                // 產生新的檔案，代表有捕捉到 vault-token 更新
+                string timestamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss");
+                string newTokenFileName = $"vault-token-updated-{timestamp}";
+                await File.WriteAllTextAsync(newTokenFileName, newToken);              
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"\n監聽 Token 更新時發生錯誤: {ex.Message}");
+            }
+        };
+
+        watcher.EnableRaisingEvents = true;
     }
 }
