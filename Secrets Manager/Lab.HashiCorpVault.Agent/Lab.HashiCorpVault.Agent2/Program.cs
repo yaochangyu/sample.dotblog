@@ -9,6 +9,8 @@ class Program
     private static string VaultToken = "你的 token";
     private static string VaultAgentAddress = "http://127.0.0.1:8100/";
     private static FileSystemWatcher watcher = null;
+    private static string VaultFileName = "vault-token";
+
     static async Task Main(string[] args)
     {
         Console.WriteLine("Vault Agent Starting...");
@@ -21,7 +23,7 @@ class Program
             Console.WriteLine("Error: Vault token cannot be empty.");
             return;
         }
-        
+
         // 應該要有兩個 Process 
         await VaultAgentSetup2.VerifyVaultProcessInfoAsync();
 
@@ -32,10 +34,12 @@ class Program
         }, vaultToken));
 
         await setup.SetupVaultAgentAsync();
+        await setup.StartVaultAgentAsync();
+
         Console.WriteLine("Vault Agent Started.");
 
         Console.WriteLine("透過 Vault Agent 讀取秘密...");
-        var agentToken = await File.ReadAllTextAsync("vault-token");
+        var agentToken = await File.ReadAllTextAsync(VaultFileName);
         var vaultApiClient = new VaultApiClient(new HttpClient
         {
             BaseAddress = new Uri(VaultAgentAddress),
@@ -46,7 +50,7 @@ class Program
         await PrintSecretDataAsync(vaultApiClient);
         SetupTokenWatcher();
         // 監控 token 文件變化
-        var tokenFileInfo = new FileInfo("vault-token");
+        var tokenFileInfo = new FileInfo(VaultFileName);
         var lastTokenTimeUtc = tokenFileInfo.LastWriteTimeUtc;
 
         while (true)
@@ -67,7 +71,7 @@ class Program
                 {
                     case '1':
                         // 檢查 token 文件的最後修改時間
-                        tokenFileInfo = new FileInfo("vault-token");
+                        tokenFileInfo = new FileInfo(VaultFileName);
                         if (tokenFileInfo.LastWriteTimeUtc > lastTokenTimeUtc)
                         {
                             lastTokenTimeUtc = tokenFileInfo.LastWriteTimeUtc;
@@ -75,7 +79,7 @@ class Program
                             Console.WriteLine($"Token 文件更新時間: {lastTokenTimeUtc}");
 
                             // 讀取並使用新的 token
-                            agentToken = await File.ReadAllTextAsync("vault-token");
+                            agentToken = await File.ReadAllTextAsync(VaultFileName);
                             Console.WriteLine($"成功獲取新的 Token：{agentToken}");
                             vaultApiClient.UpdateToken(agentToken);
                             Console.WriteLine($"使用 Vault Agent Token: {agentToken}");
@@ -85,8 +89,8 @@ class Program
                         break;
 
                     case '2':
-                        var currentToken = await File.ReadAllTextAsync("vault-token");
-                        var currentFileInfo = new FileInfo("vault-token");
+                        var currentToken = await File.ReadAllTextAsync(VaultFileName);
+                        var currentFileInfo = new FileInfo(VaultFileName);
 
                         Console.WriteLine($"當前 Token: {currentToken}");
                         Console.WriteLine($"Token 文件最後更新時間: {currentFileInfo.LastWriteTimeUtc}");
