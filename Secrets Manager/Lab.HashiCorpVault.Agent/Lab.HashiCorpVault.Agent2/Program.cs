@@ -38,7 +38,6 @@ class Program
             BaseAddress = new Uri(VaultAgentAddress),
 
         }, agentToken);
-        vaultApiClient.UpdateToken(agentToken);
         Console.WriteLine($"使用 Vault Agent Token: {agentToken}");
 
         await PrintSecretDataAsync(vaultApiClient);
