@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Nodes;
+﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using Lab.HashiCorpVault.Client;
 
 namespace Lab.HashiCorpVault.Agent2;
@@ -24,6 +25,28 @@ class Program
             return;
         }
 
+        // 讀取 .vault-token 檔案，取得 root token
+        var rootVaultFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".vault-token");
+        string vaultRootToken = string.Empty;
+
+        if (File.Exists(rootVaultFilePath) == false)
+        {
+            Console.Write("Please enter your Vault root token: ");
+            vaultRootToken = Console.ReadLine();
+        }
+        else
+        {
+            vaultRootToken = await File.ReadAllTextAsync(rootVaultFilePath);
+            Console.WriteLine($"讀取 Vault root token: {vaultRootToken}");
+        }
+        
+        if (string.IsNullOrWhiteSpace(vaultRootToken))
+        {
+            Console.WriteLine("Error: Vault root token cannot be empty.");
+            return;
+        }
+        
         // 應該要有兩個 Process 
         await VaultAgentSetup2.VerifyVaultProcessInfoAsync();
 
@@ -34,7 +57,7 @@ class Program
         }, vaultToken));
 
         await setup.SetupVaultAgentAsync();
-        // await setup.StartVaultAgentAsync();
+        // await setup.StartVaultAgentAsync();// Agent 無法單獨啟動，必須要要走完整個流程，關閉後就無法正常工作
 
         Console.WriteLine("Vault Agent Started.");
 
@@ -94,6 +117,14 @@ class Program
 
                         Console.WriteLine($"當前 Token: {currentToken}");
                         Console.WriteLine($"Token 文件最後更新時間: {currentFileInfo.LastWriteTimeUtc}");
+
+                        // 查看 Token 的有效期
+                        vaultApiClient.UpdateToken(vaultRootToken);
+                        var tokenInfo = await vaultApiClient.GetTokenInfoAsync(currentToken);
+                        var tokenInfoString = JsonSerializer.Serialize(tokenInfo);
+                        Console.WriteLine("Token Info：");
+                        Console.WriteLine($"{tokenInfoString}");
+                        vaultApiClient.UpdateToken(agentToken);
                         break;
 
                     case '3':

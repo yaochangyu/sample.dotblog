@@ -12,8 +12,23 @@ class Program
     {
         Console.WriteLine("Setup Vault Starting...");
         Console.Write("Please enter your Vault root token: ");
-        string vaultRootToken = Console.ReadLine() ?? VaultRootToken;
+        var vaultRootToken = string.Empty;
         
+        // 讀取 .vault-token 檔案，取得 root token
+        var rootVaultFilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".vault-token");
+
+        if (File.Exists(rootVaultFilePath) == false)
+        {
+            Console.Write("Please enter your Vault root token: ");
+            vaultRootToken = Console.ReadLine();
+        }
+        else
+        {
+            vaultRootToken = await File.ReadAllTextAsync(rootVaultFilePath);
+            Console.WriteLine($"讀取 Vault root token: {vaultRootToken}");
+        }
+ 
         if (string.IsNullOrWhiteSpace(vaultRootToken))
         {
             Console.WriteLine("Error: Vault token cannot be empty.");

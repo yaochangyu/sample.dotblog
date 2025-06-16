@@ -126,4 +126,13 @@ public class VaultApiClient(HttpClient client, string vaultToken)
 
         return JsonNode.Parse(content)?.AsObject() ?? new JsonObject();
     }
+    
+    public async Task<JsonObject> GetTokenInfoAsync(string token)
+    {
+        var payload = new
+        {
+            token
+        };
+        return await SendRequestAsync(HttpMethod.Post, "/v1/auth/token/lookup", payload);
+    }
 }
