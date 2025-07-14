@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.XmlSerializer.ConsoleApp", "Lab.XmlSerializer.ConsoleApp\Lab.XmlSerializer.ConsoleApp.csproj", "{CC8944ED-8F98-44A0-94EA-9ED949D98833}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject1", "TestProject1\TestProject1.csproj", "{477C0703-04F8-46F2-BA33-985BB7D59F68}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CC8944ED-8F98-44A0-94EA-9ED949D98833}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC8944ED-8F98-44A0-94EA-9ED949D98833}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC8944ED-8F98-44A0-94EA-9ED949D98833}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC8944ED-8F98-44A0-94EA-9ED949D98833}.Release|Any CPU.Build.0 = Release|Any CPU
+		{477C0703-04F8-46F2-BA33-985BB7D59F68}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{477C0703-04F8-46F2-BA33-985BB7D59F68}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{477C0703-04F8-46F2-BA33-985BB7D59F68}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{477C0703-04F8-46F2-BA33-985BB7D59F68}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
