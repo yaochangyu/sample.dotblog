@@ -18,6 +18,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Lab.XmlSerializer.ConsoleApp\Lab.XmlSerializer.ConsoleApp.csproj" />
+      <ProjectReference Include="..\Lab.XmlSerializer.WebApi\Lab.XmlSerializer.WebApi.csproj" />
     </ItemGroup>
 
 </Project>
