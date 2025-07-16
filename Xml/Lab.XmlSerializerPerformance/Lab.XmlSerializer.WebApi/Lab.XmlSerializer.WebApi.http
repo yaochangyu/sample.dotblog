@@ -1,0 +1,6 @@
+@Lab.XmlSerializer.WebApi_HostAddress = http://localhost:5142
+
+GET {{Lab.XmlSerializer.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.XmlSerializer.ConsoleAp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject1", "TestProject1\TestProject1.csproj", "{477C0703-04F8-46F2-BA33-985BB7D59F68}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.XmlSerializer.WebApi", "Lab.XmlSerializer.WebApi\Lab.XmlSerializer.WebApi.csproj", "{7EECE89F-B056-4D9E-B60D-31393090B91A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{477C0703-04F8-46F2-BA33-985BB7D59F68}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{477C0703-04F8-46F2-BA33-985BB7D59F68}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{477C0703-04F8-46F2-BA33-985BB7D59F68}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7EECE89F-B056-4D9E-B60D-31393090B91A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7EECE89F-B056-4D9E-B60D-31393090B91A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7EECE89F-B056-4D9E-B60D-31393090B91A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7EECE89F-B056-4D9E-B60D-31393090B91A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
