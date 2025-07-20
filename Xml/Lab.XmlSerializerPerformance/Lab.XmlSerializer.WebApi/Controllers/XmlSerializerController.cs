@@ -64,8 +64,14 @@
     [Route("[controller]")]
     public class XmlSerializerController : ControllerBase
     {
-        private readonly BadXmlSerializerService _badService = new BadXmlSerializerService();
-        private readonly GoodXmlSerializerService _goodService = new GoodXmlSerializerService();
+        private readonly BadXmlSerializerService _badService;
+        private readonly GoodXmlSerializerService _goodService;
+        public XmlSerializerController(BadXmlSerializerService badService, 
+            GoodXmlSerializerService goodService)
+        {
+            _badService = badService;
+            _goodService = goodService;
+        }
 
         [HttpGet("bad")]
         public async Task<ActionResult> BadSerialize()
