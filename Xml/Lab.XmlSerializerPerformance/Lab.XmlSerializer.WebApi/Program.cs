@@ -1,3 +1,4 @@
+using Lab.XmlSerializer.WebApi.Controllers;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Lab.XmlSerializer.WebApi;
@@ -14,6 +15,8 @@ public class Program
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
         builder.Services.AddControllers();
+        builder.Services.AddSingleton<BadXmlSerializerService>();
+        builder.Services.AddSingleton<GoodXmlSerializerService>();
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
