@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Web.Http;
 
 namespace AspNetFx.WebApi.Controllers
@@ -10,13 +12,10 @@ namespace AspNetFx.WebApi.Controllers
     public class ValuesController : ApiController
     {
         // GET api/values
-        public IEnumerable<string> Get()
+        public async Task<IHttpActionResult> Get(CancellationToken cancel)
         {
             var serverVariables = new HttpContextProvider().GetServerVariables();
-            var results = serverVariables.Select(p => p.Key + "=" + p.Value)
-                .ToList();
-                
-            return results;
+            return Ok(serverVariables);
         }
 
         // GET api/values/5
