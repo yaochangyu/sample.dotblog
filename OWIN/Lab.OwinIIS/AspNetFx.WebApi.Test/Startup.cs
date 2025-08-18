@@ -1,4 +1,5 @@
 ﻿using System.Web.Http;
+using AspNetFx.WebApi;
 using Owin;
 
 namespace AspNetFx.WebApi.Test
@@ -7,6 +8,9 @@ namespace AspNetFx.WebApi.Test
     {
         public void Configuration(IAppBuilder app)
         {
+            // 設定使用 OWIN HttpContext Provider
+            HttpContextProviderConfiguration.UseOwinProvider();
+            
             var configuration = new HttpConfiguration();
             WebApiConfig.Register(configuration);
             //app.UseErrorPage();
