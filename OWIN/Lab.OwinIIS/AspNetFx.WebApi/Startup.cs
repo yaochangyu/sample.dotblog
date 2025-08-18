@@ -10,6 +10,9 @@ namespace AspNetFx.WebApi
     {
         public void Configuration(IAppBuilder app)
         {
+            // 設定使用 OWIN HttpContext Provider
+            HttpContextProviderConfiguration.UseOwinProvider();
+            
             var config = new HttpConfiguration();
             
             config.Routes.MapHttpRoute(

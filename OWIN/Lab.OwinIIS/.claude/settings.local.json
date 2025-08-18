@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(msbuild:*)",
+      "Bash(where msbuild)",
+      "Bash(\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\MSBuild\\Current\\Bin\\MSBuild.exe\" Lab.OwinIIS.sln)",
+      "Bash(\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE\\CommonExtensions\\Microsoft\\TestWindow\\vstest.console.exe\" AspNetFx.WebApi.TestbinDebugAspNetFx.WebApi.Test.dll)",
+      "Bash(dir:*)",
+      "Bash(\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\Common7\\IDE\\CommonExtensions\\Microsoft\\TestWindow\\vstest.console.exe\" \"AspNetFx.WebApi.Test\\bin\\Debug\\AspNetFx.WebApi.Test.dll\")",
+      "Bash(\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\MSBuild\\Current\\Bin\\MSBuild.exe\" AspNetFx.WebApi.TestAspNetFx.WebApi.Test.csproj)",
+      "Bash(\"C:\\Program Files\\Microsoft Visual Studio\\2022\\Enterprise\\MSBuild\\Current\\Bin\\MSBuild.exe\" \"AspNetFx.WebApi.Test\\AspNetFx.WebApi.Test.csproj\")"
     ],
     "deny": [],
     "ask": []

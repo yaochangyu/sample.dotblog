@@ -4,7 +4,7 @@ using System.Web;
 
 namespace AspNetFx.WebApi
 {
-    public class HttpContextProvider
+    public class HttpContextProvider : IHttpContextProvider
     {
         private HttpContext Context => HttpContext.Current;
 
