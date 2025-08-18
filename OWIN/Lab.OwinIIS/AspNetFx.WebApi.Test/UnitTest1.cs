@@ -32,7 +32,7 @@ namespace AspNetFx.WebApi.Test
         [TestMethod]
         public void TestMethod1()
         {
-            var url = "api/Default/1";
+            var url = "api/values/1";
             var response = s_client.GetAsync(url).Result;
             Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
 
