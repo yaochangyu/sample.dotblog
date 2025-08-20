@@ -13,9 +13,6 @@ namespace AspNetFx.WebApi
     {
         protected void Application_Start()
         {
-            // 設定使用 ASP.NET HttpContext Provider
-            HttpContextProviderConfiguration.UseAspNetProvider();
-            
             AreaRegistration.RegisterAllAreas();
             GlobalConfiguration.Configure(WebApiConfig.Register);
             FilterConfig.RegisterGlobalFilters(GlobalFilters.Filters);
