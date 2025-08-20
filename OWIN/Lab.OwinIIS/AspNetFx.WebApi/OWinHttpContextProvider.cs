@@ -8,10 +8,24 @@ namespace AspNetFx.WebApi
 {
     public class OWinHttpContextProvider : IHttpContextProvider
     {
+        private readonly IOwinContext _context;
+
+        public OWinHttpContextProvider(IOwinContext context)
+        {
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+        }
+
         private IOwinContext Context
         {
             get
             {
+                // 先嘗試從注入的 context 取得
+                if (_context != null)
+                {
+                    return _context;
+                }
+
+                // 如果沒有注入的 context，再嘗試從 HttpContext.Current 取得（相容性考量）
                 var httpContext = HttpContext.Current;
                 if (httpContext?.Items["owin.Environment"] != null)
                 {
@@ -25,7 +39,7 @@ namespace AspNetFx.WebApi
         {
             var variables = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
             var context = Context;
-            
+
             if (context?.Environment != null)
             {
                 foreach (var kvp in context.Environment)

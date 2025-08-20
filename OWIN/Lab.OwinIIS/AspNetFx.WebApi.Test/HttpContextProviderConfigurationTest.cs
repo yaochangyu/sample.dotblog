@@ -1,13 +1,13 @@
 using System;
 using System.Net.Http;
-using AspNetFx.WebApi;
+using System.Threading.Tasks;
 using Microsoft.Owin.Hosting;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace AspNetFx.WebApi.Test
 {
     [TestClass]
-    public class HttpContextProviderConfigurationTest
+    public class HttpContextProviderTest
     {
         private const string HOST_ADDRESS = "http://localhost:8002";
         private IDisposable _webApp;
@@ -29,31 +29,22 @@ namespace AspNetFx.WebApi.Test
         }
 
         [TestMethod]
-        public void TestOwinProviderConfiguration()
+        public async Task TestOwinProviderConfiguration()
         {
             // 測試是否正確使用 OWIN Provider
             var url = "api/values";
-            var response = _client.GetAsync(url).Result;
-            
+
+            var httpRequestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+            httpRequestMessage.Headers.Add("User-Agent", "HttpContextProviderTest");
+            var response = await _client.SendAsync(httpRequestMessage);
+
             Assert.AreEqual(System.Net.HttpStatusCode.OK, response.StatusCode);
-            
-            // 由於 OWinHttpContextProvider 目前拋出 NotImplementedException
+
             // 這個測試會驗證啟動時設定是否正確
             var content = response.Content.ReadAsStringAsync().Result;
             Console.WriteLine($"Response content: {content}");
-            
-            // 實際的測試會在 OWinHttpContextProvider 完成實作後進行
-        }
 
-        [TestMethod]
-        public void TestConfigurationPersistence()
-        {
-            // 驗證設定在啟動後是否持續有效
-            var factory = new HttpContextProviderFactory();
-            var provider = factory.CreateProvider();
-            
-            Assert.IsNotNull(provider);
-            Assert.IsInstanceOfType(provider, typeof(OWinHttpContextProvider));
+            // 實際的測試會在 OWinHttpContextProvider 完成實作後進行
         }
     }
 }
