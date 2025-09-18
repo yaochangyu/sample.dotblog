@@ -33,7 +33,7 @@ public class ChannelQueueHandler : IQueueHandler
         };
 
         _pendingRequests[queuedRequest.Id] = queuedRequest;
-        await _writer.WriteAsync(queuedRequest);
+        await _writer.WriteAsync(queuedRequest, cancellationToken);
 
         return queuedRequest.Id;
     }
@@ -42,7 +42,22 @@ public class ChannelQueueHandler : IQueueHandler
     {
         try
         {
-            return await _reader.ReadAsync(cancellationToken);
+            // 先檢查是否有可用項目，避免無限等待
+            if (_reader.TryRead(out var item))
+            {
+                return item;
+            }
+
+            // 如果沒有立即可用的項目，等待一小段時間
+            using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+            using var combined = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
+
+            return await _reader.ReadAsync(combined.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // 超時或取消
+            return null;
         }
         catch (InvalidOperationException)
         {
