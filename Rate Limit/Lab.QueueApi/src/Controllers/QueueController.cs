@@ -31,7 +31,7 @@ public class QueueController : ControllerBase
     /// <param name="request">API 請求資料</param>
     /// <returns>API 回應</returns>
     [HttpPost("process")]
-    public async Task<IActionResult> ProcessRequest([FromBody] CreateQueueRequest request)
+    public async Task<IActionResult> ProcessRequest([FromBody] CreateQueueRequest request, CancellationToken cancel = default)
     {
         try
         {
@@ -39,19 +39,19 @@ public class QueueController : ControllerBase
             if (_rateLimiter.IsRequestAllowed())
             {
                 _rateLimiter.RecordRequest();
-                
+
                 // 直接處理請求
                 var response = await ProcessDirectlyAsync(request);
-                
+
                 _logger.LogInformation("Request processed directly");
                 return this.Ok(response);
             }
-            
+
             // 請求進入佇列
-            var requestId = await _queueHandler.EnqueueRequestAsync(request.Data);
+            var requestId = await _queueHandler.EnqueueRequestAsync(request.Data, cancel);
             var retryAfter = _rateLimiter.GetRetryAfter();
-                
-            _logger.LogInformation("Request {RequestId} queued, retry after {RetryAfter}s", 
+
+            _logger.LogInformation("Request {RequestId} queued, retry after {RetryAfter}s",
                 requestId, retryAfter.TotalSeconds);
 
             // 返回 429 狀態碼和 Retry-After 標頭
@@ -80,18 +80,19 @@ public class QueueController : ControllerBase
     /// <param name="requestId">請求 ID</param>
     /// <returns>請求狀態</returns>
     [HttpGet("status/{requestId}")]
-    public async Task<IActionResult> GetRequestStatus(string requestId)
+    public async Task<IActionResult> GetRequestStatus(string requestId, CancellationToken cancel = default)
     {
         try
         {
             // 等待請求完成，設定較短的超時時間用於狀態檢查
-            var response = await _queueHandler.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(1));
-            
+            var response = await _queueHandler.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(1), cancel);
+
             if (response.Success)
             {
                 return this.Ok(response);
             }
-            else if (response.Message == "Request timeout")
+            
+            if (response.Message == "Request timeout")
             {
                 return this.Accepted(new
                 {
@@ -100,10 +101,8 @@ public class QueueController : ControllerBase
                     QueuePosition = _queueHandler.GetQueueLength()
                 });
             }
-            else
-            {
-                return this.NotFound(new { Message = response.Message });
-            }
+            
+            return this.NotFound(new { Message = response.Message });
         }
         catch (Exception ex)
         {
@@ -118,7 +117,7 @@ public class QueueController : ControllerBase
     /// <param name="requestId">請求 ID</param>
     /// <returns>處理結果</returns>
     [HttpGet("wait/{requestId}")]
-    public async Task<IActionResult> WaitForRequest(string requestId)
+    public async Task<IActionResult> WaitForRequest(string requestId, CancellationToken cancel = default)
     {
         try
         {
@@ -126,13 +125,14 @@ public class QueueController : ControllerBase
             await TryProcessQueuedRequests();
 
             // 等待請求完成，設定較長的超時時間
-            var response = await _queueHandler.WaitForResponseAsync(requestId, TimeSpan.FromMinutes(1));
+            var response = await _queueHandler.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(10), cancel);
 
             if (response.Success)
             {
                 return this.Ok(response);
             }
-            else if (response.Message == "Request timeout")
+            
+            if (response.Message == "Request timeout")
             {
                 return this.StatusCode(408, new
                 {
@@ -140,10 +140,8 @@ public class QueueController : ControllerBase
                     RequestId = requestId
                 });
             }
-            else
-            {
-                return this.NotFound(new { Message = response.Message });
-            }
+            
+            return this.NotFound(new { Message = response.Message });
         }
         catch (Exception ex)
         {
@@ -158,9 +156,33 @@ public class QueueController : ControllerBase
     private async Task TryProcessQueuedRequests()
     {
         // 持續處理佇列中的請求，直到無法處理更多或佇列為空
-        while (await _requestProcessor.TryProcessNextRequestAsync())
+        while (true)
         {
-            _logger.LogDebug("Processed a queued request on-demand");
+            // 嘗試處理下一個請求
+            var processed = await _requestProcessor.TryProcessNextRequestAsync();
+
+            if (processed)
+            {
+                _logger.LogDebug("Processed a queued request on-demand");
+            }
+            else
+            {
+                // 無法處理更多請求（限流或佇列為空）
+                // 檢查是否因為限流而無法處理
+                if (!_rateLimiter.IsRequestAllowed() && _queueHandler.GetQueueLength() > 0)
+                {
+                    // 如果限流中且佇列不為空，等待到可以處理的時間
+                    var retryAfter = _rateLimiter.GetRetryAfter();
+                    _logger.LogDebug("Rate limit reached, waiting {RetryAfter}ms", retryAfter.TotalMilliseconds);
+                    await Task.Delay(retryAfter.Add(TimeSpan.FromMilliseconds(100)));
+                    continue;
+                }
+                else
+                {
+                    // 佇列為空或其他原因，退出
+                    break;
+                }
+            }
         }
     }
 
@@ -199,4 +221,3 @@ public class QueueController : ControllerBase
         };
     }
 }
-
