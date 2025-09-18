@@ -2,16 +2,16 @@ using Lab.QueueApi.Models;
 
 namespace Lab.QueueApi.Services;
 
-public class BackgroundRequestProcessor : BackgroundService
+public class RequestProcessorService : BackgroundService
 {
     private readonly IRequestQueue _requestQueue;
     private readonly IRateLimiter _rateLimiter;
-    private readonly ILogger<BackgroundRequestProcessor> _logger;
+    private readonly ILogger<RequestProcessorService> _logger;
 
-    public BackgroundRequestProcessor(
+    public RequestProcessorService(
         IRequestQueue requestQueue,
         IRateLimiter rateLimiter,
-        ILogger<BackgroundRequestProcessor> logger)
+        ILogger<RequestProcessorService> logger)
     {
         _requestQueue = requestQueue;
         _rateLimiter = rateLimiter;

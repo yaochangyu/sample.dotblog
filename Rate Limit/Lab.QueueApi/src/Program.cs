@@ -25,12 +25,12 @@ builder.Services.AddSwaggerGen(c =>
 
 // Register custom services
 builder.Services.AddSingleton<IRateLimiter>(provider => 
-    new SlidingWindowRateLimiter(maxRequests: 2, timeWindow: TimeSpan.FromMinutes(1)));
+    new SlidingWindowRateLimiter(maxRequests: 2, timeWindow: TimeSpan.FromSeconds(10)));
 
 builder.Services.AddSingleton<IRequestQueue>(provider => 
     new ChannelRequestQueue(capacity: 100));
 
-builder.Services.AddHostedService<BackgroundRequestProcessor>();
+builder.Services.AddHostedService<RequestProcessorService>();
 
 // Add CORS support
 builder.Services.AddCors(options =>
@@ -81,4 +81,4 @@ app.MapGet("/", () => new
     Documentation = "/swagger"
 });
 
-app.Run("http://0.0.0.0:5001");
+app.Run();
