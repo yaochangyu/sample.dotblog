@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//mnt/d/lab/sample.dotblog/**)",
+      "Bash(find:*)",
+      "Bash(dotnet build)",
+      "Bash(dotnet test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
