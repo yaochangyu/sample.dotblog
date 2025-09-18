@@ -10,18 +10,15 @@ public class QueueController : ControllerBase
 {
     private readonly IRateLimiter _rateLimiter;
     private readonly IQueueHandler _queueHandler;
-    private readonly RequestProcessorService _requestProcessor;
     private readonly ILogger<QueueController> _logger;
 
     public QueueController(
         IRateLimiter rateLimiter,
         IQueueHandler queueHandler,
-        RequestProcessorService requestProcessor,
         ILogger<QueueController> logger)
     {
         _rateLimiter = rateLimiter;
         _queueHandler = queueHandler;
-        _requestProcessor = requestProcessor;
         _logger = logger;
     }
 
@@ -121,17 +118,14 @@ public class QueueController : ControllerBase
     {
         try
         {
-            // 先嘗試處理佇列中的請求
-            await TryProcessQueuedRequests();
-
-            // 等待請求完成，設定較長的超時時間
-            var response = await _queueHandler.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(10), cancel);
+            // 使用整合的等待和處理方法
+            var response = await WaitForResponseWithProcessingAsync(requestId, TimeSpan.FromSeconds(10), cancel);
 
             if (response.Success)
             {
                 return this.Ok(response);
             }
-            
+
             if (response.Message == "Request timeout")
             {
                 return this.StatusCode(408, new
@@ -140,7 +134,7 @@ public class QueueController : ControllerBase
                     RequestId = requestId
                 });
             }
-            
+
             return this.NotFound(new { Message = response.Message });
         }
         catch (Exception ex)
@@ -151,39 +145,57 @@ public class QueueController : ControllerBase
     }
 
     /// <summary>
-    /// 嘗試處理佇列中的請求（按需處理）
+    /// 等待請求回應並主動處理佇列（整合版本）
     /// </summary>
-    private async Task TryProcessQueuedRequests()
+    private async Task<ApiResponse> WaitForResponseWithProcessingAsync(string requestId, TimeSpan timeout, CancellationToken cancellationToken = default)
     {
-        // 持續處理佇列中的請求，直到無法處理更多或佇列為空
-        while (true)
-        {
-            // 嘗試處理下一個請求
-            var processed = await _requestProcessor.TryProcessNextRequestAsync();
+        var startTime = DateTime.UtcNow;
+        var endTime = startTime.Add(timeout);
 
+        while (DateTime.UtcNow < endTime)
+        {
+            // 先檢查請求是否已經完成
+            var quickCheck = await _queueHandler.WaitForResponseAsync(requestId, TimeSpan.FromMilliseconds(100), cancellationToken);
+            if (quickCheck.Success)
+            {
+                return quickCheck;
+            }
+
+            // 如果請求不存在，直接返回
+            if (quickCheck.Message == "Request not found")
+            {
+                return quickCheck;
+            }
+
+            // 嘗試處理一個佇列請求
+            var processed = await _queueHandler.TryProcessNextRequestAsync(cancellationToken);
             if (processed)
             {
-                _logger.LogDebug("Processed a queued request on-demand");
+                _logger.LogDebug("Processed a queued request while waiting");
+                continue; // 處理了請求，立即檢查目標請求是否完成
+            }
+
+            // 沒有處理任何請求，檢查是否因為限流
+            if (!_rateLimiter.IsRequestAllowed() && _queueHandler.GetQueueLength() > 0)
+            {
+                // 限流中，等待一段時間
+                var retryAfter = _rateLimiter.GetRetryAfter();
+                var waitTime = TimeSpan.FromMilliseconds(Math.Min(retryAfter.TotalMilliseconds + 100, 1000));
+                await Task.Delay(waitTime, cancellationToken);
             }
             else
             {
-                // 無法處理更多請求（限流或佇列為空）
-                // 檢查是否因為限流而無法處理
-                if (!_rateLimiter.IsRequestAllowed() && _queueHandler.GetQueueLength() > 0)
-                {
-                    // 如果限流中且佇列不為空，等待到可以處理的時間
-                    var retryAfter = _rateLimiter.GetRetryAfter();
-                    _logger.LogDebug("Rate limit reached, waiting {RetryAfter}ms", retryAfter.TotalMilliseconds);
-                    await Task.Delay(retryAfter.Add(TimeSpan.FromMilliseconds(100)));
-                    continue;
-                }
-                else
-                {
-                    // 佇列為空或其他原因，退出
-                    break;
-                }
+                // 佇列為空或其他原因，短暫等待
+                await Task.Delay(200, cancellationToken);
             }
         }
+
+        // 超時
+        return new ApiResponse
+        {
+            Success = false,
+            Message = "Request timeout"
+        };
     }
 
     /// <summary>

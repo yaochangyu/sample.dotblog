@@ -10,9 +10,14 @@ public class ChannelQueueHandler : IQueueHandler
     private readonly ChannelWriter<QueuedRequest> _writer;
     private readonly ChannelReader<QueuedRequest> _reader;
     private readonly ConcurrentDictionary<string, QueuedRequest> _pendingRequests = new();
+    private readonly IRateLimiter _rateLimiter;
+    private readonly ILogger<ChannelQueueHandler> _logger;
 
-    public ChannelQueueHandler(int capacity = 100)
+    public ChannelQueueHandler(IRateLimiter rateLimiter, ILogger<ChannelQueueHandler> logger, int capacity = 100)
     {
+        _rateLimiter = rateLimiter;
+        _logger = logger;
+
         var options = new BoundedChannelOptions(capacity)
         {
             FullMode = BoundedChannelFullMode.Wait,
@@ -106,5 +111,58 @@ public class ChannelQueueHandler : IQueueHandler
     public int GetQueueLength()
     {
         return _pendingRequests.Count;
+    }
+
+    public async Task<bool> TryProcessNextRequestAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // 檢查是否可以處理請求
+            if (!_rateLimiter.IsRequestAllowed())
+            {
+                return false;
+            }
+
+            // 嘗試從佇列取出請求
+            var queuedRequest = await DequeueRequestAsync(cancellationToken);
+
+            if (queuedRequest == null)
+            {
+                return false;
+            }
+
+            // 記錄請求並處理
+            _rateLimiter.RecordRequest();
+            var response = await ProcessRequestAsync(queuedRequest);
+
+            CompleteRequest(queuedRequest.Id, response);
+
+            _logger.LogInformation("Processed request {RequestId} on-demand", queuedRequest.Id);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing queued request on-demand");
+            return false;
+        }
+    }
+
+    private async Task<ApiResponse> ProcessRequestAsync(QueuedRequest queuedRequest)
+    {
+        // 模擬處理時間
+        await Task.Delay(TimeSpan.FromSeconds(1));
+
+        return new ApiResponse
+        {
+            Success = true,
+            Message = "Request processed successfully",
+            Data = new
+            {
+                RequestId = queuedRequest.Id,
+                OriginalData = queuedRequest.RequestData,
+                QueuedAt = queuedRequest.QueuedAt,
+                ProcessedData = $"Processed: {queuedRequest.RequestData}"
+            }
+        };
     }
 }
