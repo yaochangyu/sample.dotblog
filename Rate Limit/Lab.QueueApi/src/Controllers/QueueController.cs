@@ -9,16 +9,19 @@ namespace Lab.QueueApi.Controllers;
 public class QueueController : ControllerBase
 {
     private readonly IRateLimiter _rateLimiter;
-    private readonly IRequestQueue _requestQueue;
+    private readonly IQueueHandler _queueHandler;
+    private readonly RequestProcessorService _requestProcessor;
     private readonly ILogger<QueueController> _logger;
 
     public QueueController(
         IRateLimiter rateLimiter,
-        IRequestQueue requestQueue,
+        IQueueHandler queueHandler,
+        RequestProcessorService requestProcessor,
         ILogger<QueueController> logger)
     {
         _rateLimiter = rateLimiter;
-        _requestQueue = requestQueue;
+        _queueHandler = queueHandler;
+        _requestProcessor = requestProcessor;
         _logger = logger;
     }
 
@@ -45,7 +48,7 @@ public class QueueController : ControllerBase
             }
             
             // 請求進入佇列
-            var requestId = await _requestQueue.EnqueueRequestAsync(request.Data);
+            var requestId = await _queueHandler.EnqueueRequestAsync(request.Data);
             var retryAfter = _rateLimiter.GetRetryAfter();
                 
             _logger.LogInformation("Request {RequestId} queued, retry after {RetryAfter}s", 
@@ -53,7 +56,7 @@ public class QueueController : ControllerBase
 
             // 返回 429 狀態碼和 Retry-After 標頭
             Response.Headers["Retry-After"] = ((int)retryAfter.TotalSeconds).ToString();
-            Response.Headers["X-Queue-Position"] = _requestQueue.GetQueueLength().ToString();
+            Response.Headers["X-Queue-Position"] = _queueHandler.GetQueueLength().ToString();
             Response.Headers["X-Request-Id"] = requestId;
 
             return this.StatusCode(429, new
@@ -61,7 +64,7 @@ public class QueueController : ControllerBase
                 Message = "Too many requests. Please retry after the specified time.",
                 RequestId = requestId,
                 RetryAfterSeconds = (int)retryAfter.TotalSeconds,
-                QueuePosition = _requestQueue.GetQueueLength()
+                QueuePosition = _queueHandler.GetQueueLength()
             });
         }
         catch (Exception ex)
@@ -82,7 +85,7 @@ public class QueueController : ControllerBase
         try
         {
             // 等待請求完成，設定較短的超時時間用於狀態檢查
-            var response = await _requestQueue.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(1));
+            var response = await _queueHandler.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(1));
             
             if (response.Success)
             {
@@ -94,7 +97,7 @@ public class QueueController : ControllerBase
                 {
                     Message = "Request is still being processed",
                     RequestId = requestId,
-                    QueuePosition = _requestQueue.GetQueueLength()
+                    QueuePosition = _queueHandler.GetQueueLength()
                 });
             }
             else
@@ -119,9 +122,12 @@ public class QueueController : ControllerBase
     {
         try
         {
+            // 先嘗試處理佇列中的請求
+            await TryProcessQueuedRequests();
+
             // 等待請求完成，設定較長的超時時間
-            var response = await _requestQueue.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(2));
-            
+            var response = await _queueHandler.WaitForResponseAsync(requestId, TimeSpan.FromMinutes(1));
+
             if (response.Success)
             {
                 return this.Ok(response);
@@ -147,6 +153,18 @@ public class QueueController : ControllerBase
     }
 
     /// <summary>
+    /// 嘗試處理佇列中的請求（按需處理）
+    /// </summary>
+    private async Task TryProcessQueuedRequests()
+    {
+        // 持續處理佇列中的請求，直到無法處理更多或佇列為空
+        while (await _requestProcessor.TryProcessNextRequestAsync())
+        {
+            _logger.LogDebug("Processed a queued request on-demand");
+        }
+    }
+
+    /// <summary>
     /// 獲取系統狀態
     /// </summary>
     /// <returns>系統狀態資訊</returns>
@@ -156,7 +174,7 @@ public class QueueController : ControllerBase
         return this.Ok(new
         {
             Status = "Healthy",
-            QueueLength = _requestQueue.GetQueueLength(),
+            QueueLength = _queueHandler.GetQueueLength(),
             CanAcceptRequest = _rateLimiter.IsRequestAllowed(),
             RetryAfterSeconds = (int)_rateLimiter.GetRetryAfter().TotalSeconds,
             Timestamp = DateTime.UtcNow

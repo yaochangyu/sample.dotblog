@@ -2,69 +2,57 @@ using Lab.QueueApi.Models;
 
 namespace Lab.QueueApi.Services;
 
-public class RequestProcessorService : BackgroundService
+public class RequestProcessorService
 {
-    private readonly IRequestQueue _requestQueue;
+    private readonly IQueueHandler _queueHandler;
     private readonly IRateLimiter _rateLimiter;
     private readonly ILogger<RequestProcessorService> _logger;
 
     public RequestProcessorService(
-        IRequestQueue requestQueue,
+        IQueueHandler queueHandler,
         IRateLimiter rateLimiter,
         ILogger<RequestProcessorService> logger)
     {
-        _requestQueue = requestQueue;
+        _queueHandler = queueHandler;
         _rateLimiter = rateLimiter;
         _logger = logger;
     }
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    public async Task<bool> TryProcessNextRequestAsync()
     {
-        _logger.LogInformation("Background Request Processor started");
-
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            try
+            // 檢查是否可以處理請求
+            if (!_rateLimiter.IsRequestAllowed())
             {
-                var queuedRequest = await _requestQueue.DequeueRequestAsync(stoppingToken);
-                
-                if (queuedRequest == null)
-                {
-                    await Task.Delay(100, stoppingToken);
-                    continue;
-                }
+                return false;
+            }
 
-                // 等待直到可以處理請求（遵守限流規則）
-                while (!_rateLimiter.IsRequestAllowed())
-                {
-                    var retryAfter = _rateLimiter.GetRetryAfter();
-                    _logger.LogDebug("Rate limit reached, waiting {RetryAfter}ms", retryAfter.TotalMilliseconds);
-                    await Task.Delay(retryAfter.Add(TimeSpan.FromMilliseconds(100)), stoppingToken);
-                }
+            // 嘗試從佇列取出請求
+            var queuedRequest = await _queueHandler.DequeueRequestAsync(CancellationToken.None);
 
-                // 記錄請求並處理
-                _rateLimiter.RecordRequest();
-                var response = await ProcessRequestAsync(queuedRequest);
-                
-                _requestQueue.CompleteRequest(queuedRequest.Id, response);
-                
-                _logger.LogInformation("Processed request {RequestId}", queuedRequest.Id);
-            }
-            catch (OperationCanceledException)
+            if (queuedRequest == null)
             {
-                break;
+                return false;
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error processing queued request");
-                await Task.Delay(1000, stoppingToken);
-            }
+
+            // 記錄請求並處理
+            _rateLimiter.RecordRequest();
+            var response = await ProcessRequestAsync(queuedRequest);
+
+            _queueHandler.CompleteRequest(queuedRequest.Id, response);
+
+            _logger.LogInformation("Processed request {RequestId} on-demand", queuedRequest.Id);
+            return true;
         }
-
-        _logger.LogInformation("Background Request Processor stopped");
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing queued request on-demand");
+            return false;
+        }
     }
 
-    private async Task<ApiResponse> ProcessRequestAsync(QueuedRequest queuedRequest)
+    public async Task<ApiResponse> ProcessRequestAsync(QueuedRequest queuedRequest)
     {
         // 模擬處理時間
         await Task.Delay(TimeSpan.FromSeconds(1));
@@ -83,4 +71,3 @@ public class RequestProcessorService : BackgroundService
         };
     }
 }
-

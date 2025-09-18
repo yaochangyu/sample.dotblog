@@ -27,10 +27,11 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddSingleton<IRateLimiter>(provider => 
     new SlidingWindowRateLimiter(maxRequests: 2, timeWindow: TimeSpan.FromSeconds(10)));
 
-builder.Services.AddSingleton<IRequestQueue>(provider => 
-    new ChannelRequestQueue(capacity: 100));
+builder.Services.AddSingleton<IQueueHandler>(provider => 
+    new ChannelQueueHandler(capacity: 100));
 
-builder.Services.AddHostedService<RequestProcessorService>();
+// Register RequestProcessorService as both singleton and hosted service
+builder.Services.AddSingleton<RequestProcessorService>();
 
 // Add CORS support
 builder.Services.AddCors(options =>

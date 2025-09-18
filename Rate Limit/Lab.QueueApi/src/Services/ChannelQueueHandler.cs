@@ -4,14 +4,14 @@ using Lab.QueueApi.Models;
 
 namespace Lab.QueueApi.Services;
 
-public class ChannelRequestQueue : IRequestQueue
+public class ChannelQueueHandler : IQueueHandler
 {
     private readonly Channel<QueuedRequest> _channel;
     private readonly ChannelWriter<QueuedRequest> _writer;
     private readonly ChannelReader<QueuedRequest> _reader;
     private readonly ConcurrentDictionary<string, QueuedRequest> _pendingRequests = new();
 
-    public ChannelRequestQueue(int capacity = 100)
+    public ChannelQueueHandler(int capacity = 100)
     {
         var options = new BoundedChannelOptions(capacity)
         {
@@ -25,7 +25,7 @@ public class ChannelRequestQueue : IRequestQueue
         _reader = _channel.Reader;
     }
 
-    public async Task<string> EnqueueRequestAsync(string requestData)
+    public async Task<string> EnqueueRequestAsync(string requestData, CancellationToken cancellationToken = default)
     {
         var queuedRequest = new QueuedRequest
         {
@@ -34,7 +34,7 @@ public class ChannelRequestQueue : IRequestQueue
 
         _pendingRequests[queuedRequest.Id] = queuedRequest;
         await _writer.WriteAsync(queuedRequest);
-        
+
         return queuedRequest.Id;
     }
 
@@ -50,8 +50,7 @@ public class ChannelRequestQueue : IRequestQueue
             return null;
         }
     }
-
-    public async Task<ApiResponse> WaitForResponseAsync(string requestId, TimeSpan timeout)
+    public async Task<ApiResponse> WaitForResponseAsync(string requestId, TimeSpan timeout, CancellationToken cancellationToken = default)
     {
         if (!_pendingRequests.TryGetValue(requestId, out var queuedRequest))
         {
@@ -94,4 +93,3 @@ public class ChannelRequestQueue : IRequestQueue
         return _pendingRequests.Count;
     }
 }
-
