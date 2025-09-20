@@ -30,6 +30,16 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     private readonly ConcurrentDictionary<string, QueuedContext> _pendingRequests = new();
 
     /// <summary>
+    /// 儲存被清理請求記錄的並行字典。
+    /// </summary>
+    private readonly ConcurrentDictionary<string, CleanupRecord> _cleanupRecords = new();
+
+    /// <summary>
+    /// 清理記錄的最大保存數量。
+    /// </summary>
+    private readonly int _maxCleanupRecords = 1000;
+
+    /// <summary>
     /// 佇列的最大容量。
     /// </summary>
     private readonly int _maxCapacity;
@@ -132,7 +142,9 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     /// </summary>
     /// <param name="requestId">已完成的請求的唯一識別碼。</param>
     /// <param name="response">請求的 ApiResponse。</param>
-    public void CompleteCommand(string requestId, QueuedCommandResponse response)
+    /// <param name="cancel"></param>
+    public async Task CompleteCommandAsync(string requestId, QueuedCommandResponse response,
+        CancellationToken cancel = default)
     {
         if (_pendingRequests.TryGetValue(requestId, out var queuedRequest))
         {
@@ -154,7 +166,7 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     /// </summary>
     /// <param name="cancel"></param>
     /// <returns>包含所有待處理請求的集合。</returns>
-    public async Task<IEnumerable<QueuedContext>> GetAllQueuedCommands(CancellationToken cancel = default)
+    public async Task<IEnumerable<QueuedContext>> GetAllQueuedCommandsAsync(CancellationToken cancel = default)
     {
         return _pendingRequests.Values.OrderBy(x => x.QueuedAt);
     }
@@ -175,5 +187,89 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     public int GetMaxCapacity()
     {
         return _maxCapacity;
+    }
+
+    /// <summary>
+    /// 清理超過指定時間且未被取得結果的過期請求。
+    /// </summary>
+    /// <param name="maxAge">請求最大存活時間。</param>
+    /// <returns>被清理的請求數量。</returns>
+    public int CleanupExpiredRequests(TimeSpan maxAge)
+    {
+        var cutoffTime = DateTime.UtcNow - maxAge;
+        var expiredRequestIds = new List<string>();
+
+        foreach (var kvp in _pendingRequests)
+        {
+            if (kvp.Value.QueuedAt < cutoffTime)
+            {
+                expiredRequestIds.Add(kvp.Key);
+            }
+        }
+
+        var cleanedCount = 0;
+        foreach (var requestId in expiredRequestIds)
+        {
+            if (_pendingRequests.TryRemove(requestId, out var expiredRequest))
+            {
+                // 建立清理記錄
+                var cleanupRecord = new CleanupRecord
+                {
+                    RequestId = requestId,
+                    RequestData = expiredRequest.RequestData,
+                    QueuedAt = expiredRequest.QueuedAt,
+                    CleanedAt = DateTime.UtcNow,
+                    Reason = $"Expired after {maxAge.TotalMinutes:F1} minutes"
+                };
+
+                // 將清理記錄加入字典
+                _cleanupRecords[requestId] = cleanupRecord;
+
+                // 如果清理記錄數量超過限制，移除最舊的記錄
+                if (_cleanupRecords.Count > _maxCleanupRecords)
+                {
+                    var oldestRecord = _cleanupRecords.Values
+                        .OrderBy(r => r.CleanedAt)
+                        .FirstOrDefault();
+                    if (oldestRecord != null)
+                    {
+                        _cleanupRecords.TryRemove(oldestRecord.RequestId, out _);
+                    }
+                }
+
+                // 設定超時回應給任何正在等待的消費者
+                if (!expiredRequest.CompletionSource.Task.IsCompleted)
+                {
+                    expiredRequest.CompletionSource.SetResult(new QueuedCommandResponse
+                    {
+                        Success = false,
+                        Message = "Request expired and was cleaned up"
+                    });
+                }
+
+                cleanedCount++;
+            }
+        }
+
+        return cleanedCount;
+    }
+
+    /// <summary>
+    /// 取得清理記錄摘要。
+    /// </summary>
+    /// <returns>清理記錄摘要。</returns>
+    public async Task<CleanupSummaryResponse> GetCleanupSummaryAsync(CancellationToken cancel = default)
+    {
+        var records = _cleanupRecords.Values
+            .OrderByDescending(r => r.CleanedAt)
+            .ToList();
+
+        return new CleanupSummaryResponse
+        {
+            TotalCleanupCount = records.Count,
+            CleanupRecords = records,
+            LastCleanupTime = records.FirstOrDefault()?.CleanedAt,
+            MaxRecordsKept = _maxCleanupRecords
+        };
     }
 }

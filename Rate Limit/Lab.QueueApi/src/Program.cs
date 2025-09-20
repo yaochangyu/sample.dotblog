@@ -36,6 +36,10 @@ var RequestCount = 2;
 // 排隊最大請求輛
 var MaxRequestCapacity = 100;
 
+// 過期請求清理設定
+var MaxRequestAge = TimeSpan.FromMinutes(1);
+var CleanupInterval = TimeSpan.FromSeconds(5);
+
 // 註冊自訂服務
 // 註冊 SlidingWindowRateLimiter 作為 IRateLimiter 的單例服務
 builder.Services.AddSingleton<IRateLimiter>(provider =>
@@ -47,6 +51,14 @@ builder.Services.AddSingleton<ICommandQueueProvider>(provider =>
 
 // 註冊 ChannelRequestQueueService 作為一個託管服務，使其在背景執行
 builder.Services.AddHostedService<ChannelCommandQueueService>();
+
+// 註冊過期請求清理服務作為背景服務
+builder.Services.AddHostedService<ExpiredRequestCleanupService>(provider =>
+    new ExpiredRequestCleanupService(
+        provider.GetRequiredService<ICommandQueueProvider>(),
+        provider.GetRequiredService<ILogger<ExpiredRequestCleanupService>>(),
+        MaxRequestAge,
+        CleanupInterval));
 
 // 加入 CORS 支援
 builder.Services.AddCors(options =>

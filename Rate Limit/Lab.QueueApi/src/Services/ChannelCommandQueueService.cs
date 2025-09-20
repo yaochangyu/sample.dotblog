@@ -52,7 +52,7 @@ public class ChannelCommandQueueService : BackgroundService
             try
             {
                 var queuedRequest = await _commandQueue.DequeueCommandAsync(stoppingToken);
-                
+
                 if (queuedRequest == null)
                 {
                     await Task.Delay(100, stoppingToken);
@@ -71,8 +71,8 @@ public class ChannelCommandQueueService : BackgroundService
                 _rateLimiter.RecordRequest();
                 var response = await ProcessRequestAsync(queuedRequest);
 
-                _commandQueue.CompleteCommand(queuedRequest.Id, response);
-                
+                await _commandQueue.CompleteCommandAsync(queuedRequest.Id, response, stoppingToken);
+
                 _logger.LogInformation("Processed request {RequestId}", queuedRequest.Id);
             }
             catch (OperationCanceledException)
