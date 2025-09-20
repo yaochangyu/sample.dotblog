@@ -143,7 +143,8 @@ public class CommandController : ControllerBase
             {
                 return Ok(response);
             }
-            else if (response.Message == "Request timeout")
+
+            if (response.Message == "Request timeout")
             {
                 return StatusCode(408, new
                 {
@@ -151,10 +152,8 @@ public class CommandController : ControllerBase
                     RequestId = requestId
                 });
             }
-            else
-            {
-                return NotFound(new { Message = response.Message });
-            }
+
+            return NotFound(new { Message = response.Message });
         }
         catch (Exception ex)
         {
