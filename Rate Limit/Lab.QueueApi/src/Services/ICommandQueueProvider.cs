@@ -23,6 +23,29 @@ public interface ICommandQueueProvider
     Task<QueuedContext?> DequeueCommandAsync(CancellationToken cancel = default);
 
     /// <summary>
+    /// 取得下一個等待中的請求（不從佇列移除）。
+    /// </summary>
+    /// <param name="cancel">用於取消操作的 CancellationToken。</param>
+    /// <returns>表示非同步操作的 Task，其結果為下一個等待中的請求，如果沒有則為 null。</returns>
+    Task<QueuedContext?> GetNextQueuedRequestAsync(CancellationToken cancel = default);
+
+    /// <summary>
+    /// 標記請求為準備執行狀態。
+    /// </summary>
+    /// <param name="requestId">請求的唯一識別碼。</param>
+    /// <param name="cancel">用於取消操作的 CancellationToken。</param>
+    /// <returns>表示非同步操作的 Task。</returns>
+    Task MarkRequestAsReadyAsync(string requestId, CancellationToken cancel = default);
+
+    /// <summary>
+    /// 執行準備好的請求並標記為處理中。
+    /// </summary>
+    /// <param name="requestId">請求的唯一識別碼。</param>
+    /// <param name="cancel">用於取消操作的 CancellationToken。</param>
+    /// <returns>表示非同步操作的 Task，其結果為請求上下文，如果請求不存在或狀態不正確則為 null。</returns>
+    Task<QueuedContext?> ExecuteReadyRequestAsync(string requestId, CancellationToken cancel = default);
+
+    /// <summary>
     /// 非同步地等待特定請求的回應。
     /// </summary>
     /// <param name="requestId">要等待的請求的唯一識別碼。</param>

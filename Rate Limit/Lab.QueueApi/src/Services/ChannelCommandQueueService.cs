@@ -69,13 +69,13 @@ public class ChannelCommandQueueService : BackgroundService
     /// <returns>表示非同步操作的 Task。</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("Background Request Processor started");
+        _logger.LogInformation("Background Permission Manager started");
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                var queuedRequest = await _commandQueue.DequeueCommandAsync(stoppingToken);
+                var queuedRequest = await _commandQueue.GetNextQueuedRequestAsync(stoppingToken);
 
                 if (queuedRequest == null)
                 {
@@ -83,7 +83,7 @@ public class ChannelCommandQueueService : BackgroundService
                     continue;
                 }
 
-                // 等待直到可以處理請求（遵守限流規則）
+                // 等待直到可以許可請求（遵守限流規則）
                 while (!_rateLimiter.IsRequestAllowed())
                 {
                     var retryAfter = _rateLimiter.GetRetryAfter();
@@ -91,13 +91,11 @@ public class ChannelCommandQueueService : BackgroundService
                     await Task.Delay(retryAfter.Add(TimeSpan.FromMilliseconds(100)), stoppingToken);
                 }
 
-                // 記錄請求並處理
+                // 只記錄許可並更新狀態為 Ready，不執行實際業務邏輯
                 _rateLimiter.RecordRequest();
-                var response = await ProcessRequestAsync(queuedRequest);
+                await _commandQueue.MarkRequestAsReadyAsync(queuedRequest.Id, stoppingToken);
 
-                await _commandQueue.CompleteCommandAsync(queuedRequest.Id, response, stoppingToken);
-
-                _logger.LogInformation("Processed request {RequestId}", queuedRequest.Id);
+                _logger.LogInformation("Request {RequestId} is now ready for processing", queuedRequest.Id);
             }
             catch (OperationCanceledException)
             {
@@ -105,35 +103,12 @@ public class ChannelCommandQueueService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing queued request");
+                _logger.LogError(ex, "Error managing request permissions");
                 await Task.Delay(_errorRetryDelay, stoppingToken);
             }
         }
 
-        _logger.LogInformation("Background Request Processor stopped");
+        _logger.LogInformation("Background Permission Manager stopped");
     }
 
-    /// <summary>
-    /// 非同步地處理一個已排入佇列的請求。
-    /// </summary>
-    /// <param name="queuedRequest">要處理的已排入佇列的請求。</param>
-    /// <returns>表示非同步操作的 Task，其結果為 ApiResponse。</returns>
-    private async Task<QueuedCommandResponse> ProcessRequestAsync(QueuedContext queuedRequest)
-    {
-        // 模擬處理時間
-        await Task.Delay(_processingDelay);
-
-        return new QueuedCommandResponse
-        {
-            Success = true,
-            Message = "Request processed successfully",
-            Data = new
-            {
-                RequestId = queuedRequest.Id,
-                OriginalData = queuedRequest.RequestData,
-                QueuedAt = queuedRequest.QueuedAt,
-                ProcessedData = queuedRequest.RequestData
-            }
-        };
-    }
 }
