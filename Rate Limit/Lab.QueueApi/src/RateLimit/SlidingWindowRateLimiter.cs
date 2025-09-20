@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 
-namespace Lab.QueueApi.Services;
+namespace Lab.QueueApi.RateLimit;
 
 /// <summary>
 /// 使用滑動視窗演算法的速率限制器。
@@ -42,7 +42,7 @@ public class SlidingWindowRateLimiter : IRateLimiter
     /// 判斷目前是否允許新的請求。
     /// </summary>
     /// <returns>如果允許請求，則為 true；否則為 false。</returns>
-    public bool IsRequestAllowed()
+    public bool IsAllowed()
     {
         lock (_lock)
         {

@@ -1,4 +1,4 @@
-namespace Lab.QueueApi.Commands;
+namespace Lab.QueueApi.RateLimit;
 
 /// <summary>
 /// 清理記錄摘要回應。

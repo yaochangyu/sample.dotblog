@@ -1,3 +1,5 @@
+using Lab.QueueApi.RateLimit;
+
 namespace Lab.QueueApi.Services;
 
 /// <summary>

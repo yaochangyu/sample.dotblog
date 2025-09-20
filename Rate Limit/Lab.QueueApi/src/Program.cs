@@ -1,3 +1,4 @@
+using Lab.QueueApi.RateLimit;
 using Lab.QueueApi.Services;
 
 // 建立 WebApplication 建構器。

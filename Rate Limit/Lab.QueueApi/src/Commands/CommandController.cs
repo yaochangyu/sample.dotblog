@@ -1,6 +1,7 @@
 using Lab.QueueApi.Services;
 using Microsoft.AspNetCore.Mvc;
 using System.Text.Json;
+using Lab.QueueApi.RateLimit;
 
 namespace Lab.QueueApi.Commands;
 
@@ -54,48 +55,57 @@ public class CommandController : ControllerBase
     {
         try
         {
-            // 檢查限流
-            if (_rateLimiter.IsRequestAllowed())
+            // 前置條件檢查
+            var isQueueFull = _commandQueue.IsQueueFull();
+            if (isQueueFull)
             {
-                // 直接處理請求
-                _rateLimiter.RecordRequest();
-                var response = await ExecuteBusinessLogicAsync(request, cancel);
-
-                _logger.LogInformation("Request processed directly");
-                return Ok(response);
-            }
-
-            // 檢查佇列是否已滿
-            if (_commandQueue.IsQueueFull())
-            {
-                _logger.LogWarning("Queue is full, rejecting request");
-                return StatusCode(503, new
+                // 加入佇列
+                var requestId = await _commandQueue.EnqueueCommandAsync(request.Data, cancel);
+                var retryAfter = _rateLimiter.GetRetryAfter();
+                _logger.LogWarning("Queue is full, request {RequestId} queued", requestId);
+                return StatusCode(429, new
                 {
-                    Message = "Service unavailable. Queue is full, please try again later.",
+                    Message = "Too many requests. Queue is full, please retry after the specified time.",
+                    RequestId = requestId,
+                    RetryAfterSeconds = (int)retryAfter.TotalSeconds,
                     QueueLength = _commandQueue.GetQueueLength(),
-                    MaxCapacity = _commandQueue.GetMaxCapacity()
+                    MaxCapacity = _commandQueue.GetMaxCapacity(),
+                    Reason = "QueueFull"
                 });
             }
 
-            // 請求進入佇列
-            var requestId = await _commandQueue.EnqueueCommandAsync(request.Data, cancel);
-            var retryAfter = _rateLimiter.GetRetryAfter();
+            var isRateLimitExceeded = !_rateLimiter.IsAllowed();
 
-            _logger.LogInformation("Request {RequestId} queued, retry after {RetryAfter}s",
-                requestId, retryAfter.TotalSeconds);
-
-            // 返回 429 狀態碼和 Retry-After 標頭
-            Response.Headers["Retry-After"] = ((int)retryAfter.TotalSeconds).ToString();
-            Response.Headers["X-Queue-Position"] = _commandQueue.GetQueueLength().ToString();
-            Response.Headers["X-Request-Id"] = requestId;
-
-            return StatusCode(429, new
+            // 任一條件成立，都要加入佇列並回傳 429
+            if (isRateLimitExceeded)
             {
-                Message = "Too many requests. Please retry after the specified time.",
-                RequestId = requestId,
-                RetryAfterSeconds = (int)retryAfter.TotalSeconds,
-                QueuePosition = _commandQueue.GetQueueLength()
-            });
+                // 加入佇列
+                var requestId = await _commandQueue.EnqueueCommandAsync(request.Data, cancel);
+                var retryAfter = _rateLimiter.GetRetryAfter();
+
+                // 設定回應標頭
+                Response.Headers["Retry-After"] = ((int)retryAfter.TotalSeconds).ToString();
+                Response.Headers["X-Queue-Position"] = _commandQueue.GetQueueLength().ToString();
+                Response.Headers["X-Request-Id"] = requestId;
+
+                _logger.LogWarning("Rate limit exceeded and queue is full, request {RequestId} queued", requestId);
+                return StatusCode(429, new
+                {
+                    Message =
+                        "Too many requests. Rate limit exceeded and queue is full, please retry after the specified time.",
+                    RequestId = requestId,
+                    RetryAfterSeconds = (int)retryAfter.TotalSeconds,
+                    QueueLength = _commandQueue.GetQueueLength(),
+                    MaxCapacity = _commandQueue.GetMaxCapacity(),
+                    Reason = "Rate Limit Exceeded or Queue Full."
+                });
+            }
+
+            _rateLimiter.RecordRequest();
+            var response = await ExecuteBusinessLogicAsync(request, cancel);
+
+            _logger.LogInformation("Request processed directly");
+            return Ok(response);
         }
         catch (Exception ex)
         {
@@ -230,7 +240,7 @@ public class CommandController : ControllerBase
         {
             Status = "Healthy",
             QueueLength = _commandQueue.GetQueueLength(),
-            CanAcceptRequest = _rateLimiter.IsRequestAllowed(),
+            CanAcceptRequest = _rateLimiter.IsAllowed(),
             RetryAfterSeconds = (int)_rateLimiter.GetRetryAfter().TotalSeconds,
             Timestamp = DateTime.UtcNow
         });

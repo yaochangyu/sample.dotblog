@@ -1,4 +1,4 @@
-namespace Lab.QueueApi.Services;
+namespace Lab.QueueApi.RateLimit;
 
 /// <summary>
 /// 定義速率限制器的介面。
@@ -9,7 +9,7 @@ public interface IRateLimiter
     /// 判斷目前是否允許新的請求。
     /// </summary>
     /// <returns>如果允許請求，則為 true；否則為 false。</returns>
-    bool IsRequestAllowed();
+    bool IsAllowed();
 
     /// <summary>
     /// 記錄一個新的請求。
