@@ -11,12 +11,13 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     // 設定 Swagger 文件
-    c.SwaggerDoc("v1", new() { 
-        Title = "Queued Web API", 
+    c.SwaggerDoc("v1", new()
+    {
+        Title = "Queued Web API",
         Version = "v1",
         Description = "一個具有速率限制和佇列機制的 Web API"
     });
-    
+
     // 包含 XML 註解以提供更詳細的 API 文件
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -26,14 +27,23 @@ builder.Services.AddSwaggerGen(c =>
     }
 });
 
+// 多少時間內
+var TimeWindow = TimeSpan.FromSeconds(10);
+
+// 處理多少請求
+var RequestCount = 2;
+
+// 排隊最大請求輛
+var MaxRequestCapacity = 100;
+
 // 註冊自訂服務
 // 註冊 SlidingWindowRateLimiter 作為 IRateLimiter 的單例服務
-builder.Services.AddSingleton<IRateLimiter>(provider => 
-    new SlidingWindowRateLimiter(maxRequests: 2, timeWindow: TimeSpan.FromMinutes(1)));
+builder.Services.AddSingleton<IRateLimiter>(provider =>
+    new SlidingWindowRateLimiter(maxRequests: RequestCount, timeWindow: TimeWindow));
 
 // 註冊 ChannelRequestQueueProvider 作為 IRequestQueueProvider 的單例服務
-builder.Services.AddSingleton<ICommandQueueProvider>(provider => 
-    new ChannelCommandQueueProvider(capacity: 100));
+builder.Services.AddSingleton<ICommandQueueProvider>(provider =>
+    new ChannelCommandQueueProvider(capacity: MaxRequestCapacity));
 
 // 註冊 ChannelRequestQueueService 作為一個託管服務，使其在背景執行
 builder.Services.AddHostedService<ChannelCommandQueueService>();
@@ -44,8 +54,8 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy =>
     {
         policy.AllowAnyOrigin() // 允許任何來源
-              .AllowAnyMethod() // 允許任何 HTTP 方法
-              .AllowAnyHeader(); // 允許任何 HTTP 標頭
+            .AllowAnyMethod() // 允許任何 HTTP 方法
+            .AllowAnyHeader(); // 允許任何 HTTP 標頭
     });
 });
 
