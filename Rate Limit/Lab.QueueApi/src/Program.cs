@@ -46,26 +46,21 @@ var ProcessingDelay = TimeSpan.FromSeconds(1);     // 處理請求的模擬延�
 var EmptyQueueDelay = TimeSpan.FromMilliseconds(100);  // 佇列空時的等待間隔
 var ErrorRetryDelay = TimeSpan.FromSeconds(1);     // 錯誤重試延遲
 
-// 註冊自訂服務
-// 註冊 SlidingWindowRateLimiter 作為 IRateLimiter 的單例服務
 builder.Services.AddSingleton<IRateLimiter>(provider =>
     new SlidingWindowRateLimiter(maxRequests: RequestCount, timeWindow: TimeWindow));
 
-// 註冊 ChannelRequestQueueProvider 作為 IRequestQueueProvider 的單例服務
 builder.Services.AddSingleton<ICommandQueueProvider>(provider =>
     new ChannelCommandQueueProvider(capacity: MaxRequestCapacity));
 
-// 註冊 ChannelRequestQueueService 作為一個託管服務，使其在背景執行
-builder.Services.AddHostedService<ChannelCommandQueueService>(provider =>
-    new ChannelCommandQueueService(
+builder.Services.AddHostedService<ReadyCommandQueueService>(provider =>
+    new ReadyCommandQueueService(
         provider.GetRequiredService<ICommandQueueProvider>(),
         provider.GetRequiredService<IRateLimiter>(),
-        provider.GetRequiredService<ILogger<ChannelCommandQueueService>>(),
+        provider.GetRequiredService<ILogger<ReadyCommandQueueService>>(),
         ProcessingDelay,
         EmptyQueueDelay,
         ErrorRetryDelay));
 
-// 註冊過期請求清理服務作為背景服務
 builder.Services.AddHostedService<ExpiredRequestCleanupService>(provider =>
     new ExpiredRequestCleanupService(
         provider.GetRequiredService<ICommandQueueProvider>(),

@@ -6,7 +6,7 @@ namespace Lab.QueueApi.Services;
 /// <summary>
 /// 一個背景服務，用於處理佇列中的請求。
 /// </summary>
-public class ChannelCommandQueueService : BackgroundService
+public class ReadyCommandQueueService : BackgroundService
 {
     /// <summary>
     /// 請求佇列的提供者。
@@ -21,7 +21,7 @@ public class ChannelCommandQueueService : BackgroundService
     /// <summary>
     /// 記錄器。
     /// </summary>
-    private readonly ILogger<ChannelCommandQueueService> _logger;
+    private readonly ILogger<ReadyCommandQueueService> _logger;
 
     /// <summary>
     /// 處理請求時的模擬延遲時間。
@@ -47,10 +47,10 @@ public class ChannelCommandQueueService : BackgroundService
     /// <param name="processingDelay">處理請求時的模擬延遲時間。</param>
     /// <param name="emptyQueueDelay">佇列空時的等待間隔。</param>
     /// <param name="errorRetryDelay">發生錯誤時的重試延遲。</param>
-    public ChannelCommandQueueService(
+    public ReadyCommandQueueService(
         ICommandQueueProvider commandQueue,
         IRateLimiter rateLimiter,
-        ILogger<ChannelCommandQueueService> logger,
+        ILogger<ReadyCommandQueueService> logger,
         TimeSpan processingDelay,
         TimeSpan emptyQueueDelay,
         TimeSpan errorRetryDelay)
