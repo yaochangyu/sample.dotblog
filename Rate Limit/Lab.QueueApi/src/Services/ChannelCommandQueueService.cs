@@ -70,7 +70,7 @@ public class ChannelCommandQueueService : BackgroundService
                 // 記錄請求並處理
                 _rateLimiter.RecordRequest();
                 var response = await ProcessRequestAsync(queuedRequest);
-                
+
                 _commandQueue.CompleteCommand(queuedRequest.Id, response);
                 
                 _logger.LogInformation("Processed request {RequestId}", queuedRequest.Id);
