@@ -46,6 +46,15 @@ public interface ICommandQueueProvider
     Task<QueuedContext?> ExecuteReadyRequestAsync(string requestId, CancellationToken cancel = default);
 
     /// <summary>
+    /// 將請求標記為已結束並從佇列中移除。
+    /// </summary>
+    /// <param name="requestId">請求的唯一識別碼。</param>
+    /// <param name="response">最終回應。</param>
+    /// <param name="cancel">用於取消操作的 CancellationToken。</param>
+    /// <returns>表示非同步操作的 Task。</returns>
+    Task FinishAndRemoveRequestAsync(string requestId, QueuedCommandResponse response, CancellationToken cancel = default);
+
+    /// <summary>
     /// 非同步地等待特定請求的回應。
     /// </summary>
     /// <param name="requestId">要等待的請求的唯一識別碼。</param>
