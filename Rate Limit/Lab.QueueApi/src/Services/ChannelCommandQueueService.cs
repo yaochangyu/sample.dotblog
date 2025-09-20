@@ -23,19 +23,43 @@ public class ChannelCommandQueueService : BackgroundService
     private readonly ILogger<ChannelCommandQueueService> _logger;
 
     /// <summary>
+    /// 處理請求時的模擬延遲時間。
+    /// </summary>
+    private readonly TimeSpan _processingDelay;
+
+    /// <summary>
+    /// 佇列空時的等待間隔。
+    /// </summary>
+    private readonly TimeSpan _emptyQueueDelay;
+
+    /// <summary>
+    /// 發生錯誤時的重試延遲。
+    /// </summary>
+    private readonly TimeSpan _errorRetryDelay;
+
+    /// <summary>
     /// 初始化 ChannelRequestQueueService 的新執行個體。
     /// </summary>
     /// <param name="commandQueue">請求佇列的提供者。</param>
     /// <param name="rateLimiter">速率限制器。</param>
     /// <param name="logger">記錄器。</param>
+    /// <param name="processingDelay">處理請求時的模擬延遲時間。</param>
+    /// <param name="emptyQueueDelay">佇列空時的等待間隔。</param>
+    /// <param name="errorRetryDelay">發生錯誤時的重試延遲。</param>
     public ChannelCommandQueueService(
         ICommandQueueProvider commandQueue,
         IRateLimiter rateLimiter,
-        ILogger<ChannelCommandQueueService> logger)
+        ILogger<ChannelCommandQueueService> logger,
+        TimeSpan processingDelay,
+        TimeSpan emptyQueueDelay,
+        TimeSpan errorRetryDelay)
     {
         _commandQueue = commandQueue;
         _rateLimiter = rateLimiter;
         _logger = logger;
+        _processingDelay = processingDelay;
+        _emptyQueueDelay = emptyQueueDelay;
+        _errorRetryDelay = errorRetryDelay;
     }
 
     /// <summary>
@@ -55,7 +79,7 @@ public class ChannelCommandQueueService : BackgroundService
 
                 if (queuedRequest == null)
                 {
-                    await Task.Delay(100, stoppingToken);
+                    await Task.Delay(_emptyQueueDelay, stoppingToken);
                     continue;
                 }
 
@@ -82,7 +106,7 @@ public class ChannelCommandQueueService : BackgroundService
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing queued request");
-                await Task.Delay(1000, stoppingToken);
+                await Task.Delay(_errorRetryDelay, stoppingToken);
             }
         }
 
@@ -97,7 +121,7 @@ public class ChannelCommandQueueService : BackgroundService
     private async Task<QueuedCommandResponse> ProcessRequestAsync(QueuedContext queuedRequest)
     {
         // 模擬處理時間
-        await Task.Delay(TimeSpan.FromSeconds(1));
+        await Task.Delay(_processingDelay);
 
         return new QueuedCommandResponse
         {
