@@ -18,7 +18,7 @@ public class QueuedContext
     /// <summary>
     /// 原始請求的資料。
     /// </summary>
-    public string RequestData { get; set; } = string.Empty;
+    public object RequestData { get; set; }
 
     /// <summary>
     /// 用於等待請求完成的 TaskCompletionSource。

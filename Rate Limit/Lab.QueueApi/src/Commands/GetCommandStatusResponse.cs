@@ -18,7 +18,7 @@ public class GetCommandStatusResponse
     /// <summary>
     /// 原始請求的資料。
     /// </summary>
-    public string RequestData { get; set; } = string.Empty;
+    public object RequestData { get; set; }
 
     /// <summary>
     /// 在佇列中等待的時間。

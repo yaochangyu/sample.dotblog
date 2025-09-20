@@ -5,12 +5,12 @@ namespace Lab.QueueApi.Services;
 /// <summary>
 /// 一個背景服務，用於處理佇列中的請求。
 /// </summary>
-public class ChannelRequestQueueService : BackgroundService
+public class ChannelCommandQueueService : BackgroundService
 {
     /// <summary>
     /// 請求佇列的提供者。
     /// </summary>
-    private readonly IRequestQueueProvider _requestQueue;
+    private readonly ICommandQueueProvider _commandQueue;
 
     /// <summary>
     /// 速率限制器。
@@ -20,20 +20,20 @@ public class ChannelRequestQueueService : BackgroundService
     /// <summary>
     /// 記錄器。
     /// </summary>
-    private readonly ILogger<ChannelRequestQueueService> _logger;
+    private readonly ILogger<ChannelCommandQueueService> _logger;
 
     /// <summary>
     /// 初始化 ChannelRequestQueueService 的新執行個體。
     /// </summary>
-    /// <param name="requestQueue">請求佇列的提供者。</param>
+    /// <param name="commandQueue">請求佇列的提供者。</param>
     /// <param name="rateLimiter">速率限制器。</param>
     /// <param name="logger">記錄器。</param>
-    public ChannelRequestQueueService(
-        IRequestQueueProvider requestQueue,
+    public ChannelCommandQueueService(
+        ICommandQueueProvider commandQueue,
         IRateLimiter rateLimiter,
-        ILogger<ChannelRequestQueueService> logger)
+        ILogger<ChannelCommandQueueService> logger)
     {
-        _requestQueue = requestQueue;
+        _commandQueue = commandQueue;
         _rateLimiter = rateLimiter;
         _logger = logger;
     }
@@ -51,7 +51,7 @@ public class ChannelRequestQueueService : BackgroundService
         {
             try
             {
-                var queuedRequest = await _requestQueue.DequeueCommandAsync(stoppingToken);
+                var queuedRequest = await _commandQueue.DequeueCommandAsync(stoppingToken);
                 
                 if (queuedRequest == null)
                 {
@@ -71,7 +71,7 @@ public class ChannelRequestQueueService : BackgroundService
                 _rateLimiter.RecordRequest();
                 var response = await ProcessRequestAsync(queuedRequest);
                 
-                _requestQueue.CompleteCommand(queuedRequest.Id, response);
+                _commandQueue.CompleteCommand(queuedRequest.Id, response);
                 
                 _logger.LogInformation("Processed request {RequestId}", queuedRequest.Id);
             }
@@ -108,7 +108,7 @@ public class ChannelRequestQueueService : BackgroundService
                 RequestId = queuedRequest.Id,
                 OriginalData = queuedRequest.RequestData,
                 QueuedAt = queuedRequest.QueuedAt,
-                ProcessedData = $"Processed: {queuedRequest.RequestData}"
+                ProcessedData = queuedRequest.RequestData
             }
         };
     }

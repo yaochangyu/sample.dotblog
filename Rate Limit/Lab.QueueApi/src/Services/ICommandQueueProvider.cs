@@ -5,14 +5,14 @@ namespace Lab.QueueApi.Services;
 /// <summary>
 /// 定義請求佇列提供者的介面。
 /// </summary>
-public interface IRequestQueueProvider
+public interface ICommandQueueProvider
 {
     /// <summary>
     /// 將請求非同步地加入佇列。
     /// </summary>
     /// <param name="requestData">請求的資料。</param>
     /// <returns>表示非同步操作的 Task，其結果為請求的唯一識別碼。</returns>
-    Task<string> EnqueueCommandAsync(string requestData);
+    Task<string> EnqueueCommandAsync(object requestData);
 
     /// <summary>
     /// 從佇列中非同步地取出請求。

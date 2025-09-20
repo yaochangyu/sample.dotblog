@@ -8,5 +8,5 @@ public class CreateCommandRequest
     /// <summary>
     /// 請求中包含的資料。
     /// </summary>
-    public string Data { get; set; } = string.Empty;
+    public object Data { get; set; }
 }

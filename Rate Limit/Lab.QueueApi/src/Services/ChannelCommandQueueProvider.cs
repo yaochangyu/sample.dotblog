@@ -7,7 +7,7 @@ namespace Lab.QueueApi.Services;
 /// <summary>
 /// 使用 .NET Channels 實作的請求佇列提供者。
 /// </summary>
-public class ChannelRequestQueueProvider : IRequestQueueProvider
+public class ChannelCommandQueueProvider : ICommandQueueProvider
 {
     /// <summary>
     /// 用於儲存排隊請求的 Channel。
@@ -33,7 +33,7 @@ public class ChannelRequestQueueProvider : IRequestQueueProvider
     /// 初始化 ChannelRequestQueueProvider 的新執行個體。
     /// </summary>
     /// <param name="capacity">佇列的最大容量。</param>
-    public ChannelRequestQueueProvider(int capacity = 100)
+    public ChannelCommandQueueProvider(int capacity = 100)
     {
         var options = new BoundedChannelOptions(capacity)
         {
@@ -52,7 +52,7 @@ public class ChannelRequestQueueProvider : IRequestQueueProvider
     /// </summary>
     /// <param name="requestData">請求的資料。</param>
     /// <returns>表示非同步操作的 Task，其結果為請求的唯一識別碼。</returns>
-    public async Task<string> EnqueueCommandAsync(string requestData)
+    public async Task<string> EnqueueCommandAsync(object requestData)
     {
         var queuedRequest = new QueuedContext
         {
