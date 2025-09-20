@@ -12,7 +12,7 @@ public class SlidingWindowRateLimiter : IRateLimiter
     public SlidingWindowRateLimiter(int maxRequests = 2, TimeSpan? timeWindow = null)
     {
         _maxRequests = maxRequests;
-        _timeWindow = timeWindow ?? TimeSpan.FromSeconds(30);
+        _timeWindow = timeWindow ?? TimeSpan.FromMinutes(1);
     }
 
     public bool IsRequestAllowed()
