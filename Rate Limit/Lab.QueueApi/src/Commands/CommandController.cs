@@ -1,5 +1,6 @@
 using Lab.QueueApi.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace Lab.QueueApi.Commands;
 
@@ -18,7 +19,7 @@ public class CommandController : ControllerBase
     /// <summary>
     /// 請求佇列提供者。
     /// </summary>
-    private readonly IRequestQueueProvider _requestQueue;
+    private readonly ICommandQueueProvider _commandQueue;
 
     /// <summary>
     /// 記錄器。
@@ -29,15 +30,15 @@ public class CommandController : ControllerBase
     /// 初始化 QueueController 的新執行個體。
     /// </summary>
     /// <param name="rateLimiter">速率限制器服務。</param>
-    /// <param name="requestQueue">請求佇列提供者。</param>
+    /// <param name="commandQueue">請求佇列提供者。</param>
     /// <param name="logger">記錄器。</param>
     public CommandController(
         IRateLimiter rateLimiter,
-        IRequestQueueProvider requestQueue,
+        ICommandQueueProvider commandQueue,
         ILogger<CommandController> logger)
     {
         _rateLimiter = rateLimiter;
-        _requestQueue = requestQueue;
+        _commandQueue = commandQueue;
         _logger = logger;
     }
 
@@ -63,7 +64,7 @@ public class CommandController : ControllerBase
             }
 
             // 請求進入佇列
-            var requestId = await _requestQueue.EnqueueCommandAsync(request.Data);
+            var requestId = await _commandQueue.EnqueueCommandAsync(request.Data);
             var retryAfter = _rateLimiter.GetRetryAfter();
 
             _logger.LogInformation("Request {RequestId} queued, retry after {RetryAfter}s",
@@ -71,7 +72,7 @@ public class CommandController : ControllerBase
 
             // 返回 429 狀態碼和 Retry-After 標頭
             Response.Headers["Retry-After"] = ((int)retryAfter.TotalSeconds).ToString();
-            Response.Headers["X-Queue-Position"] = _requestQueue.GetQueueLength().ToString();
+            Response.Headers["X-Queue-Position"] = _commandQueue.GetQueueLength().ToString();
             Response.Headers["X-Request-Id"] = requestId;
 
             return StatusCode(429, new
@@ -79,7 +80,7 @@ public class CommandController : ControllerBase
                 Message = "Too many requests. Please retry after the specified time.",
                 RequestId = requestId,
                 RetryAfterSeconds = (int)retryAfter.TotalSeconds,
-                QueuePosition = _requestQueue.GetQueueLength()
+                QueuePosition = _commandQueue.GetQueueLength()
             });
         }
         catch (Exception ex)
@@ -100,7 +101,7 @@ public class CommandController : ControllerBase
         try
         {
             // 等待請求完成，設定較短的超時時間用於狀態檢查
-            var response = await _requestQueue.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(1));
+            var response = await _commandQueue.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(1));
 
             if (response.Success)
             {
@@ -113,7 +114,7 @@ public class CommandController : ControllerBase
                 {
                     Message = "Request is still being processed",
                     RequestId = requestId,
-                    QueuePosition = _requestQueue.GetQueueLength()
+                    QueuePosition = _commandQueue.GetQueueLength()
                 });
             }
 
@@ -137,7 +138,7 @@ public class CommandController : ControllerBase
         try
         {
             // 等待請求完成，設定較長的超時時間
-            var response = await _requestQueue.WaitForResponseAsync(requestId, TimeSpan.FromMinutes(2));
+            var response = await _commandQueue.WaitForResponseAsync(requestId, TimeSpan.FromMinutes(2));
 
             if (response.Success)
             {
@@ -172,7 +173,7 @@ public class CommandController : ControllerBase
         return Ok(new
         {
             Status = "Healthy",
-            QueueLength = _requestQueue.GetQueueLength(),
+            QueueLength = _commandQueue.GetQueueLength(),
             CanAcceptRequest = _rateLimiter.IsRequestAllowed(),
             RetryAfterSeconds = (int)_rateLimiter.GetRetryAfter().TotalSeconds,
             Timestamp = DateTime.UtcNow
@@ -189,7 +190,7 @@ public class CommandController : ControllerBase
         try
         {
             var currentTime = DateTime.UtcNow;
-            var queuedRequests = _requestQueue.GetAllQueuedCommands();
+            var queuedRequests = _commandQueue.GetAllQueuedCommands();
 
             var commands = queuedRequests.Select(req => new GetCommandStatusResponse
             {
@@ -232,7 +233,7 @@ public class CommandController : ControllerBase
             Data = new
             {
                 OriginalData = request.Data,
-                ProcessedData = $"Processed: {request.Data}",
+                ProcessedData = request.Data,
                 ProcessingType = "Direct"
             }
         };
