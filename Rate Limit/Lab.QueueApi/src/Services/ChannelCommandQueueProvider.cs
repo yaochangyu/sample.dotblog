@@ -144,11 +144,10 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
             if (queuedRequest.Status == QueuedCommandStatus.Ready)
             {
                 queuedRequest.UpdateStatus(QueuedCommandStatus.Processing);
-                return queuedRequest;
             }
         }
 
-        return null;
+        return queuedRequest;
     }
 
     /// <summary>
@@ -158,25 +157,27 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     /// <param name="response">最終回應。</param>
     /// <param name="cancel">用於取消操作的 CancellationToken。</param>
     /// <returns>表示非同步操作的 Task。</returns>
-    public async Task FinishAndRemoveRequestAsync(string requestId, QueuedCommandResponse response, CancellationToken cancel = default)
+    public async Task FinishAndRemoveRequestAsync(QueuedContext request, QueuedCommandResponse response,
+        CancellationToken cancel = default)
     {
-        if (_pendingRequests.TryRemove(requestId, out var queuedRequest))
+        if (_pendingRequests.TryRemove(request.Id, out var queuedRequest))
         {
             // 更新狀態為 Finished
             queuedRequest.UpdateStatus(QueuedCommandStatus.Finished);
-
+            request = queuedRequest;
             // 建立完成記錄並加入 cleanup records
             var finishedRecord = new CleanupRecord
             {
-                RequestId = requestId,
+                RequestId = request.Id,
                 RequestData = queuedRequest.RequestData,
                 QueuedAt = queuedRequest.QueuedAt,
                 CleanedAt = DateTime.UtcNow,
-                Reason = $"Request finished successfully after {(DateTime.UtcNow - queuedRequest.QueuedAt).TotalSeconds:F1} seconds"
+                Reason =
+                    $"Request finished successfully after {(DateTime.UtcNow - queuedRequest.QueuedAt).TotalSeconds:F1} seconds"
             };
 
             // 將完成記錄加入字典
-            _cleanupRecords[requestId] = finishedRecord;
+            _cleanupRecords[request.Id] = finishedRecord;
 
             // 如果清理記錄數量超過限制，移除最舊的記錄
             if (_cleanupRecords.Count > _maxCleanupRecords)

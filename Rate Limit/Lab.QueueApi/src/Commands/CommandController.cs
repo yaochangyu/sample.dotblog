@@ -185,39 +185,32 @@ public class CommandController : ControllerBase
         {
             // 嘗試執行準備好的請求
             var queuedRequest = await _commandQueue.ExecuteReadyRequestAsync(requestId, cancel);
-
-            if (queuedRequest != null)
+            if (queuedRequest == null)
             {
-                // 執行真正的業務邏輯
+                return NotFound(new { Message = "Request not found" });
+            }
+
+            if (queuedRequest.Status == QueuedCommandStatus.Processing)
+            {
                 _logger.LogInformation("Executing business logic for request {RequestId}", requestId);
+
+                // 執行真正的業務邏輯
                 var response = await ExecuteBusinessLogicAsync(queuedRequest, cancel);
 
                 // 將請求標記為 Finished 並從佇列中移除
-                await _commandQueue.FinishAndRemoveRequestAsync(requestId, response, cancel);
+                await _commandQueue.FinishAndRemoveRequestAsync(queuedRequest, response, cancel);
 
                 _logger.LogInformation("Request {RequestId} executed, finished and removed from queue", requestId);
                 return Ok(response);
             }
 
-            // 如果請求還沒準備好，則等待狀態更新
-            var waitResponse = await _commandQueue.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(5));
-
-            if (waitResponse.Success)
+            _logger.LogWarning("Request {RequestId} is not ready for execution", requestId);
+            return StatusCode(429, new
             {
-                return Ok(waitResponse);
-            }
-
-            if (waitResponse.Message == "Request timeout")
-            {
-                return Accepted(new
-                {
-                    Message = "Request is still being processed",
-                    RequestId = requestId,
-                    QueuePosition = _commandQueue.GetQueueLength()
-                });
-            }
-
-            return NotFound(new { Message = waitResponse.Message });
+                Message = "Request is not ready for execution",
+                RequestId = requestId,
+                QueuePosition = _commandQueue.GetQueueLength()
+            });
         }
         catch (Exception ex)
         {
@@ -351,6 +344,7 @@ public class CommandController : ControllerBase
                 ProcessedAt = DateTime.UtcNow,
                 ProcessingType = "Queued",
                 Status = queuedRequest.Status.ToString()
+                // Status = QueuedCommandStatus.Finished
             }
         };
     }
