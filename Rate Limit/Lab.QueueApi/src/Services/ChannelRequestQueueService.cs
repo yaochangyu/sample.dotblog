@@ -2,12 +2,32 @@ using Lab.QueueApi.Models;
 
 namespace Lab.QueueApi.Services;
 
+/// <summary>
+/// 一個背景服務，用於處理佇列中的請求。
+/// </summary>
 public class ChannelRequestQueueService : BackgroundService
 {
+    /// <summary>
+    /// 請求佇列的提供者。
+    /// </summary>
     private readonly IRequestQueueProvider _requestQueue;
+
+    /// <summary>
+    /// 速率限制器。
+    /// </summary>
     private readonly IRateLimiter _rateLimiter;
+
+    /// <summary>
+    /// 記錄器。
+    /// </summary>
     private readonly ILogger<ChannelRequestQueueService> _logger;
 
+    /// <summary>
+    /// 初始化 ChannelRequestQueueService 的新執行個體。
+    /// </summary>
+    /// <param name="requestQueue">請求佇列的提供者。</param>
+    /// <param name="rateLimiter">速率限制器。</param>
+    /// <param name="logger">記錄器。</param>
     public ChannelRequestQueueService(
         IRequestQueueProvider requestQueue,
         IRateLimiter rateLimiter,
@@ -18,6 +38,11 @@ public class ChannelRequestQueueService : BackgroundService
         _logger = logger;
     }
 
+    /// <summary>
+    /// 執行背景服務的主要邏輯。
+    /// </summary>
+    /// <param name="stoppingToken">用於觸發服務停止的 CancellationToken。</param>
+    /// <returns>表示非同步操作的 Task。</returns>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("Background Request Processor started");
@@ -64,6 +89,11 @@ public class ChannelRequestQueueService : BackgroundService
         _logger.LogInformation("Background Request Processor stopped");
     }
 
+    /// <summary>
+    /// 非同步地處理一個已排入佇列的請求。
+    /// </summary>
+    /// <param name="queuedRequest">要處理的已排入佇列的請求。</param>
+    /// <returns>表示非同步操作的 Task，其結果為 ApiResponse。</returns>
     private async Task<ApiResponse> ProcessRequestAsync(QueuedRequest queuedRequest)
     {
         // 模擬處理時間
@@ -83,4 +113,3 @@ public class ChannelRequestQueueService : BackgroundService
         };
     }
 }
-
