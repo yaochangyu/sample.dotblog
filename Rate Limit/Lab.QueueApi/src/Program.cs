@@ -1,4 +1,5 @@
 using Lab.QueueApi.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -25,16 +26,12 @@ builder.Services.AddSwaggerGen(c =>
 
 // Register custom services
 builder.Services.AddSingleton<IRateLimiter>(provider => 
-    new SlidingWindowRateLimiter(maxRequests: 2, timeWindow: TimeSpan.FromSeconds(10)));
+    new SlidingWindowRateLimiter(maxRequests: 2, timeWindow: TimeSpan.FromMinutes(1)));
 
-builder.Services.AddSingleton<IQueueHandler>(provider =>
-    new ChannelQueueHandler(
-        provider.GetRequiredService<IRateLimiter>(),
-        provider.GetRequiredService<ILogger<ChannelQueueHandler>>(),
-        capacity: 100));
+builder.Services.AddSingleton<IRequestQueueProvider>(provider => 
+    new ChannelRequestQueueProvider(capacity: 100));
 
-// Register RequestProcessorService as both singleton and hosted service
-builder.Services.AddSingleton<RequestProcessorService>();
+builder.Services.AddHostedService<ChannelRequestQueueService>();
 
 // Add CORS support
 builder.Services.AddCors(options =>

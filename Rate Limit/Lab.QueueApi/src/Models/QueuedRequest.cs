@@ -16,7 +16,7 @@ public class ApiResponse
     public DateTime ProcessedAt { get; set; } = DateTime.UtcNow;
 }
 
-public class CreateQueueRequest
+public class ApiRequest
 {
     public string Data { get; set; } = string.Empty;
 }
