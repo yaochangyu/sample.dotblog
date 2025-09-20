@@ -103,7 +103,7 @@ public class CommandController : ControllerBase
         try
         {
             // 等待請求完成，設定較短的超時時間用於狀態檢查
-            var response = await _commandQueue.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(1));
+            var response = await _commandQueue.WaitForResponseAsync(requestId, TimeSpan.FromMilliseconds(100));
 
             if (response.Success)
             {
