@@ -30,11 +30,17 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     private readonly ConcurrentDictionary<string, QueuedContext> _pendingRequests = new();
 
     /// <summary>
+    /// 佇列的最大容量。
+    /// </summary>
+    private readonly int _maxCapacity;
+
+    /// <summary>
     /// 初始化 ChannelRequestQueueProvider 的新執行個體。
     /// </summary>
     /// <param name="capacity">佇列的最大容量。</param>
     public ChannelCommandQueueProvider(int capacity = 100)
     {
+        _maxCapacity = capacity;
         var options = new BoundedChannelOptions(capacity)
         {
             FullMode = BoundedChannelFullMode.Wait,
@@ -51,6 +57,7 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     /// 將請求非同步地加入佇列。
     /// </summary>
     /// <param name="requestData">請求的資料。</param>
+    /// <param name="cancel"></param>
     /// <returns>表示非同步操作的 Task，其結果為請求的唯一識別碼。</returns>
     public async Task<string> EnqueueCommandAsync(object requestData, CancellationToken cancel = default)
     {
@@ -145,9 +152,28 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     /// <summary>
     /// 取得佇列中所有待處理的請求。
     /// </summary>
+    /// <param name="cancel"></param>
     /// <returns>包含所有待處理請求的集合。</returns>
     public async Task<IEnumerable<QueuedContext>> GetAllQueuedCommands(CancellationToken cancel = default)
     {
         return _pendingRequests.Values.OrderBy(x => x.QueuedAt);
+    }
+
+    /// <summary>
+    /// 檢查佇列是否已滿。
+    /// </summary>
+    /// <returns>如果佇列已滿則返回 true，否則返回 false。</returns>
+    public bool IsQueueFull()
+    {
+        return _pendingRequests.Count >= _maxCapacity;
+    }
+
+    /// <summary>
+    /// 取得佇列的最大容量。
+    /// </summary>
+    /// <returns>佇列的最大容量。</returns>
+    public int GetMaxCapacity()
+    {
+        return _maxCapacity;
     }
 }
