@@ -52,7 +52,7 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     /// </summary>
     /// <param name="requestData">請求的資料。</param>
     /// <returns>表示非同步操作的 Task，其結果為請求的唯一識別碼。</returns>
-    public async Task<string> EnqueueCommandAsync(object requestData)
+    public async Task<string> EnqueueCommandAsync(object requestData, CancellationToken cancel = default)
     {
         var queuedRequest = new QueuedContext
         {
@@ -60,8 +60,8 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
         };
 
         _pendingRequests[queuedRequest.Id] = queuedRequest;
-        await _writer.WriteAsync(queuedRequest);
-        
+        await _writer.WriteAsync(queuedRequest, cancel);
+
         return queuedRequest.Id;
     }
 
@@ -69,12 +69,13 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     /// 從佇列中非同步地取出請求。
     /// </summary>
     /// <param name="cancellationToken">用於取消操作的 CancellationToken。</param>
+    /// <param name="cancel"></param>
     /// <returns>表示非同步操作的 Task，其結果為從佇列中取出的 QueuedRequest，如果佇列已空或已完成，則為 null。</returns>
-    public async Task<QueuedContext?> DequeueCommandAsync(CancellationToken cancellationToken = default)
+    public async Task<QueuedContext?> DequeueCommandAsync(CancellationToken cancel = default)
     {
         try
         {
-            return await _reader.ReadAsync(cancellationToken);
+            return await _reader.ReadAsync(cancel);
         }
         catch (InvalidOperationException)
         {
@@ -145,7 +146,7 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     /// 取得佇列中所有待處理的請求。
     /// </summary>
     /// <returns>包含所有待處理請求的集合。</returns>
-    public IEnumerable<QueuedContext> GetAllQueuedCommands()
+    public async Task<IEnumerable<QueuedContext>> GetAllQueuedCommands(CancellationToken cancel = default)
     {
         return _pendingRequests.Values.OrderBy(x => x.QueuedAt);
     }
