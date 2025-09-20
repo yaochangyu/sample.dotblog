@@ -46,9 +46,11 @@ public class CommandController : ControllerBase
     /// 處理 API 請求，支援限流和排隊機制。
     /// </summary>
     /// <param name="request">API 請求資料。</param>
+    /// <param name="cancel"></param>
     /// <returns>表示非同步操作結果的 IActionResult。</returns>
     [HttpPost("commands")]
-    public async Task<IActionResult> Create([FromBody] CreateCommandRequest request)
+    public async Task<IActionResult> CreateCommandAsync([FromBody] CreateCommandRequest request,
+        CancellationToken cancel = default)
     {
         try
         {
@@ -57,14 +59,14 @@ public class CommandController : ControllerBase
             {
                 // 直接處理請求
                 _rateLimiter.RecordRequest();
-                var response = await ProcessDirectlyAsync(request);
+                var response = await ProcessDirectlyAsync(request, cancel);
 
                 _logger.LogInformation("Request processed directly");
                 return Ok(response);
             }
 
             // 請求進入佇列
-            var requestId = await _commandQueue.EnqueueCommandAsync(request.Data);
+            var requestId = await _commandQueue.EnqueueCommandAsync(request.Data, cancel);
             var retryAfter = _rateLimiter.GetRetryAfter();
 
             _logger.LogInformation("Request {RequestId} queued, retry after {RetryAfter}s",
@@ -96,7 +98,7 @@ public class CommandController : ControllerBase
     /// <param name="requestId">請求的唯一識別碼。</param>
     /// <returns>表示非同步操作結果的 IActionResult。</returns>
     [HttpGet("commadns/{requestId}/status")]
-    public async Task<IActionResult> GetRequestStatus(string requestId)
+    public async Task<IActionResult> GetRequestStatusAsync(string requestId, CancellationToken cancel = default)
     {
         try
         {
@@ -133,7 +135,7 @@ public class CommandController : ControllerBase
     /// <param name="requestId">請求的唯一識別碼。</param>
     /// <returns>表示非同步操作結果的 IActionResult。</returns>
     [HttpGet("commands/{requestId}/wait")]
-    public async Task<IActionResult> WaitForRequest(string requestId)
+    public async Task<IActionResult> WaitForCommandAsync(string requestId, CancellationToken cancel = default)
     {
         try
         {
@@ -185,12 +187,12 @@ public class CommandController : ControllerBase
     /// </summary>
     /// <returns>包含所有佇列任務資訊的 IActionResult。</returns>
     [HttpGet("commands")]
-    public IActionResult GetAllCommand()
+    public async Task<IActionResult> GetAllCommandsAsync(CancellationToken cancel = default)
     {
         try
         {
             var currentTime = DateTime.UtcNow;
-            var queuedRequests = _commandQueue.GetAllQueuedCommands();
+            var queuedRequests = await _commandQueue.GetAllQueuedCommands(cancel);
 
             var commands = queuedRequests.Select(req => new GetCommandStatusResponse
             {
@@ -220,11 +222,13 @@ public class CommandController : ControllerBase
     /// 非同步地直接處理請求。
     /// </summary>
     /// <param name="request">要處理的 API 請求。</param>
+    /// <param name="cancel"></param>
     /// <returns>表示非同步操作的 Task，其結果為 ApiResponse。</returns>
-    private async Task<QueuedCommandResponse> ProcessDirectlyAsync(CreateCommandRequest request)
+    private async Task<QueuedCommandResponse> ProcessDirectlyAsync(CreateCommandRequest request,
+        CancellationToken cancel = default)
     {
         // 模擬處理時間
-        await Task.Delay(TimeSpan.FromSeconds(1));
+        await Task.Delay(TimeSpan.FromSeconds(1), cancel);
 
         return new QueuedCommandResponse
         {

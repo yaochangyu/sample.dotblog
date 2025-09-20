@@ -11,15 +11,16 @@ public interface ICommandQueueProvider
     /// 將請求非同步地加入佇列。
     /// </summary>
     /// <param name="requestData">請求的資料。</param>
+    /// <param name="cancel"></param>
     /// <returns>表示非同步操作的 Task，其結果為請求的唯一識別碼。</returns>
-    Task<string> EnqueueCommandAsync(object requestData);
+    Task<string> EnqueueCommandAsync(object requestData, CancellationToken cancel = default);
 
     /// <summary>
     /// 從佇列中非同步地取出請求。
     /// </summary>
-    /// <param name="cancellationToken">用於取消操作的 CancellationToken。</param>
+    /// <param name="cancel">用於取消操作的 CancellationToken。</param>
     /// <returns>表示非同步操作的 Task，其結果為從佇列中取出的 QueuedRequest，如果佇列已空或已完成，則為 null。</returns>
-    Task<QueuedContext?> DequeueCommandAsync(CancellationToken cancellationToken = default);
+    Task<QueuedContext?> DequeueCommandAsync(CancellationToken cancel = default);
 
     /// <summary>
     /// 非同步地等待特定請求的回應。
@@ -46,5 +47,5 @@ public interface ICommandQueueProvider
     /// 取得佇列中所有待處理的請求。
     /// </summary>
     /// <returns>包含所有待處理請求的集合。</returns>
-    IEnumerable<QueuedContext> GetAllQueuedCommands();
+    Task<IEnumerable<QueuedContext>> GetAllQueuedCommands(CancellationToken cancel = default);
 }
