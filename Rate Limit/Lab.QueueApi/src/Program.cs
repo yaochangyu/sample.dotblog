@@ -40,6 +40,11 @@ var MaxRequestCapacity = 100;
 var MaxRequestAge = TimeSpan.FromMinutes(1);
 var CleanupInterval = TimeSpan.FromSeconds(5);
 
+// 佇列處理服務設定
+var ProcessingDelay = TimeSpan.FromSeconds(1);     // 處理請求的模擬延遲
+var EmptyQueueDelay = TimeSpan.FromMilliseconds(100);  // 佇列空時的等待間隔
+var ErrorRetryDelay = TimeSpan.FromSeconds(1);     // 錯誤重試延遲
+
 // 註冊自訂服務
 // 註冊 SlidingWindowRateLimiter 作為 IRateLimiter 的單例服務
 builder.Services.AddSingleton<IRateLimiter>(provider =>
@@ -50,7 +55,14 @@ builder.Services.AddSingleton<ICommandQueueProvider>(provider =>
     new ChannelCommandQueueProvider(capacity: MaxRequestCapacity));
 
 // 註冊 ChannelRequestQueueService 作為一個託管服務，使其在背景執行
-builder.Services.AddHostedService<ChannelCommandQueueService>();
+builder.Services.AddHostedService<ChannelCommandQueueService>(provider =>
+    new ChannelCommandQueueService(
+        provider.GetRequiredService<ICommandQueueProvider>(),
+        provider.GetRequiredService<IRateLimiter>(),
+        provider.GetRequiredService<ILogger<ChannelCommandQueueService>>(),
+        ProcessingDelay,
+        EmptyQueueDelay,
+        ErrorRetryDelay));
 
 // 註冊過期請求清理服務作為背景服務
 builder.Services.AddHostedService<ExpiredRequestCleanupService>(provider =>
