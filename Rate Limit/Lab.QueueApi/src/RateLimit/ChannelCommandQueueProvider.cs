@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Threading.Channels;
 using Lab.QueueApi.Commands;
 
-namespace Lab.QueueApi.Services;
+namespace Lab.QueueApi.RateLimit;
 
 /// <summary>
 /// 使用 .NET Channels 實作的請求佇列提供者。

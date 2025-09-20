@@ -1,4 +1,4 @@
-namespace Lab.QueueApi.Commands;
+namespace Lab.QueueApi.RateLimit;
 
 /// <summary>
 /// 代表一個被清理的請求記錄。

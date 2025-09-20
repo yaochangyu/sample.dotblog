@@ -1,4 +1,6 @@
-namespace Lab.QueueApi.Commands;
+using Lab.QueueApi.Commands;
+
+namespace Lab.QueueApi.RateLimit;
 
 /// <summary>
 /// 佇列請求的狀態。
