@@ -1,4 +1,5 @@
 using Lab.QueueApi.Commands;
+using Lab.QueueApi.RateLimit;
 
 namespace Lab.QueueApi.Services;
 
@@ -84,7 +85,7 @@ public class ChannelCommandQueueService : BackgroundService
                 }
 
                 // 等待直到可以許可請求（遵守限流規則）
-                while (!_rateLimiter.IsRequestAllowed())
+                while (!_rateLimiter.IsAllowed())
                 {
                     var retryAfter = _rateLimiter.GetRetryAfter();
                     _logger.LogDebug("Rate limit reached, waiting {RetryAfter}ms", retryAfter.TotalMilliseconds);

@@ -41,18 +41,21 @@ dotnet publish -c Release -r linux-x64 --self-contained -o ./publish
 
 ```mermaid
 graph TD
-    A[使用者請求] --> B{限流檢查}
-    B -->|前2個通過| C[直接執行業務邏輯]
-    B -->|第3個超限| D[進入佇列 - 狀態: Queued]
-    D --> E[背景服務: 許可管理器]
-    E --> F[等待限流許可]
-    F --> G[標記為 Ready 狀態]
-    G --> H[使用者調用 /wait 端點]
-    H --> I[檢查狀態 = Ready?]
-    I -->|是| J[執行業務邏輯 - 狀態: Processing]
-    I -->|否| K[返回 429 未準備好]
-    J --> L[標記為 Finished 並移出佇列]
-    L --> M[記錄到 cleanup-summary]
+    A[使用者請求 POST /api/commands] --> B[前置條件檢查]
+
+    B --> C{檢查佇列是否已滿<br/>_commandQueue.IsQueueFull}
+    C -->|佇列已滿| D[加入佇列並回傳 429<br/>Reason: QueueFull]
+
+    C -->|佇列未滿| E{檢查限流<br/>!_rateLimiter.IsAllowed}
+    E -->|限流失敗| F[加入佇列並回傳 429<br/>Reason: Rate Limit Exceeded]
+
+    E -->|限流通過| G[記錄請求<br/>_rateLimiter.RecordRequest]
+    G --> H[直接執行業務邏輯]
+    H --> I[回傳 200 OK]
+
+    D --> J[客戶端根據 RetryAfterSeconds 等待重試]
+    F --> J
+    J --> A
 ```
 
 ### 核心組件
@@ -60,18 +63,23 @@ graph TD
 1. **速率限制層 (Rate Limiting)**
    - `IRateLimiter` / `SlidingWindowRateLimiter`: 滑動視窗限流實作
    - 設定：每分鐘最多 2 個請求
-   - 位置：`src/Services/`
+   - 位置：`src/RateLimit/`
 
 2. **佇列系統 (Queue System)**
    - `ICommandQueueProvider` / `ChannelCommandQueueProvider`: 請求佇列提供者
    - `ChannelCommandQueueService`: 背景服務**只負責許可管理**
    - 使用 .NET Channel 實作生產者-消費者模式
-   - 位置：`src/Services/`
+   - 位置：核心組件在 `src/RateLimit/`，背景服務在 `src/Services/`
 
 3. **API 控制器**
    - `CommandController`: 主要 API 端點控制器
    - 路由：`/api/commands/*`, `/api/health`
    - 位置：`src/Commands/`
+
+4. **清理和維護服務**
+   - `ExpiredRequestCleanupService`: 過期請求清理服務
+   - `CleanupRecord` / `CleanupSummaryResponse`: 清理記錄相關模型
+   - 位置：`src/Services/` 和 `src/RateLimit/`
 
 ### 狀態管理
 
@@ -179,9 +187,18 @@ builder.Services.AddHostedService<ChannelCommandQueueService>();
 
 ### 主要端點
 
-- `POST /api/commands` - 提交請求（支援限流和排隊）
-  - 前2個請求：直接執行並回傳結果
-  - 第3+請求：進入佇列，返回 429 和 requestId
+- `POST /api/commands` - 提交請求（支援前置條件檢查和排隊機制）
+  - **前置條件檢查順序**：
+    1. 檢查佇列是否已滿
+    2. 檢查限流是否超限
+  - **處理邏輯**：
+    - 佇列已滿：加入佇列，回傳 429 (Reason: "QueueFull")
+    - 限流失敗：加入佇列，回傳 429 (Reason: "Rate Limit Exceeded")
+    - 都通過：直接執行業務邏輯，回傳 200 OK
+  - **回傳資訊**：
+    - RequestId：用於查詢佇列狀態
+    - RetryAfterSeconds：建議重試時間
+    - HTTP Headers：Retry-After, X-Queue-Position, X-Request-Id
 
 - `GET /api/commands/{requestId}/status` - 查詢請求狀態
   - 回傳狀態：`Queued`, `Ready`, `Processing`, `Failed`, `Finished`
@@ -203,37 +220,83 @@ builder.Services.AddHostedService<ChannelCommandQueueService>();
 ```
 src/
 ├── Commands/           # API 控制器和請求/回應模型
-│   ├── CommandController.cs
-│   ├── CreateCommandRequest.cs
-│   ├── QueuedCommandResponse.cs
-│   └── QueuedContext.cs
-├── Services/           # 核心業務邏輯服務
-│   ├── IRateLimiter.cs
-│   ├── SlidingWindowRateLimiter.cs
-│   ├── ICommandQueueProvider.cs
-│   ├── ChannelCommandQueueProvider.cs
-│   └── ChannelCommandQueueService.cs
-└── Program.cs          # 應用程式進入點和 DI 設定
+│   ├── CommandController.cs       # 主要 API 端點控制器
+│   ├── CreateCommandRequest.cs    # 建立命令請求模型
+│   ├── GetCommandStatusResponse.cs # 命令狀態回應模型
+│   └── QueuedCommandResponse.cs   # 佇列命令回應模型
+├── RateLimit/          # 限流和佇列核心組件
+│   ├── IRateLimiter.cs             # 限流器介面
+│   ├── SlidingWindowRateLimiter.cs # 滑動視窗限流實作
+│   ├── ICommandQueueProvider.cs    # 佇列提供者介面
+│   ├── ChannelCommandQueueProvider.cs # Channel 佇列實作
+│   ├── QueuedContext.cs            # 佇列上下文模型
+│   ├── CleanupRecord.cs            # 清理記錄模型
+│   └── CleanupSummaryResponse.cs   # 清理摘要回應模型
+├── Services/           # 背景服務和清理服務
+│   ├── ChannelCommandQueueService.cs    # 佇列背景處理服務
+│   └── ExpiredRequestCleanupService.cs  # 過期請求清理服務
+├── Properties/         # 專案配置檔案
+│   └── launchSettings.json
+├── appsettings.json            # 應用程式設定
+├── appsettings.Development.json # 開發環境設定
+├── Lab.QueueApi.csproj        # 專案檔案
+├── Lab.QueueApi.http          # HTTP 測試檔案
+└── Program.cs                 # 應用程式進入點和 DI 設定
 ```
 
 ## 開發注意事項
 
 ### 關鍵設計原則
 
-1. **背景服務職責分離**
+1. **前置條件檢查機制**
+   - 採用分階段檢查策略，優先檢查佇列容量
+   - 任一檢查失敗都會將請求加入佇列並回傳 429
+   - 提供明確的失敗原因和重試時機指引
+
+2. **背景服務職責分離**
    - `ChannelCommandQueueService` **只負責許可管理**
    - 不執行業務邏輯，只將狀態從 `Queued` 改為 `Ready`
    - 調用端透過 `/wait` 端點主動執行業務邏輯
 
-2. **狀態流轉控制**
+3. **狀態流轉控制**
    - 只有 `Ready` 狀態的請求可被執行
    - 執行後立即變為 `Finished` 並從佇列移除
    - 移除的請求記錄在 `cleanup-summary` 中
 
-3. **搶票系統適配**
+4. **限流和排隊策略**
    - 系統每分鐘處理 2 個請求（可調整）
-   - 第 3 人的請求自動進入佇列
-   - 使用者主動決定何時搶票（調用 `/wait`）
+   - 超出限制的請求自動進入佇列等待許可
+   - 使用者可主動決定執行時機（調用 `/wait`）
+
+### POST /api/commands 端點業務規則
+
+1. **檢查順序**：
+   ```
+   步驟 1: 檢查佇列是否已滿 (_commandQueue.IsQueueFull())
+   步驟 2: 檢查限流是否超限 (!_rateLimiter.IsAllowed())
+   ```
+
+2. **處理邏輯**：
+   - 佇列已滿 → 加入佇列 → 回傳 429 (QueueFull)
+   - 限流失敗 → 加入佇列 → 回傳 429 (Rate Limit Exceeded)
+   - 都通過 → 記錄請求 → 直接執行 → 回傳 200
+
+3. **429 回應格式**：
+   ```json
+   {
+     "Message": "描述訊息",
+     "RequestId": "唯一識別碼",
+     "RetryAfterSeconds": 重試秒數,
+     "QueueLength": 佇列長度,
+     "MaxCapacity": 最大容量,
+     "Reason": "失敗原因"
+   }
+   ```
+
+4. **HTTP Headers**：
+   - `Retry-After`: 建議重試時間（秒）
+   - `X-Queue-Position`: 佇列位置
+   - `X-Request-Id`: 請求識別碼
 
 ### 修改限流設定
 若需調整限流參數，修改 `Program.cs` 中的 `SlidingWindowRateLimiter` 設定：
@@ -266,9 +329,10 @@ new ChannelCommandQueueProvider(capacity: 200)
 1. **健康檢查端點測試**
    - 驗證系統基本運作
 
-2. **限流機制測試**
-   - 前兩個請求：直接處理並回傳結果
-   - 第三個請求：進入佇列，返回 429 和 requestId
+2. **前置條件檢查測試**
+   - 佇列容量測試：當佇列滿時加入佇列並回傳 429 (QueueFull)
+   - 限流機制測試：超出限制時加入佇列並回傳 429 (Rate Limit Exceeded)
+   - 正常處理測試：通過檢查時直接執行並回傳 200
 
 3. **狀態查詢測試**
    - 查詢佇列中請求的狀態變化：`Queued` → `Ready`
@@ -284,16 +348,19 @@ new ChannelCommandQueueProvider(capacity: 200)
 ### 搶票系統測試場景
 
 ```bash
-# 模擬 3 人同時搶票
-curl -X POST /api/commands -d '{"data":"user1_ticket"}'  # 直接執行
-curl -X POST /api/commands -d '{"data":"user2_ticket"}'  # 直接執行
-curl -X POST /api/commands -d '{"data":"user3_ticket"}'  # 進入佇列
+# 模擬前置條件檢查測試
+curl -X POST /api/commands -d '{"data":"user1_ticket"}'  # 第1個請求：直接執行 (200)
+curl -X POST /api/commands -d '{"data":"user2_ticket"}'  # 第2個請求：直接執行 (200)
+curl -X POST /api/commands -d '{"data":"user3_ticket"}'  # 第3個請求：限流失敗，加入佇列 (429)
 
-# 等待背景服務許可
+# 檢查佇列中的請求狀態
+curl /api/commands/{requestId}/status  # 查看第3個請求狀態
+
+# 等待背景服務處理或限流視窗重置
 sleep 65  # 等待超過1分鐘
 
-# user3 主動搶票
-curl /api/commands/{requestId}/wait  # 執行搶票邏輯
+# 使用 wait 端點執行佇列中的請求
+curl /api/commands/{requestId}/wait  # 執行第3個請求的業務邏輯
 ```
 
 ## 使用案例：搶票系統
@@ -311,10 +378,10 @@ curl /api/commands/{requestId}/wait  # 執行搶票邏輯
 
 ```
 1. 演唱會開搶 → 大量用戶同時請求
-2. 系統限流 → 前N個直接搶票，其餘進入佇列
-3. 背景許可 → 依序發放搶票許可給排隊用戶
-4. 用戶主動 → 收到許可通知後，主動執行搶票
-5. 完成移除 → 搶票完成後從佇列移除，記錄歷史
+2. 系統限流 → 前N個直接搶票成功，其餘收到 429 錯誤
+3. 用戶重試 → 等待限流視窗重置後重新發送請求
+4. 佇列保護 → 當系統負載過重時，佇列滿則拒絕請求
+5. 成功處理 → 通過檢查的請求直接執行搶票邏輯
 ```
 
 ### 技術優勢

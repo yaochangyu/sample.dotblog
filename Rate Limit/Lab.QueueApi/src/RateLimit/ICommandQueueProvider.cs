@@ -1,6 +1,6 @@
 using Lab.QueueApi.Commands;
 
-namespace Lab.QueueApi.Services;
+namespace Lab.QueueApi.RateLimit;
 
 /// <summary>
 /// 定義請求佇列提供者的介面。
