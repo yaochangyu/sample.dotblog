@@ -35,7 +35,8 @@ public interface ICommandQueueProvider
     /// </summary>
     /// <param name="requestId">已完成的請求的唯一識別碼。</param>
     /// <param name="response">請求的 ApiResponse。</param>
-    void CompleteCommand(string requestId, QueuedCommandResponse response);
+    /// <param name="cancel"></param>
+    Task CompleteCommandAsync(string requestId, QueuedCommandResponse response,CancellationToken cancel = default);
 
     /// <summary>
     /// 取得目前佇列的長度。
@@ -46,8 +47,9 @@ public interface ICommandQueueProvider
     /// <summary>
     /// 取得佇列中所有待處理的請求。
     /// </summary>
+    /// <param name="cancel">用於取消操作的 CancellationToken。</param>
     /// <returns>包含所有待處理請求的集合。</returns>
-    Task<IEnumerable<QueuedContext>> GetAllQueuedCommands(CancellationToken cancel = default);
+    Task<IEnumerable<QueuedContext>> GetAllQueuedCommandsAsync(CancellationToken cancel = default);
 
     /// <summary>
     /// 檢查佇列是否已滿。
@@ -60,4 +62,17 @@ public interface ICommandQueueProvider
     /// </summary>
     /// <returns>佇列的最大容量。</returns>
     int GetMaxCapacity();
+
+    /// <summary>
+    /// 清理超過指定時間且未被取得結果的過期請求。
+    /// </summary>
+    /// <param name="maxAge">請求最大存活時間。</param>
+    /// <returns>被清理的請求數量。</returns>
+    int CleanupExpiredRequests(TimeSpan maxAge);
+
+    /// <summary>
+    /// 取得清理記錄摘要。
+    /// </summary>
+    /// <returns>清理記錄摘要。</returns>
+    Task<CleanupSummaryResponse> GetCleanupSummaryAsync(CancellationToken cancel = default);
 }
