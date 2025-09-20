@@ -110,7 +110,7 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     {
         // 找到狀態為 Queued 的第一個請求
         var queuedRequest = _pendingRequests.Values
-            .Where(r => r.Status == QueuedRequestStatus.Queued)
+            .Where(r => r.Status == QueuedCommandStatus.Queued)
             .OrderBy(r => r.QueuedAt)
             .FirstOrDefault();
 
@@ -127,7 +127,7 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     {
         if (_pendingRequests.TryGetValue(requestId, out var queuedRequest))
         {
-            queuedRequest.UpdateStatus(QueuedRequestStatus.Ready);
+            queuedRequest.UpdateStatus(QueuedCommandStatus.Ready);
         }
     }
 
@@ -141,14 +141,61 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     {
         if (_pendingRequests.TryGetValue(requestId, out var queuedRequest))
         {
-            if (queuedRequest.Status == QueuedRequestStatus.Ready)
+            if (queuedRequest.Status == QueuedCommandStatus.Ready)
             {
-                queuedRequest.UpdateStatus(QueuedRequestStatus.Processing);
+                queuedRequest.UpdateStatus(QueuedCommandStatus.Processing);
                 return queuedRequest;
             }
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// 將請求標記為已結束並從佇列中移除。
+    /// </summary>
+    /// <param name="requestId">請求的唯一識別碼。</param>
+    /// <param name="response">最終回應。</param>
+    /// <param name="cancel">用於取消操作的 CancellationToken。</param>
+    /// <returns>表示非同步操作的 Task。</returns>
+    public async Task FinishAndRemoveRequestAsync(string requestId, QueuedCommandResponse response, CancellationToken cancel = default)
+    {
+        if (_pendingRequests.TryRemove(requestId, out var queuedRequest))
+        {
+            // 更新狀態為 Finished
+            queuedRequest.UpdateStatus(QueuedCommandStatus.Finished);
+
+            // 建立完成記錄並加入 cleanup records
+            var finishedRecord = new CleanupRecord
+            {
+                RequestId = requestId,
+                RequestData = queuedRequest.RequestData,
+                QueuedAt = queuedRequest.QueuedAt,
+                CleanedAt = DateTime.UtcNow,
+                Reason = $"Request finished successfully after {(DateTime.UtcNow - queuedRequest.QueuedAt).TotalSeconds:F1} seconds"
+            };
+
+            // 將完成記錄加入字典
+            _cleanupRecords[requestId] = finishedRecord;
+
+            // 如果清理記錄數量超過限制，移除最舊的記錄
+            if (_cleanupRecords.Count > _maxCleanupRecords)
+            {
+                var oldestRecord = _cleanupRecords.Values
+                    .OrderBy(r => r.CleanedAt)
+                    .FirstOrDefault();
+                if (oldestRecord != null)
+                {
+                    _cleanupRecords.TryRemove(oldestRecord.RequestId, out _);
+                }
+            }
+
+            // 設定完成回應給等待的消費者
+            if (!queuedRequest.CompletionSource.Task.IsCompleted)
+            {
+                queuedRequest.CompletionSource.SetResult(response);
+            }
+        }
     }
 
     /// <summary>
@@ -198,7 +245,7 @@ public class ChannelCommandQueueProvider : ICommandQueueProvider
     {
         if (_pendingRequests.TryGetValue(requestId, out var queuedRequest))
         {
-            queuedRequest.UpdateStatus(response.Success ? QueuedRequestStatus.Completed : QueuedRequestStatus.Failed);
+            queuedRequest.UpdateStatus(response.Success ? QueuedCommandStatus.Finished : QueuedCommandStatus.Failed);
             queuedRequest.CompletionSource.SetResult(response);
         }
     }

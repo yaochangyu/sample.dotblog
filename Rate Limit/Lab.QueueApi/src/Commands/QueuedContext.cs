@@ -3,7 +3,7 @@ namespace Lab.QueueApi.Commands;
 /// <summary>
 /// 佇列請求的狀態。
 /// </summary>
-public enum QueuedRequestStatus
+public enum QueuedCommandStatus
 {
     /// <summary>
     /// 在佇列中等待
@@ -21,14 +21,14 @@ public enum QueuedRequestStatus
     Processing,
 
     /// <summary>
-    /// 已完成
-    /// </summary>
-    Completed,
-
-    /// <summary>
     /// 已取消或失敗
     /// </summary>
-    Failed
+    Failed,
+
+    /// <summary>
+    /// 已結束並從佇列移除
+    /// </summary>
+    Finished
 }
 
 /// <summary>
@@ -49,7 +49,7 @@ public class QueuedContext
     /// <summary>
     /// 請求狀態。
     /// </summary>
-    public QueuedRequestStatus Status { get; set; } = QueuedRequestStatus.Queued;
+    public QueuedCommandStatus Status { get; set; } = QueuedCommandStatus.Queued;
 
     /// <summary>
     /// 狀態更新時間。
@@ -70,7 +70,7 @@ public class QueuedContext
     /// 更新請求狀態。
     /// </summary>
     /// <param name="newStatus">新的狀態</param>
-    public void UpdateStatus(QueuedRequestStatus newStatus)
+    public void UpdateStatus(QueuedCommandStatus newStatus)
     {
         Status = newStatus;
         StatusUpdatedAt = DateTime.UtcNow;

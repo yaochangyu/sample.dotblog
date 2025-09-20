@@ -108,6 +108,7 @@ public class CommandController : ControllerBase
     /// 檢查排隊請求的狀態。
     /// </summary>
     /// <param name="requestId">請求的唯一識別碼。</param>
+    /// <param name="cancel"></param>
     /// <returns>表示非同步操作結果的 IActionResult。</returns>
     [HttpGet("commands/{requestId}/status")]
     public async Task<IActionResult> GetRequestStatusAsync(string requestId, CancellationToken cancel = default)
@@ -143,7 +144,7 @@ public class CommandController : ControllerBase
                 QueuedAt = currentRequest.QueuedAt,
                 StatusUpdatedAt = currentRequest.StatusUpdatedAt,
                 Message = GetStatusMessage(currentRequest.Status),
-                CanExecute = currentRequest.Status == QueuedRequestStatus.Ready
+                CanExecute = currentRequest.Status == QueuedCommandStatus.Ready
             });
         }
         catch (Exception ex)
@@ -158,15 +159,15 @@ public class CommandController : ControllerBase
     /// </summary>
     /// <param name="status">請求狀態。</param>
     /// <returns>狀態描述訊息。</returns>
-    private static string GetStatusMessage(QueuedRequestStatus status)
+    private static string GetStatusMessage(QueuedCommandStatus status)
     {
         return status switch
         {
-            QueuedRequestStatus.Queued => "Request is waiting in queue",
-            QueuedRequestStatus.Ready => "Request is ready for execution",
-            QueuedRequestStatus.Processing => "Request is being processed",
-            QueuedRequestStatus.Completed => "Request has been completed",
-            QueuedRequestStatus.Failed => "Request has failed",
+            QueuedCommandStatus.Queued => "Request is waiting in queue",
+            QueuedCommandStatus.Ready => "Request is ready for execution",
+            QueuedCommandStatus.Processing => "Request is being processed",
+            QueuedCommandStatus.Failed => "Request has failed",
+            QueuedCommandStatus.Finished => "Request has been finished and removed from queue",
             _ => "Unknown status"
         };
     }
@@ -191,10 +192,10 @@ public class CommandController : ControllerBase
                 _logger.LogInformation("Executing business logic for request {RequestId}", requestId);
                 var response = await ExecuteBusinessLogicAsync(queuedRequest, cancel);
 
-                // 標記請求完成
-                await _commandQueue.CompleteCommandAsync(requestId, response, cancel);
+                // 將請求標記為 Finished 並從佇列中移除
+                await _commandQueue.FinishAndRemoveRequestAsync(requestId, response, cancel);
 
-                _logger.LogInformation("Request {RequestId} executed and completed", requestId);
+                _logger.LogInformation("Request {RequestId} executed, finished and removed from queue", requestId);
                 return Ok(response);
             }
 
