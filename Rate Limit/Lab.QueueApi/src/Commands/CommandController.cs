@@ -206,7 +206,7 @@ public class CommandController : ControllerBase
         try
         {
             var currentTime = DateTime.UtcNow;
-            var queuedRequests = await _commandQueue.GetAllQueuedCommands(cancel);
+            var queuedRequests = await _commandQueue.GetAllQueuedCommandsAsync(cancel);
 
             var commands = queuedRequests.Select(req => new GetCommandStatusResponse
             {
@@ -228,6 +228,29 @@ public class CommandController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving queued tasks");
+            return StatusCode(500, new { Message = "Internal server error" });
+        }
+    }
+
+    /// <summary>
+    /// 取得清理記錄摘要。
+    /// </summary>
+    /// <returns>包含清理記錄資訊的 IActionResult。</returns>
+    [HttpGet("commands/cleanup-summary")]
+    public async Task<IActionResult> GetCleanupSummaryAsync(CancellationToken cancel = default)
+    {
+        try
+        {
+            var cleanupSummary = await _commandQueue.GetCleanupSummaryAsync(cancel);
+
+            _logger.LogInformation("Retrieved cleanup summary with {TotalCount} records",
+                cleanupSummary.TotalCleanupCount);
+
+            return Ok(cleanupSummary);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving cleanup summary");
             return StatusCode(500, new { Message = "Internal server error" });
         }
     }
