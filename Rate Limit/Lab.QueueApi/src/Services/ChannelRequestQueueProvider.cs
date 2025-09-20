@@ -1,6 +1,6 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
-using Lab.QueueApi.Models;
+using Lab.QueueApi.Commands;
 
 namespace Lab.QueueApi.Services;
 
@@ -12,22 +12,22 @@ public class ChannelRequestQueueProvider : IRequestQueueProvider
     /// <summary>
     /// 用於儲存排隊請求的 Channel。
     /// </summary>
-    private readonly Channel<QueuedRequest> _channel;
+    private readonly Channel<QueuedContext> _channel;
 
     /// <summary>
     /// Channel 的寫入器。
     /// </summary>
-    private readonly ChannelWriter<QueuedRequest> _writer;
+    private readonly ChannelWriter<QueuedContext> _writer;
 
     /// <summary>
     /// Channel 的讀取器。
     /// </summary>
-    private readonly ChannelReader<QueuedRequest> _reader;
+    private readonly ChannelReader<QueuedContext> _reader;
 
     /// <summary>
     /// 儲存待處理請求的並行字典。
     /// </summary>
-    private readonly ConcurrentDictionary<string, QueuedRequest> _pendingRequests = new();
+    private readonly ConcurrentDictionary<string, QueuedContext> _pendingRequests = new();
 
     /// <summary>
     /// 初始化 ChannelRequestQueueProvider 的新執行個體。
@@ -42,7 +42,7 @@ public class ChannelRequestQueueProvider : IRequestQueueProvider
             SingleWriter = false
         };
 
-        _channel = Channel.CreateBounded<QueuedRequest>(options);
+        _channel = Channel.CreateBounded<QueuedContext>(options);
         _writer = _channel.Writer;
         _reader = _channel.Reader;
     }
@@ -52,9 +52,9 @@ public class ChannelRequestQueueProvider : IRequestQueueProvider
     /// </summary>
     /// <param name="requestData">請求的資料。</param>
     /// <returns>表示非同步操作的 Task，其結果為請求的唯一識別碼。</returns>
-    public async Task<string> EnqueueRequestAsync(string requestData)
+    public async Task<string> EnqueueCommandAsync(string requestData)
     {
-        var queuedRequest = new QueuedRequest
+        var queuedRequest = new QueuedContext
         {
             RequestData = requestData
         };
@@ -70,7 +70,7 @@ public class ChannelRequestQueueProvider : IRequestQueueProvider
     /// </summary>
     /// <param name="cancellationToken">用於取消操作的 CancellationToken。</param>
     /// <returns>表示非同步操作的 Task，其結果為從佇列中取出的 QueuedRequest，如果佇列已空或已完成，則為 null。</returns>
-    public async Task<QueuedRequest?> DequeueRequestAsync(CancellationToken cancellationToken = default)
+    public async Task<QueuedContext?> DequeueCommandAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -89,11 +89,11 @@ public class ChannelRequestQueueProvider : IRequestQueueProvider
     /// <param name="requestId">要等待的請求的唯一識別碼。</param>
     /// <param name="timeout">等待的逾時時間。</param>
     /// <returns>表示非同步操作的 Task，其結果為 ApiResponse。</returns>
-    public async Task<ApiResponse> WaitForResponseAsync(string requestId, TimeSpan timeout)
+    public async Task<QueuedCommandResponse> WaitForResponseAsync(string requestId, TimeSpan timeout)
     {
         if (!_pendingRequests.TryGetValue(requestId, out var queuedRequest))
         {
-            return new ApiResponse
+            return new QueuedCommandResponse
             {
                 Success = false,
                 Message = "Request not found"
@@ -107,7 +107,7 @@ public class ChannelRequestQueueProvider : IRequestQueueProvider
         }
         catch (OperationCanceledException)
         {
-            return new ApiResponse
+            return new QueuedCommandResponse
             {
                 Success = false,
                 Message = "Request timeout"
@@ -124,7 +124,7 @@ public class ChannelRequestQueueProvider : IRequestQueueProvider
     /// </summary>
     /// <param name="requestId">已完成的請求的唯一識別碼。</param>
     /// <param name="response">請求的 ApiResponse。</param>
-    public void CompleteRequest(string requestId, ApiResponse response)
+    public void CompleteCommand(string requestId, QueuedCommandResponse response)
     {
         if (_pendingRequests.TryGetValue(requestId, out var queuedRequest))
         {
@@ -139,5 +139,14 @@ public class ChannelRequestQueueProvider : IRequestQueueProvider
     public int GetQueueLength()
     {
         return _pendingRequests.Count;
+    }
+
+    /// <summary>
+    /// 取得佇列中所有待處理的請求。
+    /// </summary>
+    /// <returns>包含所有待處理請求的集合。</returns>
+    public IEnumerable<QueuedContext> GetAllQueuedCommands()
+    {
+        return _pendingRequests.Values.OrderBy(x => x.QueuedAt);
     }
 }

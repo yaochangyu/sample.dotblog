@@ -1,4 +1,4 @@
-using Lab.QueueApi.Models;
+using Lab.QueueApi.Commands;
 
 namespace Lab.QueueApi.Services;
 
@@ -51,7 +51,7 @@ public class ChannelRequestQueueService : BackgroundService
         {
             try
             {
-                var queuedRequest = await _requestQueue.DequeueRequestAsync(stoppingToken);
+                var queuedRequest = await _requestQueue.DequeueCommandAsync(stoppingToken);
                 
                 if (queuedRequest == null)
                 {
@@ -71,7 +71,7 @@ public class ChannelRequestQueueService : BackgroundService
                 _rateLimiter.RecordRequest();
                 var response = await ProcessRequestAsync(queuedRequest);
                 
-                _requestQueue.CompleteRequest(queuedRequest.Id, response);
+                _requestQueue.CompleteCommand(queuedRequest.Id, response);
                 
                 _logger.LogInformation("Processed request {RequestId}", queuedRequest.Id);
             }
@@ -94,12 +94,12 @@ public class ChannelRequestQueueService : BackgroundService
     /// </summary>
     /// <param name="queuedRequest">要處理的已排入佇列的請求。</param>
     /// <returns>表示非同步操作的 Task，其結果為 ApiResponse。</returns>
-    private async Task<ApiResponse> ProcessRequestAsync(QueuedRequest queuedRequest)
+    private async Task<QueuedCommandResponse> ProcessRequestAsync(QueuedContext queuedRequest)
     {
         // 模擬處理時間
         await Task.Delay(TimeSpan.FromSeconds(1));
 
-        return new ApiResponse
+        return new QueuedCommandResponse
         {
             Success = true,
             Message = "Request processed successfully",
