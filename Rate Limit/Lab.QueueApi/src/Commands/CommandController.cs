@@ -65,6 +65,18 @@ public class CommandController : ControllerBase
                 return Ok(response);
             }
 
+            // 檢查佇列是否已滿
+            if (_commandQueue.IsQueueFull())
+            {
+                _logger.LogWarning("Queue is full, rejecting request");
+                return StatusCode(503, new
+                {
+                    Message = "Service unavailable. Queue is full, please try again later.",
+                    QueueLength = _commandQueue.GetQueueLength(),
+                    MaxCapacity = _commandQueue.GetMaxCapacity()
+                });
+            }
+
             // 請求進入佇列
             var requestId = await _commandQueue.EnqueueCommandAsync(request.Data, cancel);
             var retryAfter = _rateLimiter.GetRetryAfter();
@@ -97,7 +109,7 @@ public class CommandController : ControllerBase
     /// </summary>
     /// <param name="requestId">請求的唯一識別碼。</param>
     /// <returns>表示非同步操作結果的 IActionResult。</returns>
-    [HttpGet("commadns/{requestId}/status")]
+    [HttpGet("commands/{requestId}/status")]
     public async Task<IActionResult> GetRequestStatusAsync(string requestId, CancellationToken cancel = default)
     {
         try
@@ -133,6 +145,7 @@ public class CommandController : ControllerBase
     /// 等待排隊請求完成（用於客戶端重試）。
     /// </summary>
     /// <param name="requestId">請求的唯一識別碼。</param>
+    /// <param name="cancel"></param>
     /// <returns>表示非同步操作結果的 IActionResult。</returns>
     [HttpGet("commands/{requestId}/wait")]
     public async Task<IActionResult> WaitForCommandAsync(string requestId, CancellationToken cancel = default)
@@ -140,7 +153,7 @@ public class CommandController : ControllerBase
         try
         {
             // 等待請求完成，設定較長的超時時間
-            var response = await _commandQueue.WaitForResponseAsync(requestId, TimeSpan.FromMinutes(2));
+            var response = await _commandQueue.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(5));
 
             if (response.Success)
             {
@@ -149,10 +162,11 @@ public class CommandController : ControllerBase
 
             if (response.Message == "Request timeout")
             {
-                return StatusCode(408, new
+                return Accepted(new
                 {
-                    Message = "Request processing timeout",
-                    RequestId = requestId
+                    Message = "Request is still being processed",
+                    RequestId = requestId,
+                    QueuePosition = _commandQueue.GetQueueLength()
                 });
             }
 

@@ -48,4 +48,16 @@ public interface ICommandQueueProvider
     /// </summary>
     /// <returns>包含所有待處理請求的集合。</returns>
     Task<IEnumerable<QueuedContext>> GetAllQueuedCommands(CancellationToken cancel = default);
+
+    /// <summary>
+    /// 檢查佇列是否已滿。
+    /// </summary>
+    /// <returns>如果佇列已滿則返回 true，否則返回 false。</returns>
+    bool IsQueueFull();
+
+    /// <summary>
+    /// 取得佇列的最大容量。
+    /// </summary>
+    /// <returns>佇列的最大容量。</returns>
+    int GetMaxCapacity();
 }
