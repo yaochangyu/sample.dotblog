@@ -1,21 +1,23 @@
 using Lab.QueueApi.Services;
 
+// 建立 WebApplication 建構器。
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// 將控制器服務加入到容器中。
 builder.Services.AddControllers();
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+// 學習更多關於設定 Swagger/OpenAPI 的資訊，請參考 https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
+    // 設定 Swagger 文件
     c.SwaggerDoc("v1", new() { 
         Title = "Queued Web API", 
         Version = "v1",
-        Description = "A Web API with rate limiting and queuing mechanism"
+        Description = "一個具有速率限制和佇列機制的 Web API"
     });
     
-    // Include XML comments for better API documentation
+    // 包含 XML 註解以提供更詳細的 API 文件
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (File.Exists(xmlPath))
@@ -24,55 +26,64 @@ builder.Services.AddSwaggerGen(c =>
     }
 });
 
-// Register custom services
+// 註冊自訂服務
+// 註冊 SlidingWindowRateLimiter 作為 IRateLimiter 的單例服務
 builder.Services.AddSingleton<IRateLimiter>(provider => 
     new SlidingWindowRateLimiter(maxRequests: 2, timeWindow: TimeSpan.FromMinutes(1)));
 
+// 註冊 ChannelRequestQueueProvider 作為 IRequestQueueProvider 的單例服務
 builder.Services.AddSingleton<IRequestQueueProvider>(provider => 
     new ChannelRequestQueueProvider(capacity: 100));
 
+// 註冊 ChannelRequestQueueService 作為一個託管服務，使其在背景執行
 builder.Services.AddHostedService<ChannelRequestQueueService>();
 
-// Add CORS support
+// 加入 CORS 支援
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        policy.AllowAnyOrigin() // 允許任何來源
+              .AllowAnyMethod() // 允許任何 HTTP 方法
+              .AllowAnyHeader(); // 允許任何 HTTP 標頭
     });
 });
 
-// Add logging
+// 加入記錄服務
 builder.Services.AddLogging(logging =>
 {
-    logging.AddConsole();
-    logging.AddDebug();
+    logging.AddConsole(); // 將日誌輸出到主控台
+    logging.AddDebug(); // 將日誌輸出到偵錯視窗
 });
 
+// 建構 WebApplication。
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// 設定 HTTP 請求管線。
 if (app.Environment.IsDevelopment())
 {
+    // 在開發環境中啟用 Swagger 和 Swagger UI
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Queued Web API v1");
-        c.RoutePrefix = string.Empty; // Set Swagger UI at the app's root
+        c.RoutePrefix = string.Empty; // 將 Swagger UI 設定在應用程式的根目錄
     });
 }
 
+// 使用 HTTPS 重新導向。
 app.UseHttpsRedirection();
 
+// 使用 CORS。
 app.UseCors();
 
+// 使用授權。
 app.UseAuthorization();
 
+// 對應控制器。
 app.MapControllers();
 
-// Add a simple health check endpoint
+// 加入一個簡單的健康檢查端點
 app.MapGet("/", () => new
 {
     Service = "Queued Web API",
@@ -82,4 +93,5 @@ app.MapGet("/", () => new
     Documentation = "/swagger"
 });
 
+// 執行應用程式。
 app.Run();
