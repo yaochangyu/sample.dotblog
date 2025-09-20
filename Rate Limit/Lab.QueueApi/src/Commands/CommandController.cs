@@ -7,7 +7,7 @@ namespace Lab.QueueApi.Commands;
 /// API 控制器，用於處理具有速率限制和佇列功能的請求。
 /// </summary>
 [ApiController]
-[Route("api/[controller]")]
+[Route("api")]
 public class CommandController : ControllerBase
 {
     /// <summary>
@@ -46,7 +46,7 @@ public class CommandController : ControllerBase
     /// </summary>
     /// <param name="request">API 請求資料。</param>
     /// <returns>表示非同步操作結果的 IActionResult。</returns>
-    [HttpPost()]
+    [HttpPost("commands")]
     public async Task<IActionResult> Create([FromBody] CreateCommandRequest request)
     {
         try
@@ -61,28 +61,26 @@ public class CommandController : ControllerBase
                 _logger.LogInformation("Request processed directly");
                 return Ok(response);
             }
-            else
+
+            // 請求進入佇列
+            var requestId = await _requestQueue.EnqueueCommandAsync(request.Data);
+            var retryAfter = _rateLimiter.GetRetryAfter();
+
+            _logger.LogInformation("Request {RequestId} queued, retry after {RetryAfter}s",
+                requestId, retryAfter.TotalSeconds);
+
+            // 返回 429 狀態碼和 Retry-After 標頭
+            Response.Headers["Retry-After"] = ((int)retryAfter.TotalSeconds).ToString();
+            Response.Headers["X-Queue-Position"] = _requestQueue.GetQueueLength().ToString();
+            Response.Headers["X-Request-Id"] = requestId;
+
+            return StatusCode(429, new
             {
-                // 請求進入佇列
-                var requestId = await _requestQueue.EnqueueCommandAsync(request.Data);
-                var retryAfter = _rateLimiter.GetRetryAfter();
-
-                _logger.LogInformation("Request {RequestId} queued, retry after {RetryAfter}s",
-                    requestId, retryAfter.TotalSeconds);
-
-                // 返回 429 狀態碼和 Retry-After 標頭
-                Response.Headers["Retry-After"] = ((int)retryAfter.TotalSeconds).ToString();
-                Response.Headers["X-Queue-Position"] = _requestQueue.GetQueueLength().ToString();
-                Response.Headers["X-Request-Id"] = requestId;
-
-                return StatusCode(429, new
-                {
-                    Message = "Too many requests. Please retry after the specified time.",
-                    RequestId = requestId,
-                    RetryAfterSeconds = (int)retryAfter.TotalSeconds,
-                    QueuePosition = _requestQueue.GetQueueLength()
-                });
-            }
+                Message = "Too many requests. Please retry after the specified time.",
+                RequestId = requestId,
+                RetryAfterSeconds = (int)retryAfter.TotalSeconds,
+                QueuePosition = _requestQueue.GetQueueLength()
+            });
         }
         catch (Exception ex)
         {
@@ -96,7 +94,7 @@ public class CommandController : ControllerBase
     /// </summary>
     /// <param name="requestId">請求的唯一識別碼。</param>
     /// <returns>表示非同步操作結果的 IActionResult。</returns>
-    [HttpGet("status/{requestId}")]
+    [HttpGet("commadns/{requestId}/status")]
     public async Task<IActionResult> GetRequestStatus(string requestId)
     {
         try
@@ -108,7 +106,8 @@ public class CommandController : ControllerBase
             {
                 return Ok(response);
             }
-            else if (response.Message == "Request timeout")
+
+            if (response.Message == "Request timeout")
             {
                 return Accepted(new
                 {
@@ -117,10 +116,8 @@ public class CommandController : ControllerBase
                     QueuePosition = _requestQueue.GetQueueLength()
                 });
             }
-            else
-            {
-                return NotFound(new { Message = response.Message });
-            }
+
+            return NotFound(new { Message = response.Message });
         }
         catch (Exception ex)
         {
@@ -134,7 +131,7 @@ public class CommandController : ControllerBase
     /// </summary>
     /// <param name="requestId">請求的唯一識別碼。</param>
     /// <returns>表示非同步操作結果的 IActionResult。</returns>
-    [HttpGet("wait/{requestId}")]
+    [HttpGet("commands/{requestId}/wait")]
     public async Task<IActionResult> WaitForRequest(string requestId)
     {
         try
@@ -187,7 +184,7 @@ public class CommandController : ControllerBase
     /// 列出佇列中所有的請求。
     /// </summary>
     /// <returns>包含所有佇列任務資訊的 IActionResult。</returns>
-    [HttpGet()]
+    [HttpGet("commands")]
     public IActionResult GetAllCommand()
     {
         try
@@ -195,7 +192,7 @@ public class CommandController : ControllerBase
             var currentTime = DateTime.UtcNow;
             var queuedRequests = _requestQueue.GetAllQueuedCommands();
 
-            var tasks = queuedRequests.Select(req => new GetCommandStatusResponse
+            var commands = queuedRequests.Select(req => new GetCommandStatusResponse
             {
                 Id = req.Id,
                 QueuedAt = req.QueuedAt,
@@ -203,12 +200,12 @@ public class CommandController : ControllerBase
                 WaitingTime = currentTime - req.QueuedAt
             }).ToList();
 
-            _logger.LogInformation("Retrieved {TaskCount} queued tasks", tasks.Count);
+            _logger.LogInformation("Retrieved {TaskCount} queued tasks", commands.Count);
 
             return Ok(new
             {
-                TotalTasks = tasks.Count,
-                Tasks = tasks,
+                TotalCommandCount = commands.Count,
+                Commands = commands,
                 Timestamp = currentTime
             });
         }
