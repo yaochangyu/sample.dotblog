@@ -59,7 +59,7 @@ public class CommandController : ControllerBase
             {
                 // 直接處理請求
                 _rateLimiter.RecordRequest();
-                var response = await ProcessDirectlyAsync(request, cancel);
+                var response = await ExecuteBusinessLogicAsync(request, cancel);
 
                 _logger.LogInformation("Request processed directly");
                 return Ok(response);
@@ -194,7 +194,7 @@ public class CommandController : ControllerBase
             {
                 _logger.LogInformation("Executing business logic for request {RequestId}", requestId);
 
-                // 執行真正的業務邏輯
+                // 執行務邏輯
                 var response = await ExecuteBusinessLogicAsync(queuedRequest, cancel);
 
                 // 將請求標記為 Finished 並從佇列中移除
@@ -296,12 +296,12 @@ public class CommandController : ControllerBase
     }
 
     /// <summary>
-    /// 非同步地直接處理請求。
+    /// 執行實際的業務邏輯
     /// </summary>
     /// <param name="request">要處理的 API 請求。</param>
     /// <param name="cancel"></param>
     /// <returns>表示非同步操作的 Task，其結果為 ApiResponse。</returns>
-    private async Task<QueuedCommandResponse> ProcessDirectlyAsync(CreateCommandRequest request,
+    private async Task<QueuedCommandResponse> ExecuteBusinessLogicAsync(CreateCommandRequest request,
         CancellationToken cancel = default)
     {
         // 模擬處理時間
