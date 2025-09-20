@@ -32,11 +32,11 @@ builder.Services.AddSingleton<IRateLimiter>(provider =>
     new SlidingWindowRateLimiter(maxRequests: 2, timeWindow: TimeSpan.FromMinutes(1)));
 
 // 註冊 ChannelRequestQueueProvider 作為 IRequestQueueProvider 的單例服務
-builder.Services.AddSingleton<IRequestQueueProvider>(provider => 
-    new ChannelRequestQueueProvider(capacity: 100));
+builder.Services.AddSingleton<ICommandQueueProvider>(provider => 
+    new ChannelCommandQueueProvider(capacity: 100));
 
 // 註冊 ChannelRequestQueueService 作為一個託管服務，使其在背景執行
-builder.Services.AddHostedService<ChannelRequestQueueService>();
+builder.Services.AddHostedService<ChannelCommandQueueService>();
 
 // 加入 CORS 支援
 builder.Services.AddCors(options =>
