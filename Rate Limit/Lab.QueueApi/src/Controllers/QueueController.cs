@@ -4,14 +4,34 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Lab.QueueApi.Controllers;
 
+/// <summary>
+/// API 控制器，用於處理具有速率限制和佇列功能的請求。
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class QueueController : ControllerBase
 {
+    /// <summary>
+    /// 速率限制器服務。
+    /// </summary>
     private readonly IRateLimiter _rateLimiter;
+
+    /// <summary>
+    /// 請求佇列提供者。
+    /// </summary>
     private readonly IRequestQueueProvider _requestQueue;
+
+    /// <summary>
+    /// 記錄器。
+    /// </summary>
     private readonly ILogger<QueueController> _logger;
 
+    /// <summary>
+    /// 初始化 QueueController 的新執行個體。
+    /// </summary>
+    /// <param name="rateLimiter">速率限制器服務。</param>
+    /// <param name="requestQueue">請求佇列提供者。</param>
+    /// <param name="logger">記錄器。</param>
     public QueueController(
         IRateLimiter rateLimiter,
         IRequestQueueProvider requestQueue,
@@ -23,10 +43,10 @@ public class QueueController : ControllerBase
     }
 
     /// <summary>
-    /// 處理 API 請求，支援限流和排隊機制
+    /// 處理 API 請求，支援限流和排隊機制。
     /// </summary>
-    /// <param name="request">API 請求資料</param>
-    /// <returns>API 回應</returns>
+    /// <param name="request">API 請求資料。</param>
+    /// <returns>表示非同步操作結果的 IActionResult。</returns>
     [HttpPost("process")]
     public async Task<IActionResult> ProcessRequest([FromBody] ApiRequest request)
     {
@@ -73,10 +93,10 @@ public class QueueController : ControllerBase
     }
 
     /// <summary>
-    /// 檢查排隊請求的狀態
+    /// 檢查排隊請求的狀態。
     /// </summary>
-    /// <param name="requestId">請求 ID</param>
-    /// <returns>請求狀態</returns>
+    /// <param name="requestId">請求的唯一識別碼。</param>
+    /// <returns>表示非同步操作結果的 IActionResult。</returns>
     [HttpGet("status/{requestId}")]
     public async Task<IActionResult> GetRequestStatus(string requestId)
     {
@@ -111,10 +131,10 @@ public class QueueController : ControllerBase
     }
 
     /// <summary>
-    /// 等待排隊請求完成（用於客戶端重試）
+    /// 等待排隊請求完成（用於客戶端重試）。
     /// </summary>
-    /// <param name="requestId">請求 ID</param>
-    /// <returns>處理結果</returns>
+    /// <param name="requestId">請求的唯一識別碼。</param>
+    /// <returns>表示非同步操作結果的 IActionResult。</returns>
     [HttpGet("wait/{requestId}")]
     public async Task<IActionResult> WaitForRequest(string requestId)
     {
@@ -148,9 +168,9 @@ public class QueueController : ControllerBase
     }
 
     /// <summary>
-    /// 獲取系統狀態
+    /// 獲取系統的健康狀態。
     /// </summary>
-    /// <returns>系統狀態資訊</returns>
+    /// <returns>包含系統健康狀態資訊的 IActionResult。</returns>
     [HttpGet("health")]
     public IActionResult GetHealth()
     {
@@ -164,6 +184,11 @@ public class QueueController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// 非同步地直接處理請求。
+    /// </summary>
+    /// <param name="request">要處理的 API 請求。</param>
+    /// <returns>表示非同步操作的 Task，其結果為 ApiResponse。</returns>
     private async Task<ApiResponse> ProcessDirectlyAsync(ApiRequest request)
     {
         // 模擬處理時間
@@ -182,4 +207,3 @@ public class QueueController : ControllerBase
         };
     }
 }
-
