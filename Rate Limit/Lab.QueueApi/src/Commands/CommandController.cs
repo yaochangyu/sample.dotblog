@@ -114,7 +114,7 @@ public class CommandController : ControllerBase
     {
         try
         {
-            // 等待請求完成，設定較短的超時時間用於狀態檢查
+            // 先快速檢查是否已完成
             var response = await _commandQueue.WaitForResponseAsync(requestId, TimeSpan.FromMilliseconds(100));
 
             if (response.Success)
@@ -122,23 +122,53 @@ public class CommandController : ControllerBase
                 return Ok(response);
             }
 
-            if (response.Message == "Request timeout")
+            if (response.Message == "Request not found")
             {
-                return Accepted(new
-                {
-                    Message = "Request is still being processed",
-                    RequestId = requestId,
-                    QueuePosition = _commandQueue.GetQueueLength()
-                });
+                return NotFound(new { Message = response.Message });
             }
 
-            return NotFound(new { Message = response.Message });
+            // 如果還沒完成，取得所有排隊請求來確定狀態
+            var allRequests = await _commandQueue.GetAllQueuedCommandsAsync(cancel);
+            var currentRequest = allRequests.FirstOrDefault(r => r.Id == requestId);
+
+            if (currentRequest == null)
+            {
+                return NotFound(new { Message = "Request not found" });
+            }
+
+            return Ok(new
+            {
+                RequestId = requestId,
+                Status = currentRequest.Status.ToString(),
+                QueuedAt = currentRequest.QueuedAt,
+                StatusUpdatedAt = currentRequest.StatusUpdatedAt,
+                Message = GetStatusMessage(currentRequest.Status),
+                CanExecute = currentRequest.Status == QueuedRequestStatus.Ready
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking request status for {RequestId}", requestId);
             return StatusCode(500, new { Message = "Internal server error" });
         }
+    }
+
+    /// <summary>
+    /// 根據狀態取得對應的訊息。
+    /// </summary>
+    /// <param name="status">請求狀態。</param>
+    /// <returns>狀態描述訊息。</returns>
+    private static string GetStatusMessage(QueuedRequestStatus status)
+    {
+        return status switch
+        {
+            QueuedRequestStatus.Queued => "Request is waiting in queue",
+            QueuedRequestStatus.Ready => "Request is ready for execution",
+            QueuedRequestStatus.Processing => "Request is being processed",
+            QueuedRequestStatus.Completed => "Request has been completed",
+            QueuedRequestStatus.Failed => "Request has failed",
+            _ => "Unknown status"
+        };
     }
 
     /// <summary>
@@ -152,15 +182,31 @@ public class CommandController : ControllerBase
     {
         try
         {
-            // 等待請求完成，設定較長的超時時間
-            var response = await _commandQueue.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(5));
+            // 嘗試執行準備好的請求
+            var queuedRequest = await _commandQueue.ExecuteReadyRequestAsync(requestId, cancel);
 
-            if (response.Success)
+            if (queuedRequest != null)
             {
+                // 執行真正的業務邏輯
+                _logger.LogInformation("Executing business logic for request {RequestId}", requestId);
+                var response = await ExecuteBusinessLogicAsync(queuedRequest, cancel);
+
+                // 標記請求完成
+                await _commandQueue.CompleteCommandAsync(requestId, response, cancel);
+
+                _logger.LogInformation("Request {RequestId} executed and completed", requestId);
                 return Ok(response);
             }
 
-            if (response.Message == "Request timeout")
+            // 如果請求還沒準備好，則等待狀態更新
+            var waitResponse = await _commandQueue.WaitForResponseAsync(requestId, TimeSpan.FromSeconds(5));
+
+            if (waitResponse.Success)
+            {
+                return Ok(waitResponse);
+            }
+
+            if (waitResponse.Message == "Request timeout")
             {
                 return Accepted(new
                 {
@@ -170,7 +216,7 @@ public class CommandController : ControllerBase
                 });
             }
 
-            return NotFound(new { Message = response.Message });
+            return NotFound(new { Message = waitResponse.Message });
         }
         catch (Exception ex)
         {
@@ -276,6 +322,34 @@ public class CommandController : ControllerBase
                 OriginalData = request.Data,
                 ProcessedData = request.Data,
                 ProcessingType = "Direct"
+            }
+        };
+    }
+
+    /// <summary>
+    /// 執行實際的業務邏輯（從佇列處理的請求）。
+    /// </summary>
+    /// <param name="queuedRequest">排隊的請求上下文。</param>
+    /// <param name="cancel">取消令牌。</param>
+    /// <returns>表示非同步操作的 Task，其結果為 QueuedCommandResponse。</returns>
+    private async Task<QueuedCommandResponse> ExecuteBusinessLogicAsync(QueuedContext queuedRequest,
+        CancellationToken cancel = default)
+    {
+        // 模擬業務邏輯處理時間
+        await Task.Delay(TimeSpan.FromSeconds(1), cancel);
+
+        return new QueuedCommandResponse
+        {
+            Success = true,
+            Message = "Request processed successfully (from queue)",
+            Data = new
+            {
+                RequestId = queuedRequest.Id,
+                OriginalData = queuedRequest.RequestData,
+                QueuedAt = queuedRequest.QueuedAt,
+                ProcessedAt = DateTime.UtcNow,
+                ProcessingType = "Queued",
+                Status = queuedRequest.Status.ToString()
             }
         };
     }
