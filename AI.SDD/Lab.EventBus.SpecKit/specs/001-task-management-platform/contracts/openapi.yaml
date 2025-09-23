@@ -1,0 +1,347 @@
+openapi: 3.0.3
+info:
+  title: Task Management Platform API
+  description: 集中化任務管理平台 API，提供任務建立、取出、執行和狀態查詢功能
+  version: 1.0.0
+servers:
+  - url: https://api.taskmanagement.local/api/v1
+    description: Local development server
+  - url: https://api.taskmanagement.prod/api/v1
+    description: Production server
+
+paths:
+  /tasks:
+    post:
+      summary: 建立任務
+      description: 建立新任務並加入處理佇列
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+            examples:
+              basicTask:
+                summary: 基本任務範例
+                value:
+                  taskData:
+                    operation: "process-data"
+                    parameters:
+                      fileId: "12345"
+                      format: "json"
+                  callbackUrl: "https://client.example.com/callbacks/task-completed"
+                  priority: 1
+      responses:
+        '201':
+          description: 任務建立成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateTaskResponse'
+              examples:
+                success:
+                  summary: 成功建立任務
+                  value:
+                    taskId: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "Queued"
+                    createdAt: "2025-09-23T10:00:00Z"
+        '400':
+          description: 請求資料無效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tasks/dequeue:
+    get:
+      summary: 取出任務
+      description: 從佇列中取出一個待處理任務
+      operationId: dequeueTask
+      responses:
+        '200':
+          description: 成功取出任務
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DequeueTaskResponse'
+              examples:
+                success:
+                  summary: 成功取出任務
+                  value:
+                    taskId: "550e8400-e29b-41d4-a716-446655440000"
+                    taskData:
+                      operation: "process-data"
+                      parameters:
+                        fileId: "12345"
+                        format: "json"
+                    callbackUrl: "https://client.example.com/callbacks/task-completed"
+                    status: "Dequeued"
+                    dequeuedAt: "2025-09-23T10:01:00Z"
+        '204':
+          description: 佇列中無待處理任務
+        '500':
+          description: 伺服器錯誤
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tasks/{taskId}/execute:
+    post:
+      summary: 執行任務
+      description: 執行指定任務並呼叫回調 API
+      operationId: executeTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: 任務執行完成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecuteTaskResponse'
+              examples:
+                success:
+                  summary: 執行成功
+                  value:
+                    taskId: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "Completed"
+                    result:
+                      processedRecords: 1500
+                      executionTime: "00:02:30"
+                    executedAt: "2025-09-23T10:05:00Z"
+                failure:
+                  summary: 執行失敗
+                  value:
+                    taskId: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "Failed"
+                    error: "Callback API returned HTTP 500"
+                    retryCount: 2
+                    executedAt: "2025-09-23T10:05:00Z"
+        '404':
+          description: 任務不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 任務狀態衝突（如任務已在執行中）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /tasks/{taskId}:
+    get:
+      summary: 查詢任務狀態
+      description: 取得指定任務的詳細資訊和狀態
+      operationId: getTaskStatus
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: 任務資訊
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatusResponse'
+              examples:
+                completed:
+                  summary: 已完成任務
+                  value:
+                    taskId: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "Completed"
+                    taskData:
+                      operation: "process-data"
+                      parameters:
+                        fileId: "12345"
+                        format: "json"
+                    callbackUrl: "https://client.example.com/callbacks/task-completed"
+                    createdAt: "2025-09-23T10:00:00Z"
+                    updatedAt: "2025-09-23T10:05:00Z"
+                    result:
+                      processedRecords: 1500
+                      executionTime: "00:02:30"
+                failed:
+                  summary: 失敗任務
+                  value:
+                    taskId: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "Failed"
+                    error: "Connection timeout to callback API"
+                    retryCount: 3
+                    createdAt: "2025-09-23T10:00:00Z"
+                    updatedAt: "2025-09-23T10:08:00Z"
+        '404':
+          description: 任務不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    CreateTaskRequest:
+      type: object
+      required:
+        - taskData
+        - callbackUrl
+      properties:
+        taskData:
+          type: object
+          description: 任務相關資料，格式由客戶端定義
+          example:
+            operation: "process-data"
+            parameters:
+              fileId: "12345"
+              format: "json"
+        callbackUrl:
+          type: string
+          format: uri
+          description: 任務完成後的回調 API 端點
+          example: "https://client.example.com/callbacks/task-completed"
+        priority:
+          type: integer
+          minimum: 0
+          maximum: 10
+          default: 5
+          description: 任務優先級，數字越大優先級越高
+
+    CreateTaskResponse:
+      type: object
+      properties:
+        taskId:
+          type: string
+          format: uuid
+          description: 任務唯一識別碼
+        status:
+          type: string
+          enum: [Queued]
+          description: 任務狀態
+        createdAt:
+          type: string
+          format: date-time
+          description: 任務建立時間
+
+    DequeueTaskResponse:
+      type: object
+      properties:
+        taskId:
+          type: string
+          format: uuid
+          description: 任務唯一識別碼
+        taskData:
+          type: object
+          description: 任務相關資料
+        callbackUrl:
+          type: string
+          format: uri
+          description: 回調 API 端點
+        status:
+          type: string
+          enum: [Dequeued]
+          description: 任務狀態
+        dequeuedAt:
+          type: string
+          format: date-time
+          description: 任務取出時間
+
+    ExecuteTaskResponse:
+      type: object
+      properties:
+        taskId:
+          type: string
+          format: uuid
+          description: 任務唯一識別碼
+        status:
+          type: string
+          enum: [Processing, Completed, Failed]
+          description: 任務執行狀態
+        result:
+          type: object
+          description: 執行結果（成功時）
+        error:
+          type: string
+          description: 錯誤訊息（失敗時）
+        retryCount:
+          type: integer
+          minimum: 0
+          description: 重試次數
+        executedAt:
+          type: string
+          format: date-time
+          description: 執行時間
+
+    TaskStatusResponse:
+      type: object
+      properties:
+        taskId:
+          type: string
+          format: uuid
+          description: 任務唯一識別碼
+        status:
+          type: string
+          enum: [Queued, Dequeued, Processing, Completed, Failed, Retry]
+          description: 任務狀態
+        taskData:
+          type: object
+          description: 任務相關資料
+        callbackUrl:
+          type: string
+          format: uri
+          description: 回調 API 端點
+        createdAt:
+          type: string
+          format: date-time
+          description: 任務建立時間
+        updatedAt:
+          type: string
+          format: date-time
+          description: 任務最後更新時間
+        result:
+          type: object
+          description: 執行結果（成功時）
+        error:
+          type: string
+          description: 錯誤訊息（失敗時）
+        retryCount:
+          type: integer
+          minimum: 0
+          description: 重試次數
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: 錯誤類型
+        message:
+          type: string
+          description: 錯誤訊息
+        details:
+          type: object
+          description: 詳細錯誤資訊
+        traceId:
+          type: string
+          description: 追蹤識別碼
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - ApiKeyAuth: []
