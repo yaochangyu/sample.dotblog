@@ -7,6 +7,8 @@ using Polly.Extensions.Http;
 using Polly.Retry;
 using System.Net.Http;
 
+namespace Lab.HttpResilienceBenchmark.Console;
+
 [MemoryDiagnoser]
 [SimpleJob]
 public class HttpClientBenchmark

@@ -1,5 +1,6 @@
 using System.Text;
 using BenchmarkDotNet.Running;
+using Lab.HttpResilienceBenchmark.Console;
 
 Console.OutputEncoding = Encoding.UTF8;
 Console.InputEncoding = Encoding.UTF8;
