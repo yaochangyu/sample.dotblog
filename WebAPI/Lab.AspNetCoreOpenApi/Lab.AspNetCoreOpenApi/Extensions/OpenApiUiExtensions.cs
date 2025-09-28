@@ -159,6 +159,7 @@ public static class OpenApiUiExtensions
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>API Documentation - Elements</title>
+            <link rel="stylesheet" href="https://unpkg.com/@stoplight/elements/styles.min.css" />
             <style>
                 body { margin: 0; padding: 0; }
             </style>
