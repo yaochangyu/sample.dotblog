@@ -49,7 +49,7 @@ dotnet add package Microsoft.AspNetCore.OpenApi
 </Project>
 ```
 
-Microsoft.AspNetCore.OpenApi 套件提供了內建的 OpenAPI 文件生成功能。如果需要使用 Swagger UI，可以選擇安裝 Swashbuckle.AspNetCore 套件，或使用自訂的 UI 實作。
+Microsoft.AspNetCore.OpenApi 套件提供了內建的 OpenAPI 文件生成功能。不需要額外的套件，即可生成 OpenAPI 文件，這時候可以選擇性地整合其他 UI 工具來檢視這些文件。
 
 ## 基本實作範例
 
@@ -72,18 +72,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
-```
-
-## 建置時生成
-
-許多 .NET 開發人員會發現在建置時生成 OpenAPI 文件的選項很有吸引力。要啟用建置時生成，只需新增 `Microsoft.Extensions.ApiDescription.Server` 套件到您的專案。
-
-預設情況下，OpenAPI 文件生成到專案的 `obj` 目錄中，但您可以使用 `OpenApiDocumentsDirectory` 屬性自訂生成文件的位置：
-
-```xml
-<PropertyGroup>
-  <OpenApiDocumentsDirectory>./</OpenApiDocumentsDirectory>
-</PropertyGroup>
 ```
 
 ## OpenAPI 端點配置
