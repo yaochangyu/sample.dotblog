@@ -4,8 +4,8 @@ public static class OpenApiUiExtensions
 {
     public static IEndpointConventionBuilder MapSwaggerUI(this IEndpointRouteBuilder endpoints)
     {
-        return endpoints.MapGet("/swagger", () =>
-            Results.Content(GenerateSwaggerHtml(), "text/html; charset=utf-8"));
+        return endpoints.MapGet("/swagger/{documentName}", (string documentName) =>
+            Results.Content(GenerateSwaggerHtml(documentName), "text/html; charset=utf-8"));
     }
 
     public static IEndpointConventionBuilder MapScalarUi(this IEndpointRouteBuilder endpoints)
@@ -44,9 +44,9 @@ public static class OpenApiUiExtensions
             Results.Content(GenerateNavigatorHtml(), "text/html; charset=utf-8"));
     }
 
-    private static string GenerateSwaggerHtml()
+    private static string GenerateSwaggerHtml(string documentName)
     {
-        return """
+        return $$"""
         <!DOCTYPE html>
         <html lang="zh-TW">
         <head>
@@ -60,7 +60,7 @@ public static class OpenApiUiExtensions
             <script src="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui-bundle.js"></script>
             <script>
                 SwaggerUIBundle({
-                    url: '/openapi/v1.json',
+                    url: '/openapi/{{documentName}}.json',
                     dom_id: '#swagger-ui',
                     presets: [
                         SwaggerUIBundle.presets.apis,
@@ -381,7 +381,7 @@ public static class OpenApiUiExtensions
                 </div>
 
                 <div class="grid">
-                    <a href="/swagger" class="card swagger">
+                    <a href="/swagger/v1" class="card swagger">
                         <div class="card-icon">🎯</div>
                         <h3>Swagger UI</h3>
                         <p>業界標準的 API 文件工具，功能完整且穩定。</p>
