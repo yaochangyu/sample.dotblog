@@ -108,229 +108,172 @@ builder.Services.AddOpenApi("internal"); // 文件名稱是 internal
 
 ## UI 工具整合方案
 
-根據 [.NET 9 OpenAPI 博客文章](https://www.cnblogs.com/vipwan/p/18210947) 的建議，可以整合多種 UI 工具來展示 OpenAPI 文件。
+根據本專案實際實作，已整合 6 種不同的 OpenAPI 文件檢視工具，提供完整的視覺化介面選擇。
 
-### 1. SwaggerUI 整合
+### 1. 專案架構
 
-#### 方法一：使用 Swashbuckle.AspNetCore（需額外安裝套件）
+本專案使用 **Extensions/OpenApiUiExtensions.cs** 實作所有 UI 擴展方法：
 
-如果您選擇使用 Swashbuckle.AspNetCore，需要先安裝套件：
-
-```bash
-dotnet add package Swashbuckle.AspNetCore
+```
+Lab.AspNetCoreOpenApi/
+├── Extensions/
+│   └── OpenApiUiExtensions.cs    # 包含所有 UI 檢視器的擴展方法
+├── Program.cs                    # 主程式，設定路由和服務
+├── Lab.AspNetCoreOpenApi.csproj  # 專案檔案
+└── Properties/launchSettings.json # 啟動設定
 ```
 
-```csharp
-var builder = WebApplication.CreateBuilder();
+### 2. 已實作的 UI 檢視工具
 
-builder.Services.AddOpenApi();
-builder.Services.AddSwaggerGen();
-
-var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/openapi/v1.json", "v1");
-    });
-}
-
-app.Run();
-```
-
-#### 方法二：自訂 SwaggerUI 擴展方法
+#### 2.1 Swagger UI
+- **路由**：`/swagger`
+- **特色**：業界標準，互動式 API 測試
+- **技術**：使用 unpkg.com CDN 載入 swagger-ui-dist
 
 ```csharp
-public static class SwaggerUiExtensions
+public static IEndpointConventionBuilder MapSwaggerUI(this IEndpointRouteBuilder endpoints)
 {
-    public static IEndpointConventionBuilder MapSwaggerUI(this IEndpointRouteBuilder endpoints)
-    {
-        return endpoints.MapGet("/swagger", () =>
-            Results.Content(GenerateSwaggerHtml(), "text/html"));
-    }
-
-    private static string GenerateSwaggerHtml()
-    {
-        return """
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Swagger UI</title>
-            <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui.css" />
-        </head>
-        <body>
-            <div id="swagger-ui"></div>
-            <script src="https://unpkg.com/swagger-ui-dist@3.52.5/swagger-ui-bundle.js"></script>
-            <script>
-                SwaggerUIBundle({
-                    url: '/openapi/v1.json',
-                    dom_id: '#swagger-ui',
-                    presets: [
-                        SwaggerUIBundle.presets.apis,
-                        SwaggerUIBundle.presets.standalone
-                    ]
-                });
-            </script>
-        </body>
-        </html>
-        """;
-    }
+    return endpoints.MapGet("/swagger", () =>
+        Results.Content(GenerateSwaggerHtml(), "text/html; charset=utf-8"));
 }
 ```
 
-### 2. ScalarUI 整合
+#### 2.2 Scalar UI
+- **路由**：`/scalar/{documentName}`
+- **特色**：現代化設計，紫色主題
+- **技術**：使用 @scalar/api-reference CDN
 
-ScalarUI 是一個現代化的 OpenAPI 文件檢視器，提供更好的使用者體驗：
+#### 2.3 Redoc
+- **路由**：`/redoc/{documentName}`
+- **特色**：文件導向，優美排版
+- **技術**：使用 redoc standalone bundle
 
-```csharp
-public static class ScalarUiExtensions
-{
-    public static IEndpointConventionBuilder MapScalarUi(this IEndpointRouteBuilder endpoints)
-    {
-        return endpoints.MapGet("/scalar/{documentName}", (string documentName) =>
-            Results.Content(GenerateScalarHtml(documentName), "text/html"));
-    }
+#### 2.4 RapiDoc
+- **路由**：`/rapidoc/{documentName}`
+- **特色**：Web Component 架構，深色主題
+- **技術**：使用 rapidoc-min.js 模組
 
-    private static string GenerateScalarHtml(string documentName)
-    {
-        return $"""
-        <!doctype html>
-        <html>
-        <head>
-            <title>API Documentation</title>
-            <meta charset="utf-8" />
-            <meta name="viewport" content="width=device-width, initial-scale=1" />
-        </head>
-        <body>
-            <script
-                id="api-reference"
-                data-url="/openapi/{documentName}.json"
-                data-configuration='{{"theme":"purple"}}'
-            ></script>
-            <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
-        </body>
-        </html>
-        """;
-    }
-}
-```
+#### 2.5 Elements
+- **路由**：`/elements/{documentName}`
+- **特色**：Stoplight 生態系，企業級功能
+- **技術**：使用 @stoplight/elements Web Components
 
-### 3. Redoc 整合
+#### 2.6 OpenAPI Explorer
+- **路由**：`/explorer/{documentName}`
+- **特色**：基於 Swagger Editor 的輕量級探索工具
+- **技術**：使用 iframe 嵌入 editor.swagger.io
 
-Redoc 提供了另一種優雅的文件展示方式：
+### 3. 美觀的導覽頁面
 
-```csharp
-public static class RedocExtensions
-{
-    public static IEndpointConventionBuilder MapRedocUi(this IEndpointRouteBuilder endpoints)
-    {
-        return endpoints.MapGet("/redoc/{documentName}", (string documentName) =>
-            Results.Content(GenerateRedocHtml(documentName), "text/html"));
-    }
+#### 3.1 統一導覽介面
+- **路由**：`/`（首頁）
+- **功能**：提供所有檢視工具的統一入口
+- **設計**：現代化卡片佈局，漸層背景，互動式動效
 
-    private static string GenerateRedocHtml(string documentName)
-    {
-        return $"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>API Documentation</title>
-            <meta charset="utf-8"/>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <link href="https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700" rel="stylesheet">
-            <style>
-                body {{ margin: 0; padding: 0; }}
-            </style>
-        </head>
-        <body>
-            <redoc spec-url='/openapi/{documentName}.json'></redoc>
-            <script src="https://cdn.jsdelivr.net/npm/redoc@2.0.0/bundles/redoc.standalone.js"></script>
-        </body>
-        </html>
-        """;
-    }
-}
-```
+#### 3.2 導覽頁面特色
+- 響應式網格佈局（Grid Layout）
+- 每個工具使用獨特的品牌色彩
+- Hover 效果和動畫轉場
+- 卡片式設計，包含圖示、描述和功能特色
 
-### 4. 完整的 Program.cs 設定範例
-
-將所有 UI 工具整合到應用程式中：
+### 4. 完整的 Program.cs 實作
 
 ```csharp
+using Lab.AspNetCoreOpenApi.Extensions;
+
 var builder = WebApplication.CreateBuilder(args);
-
-// 註冊 OpenAPI 服務
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// 設定 HTTP 請求管道
 if (app.Environment.IsDevelopment())
 {
     // 對應 OpenAPI 文件端點
     app.MapOpenApi();
 
     // 設定多種 UI 工具
-    app.MapSwaggerUI();       // 可在 /swagger 存取
-    app.MapScalarUi();        // 可在 /scalar/v1 存取
-    app.MapRedocUi();         // 可在 /redoc/v1 存取
+    app.MapSwaggerUI();           // /swagger
+    app.MapScalarUi();            // /scalar/v1
+    app.MapRedocUi();             // /redoc/v1
+    app.MapRapiDocUi();           // /rapidoc/v1
+    app.MapElementsUi();          // /elements/v1
+    app.MapOpenApiExplorerUi();   // /explorer/v1
 
-    // 或者使用統一的導覽頁面
-    app.MapGet("/", () => Results.Content("""
-        <html>
-        <body>
-            <h1>API 文件</h1>
-            <ul>
-                <li><a href="/swagger">Swagger UI</a></li>
-                <li><a href="/scalar/v1">Scalar UI</a></li>
-                <li><a href="/redoc/v1">Redoc UI</a></li>
-                <li><a href="/openapi/v1.json">OpenAPI JSON</a></li>
-            </ul>
-        </body>
-        </html>
-        """, "text/html"));
+    // 統一的導覽頁面（美觀版本）
+    app.MapApiDocsNavigator();    // /
 }
 
-// 定義 API 端點
-app.MapGet("/weatherforecast", () =>
-{
-    var summaries = new[]
-    {
-        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    };
+app.UseHttpsRedirection();
 
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-
-    return forecast;
-})
-.WithName("GetWeatherForecast")
-.WithOpenApi();
+// WeatherForecast API 端點
+app.MapGet("/weatherforecast", () => { /* ... */ })
+    .WithName("GetWeatherForecast");
 
 app.Run();
+```
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+### 5. 專案檔案配置
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.8"/>
+    </ItemGroup>
+</Project>
+```
+
+### 6. 啟動設定
+
+```json
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5036"
+    },
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "https://localhost:7149;http://localhost:5036"
+    }
+  }
 }
 ```
 
-### 5. UI 工具比較
+### 7. UI 工具完整比較
 
-| 工具 | 特色 | 優點 | 缺點 |
-|------|------|------|------|
-| **Swagger UI** | 業界標準 | 成熟穩定、功能完整、測試功能 | 介面較傳統 |
-| **Scalar UI** | 現代化設計 | 美觀、快速、互動性好 | 相對較新 |
-| **Redoc** | 文件導向 | 適合文件閱讀、排版美觀 | 缺少測試功能 |
+| 工具 | 路由 | 特色 | 優點 | 適用場景 |
+|------|------|------|------|----------|
+| **Swagger UI** | `/swagger` | 業界標準 | 成熟穩定、功能完整、測試功能 | 日常開發測試 |
+| **Scalar UI** | `/scalar/v1` | 現代化設計 | 美觀、快速、互動性好 | 現代化專案展示 |
+| **Redoc** | `/redoc/v1` | 文件導向 | 適合文件閱讀、排版美觀 | 文件閱讀和展示 |
+| **RapiDoc** | `/rapidoc/v1` | Web Component | 輕量快速、高度可客製化 | 輕量級整合 |
+| **Elements** | `/elements/v1` | 企業級 | 開發者友善、企業級功能 | 企業級應用 |
+| **OpenAPI Explorer** | `/explorer/v1` | 探索工具 | 基於 Swagger Editor、簡潔介面 | API 探索和學習 |
+
+### 8. 存取方式
+
+啟動應用程式後，可透過以下網址存取：
+
+- **導覽頁面**：http://localhost:5036/
+- **各種檢視器**：
+  - Swagger UI: http://localhost:5036/swagger
+  - Scalar UI: http://localhost:5036/scalar/v1
+  - Redoc: http://localhost:5036/redoc/v1
+  - RapiDoc: http://localhost:5036/rapidoc/v1
+  - Elements: http://localhost:5036/elements/v1
+  - OpenAPI Explorer: http://localhost:5036/explorer/v1
+- **原始 JSON**：http://localhost:5036/openapi/v1.json
 
 ## Minimal API 範例
 
@@ -519,59 +462,83 @@ OpenAPI 端點僅限於開發環境，以降低暴露敏感資訊的風險並減
 
 ## 實作步驟
 
-1. **建立擴展方法檔案**：建立 `Extensions/OpenApiUiExtensions.cs`
-2. **實作各種 UI 擴展方法**：包含 SwaggerUI、ScalarUI、Redoc
-3. **更新 Program.cs**：註冊服務並對應端點
-4. **測試各種 UI**：確保所有介面正常運作
-5. **自訂設定**：根據需要調整主題和配置
+本專案已完成所有實作步驟：
 
-## 完整範例
+1. **✅ 建立擴展方法檔案**：已建立 `Extensions/OpenApiUiExtensions.cs`
+2. **✅ 實作各種 UI 擴展方法**：已包含 6 種 UI 檢視器（Swagger UI、Scalar UI、Redoc、RapiDoc、Elements、OpenAPI Explorer）
+3. **✅ 更新 Program.cs**：已註冊 OpenAPI 服務並對應所有端點
+4. **✅ 實作美觀導覽頁面**：已建立統一的卡片式導覽介面
+5. **✅ 專案配置完成**：已設定專案檔案和啟動設定
+
+## 完整範例（實際專案實作）
+
+本專案的實際 Program.cs 實作：
 
 ```csharp
-using Microsoft.OpenApi.Models;
+using Lab.AspNetCoreOpenApi.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 設定 OpenAPI 服務
-builder.Services.AddOpenApi("v1", options =>
-{
-    options.OpenApiDocument.Info = new OpenApiInfo
-    {
-        Title = "我的 API",
-        Version = "v1.0",
-        Description = "使用 .NET 9 和 OpenAPI 的範例 API"
-    };
-});
-
-// 如果使用 Swashbuckle.AspNetCore，需要新增以下服務
-// builder.Services.AddEndpointsApiExplorer();
-// builder.Services.AddSwaggerGen();
+// 註冊 OpenAPI 所需的服務
+builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
 // 設定 HTTP 請求管道
 if (app.Environment.IsDevelopment())
 {
+    // 對應 OpenAPI 文件端點
     app.MapOpenApi();
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/openapi/v1.json", "我的 API v1");
-        c.RoutePrefix = string.Empty; // 在根路徑提供 Swagger UI
-    });
+
+    // 設定多種 UI 工具
+    app.MapSwaggerUI();           // 可在 /swagger 存取
+    app.MapScalarUi();            // 可在 /scalar/v1 存取
+    app.MapRedocUi();             // 可在 /redoc/v1 存取
+    app.MapRapiDocUi();           // 可在 /rapidoc/v1 存取
+    app.MapElementsUi();          // 可在 /elements/v1 存取
+    app.MapOpenApiExplorerUi();   // 可在 /explorer/v1 存取
+
+    // 統一的導覽頁面（使用新的美觀版本）
+    app.MapApiDocsNavigator();    // 可在 / 存取
 }
 
-// 定義端點
-app.MapGet("/", () => "歡迎使用我的 API!")
-   .WithName("GetWelcome")
-   .WithOpenApi();
+app.UseHttpsRedirection();
 
-app.MapGet("/health", () => Results.Ok(new { Status = "健康" }))
-   .WithName("HealthCheck")
-   .WithOpenApi();
+// WeatherForecast API 端點
+var summaries = new[]
+{
+    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+};
+
+app.MapGet("/weatherforecast", () =>
+    {
+        var forecast = Enumerable.Range(1, 5).Select(index =>
+                new WeatherForecast
+                (
+                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+                    Random.Shared.Next(-20, 55),
+                    summaries[Random.Shared.Next(summaries.Length)]
+                ))
+            .ToArray();
+        return forecast;
+    })
+    .WithName("GetWeatherForecast");
 
 app.Run();
+
+record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+{
+    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+}
 ```
+
+### 專案特色
+
+1. **6 種 UI 檢視器整合**：提供多樣化的文件檢視選擇
+2. **美觀的統一導覽頁面**：卡片式佈局，漸層背景，動畫效果
+3. **簡潔的架構設計**：使用 Extensions 模式組織程式碼
+4. **完整的中文支援**：所有介面都支援繁體中文
+5. **無額外套件依賴**：僅使用 Microsoft.AspNetCore.OpenApi
 
 ## 參考資源
 
