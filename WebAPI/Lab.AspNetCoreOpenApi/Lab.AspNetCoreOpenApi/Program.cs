@@ -18,46 +18,12 @@ if (app.Environment.IsDevelopment())
     app.MapSwaggerUI();
     app.MapScalarUi();
     app.MapRedocUi();
-    
-    // 統一的導覽頁面
-    app.MapGet("/", () => Results.Content(
-        """
-        <!DOCTYPE html>
-        <html lang="zh-TW">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>API 文件導覽</title>
-            <style>
-                body { font-family: Arial, sans-serif; margin: 40px; }
-                ul { list-style-type: none; padding: 0; }
-                li { margin: 10px 0; }
-                a {
-                    display: inline-block;
-                    padding: 10px 15px;
-                    background-color: #007acc;
-                    color: white;
-                    text-decoration: none;
-                    border-radius: 5px;
-                    min-width: 120px;
-                    text-align: center;
-                }
-                a:hover { background-color: #005a9e; }
-            </style>
-        </head>
-        <body>
-            <h1>🚀 API 文件導覽</h1>
-            <p>選擇您偏好的文件檢視工具：</p>
-            <ul>
-                <li><a href="/swagger">📋 Swagger UI</a> - 業界標準，具備測試功能</li>
-                <li><a href="/scalar/v1">✨ Scalar UI</a> - 現代化設計，美觀快速</li>
-                <li><a href="/redoc/v1">📖 Redoc UI</a> - 文件導向，排版美觀</li>
-                <li><a href="/openapi/v1.json">🔗 OpenAPI JSON</a> - 原始規格檔</li>
-            </ul>
-        </body>
-        </html>
-        """,
-        "text/html; charset=utf-8"));
+    app.MapRapiDocUi();
+    app.MapElementsUi();
+    app.MapOpenApiExplorerUi();
+
+    // 統一的導覽頁面（使用新的美觀版本）
+    app.MapApiDocsNavigator();
 }
 
 app.UseHttpsRedirection();
