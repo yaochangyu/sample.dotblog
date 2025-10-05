@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 
 namespace Lab.CleanDuplicatesImage;
 
@@ -8,7 +9,8 @@ class Program
     // 支援的圖片副檔名
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif", ".ico", ".svg"
+        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".tiff", ".tif", ".ico", ".svg",
+        ".heic", ".heif", ".raw", ".cr2", ".nef", ".arw", ".dng"
     };
 
     // 支援的影片副檔名
@@ -103,8 +105,8 @@ class Program
                     var duplicates = hashGroups.Where(g => g.Value.Count > 1)
                         .ToDictionary(g => g.Key, g => g.Value);
 
-                    WriteToCsv(duplicates, batchNumber);
-                    Console.WriteLine($"已將 {duplicates.Count} 組重複檔案寫入 CSV (批次 {batchNumber})");
+                    WriteToJson(duplicates, batchNumber);
+                    Console.WriteLine($"已將 {duplicates.Count} 組重複檔案寫入 JSON (批次 {batchNumber})");
 
                     batchNumber++;
                     duplicateGroupsFound = 0;
@@ -123,8 +125,12 @@ class Program
 
         if (remainingDuplicates.Count > 0)
         {
-            WriteToCsv(remainingDuplicates, batchNumber);
-            Console.WriteLine($"已將 {remainingDuplicates.Count} 組重複檔案寫入 CSV (批次 {batchNumber})");
+            WriteToJson(remainingDuplicates, batchNumber);
+            Console.WriteLine($"已將 {remainingDuplicates.Count} 組重複檔案寫入 JSON (批次 {batchNumber})");
+        }
+        else if (batchNumber == 1)
+        {
+            Console.WriteLine("沒有找到重複的檔案");
         }
 
         Console.WriteLine();
@@ -152,25 +158,27 @@ class Program
     }
 
     /// <summary>
-    /// 將重複檔案資訊寫入 CSV
+    /// 將重複檔案資訊寫入 JSON
     /// </summary>
-    static void WriteToCsv(Dictionary<string, List<string>> duplicates, int batchNumber)
+    static void WriteToJson(Dictionary<string, List<string>> duplicates, int batchNumber)
     {
         var timestamp = DateTime.Now.ToString("yyyyMMdd");
-        var fileName = $"duplicates_{timestamp}_{batchNumber}.csv";
+        var fileName = $"duplicates_{timestamp}_{batchNumber}.json";
 
-        using var writer = new StreamWriter(fileName, false, Encoding.UTF8);
-
-        // 寫入標題列
-        writer.WriteLine("雜湊值,檔案路徑列表");
-
-        foreach (var group in duplicates)
+        var jsonData = duplicates.Select(kvp => new
         {
-            var hash = group.Key;
-            var paths = string.Join(" | ", group.Value);
+            Hash = kvp.Key,
+            Files = kvp.Value,
+            Count = kvp.Value.Count
+        }).ToList();
 
-            // 為了避免 CSV 欄位中的逗號造成問題，將路徑列表用引號包起來
-            writer.WriteLine($"{hash},\"{paths}\"");
-        }
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+
+        var json = JsonSerializer.Serialize(jsonData, options);
+        File.WriteAllText(fileName, json, new UTF8Encoding(true));
     }
 }
