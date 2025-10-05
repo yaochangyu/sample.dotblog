@@ -74,84 +74,122 @@ class Program
         var skippedFilesCount = 0;
         var duplicateGroupsCount = hashGroups.Count(g => g.Value.Count > 1);
 
+        // 只追蹤需要更新的 hash，減少記憶體使用
+        var dirtyHashes = new HashSet<string>();
+        // 追蹤每個 hash 上次寫入時的檔案數量
+        var lastWrittenCount = new Dictionary<string, int>();
+
+        // 初始化已存在的重複組的計數
+        foreach (var kvp in existingHashes.Where(g => g.Value.Count > 1))
+        {
+            lastWrittenCount[kvp.Key] = kvp.Value.Count;
+        }
+
+        const int batchSize = 100; // 提高批次大小減少寫入次數
+
         // 取得所有符合條件的檔案
         var files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
             .Where(IsMediaFile)
+            .AsParallel() // 使用 PLINQ 加速檔案列舉
             .ToList();
 
         Console.WriteLine($"找到 {files.Count} 個檔案");
         Console.WriteLine();
 
-        foreach (var file in files)
-        {
-            try
-            {
-                // 檢查檔案是否已經處理過
-                if (processedFiles.Contains(file))
-                {
-                    skippedFilesCount++;
-                    totalFilesProcessed++;
+        // 先篩選出未處理的檔案，避免重複檢查
+        var unprocessedFiles = files.Where(f => !processedFiles.Contains(f)).ToList();
+        skippedFilesCount = files.Count - unprocessedFiles.Count;
 
-                    // 顯示進度
-                    if (totalFilesProcessed % 100 == 0)
+        // 使用平行處理加速 SHA256 計算
+        var processorCount = Environment.ProcessorCount;
+        var fileBatches = unprocessedFiles.Chunk(processorCount * 4);
+
+        foreach (var batch in fileBatches)
+        {
+            // 平行計算 hash
+            var hashResults = batch
+                .AsParallel()
+                .WithDegreeOfParallelism(processorCount)
+                .Select(file =>
+                {
+                    try
                     {
-                        Console.WriteLine($"已處理 {totalFilesProcessed}/{files.Count} 個檔案 (略過 {skippedFilesCount} 個)...");
+                        return (file, hash: CalculateSHA256(file), success: true);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"處理檔案時發生錯誤 [{file}]: {ex.Message}");
+                        return (file, hash: string.Empty, success: false);
+                    }
+                })
+                .Where(r => r.success)
+                .ToList();
+
+            // 序列化處理結果，更新 hashGroups
+            lock (hashGroups) // 確保執行緒安全
+            {
+                foreach (var (file, hash, _) in hashResults)
+                {
+                    totalFilesProcessed++;
+                    processedFiles.Add(file);
+
+                    // 使用 TryGetValue 減少一次字典查詢
+                    if (!hashGroups.TryGetValue(hash, out var fileGroup))
+                    {
+                        fileGroup = new List<string>();
+                        hashGroups[hash] = fileGroup;
                     }
 
-                    continue;
-                }
+                    fileGroup.Add(file);
 
-                totalFilesProcessed++;
-
-                // 顯示進度
-                if (totalFilesProcessed % 100 == 0)
-                {
-                    Console.WriteLine($"已處理 {totalFilesProcessed}/{files.Count} 個檔案 (略過 {skippedFilesCount} 個)...");
-                }
-
-                var hash = CalculateSHA256(file);
-
-                // 將新處理的檔案加入已處理列表
-                processedFiles.Add(file);
-
-                if (!hashGroups.ContainsKey(hash))
-                {
-                    hashGroups[hash] = new List<string>();
-                }
-
-                hashGroups[hash].Add(file);
-
-                // 如果這個雜湊值的檔案從 1 個變成 2 個，表示找到新的重複組，立即寫入資料庫
-                if (hashGroups[hash].Count == 2)
-                {
-                    duplicateGroupsCount++;
-                    var duplicateGroup = new Dictionary<string, List<string>>
+                    var currentCount = fileGroup.Count;
+                    if (currentCount >= 2)
                     {
-                        { hash, hashGroups[hash] }
-                    };
-                    WriteToDatabase(duplicateGroup);
-                    Console.WriteLine($"找到第 {duplicateGroupsCount} 組重複檔案，已寫入資料庫 (Hash: {hash.Substring(0, 16)}...)");
-                }
-                // 如果已經是重複檔案（Count > 2），更新資料庫
-                else if (hashGroups[hash].Count > 2)
-                {
-                    var duplicateGroup = new Dictionary<string, List<string>>
-                    {
-                        { hash, hashGroups[hash] }
-                    };
-                    WriteToDatabase(duplicateGroup);
+                        if (currentCount == 2)
+                        {
+                            duplicateGroupsCount++;
+                            Console.WriteLine($"找到第 {duplicateGroupsCount} 組重複檔案 (Hash: {hash[..16]}...)");
+                        }
+
+                        // 只記錄需要更新的 hash
+                        if (!lastWrittenCount.TryGetValue(hash, out var lastCount) || lastCount != currentCount)
+                        {
+                            dirtyHashes.Add(hash);
+                            lastWrittenCount[hash] = currentCount;
+                        }
+                    }
                 }
             }
-            catch (Exception ex)
+
+            // 顯示進度
+            if (totalFilesProcessed % 100 == 0)
             {
-                Console.WriteLine($"處理檔案時發生錯誤 [{file}]: {ex.Message}");
+                var totalCount = skippedFilesCount + totalFilesProcessed;
+                Console.WriteLine($"已處理 {totalCount}/{files.Count} 個檔案 (略過 {skippedFilesCount} 個)...");
+            }
+
+            // 批次寫入：只寫入有變動的重複組
+            if (dirtyHashes.Count >= batchSize)
+            {
+                var pendingWrites = dirtyHashes.ToDictionary(h => h, h => hashGroups[h]);
+                WriteToDatabase(pendingWrites);
+                Console.WriteLine($"已批次寫入 {pendingWrites.Count} 組重複檔案到資料庫");
+                dirtyHashes.Clear();
             }
         }
 
+        // 最後將剩餘的資料寫入資料庫
+        if (dirtyHashes.Count > 0)
+        {
+            var pendingWrites = dirtyHashes.ToDictionary(h => h, h => hashGroups[h]);
+            WriteToDatabase(pendingWrites);
+            Console.WriteLine($"已批次寫入最後 {pendingWrites.Count} 組重複檔案到資料庫");
+        }
+
         Console.WriteLine();
-        Console.WriteLine($"總共掃描了 {totalFilesProcessed} 個檔案");
+        Console.WriteLine($"總共掃描了 {files.Count} 個檔案");
         Console.WriteLine($"略過已處理的 {skippedFilesCount} 個檔案");
-        Console.WriteLine($"新處理了 {totalFilesProcessed - skippedFilesCount} 個檔案");
+        Console.WriteLine($"新處理了 {totalFilesProcessed} 個檔案");
         Console.WriteLine($"找到 {duplicateGroupsCount} 組重複檔案");
     }
 
