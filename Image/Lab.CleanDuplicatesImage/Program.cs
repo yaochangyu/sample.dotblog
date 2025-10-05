@@ -85,7 +85,12 @@ class Program
         Console.WriteLine();
 
         // 處理檔案
-        var stats = new ProcessingStats { SkippedCount = skippedCount };
+        var existingDuplicateGroups = hashGroups.Count(g => g.Value.Count > 1);
+        var stats = new ProcessingStats
+        {
+            SkippedCount = skippedCount,
+            DuplicateGroupsCount = existingDuplicateGroups
+        };
 
         foreach (var file in unprocessedFiles)
         {
@@ -168,7 +173,6 @@ class Program
                 if (fileList.Count == 2)
                 {
                     stats.DuplicateGroupsCount++;
-                    Console.WriteLine($"找到第 {stats.DuplicateGroupsCount} 組重複檔案 (Hash: {hash[..Math.Min(16, hash.Length)]}...)");
                 }
 
                 // 標記需要寫入的 hash
@@ -294,6 +298,9 @@ class Program
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Hash TEXT NOT NULL,
                 FilePath TEXT NOT NULL,
+                FileName TEXT NOT NULL,
+                FileSize INTEGER NOT NULL,
+                FileCreatedTime TEXT NOT NULL,
                 FileCount INTEGER NOT NULL,
                 CreatedAt TEXT NOT NULL,
                 UNIQUE(Hash, FilePath)
@@ -316,9 +323,12 @@ class Program
 
         var command = connection.CreateCommand();
         command.CommandText = @"
-            INSERT INTO DuplicateFiles (Hash, FilePath, FileCount, CreatedAt)
-            VALUES ($hash, $filePath, $fileCount, $createdAt)
+            INSERT INTO DuplicateFiles (Hash, FilePath, FileName, FileSize, FileCreatedTime, FileCount, CreatedAt)
+            VALUES ($hash, $filePath, $fileName, $fileSize, $fileCreatedTime, $fileCount, $createdAt)
             ON CONFLICT(Hash, FilePath) DO UPDATE SET
+                FileName = excluded.FileName,
+                FileSize = excluded.FileSize,
+                FileCreatedTime = excluded.FileCreatedTime,
                 FileCount = excluded.FileCount,
                 CreatedAt = excluded.CreatedAt
         ";
@@ -330,6 +340,18 @@ class Program
         var filePathParam = command.CreateParameter();
         filePathParam.ParameterName = "$filePath";
         command.Parameters.Add(filePathParam);
+
+        var fileNameParam = command.CreateParameter();
+        fileNameParam.ParameterName = "$fileName";
+        command.Parameters.Add(fileNameParam);
+
+        var fileSizeParam = command.CreateParameter();
+        fileSizeParam.ParameterName = "$fileSize";
+        command.Parameters.Add(fileSizeParam);
+
+        var fileCreatedTimeParam = command.CreateParameter();
+        fileCreatedTimeParam.ParameterName = "$fileCreatedTime";
+        command.Parameters.Add(fileCreatedTimeParam);
 
         var fileCountParam = command.CreateParameter();
         fileCountParam.ParameterName = "$fileCount";
@@ -348,8 +370,13 @@ class Program
 
             foreach (var filePath in files)
             {
+                var fileInfo = new FileInfo(filePath);
+
                 hashParam.Value = hash;
                 filePathParam.Value = filePath;
+                fileNameParam.Value = fileInfo.Name;
+                fileSizeParam.Value = fileInfo.Length;
+                fileCreatedTimeParam.Value = fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss");
                 fileCountParam.Value = files.Count;
                 createdAtParam.Value = createdAt;
 
