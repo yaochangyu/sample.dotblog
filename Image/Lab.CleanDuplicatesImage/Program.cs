@@ -31,6 +31,69 @@ class Program
         Console.WriteLine("=== 重複檔案掃描工具 (優化版) ===");
         Console.WriteLine();
 
+        while (true)
+        {
+            // 主選單
+            Console.WriteLine("請選擇功能：");
+            Console.WriteLine("1. 掃描重複檔案");
+            Console.WriteLine("2. 查看並標記重複檔案");
+            Console.WriteLine("3. 執行刪除（刪除已標記的檔案）");
+            Console.WriteLine("4. 離開");
+            Console.Write("請輸入選項 (1-4): ");
+
+            var menuChoice = Console.ReadLine()?.Trim();
+            Console.WriteLine();
+
+            if (menuChoice == "4")
+            {
+                Console.WriteLine("感謝使用，再見！");
+                return;
+            }
+
+            if (menuChoice == "2")
+            {
+                // 直接進入標記模式
+                InitializeDatabase();
+                var (existingHashes, _) = LoadExistingHashes();
+
+                if (existingHashes.Count == 0)
+                {
+                    Console.WriteLine("資料庫中沒有重複檔案記錄，請先執行掃描！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                InteractiveDeleteDuplicates(existingHashes);
+                Console.WriteLine();
+                Console.WriteLine("提示：標記為待刪除的檔案儲存在資料庫的 FilesToDelete 資料表中");
+                Console.WriteLine("您可以查看該資料表後再決定是否實際刪除檔案");
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "3")
+            {
+                // 執行實際刪除
+                ExecuteMarkedDeletions();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice != "1")
+            {
+                Console.WriteLine("無效的選項！");
+                Console.WriteLine();
+                continue;
+            }
+
+            // 選項 1: 掃描模式
+            RunScanMode();
+            Console.WriteLine();
+        }
+    }
+
+    static void RunScanMode()
+    {
         // 接收使用者輸入多個資料夾路徑
         var folderPaths = new List<string>();
 
@@ -100,19 +163,7 @@ class Program
             Console.WriteLine("所有資料夾掃描完成！");
             Console.WriteLine($"結果已儲存至: {DatabaseFileName}");
             Console.WriteLine();
-
-            // 詢問是否要進行互動式標記
-            Console.Write("是否要查看並標記重複檔案？(Y/N): ");
-            var deleteChoice = Console.ReadLine()?.Trim().ToUpper();
-
-            if (deleteChoice == "Y" || deleteChoice == "YES")
-            {
-                InteractiveDeleteDuplicates(existingHashes);
-            }
-
-            Console.WriteLine();
-            Console.WriteLine("提示：標記為待刪除的檔案儲存在資料庫的 FilesToDelete 資料表中");
-            Console.WriteLine("您可以查看該資料表後再決定是否實際刪除檔案");
+            Console.WriteLine("提示：使用選項 2 可以查看並標記重複檔案");
         }
         catch (Exception ex)
         {
@@ -311,6 +362,149 @@ class Program
         command.Parameters.Add(markedAtParam);
 
         command.ExecuteNonQuery();
+    }
+
+    static void ExecuteMarkedDeletions()
+    {
+        InitializeDatabase();
+
+        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT FilePath, MarkedAt FROM FilesToDelete ORDER BY MarkedAt";
+
+        var markedFiles = new List<(string path, string markedAt)>();
+
+        using (var reader = command.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                markedFiles.Add((reader.GetString(0), reader.GetString(1)));
+            }
+        }
+
+        if (markedFiles.Count == 0)
+        {
+            Console.WriteLine("沒有標記為待刪除的檔案！");
+            return;
+        }
+
+        Console.WriteLine($"找到 {markedFiles.Count} 個標記為待刪除的檔案：");
+        Console.WriteLine();
+
+        var existingFiles = markedFiles.Where(f => File.Exists(f.path)).ToList();
+        var missingFiles = markedFiles.Where(f => !File.Exists(f.path)).ToList();
+
+        if (existingFiles.Count > 0)
+        {
+            Console.WriteLine("存在的檔案：");
+            foreach (var (path, markedAt) in existingFiles)
+            {
+                var fileInfo = new FileInfo(path);
+                Console.WriteLine($"  - {path}");
+                Console.WriteLine($"    大小: {FormatFileSize(fileInfo.Length)}，標記時間: {markedAt}");
+            }
+            Console.WriteLine();
+        }
+
+        if (missingFiles.Count > 0)
+        {
+            Console.WriteLine($"已不存在的檔案 ({missingFiles.Count} 個)：");
+            foreach (var (path, _) in missingFiles)
+            {
+                Console.WriteLine($"  - {path}");
+            }
+            Console.WriteLine();
+        }
+
+        if (existingFiles.Count == 0)
+        {
+            Console.WriteLine("所有標記的檔案都已不存在！");
+            Console.Write("是否要清除這些記錄？(Y/N): ");
+            var clearChoice = Console.ReadLine()?.Trim().ToUpper();
+
+            if (clearChoice == "Y" || clearChoice == "YES")
+            {
+                ClearDeletedMarks();
+            }
+            return;
+        }
+
+        Console.Write($"確認要刪除這 {existingFiles.Count} 個檔案嗎？(Y/N): ");
+        var confirm = Console.ReadLine()?.Trim().ToUpper();
+
+        if (confirm != "Y" && confirm != "YES")
+        {
+            Console.WriteLine("已取消刪除操作");
+            return;
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("開始刪除檔案...");
+
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var (path, _) in existingFiles)
+        {
+            try
+            {
+                File.Delete(path);
+                Console.WriteLine($"✓ 已刪除: {path}");
+                successCount++;
+
+                // 從標記表中移除
+                var deleteCommand = connection.CreateCommand();
+                deleteCommand.CommandText = "DELETE FROM FilesToDelete WHERE FilePath = $path";
+                var pathParam = deleteCommand.CreateParameter();
+                pathParam.ParameterName = "$path";
+                pathParam.Value = path;
+                deleteCommand.Parameters.Add(pathParam);
+                deleteCommand.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ 刪除失敗 [{path}]: {ex.Message}");
+                failCount++;
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"刪除完成！成功: {successCount}，失敗: {failCount}");
+
+        if (missingFiles.Count > 0)
+        {
+            Console.Write($"是否要清除 {missingFiles.Count} 個已不存在的檔案記錄？(Y/N): ");
+            var clearChoice = Console.ReadLine()?.Trim().ToUpper();
+
+            if (clearChoice == "Y" || clearChoice == "YES")
+            {
+                foreach (var (path, _) in missingFiles)
+                {
+                    var deleteCommand = connection.CreateCommand();
+                    deleteCommand.CommandText = "DELETE FROM FilesToDelete WHERE FilePath = $path";
+                    var pathParam = deleteCommand.CreateParameter();
+                    pathParam.ParameterName = "$path";
+                    pathParam.Value = path;
+                    deleteCommand.Parameters.Add(pathParam);
+                    deleteCommand.ExecuteNonQuery();
+                }
+                Console.WriteLine("已清除記錄！");
+            }
+        }
+    }
+
+    static void ClearDeletedMarks()
+    {
+        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM FilesToDelete";
+        var count = command.ExecuteNonQuery();
+
+        Console.WriteLine($"已清除 {count} 筆記錄");
     }
 
     static string FormatFileSize(long bytes)
