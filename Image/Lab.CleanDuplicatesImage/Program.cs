@@ -29,7 +29,7 @@ class Program
         Console.OutputEncoding = Encoding.UTF8;
         Console.InputEncoding = Encoding.UTF8;
 
-        Console.WriteLine("=== 重複檔案掃描工具 ===");
+        Console.WriteLine("=== 重複檔案掃描工具 (優化版) ===");
         Console.WriteLine();
 
         // 接收使用者輸入
@@ -70,13 +70,14 @@ class Program
 
     static void ScanAndWriteDuplicates(string folderPath, Dictionary<string, List<string>> existingHashes, HashSet<string> processedFiles)
     {
-        var hashGroups = existingHashes;
-        var totalFilesProcessed = 0;
-        var skippedFilesCount = 0;
-        var duplicateGroupsCount = hashGroups.Count(g => g.Value.Count > 1);
+        // 使用 ConcurrentDictionary 處理並發更新
+        var hashGroups = new ConcurrentDictionary<string, List<string>>(
+            existingHashes.Select(kvp => new KeyValuePair<string, List<string>>(kvp.Key, kvp.Value))
+        );
 
-        // 使用 ConcurrentDictionary 避免 lock 競爭
-        var dirtyHashes = new ConcurrentDictionary<string, byte>();
+        var totalFilesProcessed = 0;
+        var duplicateGroupsCount = hashGroups.Count(g => g.Value.Count > 1);
+        var dirtyHashes = new ConcurrentBag<string>();
         var lastWrittenCount = new ConcurrentDictionary<string, int>();
 
         // 初始化已存在的重複組的計數
@@ -85,35 +86,36 @@ class Program
             lastWrittenCount[kvp.Key] = kvp.Value.Count;
         }
 
-        const int batchSize = 100;
-        const int writeThreshold = batchSize; // 預先計算閾值
+        const int writeThreshold = 500; // 提高寫入閾值，減少 I/O 次數
 
-        // 移除不必要的 PLINQ，檔案列舉不需要平行化
+        // 列舉檔案
         var files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
             .Where(IsMediaFile)
-            .ToArray(); // 使用陣列避免重複列舉
+            .ToArray();
 
         Console.WriteLine($"找到 {files.Length} 個檔案");
         Console.WriteLine();
 
-        // 使用 HashSet.Except 減少記憶體配置
         var unprocessedFiles = files.Where(f => !processedFiles.Contains(f)).ToArray();
-        skippedFilesCount = files.Length - unprocessedFiles.Length;
+        var skippedFilesCount = files.Length - unprocessedFiles.Length;
 
         var processorCount = Environment.ProcessorCount;
-        var batchCount = (int)Math.Ceiling((double)unprocessedFiles.Length / (processorCount * 4));
+        var optimalBatchSize = Math.Max(processorCount * 8, 200); // 動態批次大小
+        var batchCount = (int)Math.Ceiling((double)unprocessedFiles.Length / optimalBatchSize);
 
-        // 使用物件池減少字串配置
-        var hashGroupsLock = new object();
-        var consoleWriteLock = new object();
+        // 使用 ConcurrentQueue 累積 Console 輸出
+        var consoleBuffer = new ConcurrentQueue<string>();
+        var processedFilesSet = new ConcurrentBag<string>();
+        var lastProgressUpdate = 0;
+        var progressLock = new object();
 
         for (int i = 0; i < batchCount; i++)
         {
-            var startIdx = i * processorCount * 4;
-            var count = Math.Min(processorCount * 4, unprocessedFiles.Length - startIdx);
+            var startIdx = i * optimalBatchSize;
+            var count = Math.Min(optimalBatchSize, unprocessedFiles.Length - startIdx);
             var batch = new ArraySegment<string>(unprocessedFiles, startIdx, count);
 
-            // 平行計算 hash，先處理所有 I/O 密集操作
+            // 平行計算 hash
             var hashResults = batch
                 .AsParallel()
                 .WithDegreeOfParallelism(processorCount)
@@ -122,128 +124,132 @@ class Program
                     try
                     {
                         var hash = CalculateSHA256(file);
-                        return (file, hash, success: true);
+                        return (file, hash, success: true, error: string.Empty);
                     }
                     catch (Exception ex)
                     {
-                        // 避免在平行迴圈內寫 Console，累積後批次輸出
-                        return (file, hash: ex.Message, success: false);
+                        return (file, hash: string.Empty, success: false, error: ex.Message);
                     }
                 })
-                .ToArray(); // 使用陣列避免多次列舉
+                .ToArray();
 
-            // 收集錯誤訊息，批次輸出
-            var errors = hashResults.Where(r => !r.success).ToArray();
-            if (errors.Length > 0)
+            // 處理結果
+            var newDuplicateCount = 0;
+            foreach (var result in hashResults)
             {
-                lock (consoleWriteLock)
+                if (!result.success)
                 {
-                    foreach (var (file, errorMsg, _) in errors)
-                    {
-                        Console.WriteLine($"處理檔案時發生錯誤 [{file}]: {errorMsg}");
-                    }
+                    consoleBuffer.Enqueue($"處理檔案時發生錯誤 [{result.file}]: {result.error}");
+                    continue;
                 }
-            }
 
-            // 縮小 lock 範圍，只鎖必要的寫入操作
-            var successResults = hashResults.Where(r => r.success).ToArray();
-            var newDuplicateGroups = new List<string>();
+                processedFilesSet.Add(result.file);
+                Interlocked.Increment(ref totalFilesProcessed);
 
-            lock (hashGroupsLock)
-            {
-                foreach (var (file, hash, _) in successResults)
-                {
-                    totalFilesProcessed++;
-                    processedFiles.Add(file);
-
-                    if (!hashGroups.TryGetValue(hash, out var fileGroup))
+                // 使用 AddOrUpdate 減少鎖競爭
+                var fileGroup = hashGroups.AddOrUpdate(
+                    result.hash,
+                    _ => new List<string> { result.file },
+                    (_, existingGroup) =>
                     {
-                        fileGroup = new List<string>();
-                        hashGroups[hash] = fileGroup;
-                    }
-
-                    fileGroup.Add(file);
-                    var currentCount = fileGroup.Count;
-
-                    if (currentCount >= 2)
-                    {
-                        if (currentCount == 2)
+                        lock (existingGroup)
                         {
-                            duplicateGroupsCount++;
-                            newDuplicateGroups.Add(hash); // 收集後批次輸出
+                            existingGroup.Add(result.file);
                         }
-
-                        // 使用 ConcurrentDictionary 的原子操作
-                        if (!lastWrittenCount.TryGetValue(hash, out var lastCount) || lastCount != currentCount)
-                        {
-                            dirtyHashes.TryAdd(hash, 0);
-                            lastWrittenCount[hash] = currentCount;
-                        }
+                        return existingGroup;
                     }
-                }
-            }
+                );
 
-            // 批次輸出新找到的重複組
-            if (newDuplicateGroups.Count > 0)
-            {
-                lock (consoleWriteLock)
+                int currentCount;
+                lock (fileGroup)
                 {
-                    foreach (var hash in newDuplicateGroups)
+                    currentCount = fileGroup.Count;
+                }
+
+                if (currentCount >= 2)
+                {
+                    if (currentCount == 2)
                     {
-                        var groupNum = duplicateGroupsCount - newDuplicateGroups.Count + newDuplicateGroups.IndexOf(hash) + 1;
-                        Console.WriteLine($"找到第 {groupNum} 組重複檔案 (Hash: {hash.Substring(0, Math.Min(16, hash.Length))}...)");
+                        Interlocked.Increment(ref duplicateGroupsCount);
+                        newDuplicateCount++;
+                        consoleBuffer.Enqueue($"找到第 {duplicateGroupsCount} 組重複檔案 (Hash: {result.hash.Substring(0, Math.Min(16, result.hash.Length))}...)");
+                    }
+
+                    // 檢查是否需要寫入
+                    var needsWrite = !lastWrittenCount.TryGetValue(result.hash, out var lastCount) || lastCount != currentCount;
+                    if (needsWrite)
+                    {
+                        dirtyHashes.Add(result.hash);
+                        lastWrittenCount[result.hash] = currentCount;
                     }
                 }
             }
 
-            // 顯示進度 (移到 lock 外)
-            var currentTotal = Interlocked.Add(ref totalFilesProcessed, 0); // 安全讀取
-            if (currentTotal % 100 <= successResults.Length && currentTotal >= 100)
+            // 顯示進度
+            lock (progressLock)
             {
-                lock (consoleWriteLock)
+                if (totalFilesProcessed - lastProgressUpdate >= 100)
                 {
-                    var totalCount = skippedFilesCount + currentTotal;
-                    Console.WriteLine($"已處理 {totalCount}/{files.Length} 個檔案 (略過 {skippedFilesCount} 個)...");
+                    lastProgressUpdate = totalFilesProcessed;
+                    var totalCount = skippedFilesCount + totalFilesProcessed;
+                    consoleBuffer.Enqueue($"已處理 {totalCount}/{files.Length} 個檔案 (略過 {skippedFilesCount} 個)...");
                 }
             }
 
-            // 批次寫入：只寫入有變動的重複組
+            // 輸出累積的訊息
+            while (consoleBuffer.TryDequeue(out var message))
+            {
+                Console.WriteLine(message);
+            }
+
+            // 批次寫入
             if (dirtyHashes.Count >= writeThreshold)
             {
-                var pendingWrites = new Dictionary<string, List<string>>(dirtyHashes.Count);
-                lock (hashGroupsLock)
+                var dirtyHashList = dirtyHashes.ToArray();
+                dirtyHashes = new ConcurrentBag<string>();
+
+                var pendingWrites = new Dictionary<string, List<string>>(dirtyHashList.Length);
+                foreach (var hash in dirtyHashList.Distinct())
                 {
-                    foreach (var hash in dirtyHashes.Keys)
+                    if (hashGroups.TryGetValue(hash, out var group))
                     {
-                        if (hashGroups.TryGetValue(hash, out var group))
+                        lock (group)
                         {
-                            pendingWrites[hash] = group;
+                            pendingWrites[hash] = new List<string>(group);
                         }
                     }
                 }
 
                 WriteToDatabase(pendingWrites);
-
-                lock (consoleWriteLock)
-                {
-                    Console.WriteLine($"已批次寫入 {pendingWrites.Count} 組重複檔案到資料庫");
-                }
-
-                dirtyHashes.Clear();
+                Console.WriteLine($"已批次寫入 {pendingWrites.Count} 組重複檔案到資料庫");
             }
         }
 
-        // 最後將剩餘的資料寫入資料庫
-        if (dirtyHashes.Count > 0)
+        // 更新 processedFiles
+        foreach (var file in processedFilesSet)
         {
-            var pendingWrites = new Dictionary<string, List<string>>(dirtyHashes.Count);
-            lock (hashGroupsLock)
+            processedFiles.Add(file);
+        }
+
+        // 輸出剩餘訊息
+        while (consoleBuffer.TryDequeue(out var message))
+        {
+            Console.WriteLine(message);
+        }
+
+        // 最後寫入
+        if (!dirtyHashes.IsEmpty)
+        {
+            var dirtyHashList = dirtyHashes.ToArray();
+            var pendingWrites = new Dictionary<string, List<string>>(dirtyHashList.Length);
+
+            foreach (var hash in dirtyHashList.Distinct())
             {
-                foreach (var hash in dirtyHashes.Keys)
+                if (hashGroups.TryGetValue(hash, out var group))
                 {
-                    if (hashGroups.TryGetValue(hash, out var group))
+                    lock (group)
                     {
-                        pendingWrites[hash] = group;
+                        pendingWrites[hash] = new List<string>(group);
                     }
                 }
             }
