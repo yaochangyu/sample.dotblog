@@ -37,17 +37,25 @@ class Program
             Console.WriteLine("請選擇功能：");
             Console.WriteLine("1. 掃描重複檔案");
             Console.WriteLine("2. 查看並標記重複檔案");
-            Console.WriteLine("3. 執行刪除（刪除已標記的檔案）");
-            Console.WriteLine("4. 離開");
-            Console.Write("請輸入選項 (1-4): ");
+            Console.WriteLine("3. 查看已標記檔案（可取消標記）");
+            Console.WriteLine("4. 執行刪除（刪除已標記的檔案）");
+            Console.WriteLine("5. 離開");
+            Console.Write("請輸入選項 (1-5): ");
 
             var menuChoice = Console.ReadLine()?.Trim();
             Console.WriteLine();
 
-            if (menuChoice == "4")
+            if (menuChoice == "5")
             {
                 Console.WriteLine("感謝使用，再見！");
                 return;
+            }
+
+            if (menuChoice == "1")
+            {
+                RunScanMode();
+                Console.WriteLine();
+                continue;
             }
 
             if (menuChoice == "2")
@@ -73,22 +81,19 @@ class Program
 
             if (menuChoice == "3")
             {
+                // 查看已標記檔案
+                ViewMarkedFiles();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "4")
+            {
                 // 執行實際刪除
                 ExecuteMarkedDeletions();
                 Console.WriteLine();
                 continue;
             }
-
-            if (menuChoice != "1")
-            {
-                Console.WriteLine("無效的選項！");
-                Console.WriteLine();
-                continue;
-            }
-
-            // 選項 1: 掃描模式
-            RunScanMode();
-            Console.WriteLine();
         }
     }
 
@@ -181,8 +186,15 @@ class Program
             return;
         }
 
+        // 載入已標記的檔案
+        var markedFiles = LoadMarkedFiles();
+
         Console.WriteLine();
         Console.WriteLine($"找到 {duplicateGroups.Count} 組重複檔案");
+        if (markedFiles.Count > 0)
+        {
+            Console.WriteLine($"已標記 {markedFiles.Count} 個檔案為待刪除");
+        }
         Console.WriteLine();
 
         int groupIndex = 1;
@@ -206,7 +218,10 @@ class Program
             for (int i = 0; i < validFiles.Count; i++)
             {
                 var fileInfo = new FileInfo(validFiles[i]);
-                Console.WriteLine($"[{i + 1}] {validFiles[i]}");
+                var isMarked = markedFiles.Contains(validFiles[i]);
+                var markIndicator = isMarked ? " [已標記]" : "";
+
+                Console.WriteLine($"[{i + 1}] {validFiles[i]}{markIndicator}");
                 Console.WriteLine($"    大小: {FormatFileSize(fileInfo.Length)}");
                 Console.WriteLine($"    建立時間: {fileInfo.CreationTime:yyyy-MM-dd HH:mm:ss}");
                 Console.WriteLine($"    修改時間: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
@@ -218,8 +233,10 @@ class Program
             {
                 Console.WriteLine("操作選項:");
                 Console.WriteLine("  輸入編號標記該檔案為待刪除（可用逗號分隔多個，例如: 1,3,5）");
+                Console.WriteLine("  已標記的檔案可以重新標記（會先取消再標記）");
                 Console.WriteLine("  輸入 'k' 保留所有檔案並跳過此組");
                 Console.WriteLine("  輸入 'a' 自動保留最舊的檔案，標記其他為待刪除");
+                Console.WriteLine("  輸入 'u' 取消此組所有已標記的檔案");
                 Console.WriteLine("  輸入 'q' 結束作業");
                 Console.Write("請選擇: ");
 
@@ -236,6 +253,49 @@ class Program
                     Console.WriteLine("已跳過此組");
                     Console.WriteLine();
                     break;
+                }
+
+                if (choice == "u")
+                {
+                    // 取消此組所有已標記的檔案
+                    var markedInGroup = validFiles.Where(f => markedFiles.Contains(f)).ToList();
+
+                    if (markedInGroup.Count == 0)
+                    {
+                        Console.WriteLine("此組沒有已標記的檔案！");
+                        Console.WriteLine();
+                        continue;
+                    }
+
+                    Console.WriteLine($"確認要取消以下 {markedInGroup.Count} 個檔案的標記：");
+                    foreach (var file in markedInGroup)
+                    {
+                        Console.WriteLine($"  - {file}");
+                    }
+                    Console.Write("確認取消標記？(Y/N): ");
+
+                    var unmarkConfirm = Console.ReadLine()?.Trim().ToUpper();
+                    if (unmarkConfirm == "Y" || unmarkConfirm == "YES")
+                    {
+                        UnmarkFiles(markedInGroup);
+                        Console.WriteLine("已取消標記！");
+
+                        // 更新本地標記清單
+                        foreach (var file in markedInGroup)
+                        {
+                            markedFiles.Remove(file);
+                        }
+
+                        // 重新顯示此組
+                        Console.WriteLine();
+                        break;
+                    }
+                    else
+                    {
+                        Console.WriteLine("已取消操作");
+                        Console.WriteLine();
+                        continue;
+                    }
                 }
 
                 if (choice == "a")
@@ -285,19 +345,55 @@ class Program
 
                 var filesToDelete = indices.Select(i => validFiles[i - 1]).ToList();
 
-                Console.WriteLine($"確認要標記以下 {filesToDelete.Count} 個檔案為待刪除：");
-                foreach (var file in filesToDelete)
+                // 檢查是否有已標記的檔案
+                var alreadyMarked = filesToDelete.Where(f => markedFiles.Contains(f)).ToList();
+                var newMarks = filesToDelete.Where(f => !markedFiles.Contains(f)).ToList();
+
+                if (alreadyMarked.Count > 0)
                 {
-                    Console.WriteLine($"  - {file}");
+                    Console.WriteLine($"以下 {alreadyMarked.Count} 個檔案已經被標記：");
+                    foreach (var file in alreadyMarked)
+                    {
+                        Console.WriteLine($"  - {file}");
+                    }
+                    Console.WriteLine("這些檔案會先取消標記，然後重新標記");
+                    Console.WriteLine();
                 }
+
+                if (newMarks.Count > 0)
+                {
+                    Console.WriteLine($"將標記以下 {newMarks.Count} 個檔案為待刪除：");
+                    foreach (var file in newMarks)
+                    {
+                        Console.WriteLine($"  - {file}");
+                    }
+                }
+
                 Console.Write("確認標記？(Y/N): ");
 
                 var confirm = Console.ReadLine()?.Trim().ToUpper();
                 if (confirm == "Y" || confirm == "YES")
                 {
+                    // 先取消已標記的檔案
+                    if (alreadyMarked.Count > 0)
+                    {
+                        UnmarkFiles(alreadyMarked);
+                        foreach (var file in alreadyMarked)
+                        {
+                            markedFiles.Remove(file);
+                        }
+                    }
+
+                    // 標記所有檔案
                     if (DeleteFiles(filesToDelete))
                     {
                         Console.WriteLine("標記完成！");
+
+                        // 更新本地標記清單
+                        foreach (var file in filesToDelete)
+                        {
+                            markedFiles.Add(file);
+                        }
                     }
                     Console.WriteLine();
                     break;
@@ -505,6 +601,246 @@ class Program
         var count = command.ExecuteNonQuery();
 
         Console.WriteLine($"已清除 {count} 筆記錄");
+    }
+
+    static void ViewMarkedFiles()
+    {
+        InitializeDatabase();
+
+        var markedFiles = LoadMarkedFilesWithDetails();
+
+        if (markedFiles.Count == 0)
+        {
+            Console.WriteLine("目前沒有已標記的檔案！");
+            return;
+        }
+
+        Console.WriteLine($"=== 已標記檔案清單 (共 {markedFiles.Count} 個) ===");
+        Console.WriteLine();
+
+        var existingFiles = markedFiles.Where(f => File.Exists(f.path)).ToList();
+        var missingFiles = markedFiles.Where(f => !File.Exists(f.path)).ToList();
+
+        if (existingFiles.Count > 0)
+        {
+            Console.WriteLine($"存在的檔案 ({existingFiles.Count} 個)：");
+            for (int i = 0; i < existingFiles.Count; i++)
+            {
+                var (path, markedAt) = existingFiles[i];
+                var fileInfo = new FileInfo(path);
+                Console.WriteLine($"[{i + 1}] {path}");
+                Console.WriteLine($"    大小: {FormatFileSize(fileInfo.Length)}，標記時間: {markedAt}");
+                Console.WriteLine();
+            }
+        }
+
+        if (missingFiles.Count > 0)
+        {
+            Console.WriteLine($"已不存在的檔案 ({missingFiles.Count} 個)：");
+            foreach (var (path, markedAt) in missingFiles)
+            {
+                Console.WriteLine($"  - {path} (標記時間: {markedAt})");
+            }
+            Console.WriteLine();
+        }
+
+        // 操作選單
+        while (true)
+        {
+            Console.WriteLine("操作選項：");
+            Console.WriteLine("1. 取消標記（輸入編號，可用逗號分隔多個，例如: 1,3,5）");
+            Console.WriteLine("2. 清除所有標記");
+            Console.WriteLine("3. 清除不存在檔案的標記");
+            Console.WriteLine("4. 返回主選單");
+            Console.Write("請選擇: ");
+
+            var choice = Console.ReadLine()?.Trim();
+            Console.WriteLine();
+
+            if (choice == "4")
+            {
+                return;
+            }
+
+            if (choice == "2")
+            {
+                Console.Write($"確認要清除所有 {markedFiles.Count} 個標記嗎？(Y/N): ");
+                var confirm = Console.ReadLine()?.Trim().ToUpper();
+
+                if (confirm == "Y" || confirm == "YES")
+                {
+                    ClearAllMarks();
+                    Console.WriteLine("已清除所有標記！");
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("已取消操作");
+                    Console.WriteLine();
+                    continue;
+                }
+            }
+
+            if (choice == "3")
+            {
+                if (missingFiles.Count == 0)
+                {
+                    Console.WriteLine("沒有不存在的檔案標記！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                Console.Write($"確認要清除 {missingFiles.Count} 個不存在檔案的標記嗎？(Y/N): ");
+                var confirm = Console.ReadLine()?.Trim().ToUpper();
+
+                if (confirm == "Y" || confirm == "YES")
+                {
+                    UnmarkFiles(missingFiles.Select(f => f.path).ToList());
+                    Console.WriteLine($"已清除 {missingFiles.Count} 個標記！");
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("已取消操作");
+                    Console.WriteLine();
+                    continue;
+                }
+            }
+
+            if (choice == "1")
+            {
+                if (existingFiles.Count == 0)
+                {
+                    Console.WriteLine("沒有存在的檔案可以取消標記！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                Console.Write("請輸入要取消標記的編號: ");
+                var input = Console.ReadLine()?.Trim();
+
+                var indices = input?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => int.TryParse(s, out _))
+                    .Select(int.Parse)
+                    .Where(i => i >= 1 && i <= existingFiles.Count)
+                    .Distinct()
+                    .ToList() ?? new List<int>();
+
+                if (indices.Count == 0)
+                {
+                    Console.WriteLine("無效的選擇，請重新輸入！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                var filesToUnmark = indices.Select(i => existingFiles[i - 1].path).ToList();
+
+                Console.WriteLine($"確認要取消以下 {filesToUnmark.Count} 個檔案的標記：");
+                foreach (var file in filesToUnmark)
+                {
+                    Console.WriteLine($"  - {file}");
+                }
+                Console.Write("確認取消標記？(Y/N): ");
+
+                var confirm = Console.ReadLine()?.Trim().ToUpper();
+                if (confirm == "Y" || confirm == "YES")
+                {
+                    UnmarkFiles(filesToUnmark);
+                    Console.WriteLine("已取消標記！");
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("已取消操作");
+                    Console.WriteLine();
+                }
+            }
+        }
+    }
+
+    static List<(string path, string markedAt)> LoadMarkedFilesWithDetails()
+    {
+        var markedFiles = new List<(string, string)>();
+
+        try
+        {
+            using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT FilePath, MarkedAt FROM FilesToDelete ORDER BY MarkedAt";
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                markedFiles.Add((reader.GetString(0), reader.GetString(1)));
+            }
+        }
+        catch
+        {
+            // 資料表可能不存在，忽略錯誤
+        }
+
+        return markedFiles;
+    }
+
+    static void UnmarkFiles(List<string> filePaths)
+    {
+        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+        connection.Open();
+
+        using var transaction = connection.BeginTransaction();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM FilesToDelete WHERE FilePath = $path";
+        var pathParam = command.CreateParameter();
+        pathParam.ParameterName = "$path";
+        command.Parameters.Add(pathParam);
+
+        foreach (var path in filePaths)
+        {
+            pathParam.Value = path;
+            command.ExecuteNonQuery();
+        }
+
+        transaction.Commit();
+    }
+
+    static void ClearAllMarks()
+    {
+        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "DELETE FROM FilesToDelete";
+        command.ExecuteNonQuery();
+    }
+
+    static HashSet<string> LoadMarkedFiles()
+    {
+        var markedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT FilePath FROM FilesToDelete";
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                markedFiles.Add(reader.GetString(0));
+            }
+        }
+        catch
+        {
+            // 資料表可能不存在，忽略錯誤
+        }
+
+        return markedFiles;
     }
 
     static string FormatFileSize(long bytes)
