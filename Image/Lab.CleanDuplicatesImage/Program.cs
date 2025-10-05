@@ -31,18 +31,51 @@ class Program
         Console.WriteLine("=== 重複檔案掃描工具 (優化版) ===");
         Console.WriteLine();
 
-        // 接收使用者輸入
-        Console.Write("請輸入要掃描的資料夾路徑: ");
-        var folderPath = Console.ReadLine()?.Trim();
+        // 接收使用者輸入多個資料夾路徑
+        var folderPaths = new List<string>();
 
-        if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
+        while (true)
         {
-            Console.WriteLine("錯誤：資料夾路徑無效或不存在！");
-            return;
+            Console.Write($"請輸入要掃描的資料夾路徑 ({folderPaths.Count + 1}): ");
+            var input = Console.ReadLine()?.Trim();
+
+            if (string.IsNullOrEmpty(input))
+            {
+                if (folderPaths.Count == 0)
+                {
+                    Console.WriteLine("錯誤：至少需要輸入一個路徑！");
+                    continue;
+                }
+                break;
+            }
+
+            if (!Directory.Exists(input))
+            {
+                Console.WriteLine($"錯誤：路徑不存在或無效，請重新輸入！");
+                continue;
+            }
+
+            folderPaths.Add(input);
+            Console.WriteLine($"已加入路徑: {input}");
+            Console.WriteLine();
+
+            Console.Write("是否要繼續加入路徑？(Y/N，直接按 Enter 開始掃描): ");
+            var continueInput = Console.ReadLine()?.Trim().ToUpper();
+
+            if (continueInput != "Y" && continueInput != "YES")
+            {
+                break;
+            }
+
+            Console.WriteLine();
         }
 
         Console.WriteLine();
-        Console.WriteLine($"開始掃描資料夾: {folderPath}");
+        Console.WriteLine($"開始掃描 {folderPaths.Count} 個資料夾:");
+        foreach (var path in folderPaths)
+        {
+            Console.WriteLine($"  - {path}");
+        }
         Console.WriteLine();
 
         try
@@ -56,15 +89,241 @@ class Program
             Console.WriteLine($"已處理 {processedFiles.Count} 個檔案");
             Console.WriteLine();
 
-            ScanAndWriteDuplicates(folderPath, existingHashes, processedFiles);
-            Console.WriteLine();
-            Console.WriteLine("掃描完成！");
+            // 掃描所有資料夾
+            foreach (var folderPath in folderPaths)
+            {
+                Console.WriteLine($"正在掃描資料夾: {folderPath}");
+                ScanAndWriteDuplicates(folderPath, existingHashes, processedFiles);
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("所有資料夾掃描完成！");
             Console.WriteLine($"結果已儲存至: {DatabaseFileName}");
+            Console.WriteLine();
+
+            // 詢問是否要進行互動式標記
+            Console.Write("是否要查看並標記重複檔案？(Y/N): ");
+            var deleteChoice = Console.ReadLine()?.Trim().ToUpper();
+
+            if (deleteChoice == "Y" || deleteChoice == "YES")
+            {
+                InteractiveDeleteDuplicates(existingHashes);
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("提示：標記為待刪除的檔案儲存在資料庫的 FilesToDelete 資料表中");
+            Console.WriteLine("您可以查看該資料表後再決定是否實際刪除檔案");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"發生錯誤: {ex.Message}");
         }
+    }
+
+    static void InteractiveDeleteDuplicates(Dictionary<string, List<string>> hashGroups)
+    {
+        var duplicateGroups = hashGroups.Where(g => g.Value.Count > 1).ToList();
+
+        if (duplicateGroups.Count == 0)
+        {
+            Console.WriteLine("沒有找到重複檔案！");
+            return;
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"找到 {duplicateGroups.Count} 組重複檔案");
+        Console.WriteLine();
+
+        int groupIndex = 1;
+        foreach (var group in duplicateGroups)
+        {
+            Console.WriteLine($"=== 重複組 {groupIndex}/{duplicateGroups.Count} ===");
+            Console.WriteLine($"Hash: {group.Key}");
+            Console.WriteLine($"共 {group.Value.Count} 個檔案:");
+            Console.WriteLine();
+
+            var validFiles = group.Value.Where(File.Exists).ToList();
+            if (validFiles.Count == 0)
+            {
+                Console.WriteLine("此組所有檔案都已不存在，跳過...");
+                Console.WriteLine();
+                groupIndex++;
+                continue;
+            }
+
+            // 顯示檔案清單
+            for (int i = 0; i < validFiles.Count; i++)
+            {
+                var fileInfo = new FileInfo(validFiles[i]);
+                Console.WriteLine($"[{i + 1}] {validFiles[i]}");
+                Console.WriteLine($"    大小: {FormatFileSize(fileInfo.Length)}");
+                Console.WriteLine($"    建立時間: {fileInfo.CreationTime:yyyy-MM-dd HH:mm:ss}");
+                Console.WriteLine($"    修改時間: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+                Console.WriteLine();
+            }
+
+            // 詢問操作
+            while (true)
+            {
+                Console.WriteLine("操作選項:");
+                Console.WriteLine("  輸入編號標記該檔案為待刪除（可用逗號分隔多個，例如: 1,3,5）");
+                Console.WriteLine("  輸入 'k' 保留所有檔案並跳過此組");
+                Console.WriteLine("  輸入 'a' 自動保留最舊的檔案，標記其他為待刪除");
+                Console.WriteLine("  輸入 'q' 結束作業");
+                Console.Write("請選擇: ");
+
+                var choice = Console.ReadLine()?.Trim().ToLower();
+
+                if (choice == "q")
+                {
+                    Console.WriteLine("已結束標記作業");
+                    return;
+                }
+
+                if (choice == "k")
+                {
+                    Console.WriteLine("已跳過此組");
+                    Console.WriteLine();
+                    break;
+                }
+
+                if (choice == "a")
+                {
+                    // 自動保留最舊的檔案
+                    var oldestFile = validFiles
+                        .Select(f => new { Path = f, Info = new FileInfo(f) })
+                        .OrderBy(x => x.Info.CreationTime)
+                        .First();
+
+                    var autoDeleteFiles = validFiles.Where(f => f != oldestFile.Path).ToList();
+
+                    Console.WriteLine($"保留最舊的檔案: {oldestFile.Path}");
+                    Console.WriteLine($"將標記 {autoDeleteFiles.Count} 個檔案為待刪除");
+
+                    if (DeleteFiles(autoDeleteFiles))
+                    {
+                        Console.WriteLine("標記完成！");
+                    }
+
+                    Console.WriteLine();
+                    break;
+                }
+
+                // 解析編號
+                var indices = choice?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => int.TryParse(s, out _))
+                    .Select(int.Parse)
+                    .Where(i => i >= 1 && i <= validFiles.Count)
+                    .Distinct()
+                    .ToList() ?? new List<int>();
+
+                if (indices.Count == 0)
+                {
+                    Console.WriteLine("無效的選擇，請重新輸入！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                if (indices.Count == validFiles.Count)
+                {
+                    Console.WriteLine("錯誤：不能刪除所有檔案，至少要保留一個！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                var filesToDelete = indices.Select(i => validFiles[i - 1]).ToList();
+
+                Console.WriteLine($"確認要標記以下 {filesToDelete.Count} 個檔案為待刪除：");
+                foreach (var file in filesToDelete)
+                {
+                    Console.WriteLine($"  - {file}");
+                }
+                Console.Write("確認標記？(Y/N): ");
+
+                var confirm = Console.ReadLine()?.Trim().ToUpper();
+                if (confirm == "Y" || confirm == "YES")
+                {
+                    if (DeleteFiles(filesToDelete))
+                    {
+                        Console.WriteLine("標記完成！");
+                    }
+                    Console.WriteLine();
+                    break;
+                }
+                else
+                {
+                    Console.WriteLine("已取消標記");
+                    Console.WriteLine();
+                }
+            }
+
+            groupIndex++;
+        }
+
+        Console.WriteLine("所有重複檔案處理完成！");
+    }
+
+    static bool DeleteFiles(List<string> files)
+    {
+        var success = true;
+        foreach (var file in files)
+        {
+            try
+            {
+                MarkFileForDeletion(file);
+                Console.WriteLine($"已標記為待刪除: {file}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"標記失敗 [{file}]: {ex.Message}");
+                success = false;
+            }
+        }
+        return success;
+    }
+
+    static void MarkFileForDeletion(string filePath)
+    {
+        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = @"
+            CREATE TABLE IF NOT EXISTS FilesToDelete (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                FilePath TEXT NOT NULL UNIQUE,
+                MarkedAt TEXT NOT NULL
+            );
+
+            INSERT OR IGNORE INTO FilesToDelete (FilePath, MarkedAt)
+            VALUES ($filePath, $markedAt);
+        ";
+
+        var filePathParam = command.CreateParameter();
+        filePathParam.ParameterName = "$filePath";
+        filePathParam.Value = filePath;
+        command.Parameters.Add(filePathParam);
+
+        var markedAtParam = command.CreateParameter();
+        markedAtParam.ParameterName = "$markedAt";
+        markedAtParam.Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        command.Parameters.Add(markedAtParam);
+
+        command.ExecuteNonQuery();
+    }
+
+    static string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
     }
 
     static void ScanAndWriteDuplicates(string folderPath, Dictionary<string, List<string>> existingHashes, HashSet<string> processedFiles)
