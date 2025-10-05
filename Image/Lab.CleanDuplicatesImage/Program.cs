@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
+using Microsoft.Data.Sqlite;
 
 namespace Lab.CleanDuplicatesImage;
 
@@ -19,8 +19,8 @@ class Program
         ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v", ".mpg", ".mpeg"
     };
 
-    // 批次處理門檻：每累積 100 組重複檔案就寫入一次 CSV
-    private const int BatchThreshold = 100;
+    // SQLite 資料庫檔案名稱
+    private const string DatabaseFileName = "duplicates.db";
 
     static void Main(string[] args)
     {
@@ -47,9 +47,19 @@ class Program
 
         try
         {
-            ScanAndWriteDuplicates(folderPath);
+            // 初始化資料庫
+            InitializeDatabase();
+
+            // 讀取已存在的重複檔案資料
+            var (existingHashes, processedFiles) = LoadExistingHashes();
+            Console.WriteLine($"從資料庫載入 {existingHashes.Count} 筆現有雜湊值");
+            Console.WriteLine($"已處理 {processedFiles.Count} 個檔案");
+            Console.WriteLine();
+
+            ScanAndWriteDuplicates(folderPath, existingHashes, processedFiles);
             Console.WriteLine();
             Console.WriteLine("掃描完成！");
+            Console.WriteLine($"結果已儲存至: {DatabaseFileName}");
         }
         catch (Exception ex)
         {
@@ -57,34 +67,52 @@ class Program
         }
     }
 
-    static void ScanAndWriteDuplicates(string folderPath)
+    static void ScanAndWriteDuplicates(string folderPath, Dictionary<string, List<string>> existingHashes, HashSet<string> processedFiles)
     {
-        var hashGroups = new Dictionary<string, List<string>>();
-        var duplicateGroupsFound = 0;
-        var batchNumber = 1;
+        var hashGroups = existingHashes;
         var totalFilesProcessed = 0;
+        var skippedFilesCount = 0;
+        var duplicateGroupsCount = hashGroups.Count(g => g.Value.Count > 1);
 
         // 取得所有符合條件的檔案
         var files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
             .Where(IsMediaFile)
             .ToList();
 
-        Console.WriteLine($"找到 {files.Count} 檔案");
+        Console.WriteLine($"找到 {files.Count} 個檔案");
         Console.WriteLine();
 
         foreach (var file in files)
         {
             try
             {
+                // 檢查檔案是否已經處理過
+                if (processedFiles.Contains(file))
+                {
+                    skippedFilesCount++;
+                    totalFilesProcessed++;
+
+                    // 顯示進度
+                    if (totalFilesProcessed % 100 == 0)
+                    {
+                        Console.WriteLine($"已處理 {totalFilesProcessed}/{files.Count} 個檔案 (略過 {skippedFilesCount} 個)...");
+                    }
+
+                    continue;
+                }
+
                 totalFilesProcessed++;
 
                 // 顯示進度
                 if (totalFilesProcessed % 100 == 0)
                 {
-                    Console.WriteLine($"已處理 {totalFilesProcessed}/{files.Count} 個檔案...");
+                    Console.WriteLine($"已處理 {totalFilesProcessed}/{files.Count} 個檔案 (略過 {skippedFilesCount} 個)...");
                 }
 
                 var hash = CalculateSHA256(file);
+
+                // 將新處理的檔案加入已處理列表
+                processedFiles.Add(file);
 
                 if (!hashGroups.ContainsKey(hash))
                 {
@@ -93,24 +121,25 @@ class Program
 
                 hashGroups[hash].Add(file);
 
-                // 如果這個雜湊值的檔案從 1 個變成 2 個，表示找到新的重複組
+                // 如果這個雜湊值的檔案從 1 個變成 2 個，表示找到新的重複組，立即寫入資料庫
                 if (hashGroups[hash].Count == 2)
                 {
-                    duplicateGroupsFound++;
+                    duplicateGroupsCount++;
+                    var duplicateGroup = new Dictionary<string, List<string>>
+                    {
+                        { hash, hashGroups[hash] }
+                    };
+                    WriteToDatabase(duplicateGroup);
+                    Console.WriteLine($"找到第 {duplicateGroupsCount} 組重複檔案，已寫入資料庫 (Hash: {hash.Substring(0, 16)}...)");
                 }
-
-                // 達到批次門檻，寫入 CSV
-                if (duplicateGroupsFound >= BatchThreshold)
+                // 如果已經是重複檔案（Count > 2），更新資料庫
+                else if (hashGroups[hash].Count > 2)
                 {
-                    var duplicates = hashGroups.Where(g => g.Value.Count > 1)
-                        .ToDictionary(g => g.Key, g => g.Value);
-
-                    WriteToJson(duplicates, batchNumber);
-                    Console.WriteLine($"已將 {duplicates.Count} 組重複檔案寫入 JSON (批次 {batchNumber})");
-
-                    batchNumber++;
-                    duplicateGroupsFound = 0;
-                    hashGroups.Clear();
+                    var duplicateGroup = new Dictionary<string, List<string>>
+                    {
+                        { hash, hashGroups[hash] }
+                    };
+                    WriteToDatabase(duplicateGroup);
                 }
             }
             catch (Exception ex)
@@ -119,22 +148,11 @@ class Program
             }
         }
 
-        // 處理剩餘的重複檔案
-        var remainingDuplicates = hashGroups.Where(g => g.Value.Count > 1)
-            .ToDictionary(g => g.Key, g => g.Value);
-
-        if (remainingDuplicates.Count > 0)
-        {
-            WriteToJson(remainingDuplicates, batchNumber);
-            Console.WriteLine($"已將 {remainingDuplicates.Count} 組重複檔案寫入 JSON (批次 {batchNumber})");
-        }
-        else if (batchNumber == 1)
-        {
-            Console.WriteLine("沒有找到重複的檔案");
-        }
-
         Console.WriteLine();
-        Console.WriteLine($"總共處理了 {totalFilesProcessed} 個檔案");
+        Console.WriteLine($"總共掃描了 {totalFilesProcessed} 個檔案");
+        Console.WriteLine($"略過已處理的 {skippedFilesCount} 個檔案");
+        Console.WriteLine($"新處理了 {totalFilesProcessed - skippedFilesCount} 個檔案");
+        Console.WriteLine($"找到 {duplicateGroupsCount} 組重複檔案");
     }
 
     /// <summary>
@@ -158,27 +176,125 @@ class Program
     }
 
     /// <summary>
-    /// 將重複檔案資訊寫入 JSON
+    /// 載入資料庫中已存在的雜湊值和檔案路徑
     /// </summary>
-    static void WriteToJson(Dictionary<string, List<string>> duplicates, int batchNumber)
+    static (Dictionary<string, List<string>> hashGroups, HashSet<string> processedFiles) LoadExistingHashes()
     {
-        var timestamp = DateTime.Now.ToString("yyyyMMdd");
-        var fileName = $"duplicates_{timestamp}_{batchNumber}.json";
+        var hashGroups = new Dictionary<string, List<string>>();
+        var processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var jsonData = duplicates.Select(kvp => new
+        if (!File.Exists(DatabaseFileName))
         {
-            Hash = kvp.Key,
-            Files = kvp.Value,
-            Count = kvp.Value.Count
-        }).ToList();
+            return (hashGroups, processedFiles);
+        }
 
-        var options = new JsonSerializerOptions
+        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT Hash, FilePath FROM DuplicateFiles";
+
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
         {
-            WriteIndented = true,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        };
+            var hash = reader.GetString(0);
+            var filePath = reader.GetString(1);
 
-        var json = JsonSerializer.Serialize(jsonData, options);
-        File.WriteAllText(fileName, json, new UTF8Encoding(true));
+            // 記錄所有已處理的檔案路徑
+            processedFiles.Add(filePath);
+
+            if (!hashGroups.ContainsKey(hash))
+            {
+                hashGroups[hash] = new List<string>();
+            }
+
+            // 只加入實際存在的檔案
+            if (File.Exists(filePath))
+            {
+                hashGroups[hash].Add(filePath);
+            }
+        }
+
+        return (hashGroups, processedFiles);
+    }
+
+    /// <summary>
+    /// 初始化 SQLite 資料庫
+    /// </summary>
+    static void InitializeDatabase()
+    {
+        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = @"
+            CREATE TABLE IF NOT EXISTS DuplicateFiles (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Hash TEXT NOT NULL,
+                FilePath TEXT NOT NULL,
+                FileCount INTEGER NOT NULL,
+                CreatedAt TEXT NOT NULL,
+                UNIQUE(Hash, FilePath)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_hash ON DuplicateFiles(Hash);
+        ";
+        command.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// 將重複檔案資訊寫入 SQLite 資料庫
+    /// </summary>
+    static void WriteToDatabase(Dictionary<string, List<string>> duplicates)
+    {
+        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+        connection.Open();
+
+        using var transaction = connection.BeginTransaction();
+
+        var command = connection.CreateCommand();
+        command.CommandText = @"
+            INSERT INTO DuplicateFiles (Hash, FilePath, FileCount, CreatedAt)
+            VALUES ($hash, $filePath, $fileCount, $createdAt)
+            ON CONFLICT(Hash, FilePath) DO UPDATE SET
+                FileCount = excluded.FileCount,
+                CreatedAt = excluded.CreatedAt
+        ";
+
+        var hashParam = command.CreateParameter();
+        hashParam.ParameterName = "$hash";
+        command.Parameters.Add(hashParam);
+
+        var filePathParam = command.CreateParameter();
+        filePathParam.ParameterName = "$filePath";
+        command.Parameters.Add(filePathParam);
+
+        var fileCountParam = command.CreateParameter();
+        fileCountParam.ParameterName = "$fileCount";
+        command.Parameters.Add(fileCountParam);
+
+        var createdAtParam = command.CreateParameter();
+        createdAtParam.ParameterName = "$createdAt";
+        command.Parameters.Add(createdAtParam);
+
+        var createdAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+        foreach (var group in duplicates)
+        {
+            var hash = group.Key;
+            var files = group.Value;
+
+            foreach (var filePath in files)
+            {
+                hashParam.Value = hash;
+                filePathParam.Value = filePath;
+                fileCountParam.Value = files.Count;
+                createdAtParam.Value = createdAt;
+
+                command.ExecuteNonQuery();
+            }
+        }
+
+        transaction.Commit();
     }
 }
