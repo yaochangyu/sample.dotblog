@@ -4,6 +4,67 @@ using Microsoft.Data.Sqlite;
 
 namespace Lab.CleanDuplicatesImage;
 
+/// <summary>
+/// 檔案記錄資料模型
+/// </summary>
+/// <param name="Path">檔案路徑</param>
+/// <param name="Timestamp">時間戳記（標記時間或略過時間）</param>
+/// <param name="Exists">檔案是否存在</param>
+/// <param name="Size">檔案大小</param>
+/// <param name="CreatedTime">建立時間</param>
+/// <param name="ModifiedTime">修改時間</param>
+record FileRecord(
+    string Path,
+    string Timestamp,
+    bool Exists,
+    long Size,
+    DateTime? CreatedTime,
+    DateTime? ModifiedTime)
+{
+    /// <summary>
+    /// 從檔案路徑和時間戳記建立 FileRecord
+    /// </summary>
+    public static FileRecord Create(string path, string timestamp)
+    {
+        if (File.Exists(path))
+        {
+            var fileInfo = new FileInfo(path);
+            return new FileRecord(
+                path,
+                timestamp,
+                true,
+                fileInfo.Length,
+                fileInfo.CreationTime,
+                fileInfo.LastWriteTime);
+        }
+
+        return new FileRecord(path, timestamp, false, 0, null, null);
+    }
+}
+
+/// <summary>
+/// 檔案群組資料模型
+/// </summary>
+/// <param name="Hash">檔案雜湊值</param>
+/// <param name="Files">檔案清單</param>
+record FileGroup(string Hash, List<FileRecord> Files)
+{
+    /// <summary>
+    /// 取得群組的時間戳記（使用第一個檔案的時間戳記）
+    /// </summary>
+    public string Timestamp => Files.FirstOrDefault()?.Timestamp ?? string.Empty;
+
+    /// <summary>
+    /// 取得存在的檔案數量
+    /// </summary>
+    public int ExistingFileCount => Files.Count(f => f.Exists);
+
+    /// <summary>
+    /// 取得遺失的檔案數量
+    /// </summary>
+    public int MissingFileCount => Files.Count(f => !f.Exists);
+}
+
 class Program
 {
     // 支援的圖片副檔名
@@ -1003,37 +1064,7 @@ class Program
 
     static Dictionary<string, List<(string path, string markedAt)>> LoadMarkedForDeletionFilesGroupedByHash()
     {
-        var markedGroups = new Dictionary<string, List<(string, string)>>();
-
-        try
-        {
-            using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-            connection.Open();
-
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT Hash, FilePath, MarkedAt FROM FilesToDelete WHERE Hash IS NOT NULL ORDER BY Hash, MarkedAt";
-
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                var hash = reader.GetString(0);
-                var filePath = reader.GetString(1);
-                var markedAt = reader.GetString(2);
-
-                if (!markedGroups.ContainsKey(hash))
-                {
-                    markedGroups[hash] = new List<(string, string)>();
-                }
-
-                markedGroups[hash].Add((filePath, markedAt));
-            }
-        }
-        catch
-        {
-            // 資料表可能不存在或沒有 Hash 欄位，忽略錯誤
-        }
-
-        return markedGroups;
+        return LoadFilesGroupedByHash("FilesToDelete", "MarkedAt");
     }
 
     static void UnmarkFiles(List<string> filePaths)
@@ -1192,37 +1223,7 @@ class Program
 
     static Dictionary<string, List<(string path, string skippedAt)>> LoadSkippedFilesGroupedByHash()
     {
-        var skippedGroups = new Dictionary<string, List<(string, string)>>();
-
-        try
-        {
-            using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-            connection.Open();
-
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT Hash, FilePath, SkippedAt FROM SkippedHashes ORDER BY Hash, SkippedAt";
-
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                var hash = reader.GetString(0);
-                var filePath = reader.GetString(1);
-                var skippedAt = reader.GetString(2);
-
-                if (!skippedGroups.ContainsKey(hash))
-                {
-                    skippedGroups[hash] = new List<(string, string)>();
-                }
-
-                skippedGroups[hash].Add((filePath, skippedAt));
-            }
-        }
-        catch
-        {
-            // 資料表可能不存在，忽略錯誤
-        }
-
-        return skippedGroups;
+        return LoadFilesGroupedByHash("SkippedHashes", "SkippedAt");
     }
 
     static void UnskipHashes(List<string> hashes)
@@ -1480,6 +1481,49 @@ class Program
         Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonFileName)}");
         Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(htmlFileName)}");
         Console.WriteLine($"總共 {groups.Count} 組，{totalFiles} 個檔案（存在：{totalExistingFiles}，遺失：{totalMissingFiles}）");
+    }
+
+    /// <summary>
+    /// 統一的資料載入方法（從資料庫載入檔案群組）
+    /// </summary>
+    /// <param name="tableName">資料表名稱</param>
+    /// <param name="timestampColumn">時間戳記欄位名稱</param>
+    /// <returns>按 Hash 分組的檔案清單</returns>
+    static Dictionary<string, List<(string path, string timestamp)>> LoadFilesGroupedByHash(
+        string tableName,
+        string timestampColumn)
+    {
+        var groups = new Dictionary<string, List<(string, string)>>();
+
+        try
+        {
+            using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = $"SELECT Hash, FilePath, {timestampColumn} FROM {tableName} WHERE Hash IS NOT NULL ORDER BY Hash, {timestampColumn}";
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                var hash = reader.GetString(0);
+                var filePath = reader.GetString(1);
+                var timestamp = reader.GetString(2);
+
+                if (!groups.ContainsKey(hash))
+                {
+                    groups[hash] = new List<(string, string)>();
+                }
+
+                groups[hash].Add((filePath, timestamp));
+            }
+        }
+        catch
+        {
+            // 資料表可能不存在或沒有相應欄位，忽略錯誤
+        }
+
+        return groups;
     }
 
     static void ScanAndWriteDuplicates(string folderPath, Dictionary<string, List<string>> existingHashes,
