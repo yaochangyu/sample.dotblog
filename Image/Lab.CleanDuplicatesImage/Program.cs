@@ -200,6 +200,20 @@ class Program
                 var validFiles = g.Value.Where(File.Exists).ToList();
                 var unmarkedFiles = validFiles.Where(f => !markedFiles.Contains(f)).ToList();
 
+                // 檢查此 hash 是否已經完全處理過
+                // 如果該 hash 在 FilesToDelete 中已有標記，且只剩一個檔案未標記，表示已處理完成
+                if (markedFilesByHash.ContainsKey(hash))
+                {
+                    var markedCount = markedFilesByHash[hash].Count;
+                    var totalCount = validFiles.Count;
+
+                    // 如果已標記數量 >= 總數量 - 1，表示已經處理完成（保留了一個檔案）
+                    if (markedCount >= totalCount - 1)
+                    {
+                        return false;
+                    }
+                }
+
                 // 至少要有一個未標記的檔案
                 return unmarkedFiles.Count > 0;
             })
