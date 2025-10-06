@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab.CleanDuplicatesImage", "Lab.CleanDuplicatesImage.csproj", "{63C8C8F1-C2D6-4840-AE0A-32B240CBD82A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{63C8C8F1-C2D6-4840-AE0A-32B240CBD82A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{63C8C8F1-C2D6-4840-AE0A-32B240CBD82A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{63C8C8F1-C2D6-4840-AE0A-32B240CBD82A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{63C8C8F1-C2D6-4840-AE0A-32B240CBD82A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
