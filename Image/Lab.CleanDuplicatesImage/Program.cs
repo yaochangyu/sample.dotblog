@@ -65,6 +65,74 @@ record FileGroup(string Hash, List<FileRecord> Files)
     public int MissingFileCount => Files.Count(f => !f.Exists);
 }
 
+/// <summary>
+/// 資料庫輔助類別，提供統一的資料庫連線和基本操作
+/// </summary>
+static class DatabaseHelper
+{
+    private const string DatabaseFileName = "duplicates.db";
+
+    /// <summary>
+    /// 建立資料庫連線
+    /// </summary>
+    public static SqliteConnection CreateConnection()
+    {
+        return new SqliteConnection($"Data Source={DatabaseFileName}");
+    }
+
+    /// <summary>
+    /// 執行非查詢命令（INSERT、UPDATE、DELETE）
+    /// </summary>
+    public static int ExecuteNonQuery(string commandText, Action<SqliteCommand>? configureParameters = null)
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = commandText;
+        configureParameters?.Invoke(command);
+
+        return command.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// 執行查詢並處理結果
+    /// </summary>
+    public static T ExecuteQuery<T>(string commandText, Func<SqliteDataReader, T> processReader, Action<SqliteCommand>? configureParameters = null)
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = commandText;
+        configureParameters?.Invoke(command);
+
+        using var reader = command.ExecuteReader();
+        return processReader(reader);
+    }
+
+    /// <summary>
+    /// 執行帶交易的批次操作
+    /// </summary>
+    public static void ExecuteTransaction(Action<SqliteConnection, SqliteTransaction> action)
+    {
+        using var connection = CreateConnection();
+        connection.Open();
+
+        using var transaction = connection.BeginTransaction();
+        try
+        {
+            action(connection, transaction);
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+}
+
 class Program
 {
     // 支援的圖片副檔名
@@ -1070,12 +1138,7 @@ class Program
 
     static void ClearAllMarks()
     {
-        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-        connection.Open();
-
-        var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM FilesToDelete";
-        command.ExecuteNonQuery();
+        DatabaseHelper.ExecuteNonQuery("DELETE FROM FilesToDelete");
     }
 
     static HashSet<string> LoadMarkedFiles()
@@ -1229,12 +1292,7 @@ class Program
 
     static void ClearAllSkippedMarks()
     {
-        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-        connection.Open();
-
-        var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM SkippedHashes";
-        command.ExecuteNonQuery();
+        DatabaseHelper.ExecuteNonQuery("DELETE FROM SkippedHashes");
     }
 
     static void GenerateSkippedFilesReport()
@@ -1526,37 +1584,35 @@ class Program
         string tableName,
         string timestampColumn)
     {
-        var groups = new Dictionary<string, List<(string, string)>>();
-
         try
         {
-            using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-            connection.Open();
-
-            var command = connection.CreateCommand();
-            command.CommandText = $"SELECT Hash, FilePath, {timestampColumn} FROM {tableName} WHERE Hash IS NOT NULL ORDER BY Hash, {timestampColumn}";
-
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                var hash = reader.GetString(0);
-                var filePath = reader.GetString(1);
-                var timestamp = reader.GetString(2);
-
-                if (!groups.ContainsKey(hash))
+            return DatabaseHelper.ExecuteQuery(
+                $"SELECT Hash, FilePath, {timestampColumn} FROM {tableName} WHERE Hash IS NOT NULL ORDER BY Hash, {timestampColumn}",
+                reader =>
                 {
-                    groups[hash] = new List<(string, string)>();
-                }
+                    var groups = new Dictionary<string, List<(string, string)>>();
+                    while (reader.Read())
+                    {
+                        var hash = reader.GetString(0);
+                        var filePath = reader.GetString(1);
+                        var timestamp = reader.GetString(2);
 
-                groups[hash].Add((filePath, timestamp));
-            }
+                        if (!groups.ContainsKey(hash))
+                        {
+                            groups[hash] = new List<(string, string)>();
+                        }
+
+                        groups[hash].Add((filePath, timestamp));
+                    }
+                    return groups;
+                }
+            );
         }
         catch
         {
             // 資料表可能不存在或沒有相應欄位，忽略錯誤
+            return new Dictionary<string, List<(string, string)>>();
         }
-
-        return groups;
     }
 
     static void ScanAndWriteDuplicates(string folderPath, Dictionary<string, List<string>> existingHashes,
