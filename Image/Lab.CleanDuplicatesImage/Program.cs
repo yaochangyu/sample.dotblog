@@ -1225,28 +1225,7 @@ class Program
             return;
         }
 
-        Console.WriteLine("請選擇報表格式：");
-        Console.WriteLine("1. JSON 格式");
-        Console.WriteLine("2. HTML 格式");
-        Console.Write("請選擇 (1-2): ");
-
-        var choice = Console.ReadLine()?.Trim();
-        Console.WriteLine();
-
-        if (choice == "1")
-        {
-            var jsonPath = GenerateJsonReport(skippedGroups);
-            Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonPath)}");
-            Console.WriteLine($"總共 {skippedGroups.Count} 組，{skippedGroups.Sum(g => g.Value.Count)} 個檔案");
-        }
-        else if (choice == "2")
-        {
-            GenerateHtmlReport(skippedGroups);
-        }
-        else
-        {
-            Console.WriteLine("無效的選擇！");
-        }
+        GenerateHtmlReport(skippedGroups);
     }
 
     static void GenerateMarkedForDeletionReport()
@@ -1261,28 +1240,7 @@ class Program
             return;
         }
 
-        Console.WriteLine("請選擇報表格式：");
-        Console.WriteLine("1. JSON 格式");
-        Console.WriteLine("2. HTML 格式");
-        Console.Write("請選擇 (1-2): ");
-
-        var choice = Console.ReadLine()?.Trim();
-        Console.WriteLine();
-
-        if (choice == "1")
-        {
-            var jsonPath = GenerateMarkedForDeletionJsonReport(markedFilesGrouped);
-            Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonPath)}");
-            Console.WriteLine($"總共 {markedFilesGrouped.Count} 組，{markedFilesGrouped.Sum(g => g.Value.Count)} 個檔案");
-        }
-        else if (choice == "2")
-        {
-            GenerateMarkedForDeletionHtmlReport(markedFilesGrouped);
-        }
-        else
-        {
-            Console.WriteLine("無效的選擇！");
-        }
+        GenerateMarkedForDeletionHtmlReport(markedFilesGrouped);
     }
 
     static string GenerateJsonReport(Dictionary<string, List<(string path, string skippedAt)>> skippedGroups, string fileName = null)
