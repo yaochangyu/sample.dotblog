@@ -399,13 +399,13 @@ class Program
             // 詢問操作
             while (true)
             {
-                Console.WriteLine("操作選項:");
-                Console.WriteLine("  輸入編號標記該檔案為待刪除（可用逗號分隔多個，例如: 1,3,5）");
-                Console.WriteLine("  輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）");
-                Console.WriteLine("  輸入 'k' 保留所有檔案並跳過此組");
-                Console.WriteLine("  輸入 'a' 自動保留最舊的檔案，標記其他為待刪除");
-                Console.WriteLine("  輸入 'q' 結束作業");
-                Console.Write("請選擇: ");
+                DisplayMenu(
+                    "輸入編號標記該檔案為待刪除（可用逗號分隔多個，例如: 1,3,5）",
+                    "輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）",
+                    "輸入 'k' 保留所有檔案並跳過此組",
+                    "輸入 'a' 自動保留最舊的檔案，標記其他為待刪除",
+                    "輸入 'q' 結束作業"
+                );
 
                 var choice = Console.ReadLine()?.Trim().ToLower();
 
@@ -773,28 +773,7 @@ class Program
             Console.WriteLine($"    檔案數量: {files.Count}");
             Console.WriteLine($"    略過時間: {files.First().skippedAt}");
 
-            var existingFiles = files.Where(f => File.Exists(f.path)).ToList();
-            var missingFiles = files.Where(f => !File.Exists(f.path)).ToList();
-
-            if (existingFiles.Count > 0)
-            {
-                Console.WriteLine($"    存在的檔案 ({existingFiles.Count} 個):");
-                foreach (var (path, _) in existingFiles)
-                {
-                    var fileInfo = new FileInfo(path);
-                    Console.WriteLine($"      - {path}");
-                    Console.WriteLine($"        大小: {FormatFileSize(fileInfo.Length)}");
-                }
-            }
-
-            if (missingFiles.Count > 0)
-            {
-                Console.WriteLine($"    已不存在的檔案 ({missingFiles.Count} 個):");
-                foreach (var (path, _) in missingFiles)
-                {
-                    Console.WriteLine($"      - {path}");
-                }
-            }
+            DisplayFileGroup(files, "略過時間");
 
             Console.WriteLine();
             groupIndex++;
@@ -803,12 +782,12 @@ class Program
         // 操作選單
         while (true)
         {
-            Console.WriteLine("操作選項：");
-            Console.WriteLine("  輸入編號取消略過該群組（可用逗號分隔多個，例如: 1,3,5）");
-            Console.WriteLine("  輸入 'p' 或 'p 編號' 預覽群組檔案（例如: p 1,2 或 p 預覽所有）");
-            Console.WriteLine("  輸入 'a' 清除所有略過標記");
-            Console.WriteLine("  輸入 'q' 返回主選單");
-            Console.Write("請選擇: ");
+            DisplayMenu(
+                "輸入編號取消略過該群組（可用逗號分隔多個，例如: 1,3,5）",
+                "輸入 'p' 或 'p 編號' 預覽群組檔案（例如: p 1,2 或 p 預覽所有）",
+                "輸入 'a' 清除所有略過標記",
+                "輸入 'q' 返回主選單"
+            );
 
             var choice = Console.ReadLine()?.Trim().ToLower();
             Console.WriteLine();
@@ -950,12 +929,12 @@ class Program
         // 操作選單
         while (true)
         {
-            Console.WriteLine("操作選項：");
-            Console.WriteLine("  輸入編號取消標記（可用逗號分隔多個，例如: 1,3,5）");
-            Console.WriteLine("  輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）");
-            Console.WriteLine("  輸入 'a' 清除所有標記");
-            Console.WriteLine("  輸入 'q' 返回主選單");
-            Console.Write("請選擇: ");
+            DisplayMenu(
+                "輸入編號取消標記（可用逗號分隔多個，例如: 1,3,5）",
+                "輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）",
+                "輸入 'a' 清除所有標記",
+                "輸入 'q' 返回主選單"
+            );
 
             var choice = Console.ReadLine()?.Trim().ToLower();
             Console.WriteLine();
@@ -1402,6 +1381,60 @@ class Program
             .Where(i => i >= 1 && i <= maxCount)
             .Distinct()
             .ToList() ?? new List<int>();
+    }
+
+    /// <summary>
+    /// 顯示檔案資訊（包含路徑、大小、時間等）
+    /// </summary>
+    static void DisplayFileInfo(string path, bool showDetails = true)
+    {
+        Console.WriteLine($"  - {path}");
+
+        if (showDetails && File.Exists(path))
+        {
+            var fileInfo = new FileInfo(path);
+            Console.WriteLine($"    大小: {FormatFileSize(fileInfo.Length)}");
+        }
+    }
+
+    /// <summary>
+    /// 顯示檔案群組資訊（分為存在和不存在的檔案）
+    /// </summary>
+    static void DisplayFileGroup(List<(string path, string timestamp)> files, string timestampLabel)
+    {
+        var existingFiles = files.Where(f => File.Exists(f.path)).ToList();
+        var missingFiles = files.Where(f => !File.Exists(f.path)).ToList();
+
+        if (existingFiles.Count > 0)
+        {
+            Console.WriteLine($"    存在的檔案 ({existingFiles.Count} 個):");
+            foreach (var (path, _) in existingFiles)
+            {
+                DisplayFileInfo(path, showDetails: true);
+            }
+        }
+
+        if (missingFiles.Count > 0)
+        {
+            Console.WriteLine($"    已不存在的檔案 ({missingFiles.Count} 個):");
+            foreach (var (path, _) in missingFiles)
+            {
+                Console.WriteLine($"      - {path}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 顯示操作選單
+    /// </summary>
+    static void DisplayMenu(params string[] options)
+    {
+        Console.WriteLine("操作選項：");
+        foreach (var option in options)
+        {
+            Console.WriteLine($"  {option}");
+        }
+        Console.Write("請選擇: ");
     }
 
     /// <summary>
