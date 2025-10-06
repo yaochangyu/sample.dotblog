@@ -7,24 +7,24 @@
     <style>
         body { font-family: 'Microsoft JhengHei', Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
         .container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { color: #333; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }
-        .summary { background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        h1 { color: #2d3748; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        .summary { background: linear-gradient(135deg, #f6f8fb 0%, #e9ecef 100%); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dee2e6; }
         .summary-item { display: inline-block; margin-right: 30px; font-weight: bold; }
         .group { border: 1px solid #ddd; margin-bottom: 20px; border-radius: 5px; overflow: hidden; }
-        .group-header { background-color: #2196F3; color: white; padding: 10px 15px; cursor: pointer; }
-        .group-header:hover { background-color: #1976D2; }
-        .group-content { padding: 15px; display: none; }
+        .group-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; cursor: pointer; }
+        .group-header:hover { background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%); }
+        .group-content { padding: 15px; display: none; background-color: #fafafa; }
         .group-content.active { display: block; }
-        .file-item { background-color: #f9f9f9; padding: 10px; margin-bottom: 10px; border-left: 4px solid #4CAF50; }
-        .file-item.missing { border-left-color: #f44336; background-color: #ffebee; }
-        .file-path { font-family: 'Consolas', monospace; color: #333; word-break: break-all; }
-        .file-info { color: #666; font-size: 0.9em; margin-top: 5px; }
-        .hash { font-family: 'Consolas', monospace; color: #666; font-size: 0.9em; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.85em; margin-left: 10px; }
-        .badge-exists { background-color: #4CAF50; color: white; }
-        .badge-missing { background-color: #f44336; color: white; }
-        .toggle-all { background-color: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 15px; }
-        .toggle-all:hover { background-color: #45a049; }
+        .file-item { background-color: white; padding: 12px; margin-bottom: 10px; border-left: 4px solid #667eea; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .file-item.missing { border-left-color: #e53e3e; background-color: #fff5f5; }
+        .file-path { font-family: 'Consolas', monospace; color: #2d3748; word-break: break-all; font-weight: 500; }
+        .file-info { color: #718096; font-size: 0.9em; margin-top: 5px; }
+        .hash { font-family: 'Consolas', monospace; color: #f7fafc; font-size: 0.9em; background-color: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 3px; display: inline-block; margin-top: 5px; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; margin-left: 10px; font-weight: 600; }
+        .badge-exists { background-color: #48bb78; color: white; }
+        .badge-missing { background-color: #f56565; color: white; }
+        .toggle-all { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3); }
+        .toggle-all:hover { background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%); box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4); }
         .hidden { display: none; }
     </style>
 </head>
