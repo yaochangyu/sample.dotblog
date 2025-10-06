@@ -355,40 +355,8 @@ class Program
                 }
 
                 // 處理預覽指令
-                if (choice?.StartsWith("p") == true)
+                if (HandlePreviewCommand(choice, validFiles))
                 {
-                    var previewPart = choice.Substring(1).Trim();
-
-                    if (string.IsNullOrEmpty(previewPart))
-                    {
-                        // 預覽所有檔案
-                        Console.WriteLine("正在開啟所有檔案進行預覽...");
-                        PreviewFiles(validFiles);
-                        Console.WriteLine();
-                        continue;
-                    }
-
-                    // 解析要預覽的檔案編號
-                    var previewIndices = previewPart.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                        .Select(s => s.Trim())
-                        .Where(s => int.TryParse(s, out _))
-                        .Select(int.Parse)
-                        .Where(i => i >= 1 && i <= validFiles.Count)
-                        .Distinct()
-                        .ToList();
-
-                    if (previewIndices.Count > 0)
-                    {
-                        var filesToPreview = previewIndices.Select(i => validFiles[i - 1]).ToList();
-                        Console.WriteLine($"正在開啟 {filesToPreview.Count} 個檔案進行預覽...");
-                        PreviewFiles(filesToPreview);
-                    }
-                    else
-                    {
-                        Console.WriteLine("無效的預覽編號!");
-                    }
-
-                    Console.WriteLine();
                     continue;
                 }
 
@@ -423,10 +391,7 @@ class Program
                     }
 
                     Console.WriteLine();
-                    Console.Write("確認標記？(Y/n): ");
-
-                    var autoConfirm = Console.ReadLine()?.Trim().ToUpper();
-                    if (string.IsNullOrEmpty(autoConfirm) || autoConfirm == "Y" || autoConfirm == "YES")
+                    if (ConfirmAction("確認標記？"))
                     {
                         if (MarkFilesForDeletion(group.Key, autoDeleteFiles))
                         {
@@ -449,13 +414,7 @@ class Program
                 }
 
                 // 解析編號
-                var indices = choice?.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(s => s.Trim())
-                    .Where(s => int.TryParse(s, out _))
-                    .Select(int.Parse)
-                    .Where(i => i >= 1 && i <= validFiles.Count)
-                    .Distinct()
-                    .ToList() ?? new List<int>();
+                var indices = ParseIndices(choice, validFiles.Count);
 
                 if (indices.Count == 0)
                 {
@@ -498,10 +457,7 @@ class Program
                     }
                 }
 
-                Console.Write("確認標記？(Y/n): ");
-
-                var confirm = Console.ReadLine()?.Trim().ToUpper();
-                if (string.IsNullOrEmpty(confirm) || confirm == "Y" || confirm == "YES")
+                if (ConfirmAction("確認標記？"))
                 {
                     // 先取消已標記的檔案
                     if (alreadyMarked.Count > 0)
@@ -649,10 +605,7 @@ class Program
         if (existingFiles.Count == 0)
         {
             Console.WriteLine("所有標記的檔案都已不存在！");
-            Console.Write("是否要清除這些記錄？(Y/n): ");
-            var clearChoice = Console.ReadLine()?.Trim().ToUpper();
-
-            if (string.IsNullOrEmpty(clearChoice) || clearChoice == "Y" || clearChoice == "YES")
+            if (ConfirmAction("是否要清除這些記錄？"))
             {
                 ClearDeletedMarks();
             }
@@ -660,10 +613,7 @@ class Program
             return;
         }
 
-        Console.Write($"確認要刪除這 {existingFiles.Count} 個檔案嗎？(Y/n): ");
-        var confirm = Console.ReadLine()?.Trim().ToUpper();
-
-        if (!string.IsNullOrEmpty(confirm) && confirm != "Y" && confirm != "YES")
+        if (!ConfirmAction($"確認要刪除這 {existingFiles.Count} 個檔案嗎？"))
         {
             Console.WriteLine("已取消刪除操作");
             return;
@@ -704,10 +654,7 @@ class Program
 
         if (missingFiles.Count > 0)
         {
-            Console.Write($"是否要清除 {missingFiles.Count} 個已不存在的檔案記錄？(Y/n): ");
-            var clearChoice = Console.ReadLine()?.Trim().ToUpper();
-
-            if (string.IsNullOrEmpty(clearChoice) || clearChoice == "Y" || clearChoice == "YES")
+            if (ConfirmAction($"是否要清除 {missingFiles.Count} 個已不存在的檔案記錄？"))
             {
                 foreach (var (path, _) in missingFiles)
                 {
@@ -810,75 +757,48 @@ class Program
                 return;
             }
 
-            // 處理預覽指令
+            // 處理預覽指令（群組模式）
             if (choice?.StartsWith("p") == true)
             {
                 var previewPart = choice.Substring(1).Trim();
+                var previewIndices = ParsePreviewIndices(previewPart, groupList.Count);
 
-                if (string.IsNullOrEmpty(previewPart))
+                List<string> filesToPreview;
+                if (previewIndices.Count == 0)
                 {
                     // 預覽所有群組的檔案
-                    var allFiles = groupList
+                    filesToPreview = groupList
                         .SelectMany(g => g.files)
                         .Where(f => File.Exists(f.path))
                         .Select(f => f.path)
                         .ToList();
-
-                    if (allFiles.Count == 0)
-                    {
-                        Console.WriteLine("沒有存在的檔案可以預覽！");
-                        Console.WriteLine();
-                        continue;
-                    }
-
-                    Console.WriteLine($"正在開啟所有群組的 {allFiles.Count} 個檔案進行預覽...");
-                    PreviewFiles(allFiles);
-                    Console.WriteLine();
-                    continue;
                 }
-
-                // 解析要預覽的群組編號
-                var previewIndices = previewPart.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(s => s.Trim())
-                    .Where(s => int.TryParse(s, out _))
-                    .Select(int.Parse)
-                    .Where(i => i >= 1 && i <= groupList.Count)
-                    .Distinct()
-                    .ToList();
-
-                if (previewIndices.Count > 0)
+                else
                 {
-                    var filesToPreview = previewIndices
+                    // 預覽指定群組的檔案
+                    filesToPreview = previewIndices
                         .SelectMany(i => groupList[i - 1].files)
                         .Where(f => File.Exists(f.path))
                         .Select(f => f.path)
                         .ToList();
-
-                    if (filesToPreview.Count == 0)
-                    {
-                        Console.WriteLine("選擇的群組中沒有存在的檔案可以預覽！");
-                        Console.WriteLine();
-                        continue;
-                    }
-
-                    Console.WriteLine($"正在開啟 {previewIndices.Count} 組共 {filesToPreview.Count} 個檔案進行預覽...");
-                    PreviewFiles(filesToPreview);
                 }
-                else
+
+                if (filesToPreview.Count == 0)
                 {
-                    Console.WriteLine("無效的預覽編號!");
+                    Console.WriteLine("沒有存在的檔案可以預覽！");
+                    Console.WriteLine();
+                    continue;
                 }
 
+                Console.WriteLine($"正在開啟 {filesToPreview.Count} 個檔案進行預覽...");
+                PreviewFiles(filesToPreview);
                 Console.WriteLine();
                 continue;
             }
 
             if (choice == "a")
             {
-                Console.Write($"確認要清除所有 {skippedGroups.Count} 組略過標記嗎？(Y/n): ");
-                var clearConfirm = Console.ReadLine()?.Trim().ToUpper();
-
-                if (string.IsNullOrEmpty(clearConfirm) || clearConfirm == "Y" || clearConfirm == "YES")
+                if (ConfirmAction($"確認要清除所有 {skippedGroups.Count} 組略過標記嗎？"))
                 {
                     ClearAllSkippedMarks();
                     Console.WriteLine("已清除所有略過標記！");
@@ -892,13 +812,7 @@ class Program
                 }
             }
 
-            var indices = choice?.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim())
-                .Where(s => int.TryParse(s, out _))
-                .Select(int.Parse)
-                .Where(i => i >= 1 && i <= groupList.Count)
-                .Distinct()
-                .ToList() ?? new List<int>();
+            var indices = ParseIndices(choice, groupList.Count);
 
             if (indices.Count == 0)
             {
@@ -916,10 +830,7 @@ class Program
                 Console.WriteLine($"  [{index}] Hash: {hash} ({files.Count} 個檔案)");
             }
 
-            Console.Write("確認取消略過標記？(Y/n): ");
-
-            var confirm = Console.ReadLine()?.Trim().ToUpper();
-            if (string.IsNullOrEmpty(confirm) || confirm == "Y" || confirm == "YES")
+            if (ConfirmAction("確認取消略過標記？"))
             {
                 UnskipHashes(hashesToUnskip);
                 Console.WriteLine("已取消略過標記！");
@@ -1003,48 +914,16 @@ class Program
                     continue;
                 }
 
-                var previewPart = choice.Substring(1).Trim();
-
-                if (string.IsNullOrEmpty(previewPart))
+                var existingPaths = existingFiles.Select(f => f.path).ToList();
+                if (HandlePreviewCommand(choice, existingPaths))
                 {
-                    // 預覽所有檔案
-                    var allPaths = existingFiles.Select(f => f.path).ToList();
-                    Console.WriteLine("正在開啟所有檔案進行預覽...");
-                    PreviewFiles(allPaths);
-                    Console.WriteLine();
                     continue;
                 }
-
-                // 解析要預覽的檔案編號
-                var previewIndices = previewPart.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(s => s.Trim())
-                    .Where(s => int.TryParse(s, out _))
-                    .Select(int.Parse)
-                    .Where(i => i >= 1 && i <= existingFiles.Count)
-                    .Distinct()
-                    .ToList();
-
-                if (previewIndices.Count > 0)
-                {
-                    var filesToPreview = previewIndices.Select(i => existingFiles[i - 1].path).ToList();
-                    Console.WriteLine($"正在開啟 {filesToPreview.Count} 個檔案進行預覽...");
-                    PreviewFiles(filesToPreview);
-                }
-                else
-                {
-                    Console.WriteLine("無效的預覽編號!");
-                }
-
-                Console.WriteLine();
-                continue;
             }
 
             if (choice == "a")
             {
-                Console.Write($"確認要清除所有 {markedFiles.Count} 個標記嗎？(Y/n): ");
-                var clearConfirm = Console.ReadLine()?.Trim().ToUpper();
-
-                if (string.IsNullOrEmpty(clearConfirm) || clearConfirm == "Y" || clearConfirm == "YES")
+                if (ConfirmAction($"確認要清除所有 {markedFiles.Count} 個標記嗎？"))
                 {
                     ClearAllMarks();
                     Console.WriteLine("已清除所有標記！");
@@ -1065,13 +944,7 @@ class Program
                 continue;
             }
 
-            var indices = choice?.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim())
-                .Where(s => int.TryParse(s, out _))
-                .Select(int.Parse)
-                .Where(i => i >= 1 && i <= existingFiles.Count)
-                .Distinct()
-                .ToList() ?? new List<int>();
+            var indices = ParseIndices(choice, existingFiles.Count);
 
             if (indices.Count == 0)
             {
@@ -1088,10 +961,7 @@ class Program
                 Console.WriteLine($"  - {file}");
             }
 
-            Console.Write("確認取消標記？(Y/n): ");
-
-            var confirm = Console.ReadLine()?.Trim().ToUpper();
-            if (string.IsNullOrEmpty(confirm) || confirm == "Y" || confirm == "YES")
+            if (ConfirmAction("確認取消標記？"))
             {
                 UnmarkFiles(filesToUnmark);
                 Console.WriteLine("已取消標記！");
@@ -1399,7 +1269,7 @@ class Program
             return;
         }
 
-        GenerateHtmlReport(skippedGroups);
+        GenerateReport(skippedGroups, "SkippedFilesReport", "SkippedFilesReport.html", "SkippedAt");
     }
 
     static void GenerateMarkedForDeletionReport()
@@ -1414,204 +1284,9 @@ class Program
             return;
         }
 
-        GenerateMarkedForDeletionHtmlReport(markedFilesGrouped);
+        GenerateReport(markedFilesGrouped, "MarkedForDeletionReport", "MarkedForDeletionReport.html", "MarkedAt");
     }
 
-    static string GenerateJsonReport(Dictionary<string, List<(string path, string skippedAt)>> skippedGroups, string fileName = null)
-    {
-        var reportData = new
-        {
-            GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            TotalGroups = skippedGroups.Count,
-            Groups = skippedGroups.Select(g => new
-            {
-                Hash = g.Key,
-                SkippedAt = g.Value.First().skippedAt,
-                FileCount = g.Value.Count,
-                Files = g.Value.Select(f => new
-                {
-                    Path = f.path,
-                    Exists = File.Exists(f.path),
-                    Size = File.Exists(f.path) ? new FileInfo(f.path).Length : 0,
-                    CreatedTime = File.Exists(f.path)
-                        ? new FileInfo(f.path).CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
-                        : null,
-                    ModifiedTime = File.Exists(f.path)
-                        ? new FileInfo(f.path).LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
-                        : null
-                }).ToList()
-            }).ToList()
-        };
-
-        var json = System.Text.Json.JsonSerializer.Serialize(reportData, new System.Text.Json.JsonSerializerOptions
-        {
-            WriteIndented = true,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        });
-
-        if (string.IsNullOrEmpty(fileName))
-        {
-            fileName = $"SkippedFilesReport_{DateTime.Now:yyyyMMdd_HHmmss}.json";
-        }
-
-        var fullPath = $"Reports/{fileName}";
-        File.WriteAllText(fullPath, json, Encoding.UTF8);
-
-        return fullPath;
-    }
-
-    static string GenerateMarkedForDeletionJsonReport(Dictionary<string, List<(string path, string markedAt)>> markedGroups, string fileName = null)
-    {
-        var reportData = new
-        {
-            GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            TotalGroups = markedGroups.Count,
-            Groups = markedGroups.Select(g => new
-            {
-                Hash = g.Key,
-                MarkedAt = g.Value.First().markedAt,
-                FileCount = g.Value.Count,
-                Files = g.Value.Select(f => new
-                {
-                    Path = f.path,
-                    Exists = File.Exists(f.path),
-                    Size = File.Exists(f.path) ? new FileInfo(f.path).Length : 0,
-                    CreatedTime = File.Exists(f.path)
-                        ? new FileInfo(f.path).CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
-                        : null,
-                    ModifiedTime = File.Exists(f.path)
-                        ? new FileInfo(f.path).LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
-                        : null
-                }).ToList()
-            }).ToList()
-        };
-
-        var json = System.Text.Json.JsonSerializer.Serialize(reportData, new System.Text.Json.JsonSerializerOptions
-        {
-            WriteIndented = true,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        });
-
-        if (string.IsNullOrEmpty(fileName))
-        {
-            fileName = $"MarkedForDeletionReport_{DateTime.Now:yyyyMMdd_HHmmss}.json";
-        }
-
-        var fullPath = $"Reports/{fileName}";
-        File.WriteAllText(fullPath, json, Encoding.UTF8);
-
-        return fullPath;
-    }
-
-    static void GenerateHtmlReport(Dictionary<string, List<(string path, string skippedAt)>> skippedGroups)
-    {
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-
-        // 1. 先產生 JSON 檔案（供獨立使用）
-        var jsonFileName = GenerateJsonReport(skippedGroups, $"SkippedFilesReport_{timestamp}.json");
-
-        // 2. 建立報表資料物件
-        var reportData = new
-        {
-            GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            TotalGroups = skippedGroups.Count,
-            Groups = skippedGroups.Select(g => new
-            {
-                Hash = g.Key,
-                SkippedAt = g.Value.First().skippedAt,
-                FileCount = g.Value.Count,
-                Files = g.Value.Select(f => new
-                {
-                    Path = f.path,
-                    Exists = File.Exists(f.path),
-                    Size = File.Exists(f.path) ? new FileInfo(f.path).Length : 0,
-                    CreatedTime = File.Exists(f.path)
-                        ? new FileInfo(f.path).CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
-                        : null,
-                    ModifiedTime = File.Exists(f.path)
-                        ? new FileInfo(f.path).LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
-                        : null
-                }).ToList()
-            }).ToList()
-        };
-
-        // 3. 序列化為 JSON（不縮排，減少檔案大小）
-        var json = System.Text.Json.JsonSerializer.Serialize(reportData, new System.Text.Json.JsonSerializerOptions
-        {
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        });
-
-        // 4. 讀取 HTML 模板並替換 JSON 資料
-        var template = File.ReadAllText("Templates/SkippedFilesReport.html", Encoding.UTF8);
-        var html = template.Replace("{{REPORT_DATA}}", json);
-
-        // 5. 產生 HTML 檔案
-        var htmlFileName = $"Reports/SkippedFilesReport_{timestamp}.html";
-        File.WriteAllText(htmlFileName, html, Encoding.UTF8);
-
-        var totalFiles = skippedGroups.Sum(g => g.Value.Count);
-        var totalExistingFiles = skippedGroups.Sum(g => g.Value.Count(f => File.Exists(f.path)));
-        var totalMissingFiles = totalFiles - totalExistingFiles;
-
-        Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonFileName)}");
-        Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(htmlFileName)}");
-        Console.WriteLine($"總共 {skippedGroups.Count} 組，{totalFiles} 個檔案（存在：{totalExistingFiles}，遺失：{totalMissingFiles}）");
-    }
-
-    static void GenerateMarkedForDeletionHtmlReport(Dictionary<string, List<(string path, string markedAt)>> markedGroups)
-    {
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-
-        // 1. 先產生 JSON 檔案（供獨立使用）
-        var jsonFileName = GenerateMarkedForDeletionJsonReport(markedGroups, $"MarkedForDeletionReport_{timestamp}.json");
-
-        // 2. 建立報表資料物件
-        var reportData = new
-        {
-            GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            TotalGroups = markedGroups.Count,
-            Groups = markedGroups.Select(g => new
-            {
-                Hash = g.Key,
-                MarkedAt = g.Value.First().markedAt,
-                FileCount = g.Value.Count,
-                Files = g.Value.Select(f => new
-                {
-                    Path = f.path,
-                    Exists = File.Exists(f.path),
-                    Size = File.Exists(f.path) ? new FileInfo(f.path).Length : 0,
-                    CreatedTime = File.Exists(f.path)
-                        ? new FileInfo(f.path).CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
-                        : null,
-                    ModifiedTime = File.Exists(f.path)
-                        ? new FileInfo(f.path).LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
-                        : null
-                }).ToList()
-            }).ToList()
-        };
-
-        // 3. 序列化為 JSON（不縮排，減少檔案大小）
-        var json = System.Text.Json.JsonSerializer.Serialize(reportData, new System.Text.Json.JsonSerializerOptions
-        {
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        });
-
-        // 4. 讀取 HTML 模板並替換 JSON 資料
-        var template = File.ReadAllText("Templates/MarkedForDeletionReport.html", Encoding.UTF8);
-        var html = template.Replace("{{REPORT_DATA}}", json);
-
-        // 5. 產生 HTML 檔案
-        var htmlFileName = $"Reports/MarkedForDeletionReport_{timestamp}.html";
-        File.WriteAllText(htmlFileName, html, Encoding.UTF8);
-
-        var totalFiles = markedGroups.Sum(g => g.Value.Count);
-        var totalExistingFiles = markedGroups.Sum(g => g.Value.Count(f => File.Exists(f.path)));
-        var totalMissingFiles = totalFiles - totalExistingFiles;
-
-        Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonFileName)}");
-        Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(htmlFileName)}");
-        Console.WriteLine($"總共 {markedGroups.Count} 組，{totalFiles} 個檔案（存在：{totalExistingFiles}，已刪除/遺失：{totalMissingFiles}）");
-    }
 
     static string FormatFileSize(long bytes)
     {
@@ -1625,6 +1300,186 @@ class Program
         }
 
         return $"{len:0.##} {sizes[order]}";
+    }
+
+    /// <summary>
+    /// 解析預覽指令，返回要預覽的項目索引
+    /// </summary>
+    /// <param name="previewPart">預覽指令部分（例如 "1,2,3" 或空字串表示全部）</param>
+    /// <param name="maxCount">最大項目數量</param>
+    /// <returns>要預覽的索引列表，空列表表示預覽全部</returns>
+    static List<int> ParsePreviewIndices(string previewPart, int maxCount)
+    {
+        if (string.IsNullOrEmpty(previewPart))
+        {
+            // 空字串表示預覽全部
+            return new List<int>();
+        }
+
+        return previewPart.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .Where(s => int.TryParse(s, out _))
+            .Select(int.Parse)
+            .Where(i => i >= 1 && i <= maxCount)
+            .Distinct()
+            .ToList();
+    }
+
+    /// <summary>
+    /// 處理預覽指令，預覽指定的檔案
+    /// </summary>
+    /// <param name="choice">使用者輸入的完整指令（例如 "p" 或 "p 1,2"）</param>
+    /// <param name="files">所有可預覽的檔案列表</param>
+    /// <returns>true 表示已處理預覽指令，false 表示不是預覽指令</returns>
+    static bool HandlePreviewCommand(string? choice, List<string> files)
+    {
+        if (choice?.StartsWith("p") != true)
+        {
+            return false;
+        }
+
+        var previewPart = choice!.Substring(1).Trim();
+        var previewIndices = ParsePreviewIndices(previewPart, files.Count);
+
+        if (previewIndices.Count == 0)
+        {
+            // 預覽所有檔案
+            var existingFiles = files.Where(File.Exists).ToList();
+            if (existingFiles.Count == 0)
+            {
+                Console.WriteLine("沒有存在的檔案可以預覽！");
+                Console.WriteLine();
+                return true;
+            }
+
+            Console.WriteLine($"正在開啟所有 {existingFiles.Count} 個檔案進行預覽...");
+            PreviewFiles(existingFiles);
+            Console.WriteLine();
+            return true;
+        }
+
+        // 預覽指定的檔案
+        var filesToPreview = previewIndices
+            .Select(i => files[i - 1])
+            .Where(File.Exists)
+            .ToList();
+
+        if (filesToPreview.Count == 0)
+        {
+            Console.WriteLine("選擇的檔案都不存在，無法預覽！");
+            Console.WriteLine();
+            return true;
+        }
+
+        Console.WriteLine($"正在開啟 {filesToPreview.Count} 個檔案進行預覽...");
+        PreviewFiles(filesToPreview);
+        Console.WriteLine();
+        return true;
+    }
+
+    /// <summary>
+    /// 顯示確認對話框
+    /// </summary>
+    /// <param name="message">確認訊息</param>
+    /// <returns>true 表示使用者確認，false 表示取消</returns>
+    static bool ConfirmAction(string message)
+    {
+        Console.Write($"{message} (Y/n): ");
+        var confirm = Console.ReadLine()?.Trim().ToUpper();
+        return string.IsNullOrEmpty(confirm) || confirm == "Y" || confirm == "YES";
+    }
+
+    /// <summary>
+    /// 解析使用者輸入的編號（支援逗號分隔）
+    /// </summary>
+    static List<int> ParseIndices(string? input, int maxCount)
+    {
+        return input?.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .Where(s => int.TryParse(s, out _))
+            .Select(int.Parse)
+            .Where(i => i >= 1 && i <= maxCount)
+            .Distinct()
+            .ToList() ?? new List<int>();
+    }
+
+    /// <summary>
+    /// 建立報表資料物件
+    /// </summary>
+    static object CreateReportData(Dictionary<string, List<(string path, string timestamp)>> groups, string timestampLabel)
+    {
+        return new
+        {
+            GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            TotalGroups = groups.Count,
+            Groups = groups.Select(g => new
+            {
+                Hash = g.Key,
+                Timestamp = g.Value.First().timestamp,
+                FileCount = g.Value.Count,
+                Files = g.Value.Select(f => new
+                {
+                    Path = f.path,
+                    Exists = File.Exists(f.path),
+                    Size = File.Exists(f.path) ? new FileInfo(f.path).Length : 0,
+                    CreatedTime = File.Exists(f.path)
+                        ? new FileInfo(f.path).CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
+                        : null,
+                    ModifiedTime = File.Exists(f.path)
+                        ? new FileInfo(f.path).LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+                        : null
+                }).ToList()
+            }).ToList()
+        };
+    }
+
+    /// <summary>
+    /// 序列化報表資料為 JSON
+    /// </summary>
+    static string SerializeReportData(object reportData, bool indent = true)
+    {
+        return System.Text.Json.JsonSerializer.Serialize(reportData, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = indent,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        });
+    }
+
+    /// <summary>
+    /// 統一的報表生成方法
+    /// </summary>
+    static void GenerateReport(
+        Dictionary<string, List<(string path, string timestamp)>> groups,
+        string reportPrefix,
+        string templateFileName,
+        string timestampLabel)
+    {
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+        // 1. 建立報表資料
+        var reportData = CreateReportData(groups, timestampLabel);
+
+        // 2. 產生 JSON 檔案
+        var jsonFileName = $"Reports/{reportPrefix}_{timestamp}.json";
+        var json = SerializeReportData(reportData, indent: true);
+        File.WriteAllText(jsonFileName, json, Encoding.UTF8);
+
+        // 3. 產生 HTML 檔案
+        var jsonCompact = SerializeReportData(reportData, indent: false);
+        var template = File.ReadAllText($"Templates/{templateFileName}", Encoding.UTF8);
+        var html = template.Replace("{{REPORT_DATA}}", jsonCompact);
+
+        var htmlFileName = $"Reports/{reportPrefix}_{timestamp}.html";
+        File.WriteAllText(htmlFileName, html, Encoding.UTF8);
+
+        // 4. 顯示統計資訊
+        var totalFiles = groups.Sum(g => g.Value.Count);
+        var totalExistingFiles = groups.Sum(g => g.Value.Count(f => File.Exists(f.path)));
+        var totalMissingFiles = totalFiles - totalExistingFiles;
+
+        Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonFileName)}");
+        Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(htmlFileName)}");
+        Console.WriteLine($"總共 {groups.Count} 組，{totalFiles} 個檔案（存在：{totalExistingFiles}，遺失：{totalMissingFiles}）");
     }
 
     static void ScanAndWriteDuplicates(string folderPath, Dictionary<string, List<string>> existingHashes,
