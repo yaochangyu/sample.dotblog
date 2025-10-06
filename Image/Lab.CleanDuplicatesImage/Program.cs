@@ -316,6 +316,7 @@ class Program
             {
                 Console.WriteLine("操作選項:");
                 Console.WriteLine("  輸入編號標記該檔案為待刪除（可用逗號分隔多個，例如: 1,3,5）");
+                Console.WriteLine("  輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）");
                 Console.WriteLine("  輸入 'k' 保留所有檔案並跳過此組");
                 Console.WriteLine("  輸入 'a' 自動保留最舊的檔案，標記其他為待刪除");
                 Console.WriteLine("  輸入 'q' 結束作業");
@@ -327,6 +328,44 @@ class Program
                 {
                     Console.WriteLine("已結束標記作業");
                     return;
+                }
+
+                // 處理預覽指令
+                if (choice?.StartsWith("p") == true)
+                {
+                    var previewPart = choice.Substring(1).Trim();
+
+                    if (string.IsNullOrEmpty(previewPart))
+                    {
+                        // 預覽所有檔案
+                        Console.WriteLine("正在開啟所有檔案進行預覽...");
+                        PreviewFiles(validFiles);
+                        Console.WriteLine();
+                        continue;
+                    }
+
+                    // 解析要預覽的檔案編號
+                    var previewIndices = previewPart.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(s => s.Trim())
+                        .Where(s => int.TryParse(s, out _))
+                        .Select(int.Parse)
+                        .Where(i => i >= 1 && i <= validFiles.Count)
+                        .Distinct()
+                        .ToList();
+
+                    if (previewIndices.Count > 0)
+                    {
+                        var filesToPreview = previewIndices.Select(i => validFiles[i - 1]).ToList();
+                        Console.WriteLine($"正在開啟 {filesToPreview.Count} 個檔案進行預覽...");
+                        PreviewFiles(filesToPreview);
+                    }
+                    else
+                    {
+                        Console.WriteLine("無效的預覽編號!");
+                    }
+
+                    Console.WriteLine();
+                    continue;
                 }
 
                 if (choice == "k")
@@ -734,6 +773,7 @@ class Program
         {
             Console.WriteLine("操作選項：");
             Console.WriteLine("  輸入編號取消略過該群組（可用逗號分隔多個，例如: 1,3,5）");
+            Console.WriteLine("  輸入 'p' 或 'p 編號' 預覽群組檔案（例如: p 1,2 或 p 預覽所有）");
             Console.WriteLine("  輸入 'a' 清除所有略過標記");
             Console.WriteLine("  輸入 'q' 返回主選單");
             Console.Write("請選擇: ");
@@ -744,6 +784,69 @@ class Program
             if (choice == "q")
             {
                 return;
+            }
+
+            // 處理預覽指令
+            if (choice?.StartsWith("p") == true)
+            {
+                var previewPart = choice.Substring(1).Trim();
+
+                if (string.IsNullOrEmpty(previewPart))
+                {
+                    // 預覽所有群組的檔案
+                    var allFiles = groupList
+                        .SelectMany(g => g.files)
+                        .Where(f => File.Exists(f.path))
+                        .Select(f => f.path)
+                        .ToList();
+
+                    if (allFiles.Count == 0)
+                    {
+                        Console.WriteLine("沒有存在的檔案可以預覽！");
+                        Console.WriteLine();
+                        continue;
+                    }
+
+                    Console.WriteLine($"正在開啟所有群組的 {allFiles.Count} 個檔案進行預覽...");
+                    PreviewFiles(allFiles);
+                    Console.WriteLine();
+                    continue;
+                }
+
+                // 解析要預覽的群組編號
+                var previewIndices = previewPart.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => int.TryParse(s, out _))
+                    .Select(int.Parse)
+                    .Where(i => i >= 1 && i <= groupList.Count)
+                    .Distinct()
+                    .ToList();
+
+                if (previewIndices.Count > 0)
+                {
+                    var filesToPreview = previewIndices
+                        .SelectMany(i => groupList[i - 1].files)
+                        .Where(f => File.Exists(f.path))
+                        .Select(f => f.path)
+                        .ToList();
+
+                    if (filesToPreview.Count == 0)
+                    {
+                        Console.WriteLine("選擇的群組中沒有存在的檔案可以預覽！");
+                        Console.WriteLine();
+                        continue;
+                    }
+
+                    Console.WriteLine($"正在開啟 {previewIndices.Count} 組共 {filesToPreview.Count} 個檔案進行預覽...");
+                    PreviewFiles(filesToPreview);
+                }
+                else
+                {
+                    Console.WriteLine("無效的預覽編號!");
+                }
+
+                Console.WriteLine();
+                continue;
             }
 
             if (choice == "a")
@@ -853,6 +956,7 @@ class Program
         {
             Console.WriteLine("操作選項：");
             Console.WriteLine("  輸入編號取消標記（可用逗號分隔多個，例如: 1,3,5）");
+            Console.WriteLine("  輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）");
             Console.WriteLine("  輸入 'a' 清除所有標記");
             Console.WriteLine("  輸入 'q' 返回主選單");
             Console.Write("請選擇: ");
@@ -863,6 +967,52 @@ class Program
             if (choice == "q")
             {
                 return;
+            }
+
+            // 處理預覽指令
+            if (choice?.StartsWith("p") == true)
+            {
+                if (existingFiles.Count == 0)
+                {
+                    Console.WriteLine("沒有存在的檔案可以預覽！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                var previewPart = choice.Substring(1).Trim();
+
+                if (string.IsNullOrEmpty(previewPart))
+                {
+                    // 預覽所有檔案
+                    var allPaths = existingFiles.Select(f => f.path).ToList();
+                    Console.WriteLine("正在開啟所有檔案進行預覽...");
+                    PreviewFiles(allPaths);
+                    Console.WriteLine();
+                    continue;
+                }
+
+                // 解析要預覽的檔案編號
+                var previewIndices = previewPart.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(s => s.Trim())
+                    .Where(s => int.TryParse(s, out _))
+                    .Select(int.Parse)
+                    .Where(i => i >= 1 && i <= existingFiles.Count)
+                    .Distinct()
+                    .ToList();
+
+                if (previewIndices.Count > 0)
+                {
+                    var filesToPreview = previewIndices.Select(i => existingFiles[i - 1].path).ToList();
+                    Console.WriteLine($"正在開啟 {filesToPreview.Count} 個檔案進行預覽...");
+                    PreviewFiles(filesToPreview);
+                }
+                else
+                {
+                    Console.WriteLine("無效的預覽編號!");
+                }
+
+                Console.WriteLine();
+                continue;
             }
 
             if (choice == "a")
@@ -1662,8 +1812,43 @@ class Program
     }
 
     /// <summary>
-    /// 初始化 SQLite 資料庫
+    /// 使用系統預設程式預覽檔案
     /// </summary>
+    static void PreviewFiles(List<string> filePaths)
+    {
+        foreach (var filePath in filePaths)
+        {
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    Console.WriteLine($"檔案不存在，無法預覽: {filePath}");
+                    continue;
+                }
+
+                Console.WriteLine($"正在開啟: {Path.GetFileName(filePath)}");
+
+                // 使用 ProcessStartInfo 來開啟檔案
+                var processInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = filePath,
+                    UseShellExecute = true // 使用系統預設程式開啟
+                };
+
+                System.Diagnostics.Process.Start(processInfo);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"開啟檔案失敗 [{filePath}]: {ex.Message}");
+            }
+        }
+
+        if (filePaths.Count > 1)
+        {
+            Console.WriteLine($"已開啟 {filePaths.Count} 個檔案，請在檢視完畢後返回繼續操作");
+        }
+    }
+
     static void InitializeDatabase()
     {
         using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
