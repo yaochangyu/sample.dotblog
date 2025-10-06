@@ -135,44 +135,68 @@ class Program
 
     static void RunScanMode()
     {
-        // 接收使用者輸入多個資料夾路徑
+        // 接收使用者輸入多個資料夾路徑（支援逗點分隔）
         var folderPaths = new List<string>();
 
-        while (true)
+        while (folderPaths.Count == 0)
         {
-            Console.Write($"請輸入要掃描的資料夾路徑 ({folderPaths.Count + 1}): ");
+            Console.Write("請輸入要掃描的資料夾路徑（可用逗點分隔多個路徑，或輸入 'q' 離開）: ");
             var input = Console.ReadLine()?.Trim();
 
             if (string.IsNullOrEmpty(input))
             {
-                if (folderPaths.Count == 0)
-                {
-                    Console.WriteLine("錯誤：至少需要輸入一個路徑！");
-                    continue;
-                }
-
-                break;
-            }
-
-            if (!Directory.Exists(input))
-            {
-                Console.WriteLine($"錯誤：路徑不存在或無效，請重新輸入！");
+                Console.WriteLine("錯誤：至少需要輸入一個路徑！");
                 continue;
             }
 
-            folderPaths.Add(input);
-            Console.WriteLine($"已加入路徑: {input}");
-            Console.WriteLine();
-
-            Console.Write("是否要繼續加入路徑？(y/N): ");
-            var continueInput = Console.ReadLine()?.Trim().ToUpper();
-
-            if (string.IsNullOrEmpty(continueInput) || (continueInput != "Y" && continueInput != "YES"))
+            if (input.Equals("q", StringComparison.OrdinalIgnoreCase))
             {
-                break;
+                Console.WriteLine("已取消掃描");
+                Console.WriteLine();
+                return;
             }
 
-            Console.WriteLine();
+            // 用逗點分隔路徑
+            var paths = input.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim())
+                .ToList();
+
+            var invalidPaths = new List<string>();
+            var validPaths = new List<string>();
+
+            foreach (var path in paths)
+            {
+                if (Directory.Exists(path))
+                {
+                    validPaths.Add(path);
+                }
+                else
+                {
+                    invalidPaths.Add(path);
+                }
+            }
+
+            if (invalidPaths.Count > 0)
+            {
+                Console.WriteLine("以下路徑不存在或無效：");
+                foreach (var path in invalidPaths)
+                {
+                    Console.WriteLine($"  - {path}");
+                }
+                Console.WriteLine();
+            }
+
+            if (validPaths.Count > 0)
+            {
+                folderPaths.AddRange(validPaths);
+                Console.WriteLine($"已加入 {validPaths.Count} 個有效路徑");
+            }
+
+            if (folderPaths.Count == 0)
+            {
+                Console.WriteLine("沒有有效的路徑，請重新輸入！");
+                Console.WriteLine();
+            }
         }
 
         Console.WriteLine();
