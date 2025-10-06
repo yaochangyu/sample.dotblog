@@ -295,7 +295,6 @@ class Program
                 Console.WriteLine("  已標記的檔案可以重新標記（會先取消再標記）");
                 Console.WriteLine("  輸入 'k' 保留所有檔案並跳過此組");
                 Console.WriteLine("  輸入 'a' 自動保留最舊的檔案，標記其他為待刪除");
-                Console.WriteLine("  輸入 'u' 取消此組所有已標記的檔案");
                 Console.WriteLine("  輸入 'q' 結束作業");
                 Console.Write("請選擇: ");
 
@@ -314,50 +313,6 @@ class Program
                     Console.WriteLine("已跳過此組並記錄，下次不會再顯示此組");
                     Console.WriteLine();
                     break;
-                }
-
-                if (choice == "u")
-                {
-                    // 取消此組所有已標記的檔案
-                    var markedInGroup = validFiles.Where(f => markedFiles.Contains(f)).ToList();
-
-                    if (markedInGroup.Count == 0)
-                    {
-                        Console.WriteLine("此組沒有已標記的檔案！");
-                        Console.WriteLine();
-                        continue;
-                    }
-
-                    Console.WriteLine($"確認要取消以下 {markedInGroup.Count} 個檔案的標記：");
-                    foreach (var file in markedInGroup)
-                    {
-                        Console.WriteLine($"  - {file}");
-                    }
-
-                    Console.Write("確認取消標記？(Y/N): ");
-
-                    var unmarkConfirm = Console.ReadLine()?.Trim().ToUpper();
-                    if (unmarkConfirm == "Y" || unmarkConfirm == "YES")
-                    {
-                        UnmarkFiles(markedInGroup);
-                        Console.WriteLine("已取消標記！");
-
-                        // 更新本地標記清單
-                        foreach (var file in markedInGroup)
-                        {
-                            markedFiles.Remove(file);
-                        }
-
-                        // 重新顯示此組
-                        Console.WriteLine();
-                        break;
-                    }
-                    else
-                    {
-                        Console.WriteLine("已取消操作");
-                        Console.WriteLine();
-                        continue;
-                    }
                 }
 
                 if (choice == "a")
