@@ -34,6 +34,12 @@ class Program
         // 初始化資料庫
         InitializeDatabase();
 
+        // 建立報表資料夾
+        if (!Directory.Exists("Reports"))
+        {
+            Directory.CreateDirectory("Reports");
+        }
+        
         while (true)
         {
             // 主選單
@@ -43,13 +49,14 @@ class Program
             Console.WriteLine("3. 查看已標記刪除檔案（可取消標記）");
             Console.WriteLine("4. 查看已標記略過檔案（可取消略過）");
             Console.WriteLine("5. 執行刪除（刪除已標記的檔案）");
-            Console.WriteLine("6. 離開");
-            Console.Write("請輸入選項 (1-6): ");
+            Console.WriteLine("6. 查看已標記略過檔案報表");
+            Console.WriteLine("7. 離開");
+            Console.Write("請輸入選項 (1-7): ");
 
             var menuChoice = Console.ReadLine()?.Trim();
             Console.WriteLine();
 
-            if (menuChoice == "6")
+            if (menuChoice == "7")
             {
                 Console.WriteLine("感謝使用，再見！");
                 return;
@@ -103,6 +110,14 @@ class Program
             {
                 // 執行實際刪除
                 ExecuteMarkedDeletions();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "6")
+            {
+                // 查看已標記略過檔案報表
+                GenerateSkippedFilesReport();
                 Console.WriteLine();
                 continue;
             }
@@ -1152,6 +1167,201 @@ class Program
         var command = connection.CreateCommand();
         command.CommandText = "DELETE FROM SkippedHashes";
         command.ExecuteNonQuery();
+    }
+
+    static void GenerateSkippedFilesReport()
+    {
+        InitializeDatabase();
+
+        var skippedGroups = LoadSkippedFilesGroupedByHash();
+
+        if (skippedGroups.Count == 0)
+        {
+            Console.WriteLine("目前沒有已標記略過的檔案群組！");
+            return;
+        }
+
+        Console.WriteLine("請選擇報表格式：");
+        Console.WriteLine("1. JSON 格式");
+        Console.WriteLine("2. HTML 格式");
+        Console.Write("請選擇 (1-2): ");
+
+        var choice = Console.ReadLine()?.Trim();
+        Console.WriteLine();
+
+        if (choice == "1")
+        {
+            GenerateJsonReport(skippedGroups);
+        }
+        else if (choice == "2")
+        {
+            GenerateHtmlReport(skippedGroups);
+        }
+        else
+        {
+            Console.WriteLine("無效的選擇！");
+        }
+    }
+
+    static void GenerateJsonReport(Dictionary<string, List<(string path, string skippedAt)>> skippedGroups)
+    {
+        var reportData = new
+        {
+            GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            TotalGroups = skippedGroups.Count,
+            Groups = skippedGroups.Select(g => new
+            {
+                Hash = g.Key,
+                SkippedAt = g.Value.First().skippedAt,
+                FileCount = g.Value.Count,
+                Files = g.Value.Select(f => new
+                {
+                    Path = f.path,
+                    Exists = File.Exists(f.path),
+                    Size = File.Exists(f.path) ? new FileInfo(f.path).Length : 0,
+                    CreatedTime = File.Exists(f.path)
+                        ? new FileInfo(f.path).CreationTime.ToString("yyyy-MM-dd HH:mm:ss")
+                        : null,
+                    ModifiedTime = File.Exists(f.path)
+                        ? new FileInfo(f.path).LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+                        : null
+                }).ToList()
+            }).ToList()
+        };
+
+        var json = System.Text.Json.JsonSerializer.Serialize(reportData, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        });
+
+        var fileName = $"Reports/SkippedFilesReport_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+        File.WriteAllText(fileName, json, Encoding.UTF8);
+
+        Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(fileName)}");
+        Console.WriteLine($"總共 {skippedGroups.Count} 組，{skippedGroups.Sum(g => g.Value.Count)} 個檔案");
+    }
+
+    static void GenerateHtmlReport(Dictionary<string, List<(string path, string skippedAt)>> skippedGroups)
+    {
+        var totalFiles = skippedGroups.Sum(g => g.Value.Count);
+        var totalExistingFiles = skippedGroups.Sum(g => g.Value.Count(f => File.Exists(f.path)));
+        var totalMissingFiles = totalFiles - totalExistingFiles;
+
+        var html = new StringBuilder();
+        html.AppendLine("<!DOCTYPE html>");
+        html.AppendLine("<html lang='zh-TW'>");
+        html.AppendLine("<head>");
+        html.AppendLine("    <meta charset='UTF-8'>");
+        html.AppendLine("    <meta name='viewport' content='width=device-width, initial-scale=1.0'>");
+        html.AppendLine("    <title>已標記略過檔案報表</title>");
+        html.AppendLine("    <style>");
+        html.AppendLine("        body { font-family: 'Microsoft JhengHei', Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }");
+        html.AppendLine("        .container { max-width: 1200px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }");
+        html.AppendLine("        h1 { color: #333; border-bottom: 3px solid #4CAF50; padding-bottom: 10px; }");
+        html.AppendLine("        .summary { background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }");
+        html.AppendLine("        .summary-item { display: inline-block; margin-right: 30px; font-weight: bold; }");
+        html.AppendLine("        .group { border: 1px solid #ddd; margin-bottom: 20px; border-radius: 5px; overflow: hidden; }");
+        html.AppendLine("        .group-header { background-color: #2196F3; color: white; padding: 10px 15px; cursor: pointer; }");
+        html.AppendLine("        .group-header:hover { background-color: #1976D2; }");
+        html.AppendLine("        .group-content { padding: 15px; display: none; }");
+        html.AppendLine("        .group-content.active { display: block; }");
+        html.AppendLine("        .file-item { background-color: #f9f9f9; padding: 10px; margin-bottom: 10px; border-left: 4px solid #4CAF50; }");
+        html.AppendLine("        .file-item.missing { border-left-color: #f44336; background-color: #ffebee; }");
+        html.AppendLine("        .file-path { font-family: 'Consolas', monospace; color: #333; word-break: break-all; }");
+        html.AppendLine("        .file-info { color: #666; font-size: 0.9em; margin-top: 5px; }");
+        html.AppendLine("        .hash { font-family: 'Consolas', monospace; color: #666; font-size: 0.9em; }");
+        html.AppendLine("        .badge { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 0.85em; margin-left: 10px; }");
+        html.AppendLine("        .badge-exists { background-color: #4CAF50; color: white; }");
+        html.AppendLine("        .badge-missing { background-color: #f44336; color: white; }");
+        html.AppendLine("        .toggle-all { background-color: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 15px; }");
+        html.AppendLine("        .toggle-all:hover { background-color: #45a049; }");
+        html.AppendLine("    </style>");
+        html.AppendLine("    <script>");
+        html.AppendLine("        function toggleGroup(id) {");
+        html.AppendLine("            var content = document.getElementById('content-' + id);");
+        html.AppendLine("            content.classList.toggle('active');");
+        html.AppendLine("        }");
+        html.AppendLine("        function toggleAll() {");
+        html.AppendLine("            var contents = document.querySelectorAll('.group-content');");
+        html.AppendLine("            var anyHidden = Array.from(contents).some(c => !c.classList.contains('active'));");
+        html.AppendLine("            contents.forEach(function(content) {");
+        html.AppendLine("                if (anyHidden) { content.classList.add('active'); }");
+        html.AppendLine("                else { content.classList.remove('active'); }");
+        html.AppendLine("            });");
+        html.AppendLine("        }");
+        html.AppendLine("    </script>");
+        html.AppendLine("</head>");
+        html.AppendLine("<body>");
+        html.AppendLine("    <div class='container'>");
+        html.AppendLine("        <h1>已標記略過檔案報表</h1>");
+        html.AppendLine($"        <div class='summary'>");
+        html.AppendLine($"            <div class='summary-item'>產生時間：{DateTime.Now:yyyy-MM-dd HH:mm:ss}</div>");
+        html.AppendLine($"            <div class='summary-item'>總群組數：{skippedGroups.Count}</div>");
+        html.AppendLine($"            <div class='summary-item'>總檔案數：{totalFiles}</div>");
+        html.AppendLine($"            <div class='summary-item'>存在：{totalExistingFiles}</div>");
+        html.AppendLine($"            <div class='summary-item'>遺失：{totalMissingFiles}</div>");
+        html.AppendLine($"        </div>");
+        html.AppendLine("        <button class='toggle-all' onclick='toggleAll()'>展開/收合全部</button>");
+
+        int groupIndex = 1;
+        foreach (var group in skippedGroups)
+        {
+            var hash = group.Key;
+            var files = group.Value;
+            var existingCount = files.Count(f => File.Exists(f.path));
+            var missingCount = files.Count - existingCount;
+
+            html.AppendLine($"        <div class='group'>");
+            html.AppendLine($"            <div class='group-header' onclick='toggleGroup({groupIndex})'>");
+            html.AppendLine($"                <strong>群組 {groupIndex}</strong>");
+            html.AppendLine($"                <span class='badge badge-exists'>存在：{existingCount}</span>");
+            if (missingCount > 0)
+            {
+                html.AppendLine($"                <span class='badge badge-missing'>遺失：{missingCount}</span>");
+            }
+            html.AppendLine($"                <div class='hash'>Hash: {hash}</div>");
+            html.AppendLine($"                <div style='font-size: 0.9em; margin-top: 5px;'>略過時間：{files.First().skippedAt}</div>");
+            html.AppendLine($"            </div>");
+            html.AppendLine($"            <div id='content-{groupIndex}' class='group-content'>");
+
+            foreach (var (path, _) in files)
+            {
+                var exists = File.Exists(path);
+                var cssClass = exists ? "file-item" : "file-item missing";
+                var statusBadge = exists ? "<span class='badge badge-exists'>存在</span>" : "<span class='badge badge-missing'>遺失</span>";
+
+                html.AppendLine($"                <div class='{cssClass}'>");
+                html.AppendLine($"                    {statusBadge}");
+                html.AppendLine($"                    <div class='file-path'>{System.Net.WebUtility.HtmlEncode(path)}</div>");
+
+                if (exists)
+                {
+                    var fileInfo = new FileInfo(path);
+                    html.AppendLine($"                    <div class='file-info'>");
+                    html.AppendLine($"                        大小：{FormatFileSize(fileInfo.Length)} | ");
+                    html.AppendLine($"                        建立：{fileInfo.CreationTime:yyyy-MM-dd HH:mm:ss} | ");
+                    html.AppendLine($"                        修改：{fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+                    html.AppendLine($"                    </div>");
+                }
+
+                html.AppendLine($"                </div>");
+            }
+
+            html.AppendLine($"            </div>");
+            html.AppendLine($"        </div>");
+            groupIndex++;
+        }
+
+        html.AppendLine("    </div>");
+        html.AppendLine("</body>");
+        html.AppendLine("</html>");
+
+        var fileName = $"Reports/SkippedFilesReport_{DateTime.Now:yyyyMMdd_HHmmss}.html";
+        File.WriteAllText(fileName, html.ToString(), Encoding.UTF8);
+
+        Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(fileName)}");
+        Console.WriteLine($"總共 {skippedGroups.Count} 組，{totalFiles} 個檔案（存在：{totalExistingFiles}，遺失：{totalMissingFiles}）");
     }
 
     static string FormatFileSize(long bytes)
