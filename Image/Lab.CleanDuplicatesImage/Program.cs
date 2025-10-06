@@ -37,7 +37,7 @@ class Program
             Console.WriteLine("請選擇功能：");
             Console.WriteLine("1. 掃描重複檔案");
             Console.WriteLine("2. 查看並標記重複檔案");
-            Console.WriteLine("3. 查看已標記檔案（可取消標記）");
+            Console.WriteLine("3. 查看已標記刪除檔案（可取消標記）");
             Console.WriteLine("4. 執行刪除（刪除已標記的檔案）");
             Console.WriteLine("5. 離開");
             Console.Write("請輸入選項 (1-5): ");
@@ -81,8 +81,8 @@ class Program
 
             if (menuChoice == "3")
             {
-                // 查看已標記檔案
-                ViewMarkedFiles();
+                // 查看已標記刪除檔案
+                ViewMarkedForDeletionFiles();
                 Console.WriteLine();
                 continue;
             }
@@ -191,12 +191,20 @@ class Program
         // 載入已標記的檔案及其 Hash
         var markedFiles = LoadMarkedFiles();
         var markedFilesByHash = LoadMarkedFilesByHash();
+        var skippedHashes = LoadSkippedHashes();
 
         // 過濾出尚未完全標記的群組（至少保留一個檔案未標記）
         var groupsWithUnmarkedFiles = duplicateGroups
             .Where(g =>
             {
                 var hash = g.Key;
+
+                // 檢查是否已經被跳過
+                if (skippedHashes.Contains(hash))
+                {
+                    return false;
+                }
+
                 var validFiles = g.Value.Where(File.Exists).ToList();
                 var unmarkedFiles = validFiles.Where(f => !markedFiles.Contains(f)).ToList();
 
@@ -289,7 +297,9 @@ class Program
 
                 if (choice == "k")
                 {
-                    Console.WriteLine("已跳過此組");
+                    // 記錄跳過的 hash 及所有檔案路徑
+                    MarkHashAsSkipped(group.Key, validFiles);
+                    Console.WriteLine("已跳過此組並記錄，下次不會再顯示此組");
                     Console.WriteLine();
                     break;
                 }
@@ -681,19 +691,19 @@ class Program
         Console.WriteLine($"已清除 {count} 筆記錄");
     }
 
-    static void ViewMarkedFiles()
+    static void ViewMarkedForDeletionFiles()
     {
         InitializeDatabase();
 
-        var markedFiles = LoadMarkedFilesWithDetails();
+        var markedFiles = LoadMarkedForDeletionFilesWithDetails();
 
         if (markedFiles.Count == 0)
         {
-            Console.WriteLine("目前沒有已標記的檔案！");
+            Console.WriteLine("目前沒有已標記刪除的檔案！");
             return;
         }
 
-        Console.WriteLine($"=== 已標記檔案清單 (共 {markedFiles.Count} 個) ===");
+        Console.WriteLine($"=== 已標記刪除檔案清單 (共 {markedFiles.Count} 個) ===");
         Console.WriteLine();
 
         var existingFiles = markedFiles.Where(f => File.Exists(f.path)).ToList();
@@ -806,7 +816,7 @@ class Program
         }
     }
 
-    static List<(string path, string markedAt)> LoadMarkedFilesWithDetails()
+    static List<(string path, string markedAt)> LoadMarkedForDeletionFilesWithDetails()
     {
         var markedFiles = new List<(string, string)>();
 
@@ -922,6 +932,68 @@ class Program
         }
 
         return markedFilesByHash;
+    }
+
+    static HashSet<string> LoadSkippedHashes()
+    {
+        var skippedHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+            connection.Open();
+
+            var command = connection.CreateCommand();
+            command.CommandText = "SELECT Hash FROM SkippedHashes";
+
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                skippedHashes.Add(reader.GetString(0));
+            }
+        }
+        catch
+        {
+            // 資料表可能不存在，忽略錯誤
+        }
+
+        return skippedHashes;
+    }
+
+    static void MarkHashAsSkipped(string hash, List<string> filePaths)
+    {
+        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+        connection.Open();
+
+        using var transaction = connection.BeginTransaction();
+
+        var command = connection.CreateCommand();
+        command.CommandText = @"
+            INSERT OR IGNORE INTO SkippedHashes (Hash, FilePath, SkippedAt)
+            VALUES ($hash, $filePath, $skippedAt);
+        ";
+
+        var hashParam = command.CreateParameter();
+        hashParam.ParameterName = "$hash";
+        command.Parameters.Add(hashParam);
+
+        var filePathParam = command.CreateParameter();
+        filePathParam.ParameterName = "$filePath";
+        command.Parameters.Add(filePathParam);
+
+        var skippedAtParam = command.CreateParameter();
+        skippedAtParam.ParameterName = "$skippedAt";
+        skippedAtParam.Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        command.Parameters.Add(skippedAtParam);
+
+        foreach (var filePath in filePaths)
+        {
+            hashParam.Value = hash;
+            filePathParam.Value = filePath;
+            command.ExecuteNonQuery();
+        }
+
+        transaction.Commit();
     }
 
     static string FormatFileSize(long bytes)
@@ -1169,6 +1241,14 @@ class Program
             );
 
             CREATE INDEX IF NOT EXISTS idx_hash ON DuplicateFiles(Hash);
+
+            CREATE TABLE IF NOT EXISTS SkippedHashes (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Hash TEXT NOT NULL,
+                FilePath TEXT NOT NULL,
+                SkippedAt TEXT NOT NULL,
+                UNIQUE(Hash, FilePath)
+            );
         ";
         command.ExecuteNonQuery();
     }
