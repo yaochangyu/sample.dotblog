@@ -11,4 +11,13 @@
       <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.9" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="Templates\MarkedForDeletionReport.html">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="Templates\SkippedFilesReport.html">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
 </Project>
