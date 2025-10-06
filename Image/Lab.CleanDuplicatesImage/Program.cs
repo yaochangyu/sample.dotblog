@@ -874,11 +874,9 @@ class Program
         Console.WriteLine();
 
         // 處理檔案
-        var existingDuplicateGroups = hashGroups.Count(g => g.Value.Count > 1);
         var stats = new ProcessingStats
         {
-            SkippedCount = skippedCount,
-            DuplicateGroupsCount = existingDuplicateGroups
+            SkippedCount = skippedCount
         };
 
         foreach (var file in unprocessedFiles)
@@ -908,7 +906,6 @@ class Program
     private class ProcessingStats
     {
         public int ProcessedCount { get; set; }
-        public int DuplicateGroupsCount { get; set; }
         public int SkippedCount { get; set; }
         public int LastProgressUpdate { get; set; }
     }
@@ -956,20 +953,11 @@ class Program
             }
             fileList.Add(file);
 
-            // 處理重複檔案
-            if (fileList.Count >= 2)
+            // 標記所有需要寫入的 hash（包含非重複檔案）
+            if (!lastWrittenCount.TryGetValue(hash, out var lastCount) || lastCount != fileList.Count)
             {
-                if (fileList.Count == 2)
-                {
-                    stats.DuplicateGroupsCount++;
-                }
-
-                // 標記需要寫入的 hash
-                if (!lastWrittenCount.TryGetValue(hash, out var lastCount) || lastCount != fileList.Count)
-                {
-                    dirtyHashes.Add(hash);
-                    lastWrittenCount[hash] = fileList.Count;
-                }
+                dirtyHashes.Add(hash);
+                lastWrittenCount[hash] = fileList.Count;
             }
         }
         catch (Exception ex)
@@ -1007,7 +995,6 @@ class Program
         Console.WriteLine($"總共掃描了 {totalFiles} 個檔案");
         Console.WriteLine($"略過已處理的 {stats.SkippedCount} 個檔案");
         Console.WriteLine($"新處理了 {stats.ProcessedCount} 個檔案");
-        Console.WriteLine($"找到 {stats.DuplicateGroupsCount} 組重複檔案");
     }
 
     /// <summary>
