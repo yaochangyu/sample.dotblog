@@ -41,7 +41,7 @@
             return text.replace(/[&<>"']/g, function(m) { return map[m]; });
         }
 
-        function renderReport() {
+        function renderReport(reportData) {
             // 渲染摘要
             var totalFiles = reportData.Groups.reduce(function(sum, g) { return sum + g.FileCount; }, 0);
             var totalExisting = reportData.Groups.reduce(function(sum, g) {
@@ -116,7 +116,9 @@
             });
         }
 
-        window.addEventListener('DOMContentLoaded', renderReport);
+        window.addEventListener('DOMContentLoaded', function() {
+            renderReport(reportData);
+        });
     </script>
 </head>
 <body>
