@@ -140,10 +140,10 @@ class Program
             Console.WriteLine($"已加入路徑: {input}");
             Console.WriteLine();
 
-            Console.Write("是否要繼續加入路徑？(Y/N，直接按 Enter 開始掃描): ");
+            Console.Write("是否要繼續加入路徑？(y/N): ");
             var continueInput = Console.ReadLine()?.Trim().ToUpper();
 
-            if (continueInput != "Y" && continueInput != "YES")
+            if (string.IsNullOrEmpty(continueInput) || (continueInput != "Y" && continueInput != "YES"))
             {
                 break;
             }
@@ -292,7 +292,6 @@ class Program
             {
                 Console.WriteLine("操作選項:");
                 Console.WriteLine("  輸入編號標記該檔案為待刪除（可用逗號分隔多個，例如: 1,3,5）");
-                Console.WriteLine("  已標記的檔案可以重新標記（會先取消再標記）");
                 Console.WriteLine("  輸入 'k' 保留所有檔案並跳過此組");
                 Console.WriteLine("  輸入 'a' 自動保留最舊的檔案，標記其他為待刪除");
                 Console.WriteLine("  輸入 'q' 結束作業");
@@ -337,10 +336,10 @@ class Program
                     }
 
                     Console.WriteLine();
-                    Console.Write("確認標記？(Y/N): ");
+                    Console.Write("確認標記？(Y/n): ");
 
                     var autoConfirm = Console.ReadLine()?.Trim().ToUpper();
-                    if (autoConfirm == "Y" || autoConfirm == "YES")
+                    if (string.IsNullOrEmpty(autoConfirm) || autoConfirm == "Y" || autoConfirm == "YES")
                     {
                         if (MarkFilesForDeletion(group.Key, autoDeleteFiles))
                         {
@@ -412,10 +411,10 @@ class Program
                     }
                 }
 
-                Console.Write("確認標記？(Y/N): ");
+                Console.Write("確認標記？(Y/n): ");
 
                 var confirm = Console.ReadLine()?.Trim().ToUpper();
-                if (confirm == "Y" || confirm == "YES")
+                if (string.IsNullOrEmpty(confirm) || confirm == "Y" || confirm == "YES")
                 {
                     // 先取消已標記的檔案
                     if (alreadyMarked.Count > 0)
@@ -563,10 +562,10 @@ class Program
         if (existingFiles.Count == 0)
         {
             Console.WriteLine("所有標記的檔案都已不存在！");
-            Console.Write("是否要清除這些記錄？(Y/N): ");
+            Console.Write("是否要清除這些記錄？(Y/n): ");
             var clearChoice = Console.ReadLine()?.Trim().ToUpper();
 
-            if (clearChoice == "Y" || clearChoice == "YES")
+            if (string.IsNullOrEmpty(clearChoice) || clearChoice == "Y" || clearChoice == "YES")
             {
                 ClearDeletedMarks();
             }
@@ -574,10 +573,10 @@ class Program
             return;
         }
 
-        Console.Write($"確認要刪除這 {existingFiles.Count} 個檔案嗎？(Y/N): ");
+        Console.Write($"確認要刪除這 {existingFiles.Count} 個檔案嗎？(Y/n): ");
         var confirm = Console.ReadLine()?.Trim().ToUpper();
 
-        if (confirm != "Y" && confirm != "YES")
+        if (!string.IsNullOrEmpty(confirm) && confirm != "Y" && confirm != "YES")
         {
             Console.WriteLine("已取消刪除操作");
             return;
@@ -618,10 +617,10 @@ class Program
 
         if (missingFiles.Count > 0)
         {
-            Console.Write($"是否要清除 {missingFiles.Count} 個已不存在的檔案記錄？(Y/N): ");
+            Console.Write($"是否要清除 {missingFiles.Count} 個已不存在的檔案記錄？(Y/n): ");
             var clearChoice = Console.ReadLine()?.Trim().ToUpper();
 
-            if (clearChoice == "Y" || clearChoice == "YES")
+            if (string.IsNullOrEmpty(clearChoice) || clearChoice == "Y" || clearChoice == "YES")
             {
                 foreach (var (path, _) in missingFiles)
                 {
@@ -725,10 +724,10 @@ class Program
 
             if (choice == "a")
             {
-                Console.Write($"確認要清除所有 {skippedGroups.Count} 組略過標記嗎？(Y/N): ");
+                Console.Write($"確認要清除所有 {skippedGroups.Count} 組略過標記嗎？(Y/n): ");
                 var clearConfirm = Console.ReadLine()?.Trim().ToUpper();
 
-                if (clearConfirm == "Y" || clearConfirm == "YES")
+                if (string.IsNullOrEmpty(clearConfirm) || clearConfirm == "Y" || clearConfirm == "YES")
                 {
                     ClearAllSkippedMarks();
                     Console.WriteLine("已清除所有略過標記！");
@@ -766,10 +765,10 @@ class Program
                 Console.WriteLine($"  [{index}] Hash: {hash} ({files.Count} 個檔案)");
             }
 
-            Console.Write("確認取消略過標記？(Y/N): ");
+            Console.Write("確認取消略過標記？(Y/n): ");
 
             var confirm = Console.ReadLine()?.Trim().ToUpper();
-            if (confirm == "Y" || confirm == "YES")
+            if (string.IsNullOrEmpty(confirm) || confirm == "Y" || confirm == "YES")
             {
                 UnskipHashes(hashesToUnskip);
                 Console.WriteLine("已取消略過標記！");
@@ -844,10 +843,10 @@ class Program
 
             if (choice == "a")
             {
-                Console.Write($"確認要清除所有 {markedFiles.Count} 個標記嗎？(Y/N): ");
+                Console.Write($"確認要清除所有 {markedFiles.Count} 個標記嗎？(Y/n): ");
                 var clearConfirm = Console.ReadLine()?.Trim().ToUpper();
 
-                if (clearConfirm == "Y" || clearConfirm == "YES")
+                if (string.IsNullOrEmpty(clearConfirm) || clearConfirm == "Y" || clearConfirm == "YES")
                 {
                     ClearAllMarks();
                     Console.WriteLine("已清除所有標記！");
@@ -891,10 +890,10 @@ class Program
                 Console.WriteLine($"  - {file}");
             }
 
-            Console.Write("確認取消標記？(Y/N): ");
+            Console.Write("確認取消標記？(Y/n): ");
 
             var confirm = Console.ReadLine()?.Trim().ToUpper();
-            if (confirm == "Y" || confirm == "YES")
+            if (string.IsNullOrEmpty(confirm) || confirm == "Y" || confirm == "YES")
             {
                 UnmarkFiles(filesToUnmark);
                 Console.WriteLine("已取消標記！");
