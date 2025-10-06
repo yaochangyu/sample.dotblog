@@ -25,81 +25,57 @@
         .badge-missing { background-color: #bdbdbd; color: white; }
         .toggle-all { background-color: #ff8a80; color: #333; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-bottom: 15px; }
         .toggle-all:hover { background-color: #ff6e6e; }
+        .hidden { display: none; }
     </style>
-    <script>
-        var reportData = {{REPORT_DATA}};
+</head>
+<body>
+    <!-- 資料 JSON -->
+    <script type="application/json" id="reportData">{{REPORT_DATA}}</script>
 
+    <!-- 群組模板 -->
+    <template id="group-template">
+        <div class="group">
+            <div class="group-header">
+                <strong class="group-title"></strong>
+                <span class="badge badge-exists exists-badge"></span>
+                <span class="badge badge-missing missing-badge hidden"></span>
+                <div class="hash"></div>
+                <div class="marked-time" style="font-size: 0.9em; margin-top: 5px;"></div>
+            </div>
+            <div class="group-content"></div>
+        </div>
+    </template>
+
+    <!-- 檔案模板 -->
+    <template id="file-template">
+        <div class="file-item">
+            <span class="badge file-status-badge"></span>
+            <div class="file-path"></div>
+            <div class="file-info"></div>
+        </div>
+    </template>
+
+    <div class='container'>
+        <h1>已標記刪除檔案報表</h1>
+
+        <div class='summary'>
+            <div class="summary-item">產生時間：<span id="generated-time"></span></div>
+            <div class="summary-item">總群組數：<span id="total-groups"></span></div>
+            <div class="summary-item">總檔案數：<span id="total-files"></span></div>
+            <div class="summary-item">存在：<span id="existing-files"></span></div>
+            <div class="summary-item">已刪除/遺失：<span id="missing-files"></span></div>
+        </div>
+
+        <button class='toggle-all' onclick='toggleAll()'>展開/收合全部</button>
+        <div id='groups'></div>
+    </div>
+
+    <script>
         function formatFileSize(bytes) {
             var sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
             if (bytes === 0) return '0 B';
             var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
             return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
-        }
-
-        function escapeHtml(text) {
-            var map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-        }
-
-        function renderReport(reportData) {
-            // 渲染摘要
-            var totalFiles = reportData.Groups.reduce(function(sum, g) { return sum + g.FileCount; }, 0);
-            var totalExisting = reportData.Groups.reduce(function(sum, g) {
-                return sum + g.Files.filter(function(f) { return f.Exists; }).length;
-            }, 0);
-            var totalMissing = totalFiles - totalExisting;
-
-            var summaryHtml = '<div class="summary-item">產生時間：' + escapeHtml(reportData.GeneratedAt) + '</div>' +
-                '<div class="summary-item">總群組數：' + reportData.TotalGroups + '</div>' +
-                '<div class="summary-item">總檔案數：' + totalFiles + '</div>' +
-                '<div class="summary-item">存在：' + totalExisting + '</div>' +
-                '<div class="summary-item">已刪除/遺失：' + totalMissing + '</div>';
-
-            document.getElementById('summary').innerHTML = summaryHtml;
-
-            // 渲染群組
-            var groupsHtml = '';
-            reportData.Groups.forEach(function(group, index) {
-                var groupId = index + 1;
-                var existingCount = group.Files.filter(function(f) { return f.Exists; }).length;
-                var missingCount = group.FileCount - existingCount;
-
-                groupsHtml += '<div class="group">';
-                groupsHtml += '  <div class="group-header" onclick="toggleGroup(' + groupId + ')">';
-                groupsHtml += '    <strong>群組 ' + groupId + '</strong>';
-                groupsHtml += '    <span class="badge badge-exists">存在：' + existingCount + '</span>';
-                if (missingCount > 0) {
-                    groupsHtml += '    <span class="badge badge-missing">已刪除/遺失：' + missingCount + '</span>';
-                }
-                groupsHtml += '    <div class="hash">Hash: ' + escapeHtml(group.Hash) + '</div>';
-                groupsHtml += '    <div style="font-size: 0.9em; margin-top: 5px;">標記時間：' + escapeHtml(group.MarkedAt) + '</div>';
-                groupsHtml += '  </div>';
-                groupsHtml += '  <div id="content-' + groupId + '" class="group-content">';
-
-                group.Files.forEach(function(file) {
-                    var cssClass = file.Exists ? 'file-item' : 'file-item missing';
-                    var statusBadge = file.Exists ? '<span class="badge badge-exists">待刪除</span>' : '<span class="badge badge-missing">已刪除/遺失</span>';
-
-                    groupsHtml += '    <div class="' + cssClass + '">';
-                    groupsHtml += '      ' + statusBadge;
-                    groupsHtml += '      <div class="file-path">' + escapeHtml(file.Path) + '</div>';
-
-                    if (file.Exists) {
-                        groupsHtml += '      <div class="file-info">';
-                        groupsHtml += '        大小：' + formatFileSize(file.Size) + ' | ';
-                        groupsHtml += '        建立：' + escapeHtml(file.CreatedTime) + ' | ';
-                        groupsHtml += '        修改：' + escapeHtml(file.ModifiedTime);
-                        groupsHtml += '      </div>';
-                    }
-
-                    groupsHtml += '    </div>';
-                });
-
-                groupsHtml += '  </div>';
-                groupsHtml += '</div>';
-            });
-
-            document.getElementById('groups').innerHTML = groupsHtml;
         }
 
         function toggleGroup(id) {
@@ -116,17 +92,98 @@
             });
         }
 
+        function renderReport(reportData) {
+            // 渲染摘要
+            var totalFiles = reportData.Groups.reduce(function(sum, g) { return sum + g.FileCount; }, 0);
+            var totalExisting = reportData.Groups.reduce(function(sum, g) {
+                return sum + g.Files.filter(function(f) { return f.Exists; }).length;
+            }, 0);
+            var totalMissing = totalFiles - totalExisting;
+
+            document.getElementById('generated-time').textContent = reportData.GeneratedAt;
+            document.getElementById('total-groups').textContent = reportData.TotalGroups;
+            document.getElementById('total-files').textContent = totalFiles;
+            document.getElementById('existing-files').textContent = totalExisting;
+            document.getElementById('missing-files').textContent = totalMissing;
+
+            // 取得模板
+            var groupTemplate = document.getElementById('group-template');
+            var fileTemplate = document.getElementById('file-template');
+            var groupsContainer = document.getElementById('groups');
+
+            // 渲染群組
+            reportData.Groups.forEach(function(group, index) {
+                var groupId = index + 1;
+                var existingCount = group.Files.filter(function(f) { return f.Exists; }).length;
+                var missingCount = group.FileCount - existingCount;
+
+                // 複製群組模板
+                var groupElement = groupTemplate.content.cloneNode(true);
+                var groupDiv = groupElement.querySelector('.group');
+                var groupHeader = groupElement.querySelector('.group-header');
+                var groupContent = groupElement.querySelector('.group-content');
+
+                // 設定群組 ID 和點擊事件
+                groupContent.id = 'content-' + groupId;
+                groupHeader.onclick = function() { toggleGroup(groupId); };
+
+                // 填入群組資料
+                groupElement.querySelector('.group-title').textContent = '群組 ' + groupId;
+                groupElement.querySelector('.exists-badge').textContent = '存在：' + existingCount;
+
+                var missingBadge = groupElement.querySelector('.missing-badge');
+                if (missingCount > 0) {
+                    missingBadge.textContent = '已刪除/遺失：' + missingCount;
+                    missingBadge.classList.remove('hidden');
+                }
+
+                groupElement.querySelector('.hash').textContent = 'Hash: ' + group.Hash;
+                groupElement.querySelector('.marked-time').textContent = '標記時間：' + group.MarkedAt;
+
+                // 渲染檔案
+                group.Files.forEach(function(file) {
+                    var fileElement = fileTemplate.content.cloneNode(true);
+                    var fileItem = fileElement.querySelector('.file-item');
+
+                    // 設定檔案樣式
+                    if (!file.Exists) {
+                        fileItem.classList.add('missing');
+                    }
+
+                    // 設定狀態徽章
+                    var statusBadge = fileElement.querySelector('.file-status-badge');
+                    if (file.Exists) {
+                        statusBadge.className = 'badge badge-exists';
+                        statusBadge.textContent = '待刪除';
+                    } else {
+                        statusBadge.className = 'badge badge-missing';
+                        statusBadge.textContent = '已刪除/遺失';
+                    }
+
+                    // 設定檔案路徑
+                    fileElement.querySelector('.file-path').textContent = file.Path;
+
+                    // 設定檔案資訊
+                    var fileInfo = fileElement.querySelector('.file-info');
+                    if (file.Exists) {
+                        fileInfo.textContent = '大小：' + formatFileSize(file.Size) +
+                            ' | 建立：' + file.CreatedTime +
+                            ' | 修改：' + file.ModifiedTime;
+                    } else {
+                        fileInfo.textContent = '';
+                    }
+
+                    groupContent.appendChild(fileElement);
+                });
+
+                groupsContainer.appendChild(groupElement);
+            });
+        }
+
         window.addEventListener('DOMContentLoaded', function() {
+            var reportData = JSON.parse(document.getElementById('reportData').textContent);
             renderReport(reportData);
         });
     </script>
-</head>
-<body>
-    <div class='container'>
-        <h1>已標記刪除檔案報表</h1>
-        <div id='summary' class='summary'></div>
-        <button class='toggle-all' onclick='toggleAll()'>展開/收合全部</button>
-        <div id='groups'></div>
-    </div>
 </body>
 </html>
