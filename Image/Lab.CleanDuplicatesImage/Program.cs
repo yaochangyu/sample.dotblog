@@ -648,31 +648,14 @@ class Program
 
     static void MarkFileForDeletion(string hash, string filePath)
     {
-        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-        connection.Open();
-
-        var command = connection.CreateCommand();
-        command.CommandText = @"
-            INSERT OR IGNORE INTO FilesToDelete (Hash, FilePath, MarkedAt)
-            VALUES ($hash, $filePath, $markedAt);
-        ";
-
-        var filePathParam = command.CreateParameter();
-        filePathParam.ParameterName = "$filePath";
-        filePathParam.Value = filePath;
-        command.Parameters.Add(filePathParam);
-
-        var hashParam = command.CreateParameter();
-        hashParam.ParameterName = "$hash";
-        hashParam.Value = (object)hash ?? DBNull.Value;
-        command.Parameters.Add(hashParam);
-
-        var markedAtParam = command.CreateParameter();
-        markedAtParam.ParameterName = "$markedAt";
-        markedAtParam.Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-        command.Parameters.Add(markedAtParam);
-
-        command.ExecuteNonQuery();
+        DatabaseHelper.ExecuteNonQuery(
+            "INSERT OR IGNORE INTO FilesToDelete (Hash, FilePath, MarkedAt) VALUES ($hash, $filePath, $markedAt)",
+            cmd =>
+            {
+                cmd.Parameters.Add(new SqliteParameter("$hash", (object)hash ?? DBNull.Value));
+                cmd.Parameters.Add(new SqliteParameter("$filePath", filePath));
+                cmd.Parameters.Add(new SqliteParameter("$markedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
+            });
     }
 
     static void ExecuteMarkedDeletions()
@@ -1085,28 +1068,25 @@ class Program
 
     static List<(string path, string markedAt)> LoadMarkedForDeletionFilesWithDetails()
     {
-        var markedFiles = new List<(string, string)>();
-
         try
         {
-            using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-            connection.Open();
-
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT FilePath, MarkedAt FROM FilesToDelete ORDER BY MarkedAt";
-
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                markedFiles.Add((reader.GetString(0), reader.GetString(1)));
-            }
+            return DatabaseHelper.ExecuteQuery(
+                "SELECT FilePath, MarkedAt FROM FilesToDelete ORDER BY MarkedAt",
+                reader =>
+                {
+                    var files = new List<(string, string)>();
+                    while (reader.Read())
+                    {
+                        files.Add((reader.GetString(0), reader.GetString(1)));
+                    }
+                    return files;
+                });
         }
         catch
         {
             // 資料表可能不存在，忽略錯誤
+            return new List<(string, string)>();
         }
-
-        return markedFiles;
     }
 
     static Dictionary<string, List<(string path, string markedAt)>> LoadMarkedForDeletionFilesGroupedByHash()
@@ -1116,24 +1096,21 @@ class Program
 
     static void UnmarkFiles(List<string> filePaths)
     {
-        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-        connection.Open();
-
-        using var transaction = connection.BeginTransaction();
-
-        var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM FilesToDelete WHERE FilePath = $path";
-        var pathParam = command.CreateParameter();
-        pathParam.ParameterName = "$path";
-        command.Parameters.Add(pathParam);
-
-        foreach (var path in filePaths)
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
         {
-            pathParam.Value = path;
-            command.ExecuteNonQuery();
-        }
+            var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "DELETE FROM FilesToDelete WHERE FilePath = $path";
 
-        transaction.Commit();
+            var pathParam = new SqliteParameter("$path", "");
+            command.Parameters.Add(pathParam);
+
+            foreach (var path in filePaths)
+            {
+                pathParam.Value = path;
+                command.ExecuteNonQuery();
+            }
+        });
     }
 
     static void ClearAllMarks()
@@ -1143,124 +1120,105 @@ class Program
 
     static HashSet<string> LoadMarkedFiles()
     {
-        var markedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         try
         {
-            using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-            connection.Open();
-
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT FilePath FROM FilesToDelete";
-
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                markedFiles.Add(reader.GetString(0));
-            }
+            return DatabaseHelper.ExecuteQuery(
+                "SELECT FilePath FROM FilesToDelete",
+                reader =>
+                {
+                    var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    while (reader.Read())
+                    {
+                        files.Add(reader.GetString(0));
+                    }
+                    return files;
+                });
         }
         catch
         {
             // 資料表可能不存在，忽略錯誤
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
-
-        return markedFiles;
     }
 
     static Dictionary<string, HashSet<string>> LoadMarkedFilesByHash()
     {
-        var markedFilesByHash = new Dictionary<string, HashSet<string>>();
-
         try
         {
-            using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-            connection.Open();
-
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT Hash, FilePath FROM FilesToDelete WHERE Hash IS NOT NULL";
-
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                var hash = reader.GetString(0);
-                var filePath = reader.GetString(1);
-
-                if (!markedFilesByHash.ContainsKey(hash))
+            return DatabaseHelper.ExecuteQuery(
+                "SELECT Hash, FilePath FROM FilesToDelete WHERE Hash IS NOT NULL",
+                reader =>
                 {
-                    markedFilesByHash[hash] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                }
+                    var filesByHash = new Dictionary<string, HashSet<string>>();
+                    while (reader.Read())
+                    {
+                        var hash = reader.GetString(0);
+                        var filePath = reader.GetString(1);
 
-                markedFilesByHash[hash].Add(filePath);
-            }
+                        if (!filesByHash.ContainsKey(hash))
+                        {
+                            filesByHash[hash] = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        }
+
+                        filesByHash[hash].Add(filePath);
+                    }
+                    return filesByHash;
+                });
         }
         catch
         {
             // 資料表可能不存在或沒有 Hash 欄位，忽略錯誤
+            return new Dictionary<string, HashSet<string>>();
         }
-
-        return markedFilesByHash;
     }
 
     static HashSet<string> LoadSkippedHashes()
     {
-        var skippedHashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         try
         {
-            using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-            connection.Open();
-
-            var command = connection.CreateCommand();
-            command.CommandText = "SELECT Hash FROM SkippedHashes";
-
-            using var reader = command.ExecuteReader();
-            while (reader.Read())
-            {
-                skippedHashes.Add(reader.GetString(0));
-            }
+            return DatabaseHelper.ExecuteQuery(
+                "SELECT Hash FROM SkippedHashes",
+                reader =>
+                {
+                    var hashes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                    while (reader.Read())
+                    {
+                        hashes.Add(reader.GetString(0));
+                    }
+                    return hashes;
+                });
         }
         catch
         {
             // 資料表可能不存在，忽略錯誤
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
-
-        return skippedHashes;
     }
 
     static void MarkHashAsSkipped(string hash, List<string> filePaths)
     {
-        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-        connection.Open();
+        var skippedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-        using var transaction = connection.BeginTransaction();
-
-        var command = connection.CreateCommand();
-        command.CommandText = @"
-            INSERT OR IGNORE INTO SkippedHashes (Hash, FilePath, SkippedAt)
-            VALUES ($hash, $filePath, $skippedAt);
-        ";
-
-        var hashParam = command.CreateParameter();
-        hashParam.ParameterName = "$hash";
-        command.Parameters.Add(hashParam);
-
-        var filePathParam = command.CreateParameter();
-        filePathParam.ParameterName = "$filePath";
-        command.Parameters.Add(filePathParam);
-
-        var skippedAtParam = command.CreateParameter();
-        skippedAtParam.ParameterName = "$skippedAt";
-        skippedAtParam.Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-        command.Parameters.Add(skippedAtParam);
-
-        foreach (var filePath in filePaths)
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
         {
-            hashParam.Value = hash;
-            filePathParam.Value = filePath;
-            command.ExecuteNonQuery();
-        }
+            var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "INSERT OR IGNORE INTO SkippedHashes (Hash, FilePath, SkippedAt) VALUES ($hash, $filePath, $skippedAt)";
 
-        transaction.Commit();
+            var hashParam = new SqliteParameter("$hash", hash);
+            var filePathParam = new SqliteParameter("$filePath", "");
+            var skippedAtParam = new SqliteParameter("$skippedAt", skippedAt);
+
+            command.Parameters.Add(hashParam);
+            command.Parameters.Add(filePathParam);
+            command.Parameters.Add(skippedAtParam);
+
+            foreach (var filePath in filePaths)
+            {
+                filePathParam.Value = filePath;
+                command.ExecuteNonQuery();
+            }
+        });
     }
 
     static Dictionary<string, List<(string path, string skippedAt)>> LoadSkippedFilesGroupedByHash()
@@ -1270,24 +1228,21 @@ class Program
 
     static void UnskipHashes(List<string> hashes)
     {
-        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-        connection.Open();
-
-        using var transaction = connection.BeginTransaction();
-
-        var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM SkippedHashes WHERE Hash = $hash";
-        var hashParam = command.CreateParameter();
-        hashParam.ParameterName = "$hash";
-        command.Parameters.Add(hashParam);
-
-        foreach (var hash in hashes)
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
         {
-            hashParam.Value = hash;
-            command.ExecuteNonQuery();
-        }
+            var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = "DELETE FROM SkippedHashes WHERE Hash = $hash";
 
-        transaction.Commit();
+            var hashParam = new SqliteParameter("$hash", "");
+            command.Parameters.Add(hashParam);
+
+            foreach (var hash in hashes)
+            {
+                hashParam.Value = hash;
+                command.ExecuteNonQuery();
+            }
+        });
     }
 
     static void ClearAllSkippedMarks()
@@ -1785,42 +1740,40 @@ class Program
     /// </summary>
     static (Dictionary<string, List<string>> hashGroups, HashSet<string> processedFiles) LoadExistingHashes()
     {
-        var hashGroups = new Dictionary<string, List<string>>();
-        var processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         if (!File.Exists(DatabaseFileName))
         {
-            return (hashGroups, processedFiles);
+            return (new Dictionary<string, List<string>>(), new HashSet<string>(StringComparer.OrdinalIgnoreCase));
         }
 
-        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-        connection.Open();
-
-        var command = connection.CreateCommand();
-        command.CommandText = "SELECT Hash, FilePath FROM DuplicateFiles";
-
-        using var reader = command.ExecuteReader();
-        while (reader.Read())
-        {
-            var hash = reader.GetString(0);
-            var filePath = reader.GetString(1);
-
-            // 記錄所有已處理的檔案路徑
-            processedFiles.Add(filePath);
-
-            if (!hashGroups.ContainsKey(hash))
+        return DatabaseHelper.ExecuteQuery(
+            "SELECT Hash, FilePath FROM DuplicateFiles",
+            reader =>
             {
-                hashGroups[hash] = new List<string>();
-            }
+                var hashGroups = new Dictionary<string, List<string>>();
+                var processedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // 只加入實際存在的檔案
-            if (File.Exists(filePath))
-            {
-                hashGroups[hash].Add(filePath);
-            }
-        }
+                while (reader.Read())
+                {
+                    var hash = reader.GetString(0);
+                    var filePath = reader.GetString(1);
 
-        return (hashGroups, processedFiles);
+                    // 記錄所有已處理的檔案路徑
+                    processedFiles.Add(filePath);
+
+                    if (!hashGroups.ContainsKey(hash))
+                    {
+                        hashGroups[hash] = new List<string>();
+                    }
+
+                    // 只加入實際存在的檔案
+                    if (File.Exists(filePath))
+                    {
+                        hashGroups[hash].Add(filePath);
+                    }
+                }
+
+                return (hashGroups, processedFiles);
+            });
     }
 
     /// <summary>
@@ -1905,74 +1858,57 @@ class Program
     /// </summary>
     static void WriteToDatabase(Dictionary<string, List<string>> duplicates)
     {
-        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-        connection.Open();
-
-        using var transaction = connection.BeginTransaction();
-
-        var command = connection.CreateCommand();
-        command.CommandText = @"
-            INSERT INTO DuplicateFiles (Hash, FilePath, FileName, FileSize, FileCreatedTime, FileCount, CreatedAt)
-            VALUES ($hash, $filePath, $fileName, $fileSize, $fileCreatedTime, $fileCount, $createdAt)
-            ON CONFLICT(Hash, FilePath) DO UPDATE SET
-                FileName = excluded.FileName,
-                FileSize = excluded.FileSize,
-                FileCreatedTime = excluded.FileCreatedTime,
-                FileCount = excluded.FileCount,
-                CreatedAt = excluded.CreatedAt
-        ";
-
-        var hashParam = command.CreateParameter();
-        hashParam.ParameterName = "$hash";
-        command.Parameters.Add(hashParam);
-
-        var filePathParam = command.CreateParameter();
-        filePathParam.ParameterName = "$filePath";
-        command.Parameters.Add(filePathParam);
-
-        var fileNameParam = command.CreateParameter();
-        fileNameParam.ParameterName = "$fileName";
-        command.Parameters.Add(fileNameParam);
-
-        var fileSizeParam = command.CreateParameter();
-        fileSizeParam.ParameterName = "$fileSize";
-        command.Parameters.Add(fileSizeParam);
-
-        var fileCreatedTimeParam = command.CreateParameter();
-        fileCreatedTimeParam.ParameterName = "$fileCreatedTime";
-        command.Parameters.Add(fileCreatedTimeParam);
-
-        var fileCountParam = command.CreateParameter();
-        fileCountParam.ParameterName = "$fileCount";
-        command.Parameters.Add(fileCountParam);
-
-        var createdAtParam = command.CreateParameter();
-        createdAtParam.ParameterName = "$createdAt";
-        command.Parameters.Add(createdAtParam);
-
         var createdAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
-        foreach (var group in duplicates)
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
         {
-            var hash = group.Key;
-            var files = group.Value;
+            var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+                INSERT INTO DuplicateFiles (Hash, FilePath, FileName, FileSize, FileCreatedTime, FileCount, CreatedAt)
+                VALUES ($hash, $filePath, $fileName, $fileSize, $fileCreatedTime, $fileCount, $createdAt)
+                ON CONFLICT(Hash, FilePath) DO UPDATE SET
+                    FileName = excluded.FileName,
+                    FileSize = excluded.FileSize,
+                    FileCreatedTime = excluded.FileCreatedTime,
+                    FileCount = excluded.FileCount,
+                    CreatedAt = excluded.CreatedAt";
 
-            foreach (var filePath in files)
+            var hashParam = new SqliteParameter("$hash", "");
+            var filePathParam = new SqliteParameter("$filePath", "");
+            var fileNameParam = new SqliteParameter("$fileName", "");
+            var fileSizeParam = new SqliteParameter("$fileSize", 0L);
+            var fileCreatedTimeParam = new SqliteParameter("$fileCreatedTime", "");
+            var fileCountParam = new SqliteParameter("$fileCount", 0);
+            var createdAtParam = new SqliteParameter("$createdAt", createdAt);
+
+            command.Parameters.Add(hashParam);
+            command.Parameters.Add(filePathParam);
+            command.Parameters.Add(fileNameParam);
+            command.Parameters.Add(fileSizeParam);
+            command.Parameters.Add(fileCreatedTimeParam);
+            command.Parameters.Add(fileCountParam);
+            command.Parameters.Add(createdAtParam);
+
+            foreach (var group in duplicates)
             {
-                var fileInfo = new FileInfo(filePath);
+                var hash = group.Key;
+                var files = group.Value;
 
-                hashParam.Value = hash;
-                filePathParam.Value = filePath;
-                fileNameParam.Value = fileInfo.Name;
-                fileSizeParam.Value = fileInfo.Length;
-                fileCreatedTimeParam.Value = fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss");
-                fileCountParam.Value = files.Count;
-                createdAtParam.Value = createdAt;
+                foreach (var filePath in files)
+                {
+                    var fileInfo = new FileInfo(filePath);
 
-                command.ExecuteNonQuery();
+                    hashParam.Value = hash;
+                    filePathParam.Value = filePath;
+                    fileNameParam.Value = fileInfo.Name;
+                    fileSizeParam.Value = fileInfo.Length;
+                    fileCreatedTimeParam.Value = fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss");
+                    fileCountParam.Value = files.Count;
+
+                    command.ExecuteNonQuery();
+                }
             }
-        }
-
-        transaction.Commit();
+        });
     }
 }
