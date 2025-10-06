@@ -1235,7 +1235,9 @@ class Program
 
         if (choice == "1")
         {
-            GenerateJsonReport(skippedGroups);
+            var jsonPath = GenerateJsonReport(skippedGroups);
+            Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonPath)}");
+            Console.WriteLine($"總共 {skippedGroups.Count} 組，{skippedGroups.Sum(g => g.Value.Count)} 個檔案");
         }
         else if (choice == "2")
         {
@@ -1269,7 +1271,9 @@ class Program
 
         if (choice == "1")
         {
-            GenerateMarkedForDeletionJsonReport(markedFilesGrouped);
+            var jsonPath = GenerateMarkedForDeletionJsonReport(markedFilesGrouped);
+            Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonPath)}");
+            Console.WriteLine($"總共 {markedFilesGrouped.Count} 組，{markedFilesGrouped.Sum(g => g.Value.Count)} 個檔案");
         }
         else if (choice == "2")
         {
@@ -1281,7 +1285,7 @@ class Program
         }
     }
 
-    static void GenerateJsonReport(Dictionary<string, List<(string path, string skippedAt)>> skippedGroups)
+    static string GenerateJsonReport(Dictionary<string, List<(string path, string skippedAt)>> skippedGroups, string fileName = null)
     {
         var reportData = new
         {
@@ -1313,14 +1317,18 @@ class Program
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         });
 
-        var fileName = $"Reports/SkippedFilesReport_{DateTime.Now:yyyyMMdd_HHmmss}.json";
-        File.WriteAllText(fileName, json, Encoding.UTF8);
+        if (string.IsNullOrEmpty(fileName))
+        {
+            fileName = $"SkippedFilesReport_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+        }
 
-        Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(fileName)}");
-        Console.WriteLine($"總共 {skippedGroups.Count} 組，{skippedGroups.Sum(g => g.Value.Count)} 個檔案");
+        var fullPath = $"Reports/{fileName}";
+        File.WriteAllText(fullPath, json, Encoding.UTF8);
+
+        return fullPath;
     }
 
-    static void GenerateMarkedForDeletionJsonReport(Dictionary<string, List<(string path, string markedAt)>> markedGroups)
+    static string GenerateMarkedForDeletionJsonReport(Dictionary<string, List<(string path, string markedAt)>> markedGroups, string fileName = null)
     {
         var reportData = new
         {
@@ -1352,19 +1360,25 @@ class Program
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         });
 
-        var fileName = $"Reports/MarkedForDeletionReport_{DateTime.Now:yyyyMMdd_HHmmss}.json";
-        File.WriteAllText(fileName, json, Encoding.UTF8);
+        if (string.IsNullOrEmpty(fileName))
+        {
+            fileName = $"MarkedForDeletionReport_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+        }
 
-        Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(fileName)}");
-        Console.WriteLine($"總共 {markedGroups.Count} 組，{markedGroups.Sum(g => g.Value.Count)} 個檔案");
+        var fullPath = $"Reports/{fileName}";
+        File.WriteAllText(fullPath, json, Encoding.UTF8);
+
+        return fullPath;
     }
 
     static void GenerateHtmlReport(Dictionary<string, List<(string path, string skippedAt)>> skippedGroups)
     {
-        // 讀取模板
-        var template = File.ReadAllText("Templates/SkippedFilesReport.html", Encoding.UTF8);
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 
-        // 建立報表資料物件
+        // 1. 先產生 JSON 檔案（供獨立使用）
+        var jsonFileName = GenerateJsonReport(skippedGroups, $"SkippedFilesReport_{timestamp}.json");
+
+        // 2. 建立報表資料物件
         var reportData = new
         {
             GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
@@ -1389,32 +1403,37 @@ class Program
             }).ToList()
         };
 
-        // 序列化為 JSON
+        // 3. 序列化為 JSON（不縮排，減少檔案大小）
         var json = System.Text.Json.JsonSerializer.Serialize(reportData, new System.Text.Json.JsonSerializerOptions
         {
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         });
 
-        // 替換模板中的 JSON 資料
+        // 4. 讀取 HTML 模板並替換 JSON 資料
+        var template = File.ReadAllText("Templates/SkippedFilesReport.html", Encoding.UTF8);
         var html = template.Replace("{{REPORT_DATA}}", json);
 
-        var fileName = $"Reports/SkippedFilesReport_{DateTime.Now:yyyyMMdd_HHmmss}.html";
-        File.WriteAllText(fileName, html, Encoding.UTF8);
+        // 5. 產生 HTML 檔案
+        var htmlFileName = $"Reports/SkippedFilesReport_{timestamp}.html";
+        File.WriteAllText(htmlFileName, html, Encoding.UTF8);
 
         var totalFiles = skippedGroups.Sum(g => g.Value.Count);
         var totalExistingFiles = skippedGroups.Sum(g => g.Value.Count(f => File.Exists(f.path)));
         var totalMissingFiles = totalFiles - totalExistingFiles;
 
-        Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(fileName)}");
+        Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonFileName)}");
+        Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(htmlFileName)}");
         Console.WriteLine($"總共 {skippedGroups.Count} 組，{totalFiles} 個檔案（存在：{totalExistingFiles}，遺失：{totalMissingFiles}）");
     }
 
     static void GenerateMarkedForDeletionHtmlReport(Dictionary<string, List<(string path, string markedAt)>> markedGroups)
     {
-        // 讀取模板
-        var template = File.ReadAllText("Templates/MarkedForDeletionReport.html", Encoding.UTF8);
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 
-        // 建立報表資料物件
+        // 1. 先產生 JSON 檔案（供獨立使用）
+        var jsonFileName = GenerateMarkedForDeletionJsonReport(markedGroups, $"MarkedForDeletionReport_{timestamp}.json");
+
+        // 2. 建立報表資料物件
         var reportData = new
         {
             GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
@@ -1439,23 +1458,26 @@ class Program
             }).ToList()
         };
 
-        // 序列化為 JSON
+        // 3. 序列化為 JSON（不縮排，減少檔案大小）
         var json = System.Text.Json.JsonSerializer.Serialize(reportData, new System.Text.Json.JsonSerializerOptions
         {
             Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         });
 
-        // 替換模板中的 JSON 資料
+        // 4. 讀取 HTML 模板並替換 JSON 資料
+        var template = File.ReadAllText("Templates/MarkedForDeletionReport.html", Encoding.UTF8);
         var html = template.Replace("{{REPORT_DATA}}", json);
 
-        var fileName = $"Reports/MarkedForDeletionReport_{DateTime.Now:yyyyMMdd_HHmmss}.html";
-        File.WriteAllText(fileName, html, Encoding.UTF8);
+        // 5. 產生 HTML 檔案
+        var htmlFileName = $"Reports/MarkedForDeletionReport_{timestamp}.html";
+        File.WriteAllText(htmlFileName, html, Encoding.UTF8);
 
         var totalFiles = markedGroups.Sum(g => g.Value.Count);
         var totalExistingFiles = markedGroups.Sum(g => g.Value.Count(f => File.Exists(f.path)));
         var totalMissingFiles = totalFiles - totalExistingFiles;
 
-        Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(fileName)}");
+        Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonFileName)}");
+        Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(htmlFileName)}");
         Console.WriteLine($"總共 {markedGroups.Count} 組，{totalFiles} 個檔案（存在：{totalExistingFiles}，已刪除/遺失：{totalMissingFiles}）");
     }
 
