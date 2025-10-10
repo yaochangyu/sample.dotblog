@@ -204,16 +204,16 @@ class Program
             {
                 // 直接進入標記模式
                 InitializeDatabase();
-                var (existingHashes, _) = LoadExistingHashes();
+                var duplicateFileGroups = LoadDuplicateGroupsWithDetails();
 
-                if (existingHashes.Count == 0)
+                if (duplicateFileGroups.Count == 0)
                 {
                     Console.WriteLine("資料庫中沒有重複檔案記錄，請先執行掃描！");
                     Console.WriteLine();
                     continue;
                 }
 
-                InteractiveDeleteDuplicates(existingHashes);
+                InteractiveDeleteDuplicates(duplicateFileGroups);
                 Console.WriteLine();
                 Console.WriteLine("提示：標記為待刪除的檔案儲存在資料庫的 FilesToDelete 資料表中");
                 Console.WriteLine("您可以查看該資料表後再決定是否實際刪除檔案");
@@ -269,6 +269,38 @@ class Program
                 continue;
             }
         }
+    }
+
+    record FileDetails(string Path, long Size, string CreatedTime);
+
+    static Dictionary<string, List<FileDetails>> LoadDuplicateGroupsWithDetails()
+    {
+        if (!File.Exists(DatabaseFileName))
+        {
+            return new Dictionary<string, List<FileDetails>>();
+        }
+
+        return DatabaseHelper.ExecuteQuery(
+            "SELECT Hash, FilePath, FileSize, FileCreatedTime FROM DuplicateFiles WHERE IsDeleted = 0 OR IsDeleted IS NULL",
+            reader =>
+            {
+                var hashGroups = new Dictionary<string, List<FileDetails>>();
+                while (reader.Read())
+                {
+                    var hash = reader.GetString(0);
+                    if (!hashGroups.ContainsKey(hash))
+                    {
+                        hashGroups[hash] = new List<FileDetails>();
+                    }
+
+                    hashGroups[hash].Add(new FileDetails(
+                        reader.GetString(1),
+                        reader.GetInt64(2),
+                        reader.GetString(3)
+                    ));
+                }
+                return hashGroups;
+            });
     }
 
     static void RunScanMode()
@@ -376,7 +408,7 @@ class Program
         }
     }
 
-    static void InteractiveDeleteDuplicates(Dictionary<string, List<string>> hashGroups)
+    static void InteractiveDeleteDuplicates(Dictionary<string, List<FileDetails>> hashGroups)
     {
         var duplicateGroups = hashGroups.Where(g => g.Value.Count > 1).ToList();
 
@@ -403,33 +435,27 @@ class Program
                     return false;
                 }
 
-                var validFiles = g.Value.Where(File.Exists).ToList();
-                var unmarkedFiles = validFiles.Where(f => !markedFiles.Contains(f)).ToList();
+                var allFilePaths = g.Value.Select(f => f.Path).ToList();
+                var unmarkedFiles = allFilePaths.Where(f => !markedFiles.Contains(f)).ToList();
 
                 // 檢查此 hash 是否已經完全處理過
-                // 如果該 hash 在 FilesToDelete 中已有標記，且只剩一個檔案未標記，表示已處理完成
                 if (markedFilesByHash.ContainsKey(hash))
                 {
                     var markedCount = markedFilesByHash[hash].Count;
-                    var totalCount = validFiles.Count;
+                    var totalCount = allFilePaths.Count;
 
-                    // 如果已標記數量 >= 總數量 - 1，表示已經處理完成（保留了一個檔案）
                     if (markedCount >= totalCount - 1)
                     {
                         return false;
                     }
                 }
 
-                // 至少要有一個未標記的檔案
                 return unmarkedFiles.Count > 0;
             })
             .Select(g => new
             {
                 Group = g,
-                // 計算群組中第一個存在檔案的大小（用於排序）
-                FileSize = g.Value.Where(File.Exists)
-                    .Select(f => new FileInfo(f).Length)
-                    .FirstOrDefault()
+                FileSize = g.Value.Select(f => f.Size).FirstOrDefault()
             })
             .OrderByDescending(x => x.FileSize) // 依檔案大小降序排列（大的優先）
             .Select(x => x.Group)
@@ -460,32 +486,25 @@ class Program
             Console.WriteLine($"共 {group.Value.Count} 個檔案:");
             Console.WriteLine();
 
-            var validFiles = group.Value.Where(File.Exists).ToList();
-            if (validFiles.Count == 0)
-            {
-                Console.WriteLine("此組所有檔案都已不存在，跳過...");
-                Console.WriteLine();
-                groupIndex++;
-                continue;
-            }
-
+            var filesInGroup = group.Value;
+            
             // 顯示檔案清單
-            for (int i = 0; i < validFiles.Count; i++)
+            for (int i = 0; i < filesInGroup.Count; i++)
             {
-                var fileInfo = new FileInfo(validFiles[i]);
-                var isMarked = markedFiles.Contains(validFiles[i]);
+                var fileDetails = filesInGroup[i];
+                var isMarked = markedFiles.Contains(fileDetails.Path);
                 var markIndicator = isMarked ? " [已標記]" : "";
 
-                Console.WriteLine($"[{i + 1}] {validFiles[i]}{markIndicator}");
-                Console.WriteLine($"    大小: {FormatFileSize(fileInfo.Length)}");
-                Console.WriteLine($"    建立時間: {fileInfo.CreationTime:yyyy-MM-dd HH:mm:ss}");
-                Console.WriteLine($"    修改時間: {fileInfo.LastWriteTime:yyyy-MM-dd HH:mm:ss}");
+                Console.WriteLine($"[{i + 1}] {fileDetails.Path}{markIndicator}");
+                Console.WriteLine($"    大小: {FormatFileSize(fileDetails.Size)}");
+                Console.WriteLine($"    建立時間: {fileDetails.CreatedTime}");
                 Console.WriteLine();
             }
 
             // 詢問操作
             while (true)
             {
+                var validFilePaths = filesInGroup.Select(f => f.Path).ToList();
                 DisplayMenu(
                     "輸入編號標記該檔案為待刪除（可用逗號分隔多個，例如: 1,3,5）",
                     "輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）",
@@ -502,16 +521,14 @@ class Program
                     return;
                 }
 
-                // 處理預覽指令
-                if (HandlePreviewCommand(choice, validFiles))
+                if (HandlePreviewCommand(choice, validFilePaths))
                 {
                     continue;
                 }
 
                 if (choice == "k")
                 {
-                    // 記錄跳過的 hash 及所有檔案路徑
-                    MarkHashAsSkipped(group.Key, validFiles);
+                    MarkHashAsSkipped(group.Key, validFilePaths);
                     Console.WriteLine("已跳過此組並記錄，下次不會再顯示此組");
                     Console.WriteLine();
                     break;
@@ -519,37 +536,33 @@ class Program
 
                 if (choice == "a")
                 {
-                    // 自動保留最舊的檔案
-                    var oldestFile = validFiles
-                        .Select(f => new { Path = f, Info = new FileInfo(f) })
-                        .OrderBy(x => x.Info.CreationTime)
+                    var oldestFile = filesInGroup
+                        .OrderBy(f => DateTime.Parse(f.CreatedTime))
                         .First();
 
-                    var autoDeleteFiles = validFiles.Where(f => f != oldestFile.Path).ToList();
+                    var autoDeletePaths = filesInGroup
+                        .Where(f => f.Path != oldestFile.Path)
+                        .Select(f => f.Path)
+                        .ToList();
 
                     Console.WriteLine($"保留最舊的檔案: {oldestFile.Path}");
-                    Console.WriteLine($"建立時間: {oldestFile.Info.CreationTime:yyyy-MM-dd HH:mm:ss}");
+                    Console.WriteLine($"建立時間: {oldestFile.CreatedTime}");
                     Console.WriteLine();
-                    Console.WriteLine($"將標記以下 {autoDeleteFiles.Count} 個檔案為待刪除：");
-                    foreach (var file in autoDeleteFiles)
+                    Console.WriteLine($"將標記以下 {autoDeletePaths.Count} 個檔案為待刪除：");
+                    foreach (var filePath in autoDeletePaths)
                     {
-                        var fileInfo = new FileInfo(file);
-                        Console.WriteLine($"  - {file}");
-                        Console.WriteLine($"    建立時間: {fileInfo.CreationTime:yyyy-MM-dd HH:mm:ss}");
+                        var fileToMark = filesInGroup.First(f => f.Path == filePath);
+                        Console.WriteLine($"  - {filePath}");
+                        Console.WriteLine($"    建立時間: {fileToMark.CreatedTime}");
                     }
 
                     Console.WriteLine();
                     if (ConfirmAction("確認標記？"))
                     {
-                        if (MarkFilesForDeletion(group.Key, autoDeleteFiles))
+                        if (MarkFilesForDeletion(group.Key, autoDeletePaths))
                         {
                             Console.WriteLine("標記完成！");
-
-                            // 更新本地標記清單
-                            foreach (var file in autoDeleteFiles)
-                            {
-                                markedFiles.Add(file);
-                            }
+                            markedFiles.UnionWith(autoDeletePaths);
                         }
                     }
                     else
@@ -561,8 +574,7 @@ class Program
                     break;
                 }
 
-                // 解析編號
-                var indices = ParseIndices(choice, validFiles.Count);
+                var indices = ParseIndices(choice, filesInGroup.Count);
 
                 if (indices.Count == 0)
                 {
@@ -571,16 +583,15 @@ class Program
                     continue;
                 }
 
-                if (indices.Count == validFiles.Count)
+                if (indices.Count == filesInGroup.Count)
                 {
                     Console.WriteLine("錯誤：不能刪除所有檔案，至少要保留一個！");
                     Console.WriteLine();
                     continue;
                 }
 
-                var filesToDelete = indices.Select(i => validFiles[i - 1]).ToList();
+                var filesToDelete = indices.Select(i => filesInGroup[i - 1].Path).ToList();
 
-                // 檢查是否有已標記的檔案
                 var alreadyMarked = filesToDelete.Where(f => markedFiles.Contains(f)).ToList();
                 var newMarks = filesToDelete.Where(f => !markedFiles.Contains(f)).ToList();
 
@@ -607,26 +618,16 @@ class Program
 
                 if (ConfirmAction("確認標記？"))
                 {
-                    // 先取消已標記的檔案
                     if (alreadyMarked.Count > 0)
                     {
                         UnmarkFiles(alreadyMarked);
-                        foreach (var file in alreadyMarked)
-                        {
-                            markedFiles.Remove(file);
-                        }
+                        markedFiles.ExceptWith(alreadyMarked);
                     }
 
-                    // 標記所有檔案
                     if (MarkFilesForDeletion(group.Key, filesToDelete))
                     {
                         Console.WriteLine("標記完成！");
-
-                        // 更新本地標記清單
-                        foreach (var file in filesToDelete)
-                        {
-                            markedFiles.Add(file);
-                        }
+                        markedFiles.UnionWith(filesToDelete);
                     }
 
                     Console.WriteLine();
