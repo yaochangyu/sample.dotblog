@@ -114,8 +114,12 @@
                             <th style="width: 100px;">重複次數</th>
                             <th style="width: 150px;">浪費空間</th>
                             <th>檔案路徑</th>
+                            <th style="width: 150px;">檔案修改日期</th>
+                            <th style="width: 100px;">目標資料夾</th>
                             <th style="width: 120px;">標記刪除</th>
-                            <th style="width: 120px;">取消標記刪除</th>
+                            <th style="width: 120px;">取消標記</th>
+                            <th style="width: 120px;">標記移動</th>
+                            <th style="width: 120px;">取消移動</th>
                         </tr>
                     </thead>
                     <tbody id="large-files-tbody"></tbody>
@@ -142,7 +146,7 @@
         }
 
 
-        function markFile(filePath, mark, markButton, unmarkButton, tdPath) {
+        function markFileForDeletion(filePath, mark, markButton, unmarkButton, tdPath, markMoveButton, unmarkMoveButton) {
             const files = [filePath];
             const endpoint = mark ? 'mark-for-deletion' : 'unmark-for-deletion';
 
@@ -164,14 +168,65 @@
                     // Update UI based on mark status
                     if (mark) {
                         tdPath.style.textDecoration = 'line-through';
-                        tdPath.style.color = '#888';
+                        tdPath.style.color = '#f56565';
                         markButton.disabled = true;
                         unmarkButton.disabled = false;
+                        markMoveButton.disabled = true;
+                        unmarkMoveButton.disabled = true;
                     } else {
                         tdPath.style.textDecoration = 'none';
                         tdPath.style.color = 'inherit';
                         markButton.disabled = false;
                         unmarkButton.disabled = true;
+                        markMoveButton.disabled = false;
+                        unmarkMoveButton.disabled = true;
+                    }
+                } else {
+                    alert('操作失敗: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('API 呼叫失敗:', error);
+                alert('API 呼叫失敗！\n請確認主程式正在運行，並且 API 伺服器已啟動。');
+            });
+        }
+
+        function markFileForMove(filePath, mark, markButton, unmarkButton, tdPath, tdTargetFolder, markDeleteButton, unmarkDeleteButton) {
+            const files = [filePath];
+            const endpoint = mark ? 'mark-for-move' : 'unmark-for-move';
+
+            fetch(`http://localhost:12345/${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(files),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('伺服器回應錯誤: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update UI based on mark status
+                    if (mark) {
+                        tdPath.style.textDecoration = 'underline';
+                        tdPath.style.color = '#4299e1';
+                        markButton.disabled = true;
+                        unmarkButton.disabled = false;
+                        markDeleteButton.disabled = true;
+                        unmarkDeleteButton.disabled = true;
+                        tdTargetFolder.style.fontWeight = 'bold';
+                    } else {
+                        tdPath.style.textDecoration = 'none';
+                        tdPath.style.color = 'inherit';
+                        markButton.disabled = false;
+                        unmarkButton.disabled = true;
+                        markDeleteButton.disabled = false;
+                        unmarkDeleteButton.disabled = true;
+                        tdTargetFolder.style.fontWeight = 'normal';
                     }
                 } else {
                     alert('操作失敗: ' + data.message);
@@ -344,39 +399,93 @@
                     tdPath.appendChild(pathSpan);
                     tr.appendChild(tdPath);
 
+                    // 檔案修改日期
+                    var tdModifiedTime = document.createElement('td');
+                    tdModifiedTime.textContent = filePath.FileLastModifiedTime || '-';
+                    tdModifiedTime.style.fontSize = '0.9em';
+                    tdModifiedTime.style.color = '#4a5568';
+                    tr.appendChild(tdModifiedTime);
+
+                    // 目標資料夾（根據檔案修改日期）
+                    var tdTargetFolder = document.createElement('td');
+                    tdTargetFolder.textContent = filePath.TargetFolder || '-';
+                    tdTargetFolder.style.fontSize = '0.9em';
+                    tdTargetFolder.style.color = '#667eea';
+                    tr.appendChild(tdTargetFolder);
+
                     // Mark for deletion column
-                    var tdMark = document.createElement('td');
-                    var markButton = document.createElement('button');
-                    markButton.className = 'toggle-btn';
-                    markButton.textContent = '標記刪除';
-                    markButton.onclick = function() {
-                        markFile(filePath.Path, true, markButton, unmarkButton, tdPath);
-                    };
-                    tdMark.appendChild(markButton);
-                    tr.appendChild(tdMark);
+                    var tdMarkDelete = document.createElement('td');
+                    var markDeleteButton = document.createElement('button');
+                    markDeleteButton.className = 'toggle-btn';
+                    markDeleteButton.textContent = '標記刪除';
+                    tdMarkDelete.appendChild(markDeleteButton);
+                    tr.appendChild(tdMarkDelete);
 
                     // Unmark for deletion column
-                    var tdUnmark = document.createElement('td');
-                    var unmarkButton = document.createElement('button');
-                    unmarkButton.className = 'toggle-btn';
-                    unmarkButton.textContent = '取消標記';
-                    unmarkButton.onclick = function() {
-                        markFile(filePath.Path, false, markButton, unmarkButton, tdPath);
-                    };
-                    tdUnmark.appendChild(unmarkButton);
-                    tr.appendChild(tdUnmark);
+                    var tdUnmarkDelete = document.createElement('td');
+                    var unmarkDeleteButton = document.createElement('button');
+                    unmarkDeleteButton.className = 'toggle-btn';
+                    unmarkDeleteButton.textContent = '取消標記';
+                    tdUnmarkDelete.appendChild(unmarkDeleteButton);
+                    tr.appendChild(tdUnmarkDelete);
 
-                    // Set initial state based on IsMarked
-                    if (filePath.IsMarked) {
+                    // Mark for move column
+                    var tdMarkMove = document.createElement('td');
+                    var markMoveButton = document.createElement('button');
+                    markMoveButton.className = 'toggle-btn';
+                    markMoveButton.textContent = '標記移動';
+                    tdMarkMove.appendChild(markMoveButton);
+                    tr.appendChild(tdMarkMove);
+
+                    // Unmark for move column
+                    var tdUnmarkMove = document.createElement('td');
+                    var unmarkMoveButton = document.createElement('button');
+                    unmarkMoveButton.className = 'toggle-btn';
+                    unmarkMoveButton.textContent = '取消移動';
+                    tdUnmarkMove.appendChild(unmarkMoveButton);
+                    tr.appendChild(tdUnmarkMove);
+
+                    // Set onclick handlers
+                    markDeleteButton.onclick = function() {
+                        markFileForDeletion(filePath.Path, true, markDeleteButton, unmarkDeleteButton, tdPath, markMoveButton, unmarkMoveButton);
+                    };
+                    unmarkDeleteButton.onclick = function() {
+                        markFileForDeletion(filePath.Path, false, markDeleteButton, unmarkDeleteButton, tdPath, markMoveButton, unmarkMoveButton);
+                    };
+                    markMoveButton.onclick = function() {
+                        markFileForMove(filePath.Path, true, markMoveButton, unmarkMoveButton, tdPath, tdTargetFolder, markDeleteButton, unmarkDeleteButton);
+                    };
+                    unmarkMoveButton.onclick = function() {
+                        markFileForMove(filePath.Path, false, markMoveButton, unmarkMoveButton, tdPath, tdTargetFolder, markDeleteButton, unmarkDeleteButton);
+                    };
+
+                    // Set initial state based on MarkType
+                    // MarkType: 0=無標記, 1=刪除標記, 2=移動標記
+                    if (filePath.MarkType === 1) {
+                        // 刪除標記
                         tdPath.style.textDecoration = 'line-through';
-                        tdPath.style.color = '#888';
-                        markButton.disabled = true;
-                        unmarkButton.disabled = false;
+                        tdPath.style.color = '#f56565';
+                        markDeleteButton.disabled = true;
+                        unmarkDeleteButton.disabled = false;
+                        markMoveButton.disabled = true;
+                        unmarkMoveButton.disabled = true;
+                    } else if (filePath.MarkType === 2) {
+                        // 移動標記
+                        tdPath.style.textDecoration = 'underline';
+                        tdPath.style.color = '#4299e1';
+                        markMoveButton.disabled = true;
+                        unmarkMoveButton.disabled = false;
+                        markDeleteButton.disabled = true;
+                        unmarkDeleteButton.disabled = true;
+                        tdTargetFolder.style.fontWeight = 'bold';
                     } else {
+                        // 無標記
                         tdPath.style.textDecoration = 'none';
                         tdPath.style.color = 'inherit';
-                        markButton.disabled = false;
-                        unmarkButton.disabled = true;
+                        markDeleteButton.disabled = false;
+                        unmarkDeleteButton.disabled = true;
+                        markMoveButton.disabled = false;
+                        unmarkMoveButton.disabled = true;
                     }
 
                     tbody.appendChild(tr);
