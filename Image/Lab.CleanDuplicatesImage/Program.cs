@@ -2063,6 +2063,8 @@ class Program
     {
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 
+        var markedFiles = LoadMarkedFiles();
+
         // 1. 建立報表資料
         var reportData = new
         {
@@ -2080,13 +2082,13 @@ class Program
             FileSizeDistribution = new
             {
                 Small = fileSizeDistribution.Small,
-                SmallPercentage = fileSizeDistribution.Small * 100.0 / duplicateData.Count,
+                SmallPercentage = fileSizeDistribution.Small * 100.0 / (duplicateData.Count > 0 ? duplicateData.Count : 1),
                 Medium = fileSizeDistribution.Medium,
-                MediumPercentage = fileSizeDistribution.Medium * 100.0 / duplicateData.Count,
+                MediumPercentage = fileSizeDistribution.Medium * 100.0 / (duplicateData.Count > 0 ? duplicateData.Count : 1),
                 Large = fileSizeDistribution.Large,
-                LargePercentage = fileSizeDistribution.Large * 100.0 / duplicateData.Count,
+                LargePercentage = fileSizeDistribution.Large * 100.0 / (duplicateData.Count > 0 ? duplicateData.Count : 1),
                 VeryLarge = fileSizeDistribution.VeryLarge,
-                VeryLargePercentage = fileSizeDistribution.VeryLarge * 100.0 / duplicateData.Count
+                VeryLargePercentage = fileSizeDistribution.VeryLarge * 100.0 / (duplicateData.Count > 0 ? duplicateData.Count : 1)
             },
             TopFoldersByDuplicateRate = folderStats
                 .OrderByDescending(f => f.DuplicateRate)
@@ -2114,7 +2116,7 @@ class Program
                     g.FileCount,
                     WastedSpace = g.FileSize * (g.FileCount - 1),
                     WastedSpaceFormatted = FormatFileSize(g.FileSize * (g.FileCount - 1)),
-                    FilePaths = g.FilePaths
+                    FilePaths = g.FilePaths.Select(p => new { Path = p, IsMarked = markedFiles.Contains(p) }).ToList()
                 })
         };
 
