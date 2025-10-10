@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Net;
 using Microsoft.Data.Sqlite;
 
 namespace Lab.CleanDuplicatesImage;
@@ -135,6 +136,60 @@ static class DatabaseHelper
 
 class Program
 {
+    static void HandleCommandLineArgs(string[] args)
+    {
+        if (args.Length > 1 && args[0] == "--mark-delete")
+        {
+            var filesToMark = args.Skip(1).ToList();
+            Console.WriteLine($"收到 {filesToMark.Count} 個來自命令列的標記請求...");
+            InitializeDatabase();
+            
+            var hashes = GetHashesForFilePaths(filesToMark);
+            
+            foreach (var file in filesToMark)
+            {
+                hashes.TryGetValue(file, out var hash);
+                MarkFileForDeletion(hash, file);
+            }
+            Console.WriteLine("標記完成！");
+        }
+        else
+        {
+            Console.WriteLine("無法識別的命令列參數。");
+        }
+    }
+
+    static Dictionary<string, string?> GetHashesForFilePaths(List<string> filePaths)
+    {
+        if (filePaths == null || filePaths.Count == 0)
+        {
+            return new Dictionary<string, string?>();
+        }
+
+        var parameters = string.Join(",", filePaths.Select((_, i) => $"$p{i}"));
+        var commandText = $"SELECT FilePath, Hash FROM DuplicateFiles WHERE FilePath IN ({parameters})";
+
+        return DatabaseHelper.ExecuteQuery(
+            commandText,
+            reader =>
+            {
+                var results = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+                while(reader.Read())
+                {
+                    results[reader.GetString(0)] = reader.GetString(1);
+                }
+                return results;
+            },
+            cmd => 
+            {
+                for(int i = 0; i < filePaths.Count; i++)
+                {
+                    cmd.Parameters.AddWithValue($"$p{i}", filePaths[i]);
+                }
+            }
+        );
+    }
+
     // 支援的圖片副檔名
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -180,7 +235,7 @@ class Program
             Console.WriteLine("5. 執行刪除（刪除已標記的檔案）");
             Console.WriteLine("6. 查看已標記略過檔案報表");
             Console.WriteLine("7. 查看已標記刪除檔案報表");
-            Console.WriteLine("8. 重複檔案分析報表");
+            Console.WriteLine("8. 啟動 API 服務並產生重複檔案分析報表");
             Console.WriteLine("9. 離開");
             Console.Write("請輸入選項 (1-9): ");
 
@@ -189,6 +244,11 @@ class Program
 
             if (menuChoice == "9")
             {
+                if (_httpListener?.IsListening == true)
+                {
+                    Console.WriteLine("正在關閉 API 伺服器...");
+                    _httpListener.Stop();
+                }
                 Console.WriteLine("感謝使用，再見！");
                 return;
             }
@@ -264,7 +324,7 @@ class Program
             if (menuChoice == "8")
             {
                 // 重複檔案分析報表
-                GenerateDuplicateAnalysisReport();
+                RunApiServerAndGenerateReport().Wait();
                 Console.WriteLine();
                 continue;
             }
@@ -2027,6 +2087,146 @@ class Program
                 }
             }
         });
+    }
+
+    private static HttpListener? _httpListener;
+
+    static async Task RunApiServerAndGenerateReport()
+    {
+        if (_httpListener?.IsListening == true)
+        {
+            Console.WriteLine("API 伺服器已在運行中。");
+            GenerateDuplicateAnalysisReport(); // Just regenerate the report
+            return;
+        }
+
+        _httpListener = new HttpListener();
+        _httpListener.Prefixes.Add("http://localhost:12345/");
+        
+        try
+        {
+            _httpListener.Start();
+            Console.WriteLine("API 伺服器已啟動於 http://localhost:12345/");
+            Console.WriteLine("請勿關閉此視窗，直到您完成報表操作。");
+
+            // Run the listener on a background thread
+            _ = Task.Run(HandleIncomingRequests);
+
+            // Generate and open the report
+            GenerateDuplicateAnalysisReport();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"無法啟動 API 伺服器: {ex.Message}");
+            Console.WriteLine("報表將在沒有 API 功能的情況下產生。");
+            _httpListener = null;
+            GenerateDuplicateAnalysisReport(); // Fallback
+        }
+    }
+
+    static async Task HandleIncomingRequests()
+    {
+        if (_httpListener == null) return;
+
+        while (_httpListener.IsListening)
+        {
+            try
+            {
+                var context = await _httpListener.GetContextAsync();
+                var request = context.Request;
+                var response = context.Response;
+
+                // Handle CORS pre-flight request
+                if (request.HttpMethod == "OPTIONS")
+                {
+                    response.AddHeader("Access-Control-Allow-Origin", "*");
+                    response.AddHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+                    response.AddHeader("Access-control-allow-headers", "Content-Type");
+                    response.StatusCode = 204; // No Content
+                    response.Close();
+                    continue;
+                }
+
+                // Add CORS header to actual request
+                response.AddHeader("Access-Control-Allow-Origin", "*");
+
+                if (request.Url?.AbsolutePath == "/mark-for-deletion" && request.HttpMethod == "POST")
+                {
+                    using var reader = new StreamReader(request.InputStream, request.ContentEncoding);
+                    var jsonPayload = await reader.ReadToEndAsync();
+                    var filesToMark = System.Text.Json.JsonSerializer.Deserialize<List<string>>(jsonPayload);
+
+                    if (filesToMark != null && filesToMark.Count > 0)
+                    {
+                        Console.WriteLine($"收到 {filesToMark.Count} 個來自 API 的標記請求...");
+                        var hashes = GetHashesForFilePaths(filesToMark);
+                        foreach (var file in filesToMark)
+                        {
+                            hashes.TryGetValue(file, out var hash);
+                            MarkFileForDeletion(hash, file);
+                        }
+                        
+                        var responseString = "{\"success\": true, \"message\": \"標記成功！\"}";
+                        var buffer = Encoding.UTF8.GetBytes(responseString);
+                        response.ContentType = "application/json";
+                        response.ContentLength64 = buffer.Length;
+                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                        Console.WriteLine("API 請求處理完成。");
+                    }
+                    else
+                    {
+                        var responseString = "{\"success\": false, \"message\": \"請求中未包含檔案路徑。\"}";
+                        var buffer = Encoding.UTF8.GetBytes(responseString);
+                        response.StatusCode = 400; // Bad Request
+                        response.ContentType = "application/json";
+                        response.ContentLength64 = buffer.Length;
+                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                    }
+                }
+                else if (request.Url?.AbsolutePath == "/unmark-for-deletion" && request.HttpMethod == "POST")
+                {
+                    using var reader = new StreamReader(request.InputStream, request.ContentEncoding);
+                    var jsonPayload = await reader.ReadToEndAsync();
+                    var filesToUnmark = System.Text.Json.JsonSerializer.Deserialize<List<string>>(jsonPayload);
+
+                    if (filesToUnmark != null && filesToUnmark.Count > 0)
+                    {
+                        Console.WriteLine($"收到 {filesToUnmark.Count} 個來自 API 的取消標記請求...");
+                        UnmarkFiles(filesToUnmark);
+                        
+                        var responseString = "{\"success\": true, \"message\": \"取消標記成功！\"}";
+                        var buffer = Encoding.UTF8.GetBytes(responseString);
+                        response.ContentType = "application/json";
+                        response.ContentLength64 = buffer.Length;
+                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                        Console.WriteLine("API 取消標記請求處理完成。");
+                    }
+                    else
+                    {
+                        var responseString = "{\"success\": false, \"message\": \"請求中未包含檔案路徑。\"}";
+                        var buffer = Encoding.UTF8.GetBytes(responseString);
+                        response.StatusCode = 400; // Bad Request
+                        response.ContentType = "application/json";
+                        response.ContentLength64 = buffer.Length;
+                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                    }
+                }
+                else
+                {
+                    response.StatusCode = 404; // Not Found
+                }
+                response.Close();
+            }
+            catch (HttpListenerException)
+            {
+                // Listener was stopped, exit the loop
+                break;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"API 請求處理錯誤: {ex.Message}");
+            }
+        }
     }
 
     /// <summary>
