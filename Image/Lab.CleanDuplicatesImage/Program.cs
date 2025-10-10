@@ -747,6 +747,8 @@ class Program
         int successCount = 0;
         int failCount = 0;
 
+        var deletedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
         foreach (var (path, _) in existingFiles)
         {
             try
@@ -756,13 +758,29 @@ class Program
                 successCount++;
 
                 // 從標記表中移除
-                var deleteCommand = connection.CreateCommand();
-                deleteCommand.CommandText = "DELETE FROM FilesToDelete WHERE FilePath = $path";
-                var pathParam = deleteCommand.CreateParameter();
-                pathParam.ParameterName = "$path";
-                pathParam.Value = path;
-                deleteCommand.Parameters.Add(pathParam);
-                deleteCommand.ExecuteNonQuery();
+                var deleteMarkCommand = connection.CreateCommand();
+                deleteMarkCommand.CommandText = "DELETE FROM FilesToDelete WHERE FilePath = $path";
+                var markPathParam = deleteMarkCommand.CreateParameter();
+                markPathParam.ParameterName = "$path";
+                markPathParam.Value = path;
+                deleteMarkCommand.Parameters.Add(markPathParam);
+                deleteMarkCommand.ExecuteNonQuery();
+
+                // 標記為已刪除（保留歷史記錄）
+                var updateCommand = connection.CreateCommand();
+                updateCommand.CommandText = @"
+                    UPDATE DuplicateFiles
+                    SET IsDeleted = 1, DeletedAt = $deletedAt
+                    WHERE FilePath = $path";
+                var updatePathParam = updateCommand.CreateParameter();
+                updatePathParam.ParameterName = "$path";
+                updatePathParam.Value = path;
+                updateCommand.Parameters.Add(updatePathParam);
+                var deletedAtParam = updateCommand.CreateParameter();
+                deletedAtParam.ParameterName = "$deletedAt";
+                deletedAtParam.Value = deletedAt;
+                updateCommand.Parameters.Add(deletedAtParam);
+                updateCommand.ExecuteNonQuery();
             }
             catch (Exception ex)
             {
@@ -1756,7 +1774,7 @@ class Program
         }
 
         return DatabaseHelper.ExecuteQuery(
-            "SELECT Hash, FilePath FROM DuplicateFiles",
+            "SELECT Hash, FilePath FROM DuplicateFiles WHERE IsDeleted = 0 OR IsDeleted IS NULL",
             reader =>
             {
                 var hashGroups = new Dictionary<string, List<string>>();
@@ -1767,7 +1785,7 @@ class Program
                     var hash = reader.GetString(0);
                     var filePath = reader.GetString(1);
 
-                    // 記錄所有已處理的檔案路徑
+                    // 記錄所有已處理的檔案路徑（包含已刪除的，避免重複掃描）
                     processedFiles.Add(filePath);
 
                     if (!hashGroups.ContainsKey(hash))
@@ -1775,7 +1793,7 @@ class Program
                         hashGroups[hash] = new List<string>();
                     }
 
-                    // 加入所有檔案（資料庫中的檔案代表掃描時存在）
+                    // 只加入未刪除的檔案
                     hashGroups[hash].Add(filePath);
                 }
 
@@ -1837,10 +1855,13 @@ class Program
                 FileCreatedTime TEXT NOT NULL,
                 FileCount INTEGER NOT NULL,
                 CreatedAt TEXT NOT NULL,
+                IsDeleted INTEGER NOT NULL DEFAULT 0,
+                DeletedAt TEXT,
                 UNIQUE(Hash, FilePath)
             );
 
             CREATE INDEX IF NOT EXISTS idx_hash ON DuplicateFiles(Hash);
+            CREATE INDEX IF NOT EXISTS idx_is_deleted ON DuplicateFiles(IsDeleted);
 
             CREATE TABLE IF NOT EXISTS FilesToDelete (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1858,6 +1879,29 @@ class Program
             );
         ";
         command.ExecuteNonQuery();
+
+        // 為現有資料表新增 IsDeleted 和 DeletedAt 欄位（如果不存在）
+        try
+        {
+            var alterCommand1 = connection.CreateCommand();
+            alterCommand1.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN IsDeleted INTEGER NOT NULL DEFAULT 0";
+            alterCommand1.ExecuteNonQuery();
+        }
+        catch
+        {
+            // 欄位已存在，忽略錯誤
+        }
+
+        try
+        {
+            var alterCommand2 = connection.CreateCommand();
+            alterCommand2.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN DeletedAt TEXT";
+            alterCommand2.ExecuteNonQuery();
+        }
+        catch
+        {
+            // 欄位已存在，忽略錯誤
+        }
     }
 
     /// <summary>
