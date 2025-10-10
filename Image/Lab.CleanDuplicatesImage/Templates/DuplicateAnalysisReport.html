@@ -112,7 +112,7 @@
                             <th style="width: 150px;">檔案大小</th>
                             <th style="width: 100px;">重複次數</th>
                             <th style="width: 150px;">浪費空間</th>
-                            <th>範例路徑</th>
+                            <th>檔案路徑</th>
                         </tr>
                     </thead>
                     <tbody id="large-files-tbody"></tbody>
@@ -276,12 +276,24 @@
                 tdWasted.innerHTML = '<strong>' + file.WastedSpaceFormatted + '</strong>';
                 tr.appendChild(tdWasted);
 
-                // 範例路徑
+                // 檔案路徑
                 var tdPath = document.createElement('td');
-                var pathSpan = document.createElement('span');
-                pathSpan.className = 'path';
-                pathSpan.textContent = file.SamplePath || 'N/A';
-                tdPath.appendChild(pathSpan);
+                if (file.FilePaths && file.FilePaths.length > 0) {
+                    var ul = document.createElement('ul');
+                    ul.style.margin = '0';
+                    ul.style.paddingLeft = '20px';
+                    file.FilePaths.forEach(function(path) {
+                        var li = document.createElement('li');
+                        var pathSpan = document.createElement('span');
+                        pathSpan.className = 'path';
+                        pathSpan.textContent = path;
+                        li.appendChild(pathSpan);
+                        ul.appendChild(li);
+                    });
+                    tdPath.appendChild(ul);
+                } else {
+                    tdPath.textContent = 'N/A';
+                }
                 tr.appendChild(tdPath);
 
                 tbody.appendChild(tr);
