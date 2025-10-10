@@ -136,6 +136,11 @@ static class DatabaseHelper
 
 class Program
 {
+    /// <summary>
+    /// 移動檔案的預設目標基礎路徑
+    /// </summary>
+    private const string DefaultMoveTargetBasePath = @"C:\Users\clove\OneDrive\圖片";
+
     static void HandleCommandLineArgs(string[] args)
     {
         if (args.Length > 1 && args[0] == "--mark-delete")
@@ -331,7 +336,7 @@ class Program
         }
     }
 
-    record FileDetails(string Path, long Size, string CreatedTime);
+    record FileDetails(string Path, long Size, string CreatedTime, string LastModifiedTime);
 
     static Dictionary<string, List<FileDetails>> LoadDuplicateGroupsWithDetails()
     {
@@ -341,7 +346,7 @@ class Program
         }
 
         return DatabaseHelper.ExecuteQuery(
-            "SELECT Hash, FilePath, FileSize, FileCreatedTime FROM DuplicateFiles WHERE IsDeleted = 0 OR IsDeleted IS NULL",
+            "SELECT Hash, FilePath, FileSize, FileCreatedTime, FileLastModifiedTime FROM DuplicateFiles WHERE IsDeleted = 0 OR IsDeleted IS NULL",
             reader =>
             {
                 var hashGroups = new Dictionary<string, List<FileDetails>>();
@@ -353,10 +358,12 @@ class Program
                         hashGroups[hash] = new List<FileDetails>();
                     }
 
+                    var lastModifiedTime = reader.IsDBNull(4) ? "-" : reader.GetString(4);
                     hashGroups[hash].Add(new FileDetails(
                         reader.GetString(1),
                         reader.GetInt64(2),
-                        reader.GetString(3)
+                        reader.GetString(3),
+                        lastModifiedTime
                     ));
                 }
                 return hashGroups;
@@ -558,6 +565,7 @@ class Program
                 Console.WriteLine($"[{i + 1}] {fileDetails.Path}{markIndicator}");
                 Console.WriteLine($"    大小: {FormatFileSize(fileDetails.Size)}");
                 Console.WriteLine($"    建立時間: {fileDetails.CreatedTime}");
+                Console.WriteLine($"    最後修改日期: {fileDetails.LastModifiedTime}");
                 Console.WriteLine();
             }
 
@@ -608,6 +616,7 @@ class Program
 
                     Console.WriteLine($"保留最舊的檔案: {oldestFile.Path}");
                     Console.WriteLine($"建立時間: {oldestFile.CreatedTime}");
+                    Console.WriteLine($"最後修改日期: {oldestFile.LastModifiedTime}");
                     Console.WriteLine();
                     Console.WriteLine($"將標記以下 {autoDeletePaths.Count} 個檔案為待刪除：");
                     foreach (var filePath in autoDeletePaths)
@@ -615,6 +624,7 @@ class Program
                         var fileToMark = filesInGroup.First(f => f.Path == filePath);
                         Console.WriteLine($"  - {filePath}");
                         Console.WriteLine($"    建立時間: {fileToMark.CreatedTime}");
+                        Console.WriteLine($"    最後修改日期: {fileToMark.LastModifiedTime}");
                     }
 
                     Console.WriteLine();
@@ -655,8 +665,7 @@ class Program
                     {
                         var targetPath = CalculateTargetPath(file.Path);
                         Console.WriteLine($"  - 來源: {file.Path}");
-                        Console.WriteLine($"    目標: {targetPath}");
-                        Console.WriteLine($"    建立時間: {file.CreatedTime}");
+                        Console.WriteLine($"  - 目標: {targetPath}");
                         Console.WriteLine();
                     }
 
@@ -1503,8 +1512,11 @@ class Program
     /// <summary>
     /// 計算目標檔案路徑（根據檔案修改日期 yyyy-MM）
     /// </summary>
-    static string CalculateTargetPath(string sourceFilePath, string baseTargetPath = @"C:\Users\clove\OneDrive\圖片")
+    static string CalculateTargetPath(string sourceFilePath, string? baseTargetPath = null)
     {
+        // 如果未指定基礎路徑，使用預設常數
+        baseTargetPath ??= DefaultMoveTargetBasePath;
+
         try
         {
             var fileInfo = new FileInfo(sourceFilePath);
