@@ -2114,7 +2114,7 @@ class Program
                     g.FileCount,
                     WastedSpace = g.FileSize * (g.FileCount - 1),
                     WastedSpaceFormatted = FormatFileSize(g.FileSize * (g.FileCount - 1)),
-                    SamplePath = g.FilePaths.FirstOrDefault()
+                    FilePaths = g.FilePaths
                 })
         };
 
