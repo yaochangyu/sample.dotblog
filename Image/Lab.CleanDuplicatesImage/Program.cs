@@ -194,7 +194,9 @@ class Program
         }
 
         return DatabaseHelper.ExecuteQuery(
-            "SELECT Hash, FilePath, FileSize, FileCreatedTime, FileLastModifiedTime FROM DuplicateFiles WHERE IsDeleted = 0 OR IsDeleted IS NULL",
+            @"SELECT Hash, FilePath, FileSize, FileCreatedTime, FileLastModifiedTime
+              FROM DuplicateFiles
+              WHERE MarkType = 0",
             reader =>
             {
                 var hashGroups = new Dictionary<string, List<FileDetails>>();
@@ -628,14 +630,26 @@ class Program
 
     static void MarkFileForDeletion(string hash, string filePath)
     {
-        DatabaseHelper.ExecuteNonQuery(
-            "INSERT OR IGNORE INTO FilesToDelete (Hash, FilePath, MarkedAt) VALUES ($hash, $filePath, $markedAt)",
-            cmd =>
-            {
-                cmd.Parameters.Add(new SqliteParameter("$hash", (object)hash ?? DBNull.Value));
-                cmd.Parameters.Add(new SqliteParameter("$filePath", filePath));
-                cmd.Parameters.Add(new SqliteParameter("$markedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
-            });
+        var markedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
+        {
+            // 插入到 FilesToDelete 資料表
+            var insertCommand = connection.CreateCommand();
+            insertCommand.Transaction = transaction;
+            insertCommand.CommandText = "INSERT OR IGNORE INTO FilesToDelete (Hash, FilePath, MarkedAt) VALUES ($hash, $filePath, $markedAt)";
+            insertCommand.Parameters.Add(new SqliteParameter("$hash", (object)hash ?? DBNull.Value));
+            insertCommand.Parameters.Add(new SqliteParameter("$filePath", filePath));
+            insertCommand.Parameters.Add(new SqliteParameter("$markedAt", markedAt));
+            insertCommand.ExecuteNonQuery();
+
+            // 更新 DuplicateFiles 的 MarkType
+            var updateCommand = connection.CreateCommand();
+            updateCommand.Transaction = transaction;
+            updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 1 WHERE FilePath = $filePath";
+            updateCommand.Parameters.Add(new SqliteParameter("$filePath", filePath));
+            updateCommand.ExecuteNonQuery();
+        });
     }
 
     static void ExecuteMarkedDeletions()
@@ -736,20 +750,13 @@ class Program
                 deleteMarkCommand.Parameters.Add(markPathParam);
                 deleteMarkCommand.ExecuteNonQuery();
 
-                // 標記為已刪除（保留歷史記錄）
+                // 清除 DuplicateFiles 的 MarkType
                 var updateCommand = connection.CreateCommand();
-                updateCommand.CommandText = @"
-                    UPDATE DuplicateFiles
-                    SET IsDeleted = 1, DeletedAt = $deletedAt
-                    WHERE FilePath = $path";
+                updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE FilePath = $path";
                 var updatePathParam = updateCommand.CreateParameter();
                 updatePathParam.ParameterName = "$path";
                 updatePathParam.Value = path;
                 updateCommand.Parameters.Add(updatePathParam);
-                var deletedAtParam = updateCommand.CreateParameter();
-                deletedAtParam.ParameterName = "$deletedAt";
-                deletedAtParam.Value = deletedAt;
-                updateCommand.Parameters.Add(deletedAtParam);
                 updateCommand.ExecuteNonQuery();
             }
             catch (Exception ex)
@@ -768,6 +775,7 @@ class Program
             {
                 foreach (var (path, _) in missingFiles)
                 {
+                    // 從 FilesToDelete 移除
                     var deleteCommand = connection.CreateCommand();
                     deleteCommand.CommandText = "DELETE FROM FilesToDelete WHERE FilePath = $path";
                     var pathParam = deleteCommand.CreateParameter();
@@ -775,6 +783,15 @@ class Program
                     pathParam.Value = path;
                     deleteCommand.Parameters.Add(pathParam);
                     deleteCommand.ExecuteNonQuery();
+
+                    // 清除 DuplicateFiles 的 MarkType
+                    var updateCommand = connection.CreateCommand();
+                    updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE FilePath = $path";
+                    var updatePathParam = updateCommand.CreateParameter();
+                    updatePathParam.ParameterName = "$path";
+                    updatePathParam.Value = path;
+                    updateCommand.Parameters.Add(updatePathParam);
+                    updateCommand.ExecuteNonQuery();
                 }
 
                 Console.WriteLine("已清除記錄！");
@@ -784,14 +801,22 @@ class Program
 
     static void ClearDeletedMarks()
     {
-        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
-        connection.Open();
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
+        {
+            // 清除所有 FilesToDelete 記錄
+            var deleteCommand = connection.CreateCommand();
+            deleteCommand.Transaction = transaction;
+            deleteCommand.CommandText = "DELETE FROM FilesToDelete";
+            var count = deleteCommand.ExecuteNonQuery();
 
-        var command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM FilesToDelete";
-        var count = command.ExecuteNonQuery();
+            // 清除所有 MarkType = 1 的標記
+            var updateCommand = connection.CreateCommand();
+            updateCommand.Transaction = transaction;
+            updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE MarkType = 1";
+            updateCommand.ExecuteNonQuery();
 
-        Console.WriteLine($"已清除 {count} 筆記錄");
+            Console.WriteLine($"已清除 {count} 筆記錄");
+        });
     }
 
     static void ViewSkippedFiles()
@@ -1096,17 +1121,27 @@ class Program
     {
         DatabaseHelper.ExecuteTransaction((connection, transaction) =>
         {
-            var command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = "DELETE FROM FilesToDelete WHERE FilePath = $path";
+            // 從 FilesToDelete 移除
+            var deleteCommand = connection.CreateCommand();
+            deleteCommand.Transaction = transaction;
+            deleteCommand.CommandText = "DELETE FROM FilesToDelete WHERE FilePath = $path";
+            var deletePathParam = new SqliteParameter("$path", "");
+            deleteCommand.Parameters.Add(deletePathParam);
 
-            var pathParam = new SqliteParameter("$path", "");
-            command.Parameters.Add(pathParam);
+            // 清除 DuplicateFiles 的 MarkType
+            var updateCommand = connection.CreateCommand();
+            updateCommand.Transaction = transaction;
+            updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE FilePath = $path AND MarkType = 1";
+            var updatePathParam = new SqliteParameter("$path", "");
+            updateCommand.Parameters.Add(updatePathParam);
 
             foreach (var path in filePaths)
             {
-                pathParam.Value = path;
-                command.ExecuteNonQuery();
+                deletePathParam.Value = path;
+                deleteCommand.ExecuteNonQuery();
+
+                updatePathParam.Value = path;
+                updateCommand.ExecuteNonQuery();
             }
         });
     }
@@ -1122,34 +1157,22 @@ class Program
             command.Transaction = transaction;
             command.CommandText = @"
                 UPDATE DuplicateFiles
-                SET MarkType = 2,
-                    MoveTo = $targetFolder,
-                    DeletedAt = $markedAt
+                SET MarkType = 2
                 WHERE FilePath = $path";
 
             var pathParam = new SqliteParameter("$path", "");
-            var targetFolderParam = new SqliteParameter("$targetFolder", "");
-            var markedAtParam = new SqliteParameter("$markedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-
             command.Parameters.Add(pathParam);
-            command.Parameters.Add(targetFolderParam);
-            command.Parameters.Add(markedAtParam);
 
             foreach (var path in filePaths)
             {
                 try
                 {
-                    // 取得檔案的修改日期
                     if (File.Exists(path))
                     {
-                        var fileInfo = new FileInfo(path);
-                        var targetFolder = fileInfo.LastWriteTime.ToString("yyyy-MM");
-
                         pathParam.Value = path;
-                        targetFolderParam.Value = targetFolder;
                         command.ExecuteNonQuery();
 
-                        Console.WriteLine($"標記移動：{path} -> 資料夾 {targetFolder}");
+                        Console.WriteLine($"標記移動：{path}");
                     }
                     else
                     {
@@ -1175,9 +1198,7 @@ class Program
             command.Transaction = transaction;
             command.CommandText = @"
                 UPDATE DuplicateFiles
-                SET MarkType = 0,
-                    MoveTo = NULL,
-                    DeletedAt = NULL
+                SET MarkType = 0
                 WHERE FilePath = $path AND MarkType = 2";
 
             var pathParam = new SqliteParameter("$path", "");
@@ -1262,7 +1283,10 @@ class Program
         try
         {
             return DatabaseHelper.ExecuteQuery(
-                "SELECT FilePath, MarkType, MoveTo FROM DuplicateFiles WHERE MarkType > 0",
+                @"SELECT df.FilePath, df.MarkType, ftm.TargetPath
+                  FROM DuplicateFiles df
+                  LEFT JOIN FileToMove ftm ON df.FilePath = ftm.SourcePath
+                  WHERE df.MarkType > 0",
                 reader =>
                 {
                     var markInfo = new Dictionary<string, (int, string?)>(StringComparer.OrdinalIgnoreCase);
@@ -1944,7 +1968,9 @@ class Program
         }
 
         return DatabaseHelper.ExecuteQuery(
-            "SELECT Hash, FilePath FROM DuplicateFiles WHERE IsDeleted = 0 OR IsDeleted IS NULL",
+            @"SELECT Hash, FilePath
+              FROM DuplicateFiles
+              WHERE MarkType = 0",
             reader =>
             {
                 var hashGroups = new Dictionary<string, List<string>>();
@@ -2094,38 +2120,6 @@ class Program
             }
         }
 
-        // 如果 IsDeleted 欄位不存在，則新增
-        if (!existingColumns.Contains("IsDeleted"))
-        {
-            try
-            {
-                var alterCommand1 = connection.CreateCommand();
-                alterCommand1.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN IsDeleted INTEGER NOT NULL DEFAULT 0";
-                alterCommand1.ExecuteNonQuery();
-                Console.WriteLine("已新增 IsDeleted 欄位到 DuplicateFiles 資料表");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"警告：無法新增 IsDeleted 欄位: {ex.Message}");
-            }
-        }
-
-        // 如果 DeletedAt 欄位不存在，則新增
-        if (!existingColumns.Contains("DeletedAt"))
-        {
-            try
-            {
-                var alterCommand2 = connection.CreateCommand();
-                alterCommand2.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN DeletedAt TEXT";
-                alterCommand2.ExecuteNonQuery();
-                Console.WriteLine("已新增 DeletedAt 欄位到 DuplicateFiles 資料表");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"警告：無法新增 DeletedAt 欄位: {ex.Message}");
-            }
-        }
-
         // 如果 MarkType 欄位不存在，則新增（0=無標記, 1=刪除標記, 2=移動標記）
         if (!existingColumns.Contains("MarkType"))
         {
@@ -2135,15 +2129,6 @@ class Program
                 alterCommand3.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN MarkType INTEGER NOT NULL DEFAULT 0";
                 alterCommand3.ExecuteNonQuery();
                 Console.WriteLine("已新增 MarkType 欄位到 DuplicateFiles 資料表");
-
-                // 遷移現有的 IsDeleted 資料到 MarkType
-                var migrateCommand = connection.CreateCommand();
-                migrateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 1 WHERE IsDeleted = 1";
-                var affectedRows = migrateCommand.ExecuteNonQuery();
-                if (affectedRows > 0)
-                {
-                    Console.WriteLine($"已遷移 {affectedRows} 筆刪除標記到 MarkType");
-                }
             }
             catch (Exception ex)
             {
@@ -2151,19 +2136,20 @@ class Program
             }
         }
 
-        // 如果 MoveTo 欄位不存在，則新增（格式：yyyy-MM）
-        if (!existingColumns.Contains("MoveTo"))
+        // MoveTo 欄位已由 FileToMove 資料表取代，因此移除
+        if (existingColumns.Contains("MoveTo"))
         {
+            // 這段程式碼是為了舊版資料庫相容性，未來可以移除
             try
             {
-                var alterCommand4 = connection.CreateCommand();
-                alterCommand4.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN MoveTo TEXT";
-                alterCommand4.ExecuteNonQuery();
-                Console.WriteLine("已新增 MoveTo 欄位到 DuplicateFiles 資料表");
+                var alterCommand = connection.CreateCommand();
+                alterCommand.CommandText = "ALTER TABLE DuplicateFiles DROP COLUMN MoveTo";
+                alterCommand.ExecuteNonQuery();
+                Console.WriteLine("已從 DuplicateFiles 資料表移除舊的 MoveTo 欄位");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"警告：無法新增 MoveTo 欄位: {ex.Message}");
+                Console.WriteLine($"警告：無法移除舊的 MoveTo 欄位: {ex.Message}");
             }
         }
 
@@ -2187,7 +2173,6 @@ class Program
         var indexCommand = connection.CreateCommand();
         indexCommand.CommandText = @"
             CREATE INDEX IF NOT EXISTS idx_hash ON DuplicateFiles(Hash);
-            CREATE INDEX IF NOT EXISTS idx_is_deleted ON DuplicateFiles(IsDeleted);
             CREATE INDEX IF NOT EXISTS idx_mark_type ON DuplicateFiles(MarkType);
         ";
         indexCommand.ExecuteNonQuery();
@@ -2659,7 +2644,7 @@ class Program
         return DatabaseHelper.ExecuteQuery(
             @"SELECT Hash, FilePath, FileSize, FileCount, FileLastModifiedTime
               FROM DuplicateFiles
-              WHERE (IsDeleted = 0 OR IsDeleted IS NULL) AND FileCount > 1
+              WHERE MarkType = 0 AND FileCount > 1
               ORDER BY Hash",
             reader =>
             {
