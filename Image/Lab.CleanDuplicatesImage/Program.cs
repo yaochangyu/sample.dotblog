@@ -414,6 +414,16 @@ class Program
                 // 至少要有一個未標記的檔案
                 return unmarkedFiles.Count > 0;
             })
+            .Select(g => new
+            {
+                Group = g,
+                // 計算群組中第一個存在檔案的大小（用於排序）
+                FileSize = g.Value.Where(File.Exists)
+                    .Select(f => new FileInfo(f).Length)
+                    .FirstOrDefault()
+            })
+            .OrderByDescending(x => x.FileSize) // 依檔案大小降序排列（大的優先）
+            .Select(x => x.Group)
             .ToList();
 
         if (groupsWithUnmarkedFiles.Count == 0)
@@ -1765,11 +1775,8 @@ class Program
                         hashGroups[hash] = new List<string>();
                     }
 
-                    // 只加入實際存在的檔案
-                    if (File.Exists(filePath))
-                    {
-                        hashGroups[hash].Add(filePath);
-                    }
+                    // 加入所有檔案（資料庫中的檔案代表掃描時存在）
+                    hashGroups[hash].Add(filePath);
                 }
 
                 return (hashGroups, processedFiles);
