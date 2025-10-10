@@ -567,6 +567,7 @@ class Program
                 var validFilePaths = filesInGroup.Select(f => f.Path).ToList();
                 DisplayMenu(
                     "輸入編號標記該檔案為待刪除（可用逗號分隔多個，例如: 1,3,5）",
+                    "輸入 'm 編號' 標記該檔案為待移動（可用逗號分隔多個，例如: m 1,3,5）",
                     "輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）",
                     "輸入 'k' 保留所有檔案並跳過此組",
                     "輸入 'a' 自動保留最舊的檔案，標記其他為待刪除",
@@ -632,6 +633,48 @@ class Program
 
                     Console.WriteLine();
                     break;
+                }
+
+                // 處理移動標記命令（m 1,3,5）
+                if (choice?.StartsWith("m ") == true)
+                {
+                    var indicesStr = choice.Substring(2).Trim();
+                    var moveIndices = ParseIndices(indicesStr, filesInGroup.Count);
+
+                    if (moveIndices.Count == 0)
+                    {
+                        Console.WriteLine("無效的編號，請重新輸入！");
+                        Console.WriteLine();
+                        continue;
+                    }
+
+                    var filesToMove = moveIndices.Select(i => filesInGroup[i - 1]).ToList();
+
+                    Console.WriteLine($"將標記以下 {filesToMove.Count} 個檔案為待移動：");
+                    foreach (var file in filesToMove)
+                    {
+                        var targetPath = CalculateTargetPath(file.Path);
+                        Console.WriteLine($"  - 來源: {file.Path}");
+                        Console.WriteLine($"    目標: {targetPath}");
+                        Console.WriteLine($"    建立時間: {file.CreatedTime}");
+                        Console.WriteLine();
+                    }
+
+                    if (ConfirmAction("確認標記為移動？"))
+                    {
+                        var moveFilePaths = filesToMove.Select(f => f.Path).ToList();
+                        if (MarkFilesForMove(group.Key, moveFilePaths))
+                        {
+                            Console.WriteLine("標記移動完成！");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("已取消標記");
+                    }
+
+                    Console.WriteLine();
+                    continue;
                 }
 
                 var indices = ParseIndices(choice, filesInGroup.Count);
@@ -1211,6 +1254,90 @@ class Program
         });
     }
 
+    /// <summary>
+    /// 標記檔案為移動（MarkType = 2），並設定目標資料夾（根據檔案修改日期：yyyy-MM）
+    /// </summary>
+    static void MarkFilesForMove(List<string> filePaths)
+    {
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
+        {
+            var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+                UPDATE DuplicateFiles
+                SET MarkType = 2,
+                    MoveTo = $targetFolder,
+                    DeletedAt = $markedAt
+                WHERE FilePath = $path";
+
+            var pathParam = new SqliteParameter("$path", "");
+            var targetFolderParam = new SqliteParameter("$targetFolder", "");
+            var markedAtParam = new SqliteParameter("$markedAt", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+
+            command.Parameters.Add(pathParam);
+            command.Parameters.Add(targetFolderParam);
+            command.Parameters.Add(markedAtParam);
+
+            foreach (var path in filePaths)
+            {
+                try
+                {
+                    // 取得檔案的修改日期
+                    if (File.Exists(path))
+                    {
+                        var fileInfo = new FileInfo(path);
+                        var targetFolder = fileInfo.LastWriteTime.ToString("yyyy-MM");
+
+                        pathParam.Value = path;
+                        targetFolderParam.Value = targetFolder;
+                        command.ExecuteNonQuery();
+
+                        Console.WriteLine($"標記移動：{path} -> 資料夾 {targetFolder}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"警告：檔案不存在，無法標記移動：{path}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"標記移動失敗 {path}：{ex.Message}");
+                }
+            }
+        });
+    }
+
+    /// <summary>
+    /// 取消移動標記（將 MarkType 設為 0）
+    /// </summary>
+    static void UnmarkFilesForMove(List<string> filePaths)
+    {
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
+        {
+            var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+                UPDATE DuplicateFiles
+                SET MarkType = 0,
+                    MoveTo = NULL,
+                    DeletedAt = NULL
+                WHERE FilePath = $path AND MarkType = 2";
+
+            var pathParam = new SqliteParameter("$path", "");
+            command.Parameters.Add(pathParam);
+
+            foreach (var path in filePaths)
+            {
+                pathParam.Value = path;
+                var rowsAffected = command.ExecuteNonQuery();
+                if (rowsAffected > 0)
+                {
+                    Console.WriteLine($"取消移動標記：{path}");
+                }
+            }
+        });
+    }
+
     static void ClearAllMarks()
     {
         DatabaseHelper.ExecuteNonQuery("DELETE FROM FilesToDelete");
@@ -1267,6 +1394,36 @@ class Program
         {
             // 資料表可能不存在或沒有 Hash 欄位，忽略錯誤
             return new Dictionary<string, HashSet<string>>();
+        }
+    }
+
+    /// <summary>
+    /// 載入所有檔案的標記資訊（MarkType, TargetFolder）
+    /// </summary>
+    static Dictionary<string, (int markType, string? targetFolder)> LoadFileMarkInfo()
+    {
+        try
+        {
+            return DatabaseHelper.ExecuteQuery(
+                "SELECT FilePath, MarkType, MoveTo FROM DuplicateFiles WHERE MarkType > 0",
+                reader =>
+                {
+                    var markInfo = new Dictionary<string, (int, string?)>(StringComparer.OrdinalIgnoreCase);
+                    while (reader.Read())
+                    {
+                        var filePath = reader.GetString(0);
+                        var markType = reader.GetInt32(1);
+                        var targetFolder = reader.IsDBNull(2) ? null : reader.GetString(2);
+
+                        markInfo[filePath] = (markType, targetFolder);
+                    }
+                    return markInfo;
+                });
+        }
+        catch
+        {
+            // 資料表可能不存在或沒有相關欄位，忽略錯誤
+            return new Dictionary<string, (int, string?)>(StringComparer.OrdinalIgnoreCase);
         }
     }
 
@@ -1341,6 +1498,86 @@ class Program
                 command.ExecuteNonQuery();
             }
         });
+    }
+
+    /// <summary>
+    /// 計算目標檔案路徑（根據檔案修改日期 yyyy-MM）
+    /// </summary>
+    static string CalculateTargetPath(string sourceFilePath, string baseTargetPath = @"C:\Users\clove\OneDrive\圖片")
+    {
+        try
+        {
+            var fileInfo = new FileInfo(sourceFilePath);
+            if (!fileInfo.Exists)
+            {
+                // 如果檔案不存在，使用當前時間
+                var currentFolder = DateTime.Now.ToString("yyyy-MM");
+                var fileName = Path.GetFileName(sourceFilePath);
+                return Path.Combine(baseTargetPath, currentFolder, fileName);
+            }
+
+            // 使用檔案的修改時間
+            var lastModified = fileInfo.LastWriteTime;
+            var folderName = lastModified.ToString("yyyy-MM");
+            var targetFolder = Path.Combine(baseTargetPath, folderName);
+            var targetPath = Path.Combine(targetFolder, fileInfo.Name);
+
+            return targetPath;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"計算目標路徑時發生錯誤: {ex.Message}");
+            // 發生錯誤時，使用當前時間
+            var currentFolder = DateTime.Now.ToString("yyyy-MM");
+            var fileName = Path.GetFileName(sourceFilePath);
+            return Path.Combine(baseTargetPath, currentFolder, fileName);
+        }
+    }
+
+    /// <summary>
+    /// 標記檔案為待移動
+    /// </summary>
+    static bool MarkFilesForMove(string hash, List<string> files)
+    {
+        var success = true;
+        var markedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
+        {
+            var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+                INSERT OR REPLACE INTO FileToMove (Hash, SourcePath, TargetPath, MarkedAt)
+                VALUES ($hash, $sourcePath, $targetPath, $markedAt)";
+
+            var hashParam = new SqliteParameter("$hash", hash);
+            var sourcePathParam = new SqliteParameter("$sourcePath", "");
+            var targetPathParam = new SqliteParameter("$targetPath", "");
+            var markedAtParam = new SqliteParameter("$markedAt", markedAt);
+
+            command.Parameters.Add(hashParam);
+            command.Parameters.Add(sourcePathParam);
+            command.Parameters.Add(targetPathParam);
+            command.Parameters.Add(markedAtParam);
+
+            foreach (var file in files)
+            {
+                try
+                {
+                    var targetPath = CalculateTargetPath(file);
+                    sourcePathParam.Value = file;
+                    targetPathParam.Value = targetPath;
+                    command.ExecuteNonQuery();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"標記移動檔案失敗: {file}, 錯誤: {ex.Message}");
+                    success = false;
+                }
+            }
+        });
+
+        return success;
     }
 
     static void ClearAllSkippedMarks()
@@ -1973,6 +2210,14 @@ class Program
                 SkippedAt TEXT NOT NULL,
                 UNIQUE(Hash, FilePath)
             );
+
+            CREATE TABLE IF NOT EXISTS FileToMove (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                Hash TEXT NOT NULL,
+                SourcePath TEXT NOT NULL UNIQUE,
+                TargetPath TEXT NOT NULL,
+                MarkedAt TEXT NOT NULL
+            );
         ";
         command.ExecuteNonQuery();
 
@@ -2021,11 +2266,69 @@ class Program
             }
         }
 
+        // 如果 MarkType 欄位不存在，則新增（0=無標記, 1=刪除標記, 2=移動標記）
+        if (!existingColumns.Contains("MarkType"))
+        {
+            try
+            {
+                var alterCommand3 = connection.CreateCommand();
+                alterCommand3.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN MarkType INTEGER NOT NULL DEFAULT 0";
+                alterCommand3.ExecuteNonQuery();
+                Console.WriteLine("已新增 MarkType 欄位到 DuplicateFiles 資料表");
+
+                // 遷移現有的 IsDeleted 資料到 MarkType
+                var migrateCommand = connection.CreateCommand();
+                migrateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 1 WHERE IsDeleted = 1";
+                var affectedRows = migrateCommand.ExecuteNonQuery();
+                if (affectedRows > 0)
+                {
+                    Console.WriteLine($"已遷移 {affectedRows} 筆刪除標記到 MarkType");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"警告：無法新增 MarkType 欄位: {ex.Message}");
+            }
+        }
+
+        // 如果 MoveTo 欄位不存在，則新增（格式：yyyy-MM）
+        if (!existingColumns.Contains("MoveTo"))
+        {
+            try
+            {
+                var alterCommand4 = connection.CreateCommand();
+                alterCommand4.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN MoveTo TEXT";
+                alterCommand4.ExecuteNonQuery();
+                Console.WriteLine("已新增 MoveTo 欄位到 DuplicateFiles 資料表");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"警告：無法新增 MoveTo 欄位: {ex.Message}");
+            }
+        }
+
+        // 如果 FileLastModifiedTime 欄位不存在，則新增
+        if (!existingColumns.Contains("FileLastModifiedTime"))
+        {
+            try
+            {
+                var alterCommand5 = connection.CreateCommand();
+                alterCommand5.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN FileLastModifiedTime TEXT";
+                alterCommand5.ExecuteNonQuery();
+                Console.WriteLine("已新增 FileLastModifiedTime 欄位到 DuplicateFiles 資料表");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"警告：無法新增 FileLastModifiedTime 欄位: {ex.Message}");
+            }
+        }
+
         // 第三步：建立索引（在欄位確定存在後）
         var indexCommand = connection.CreateCommand();
         indexCommand.CommandText = @"
             CREATE INDEX IF NOT EXISTS idx_hash ON DuplicateFiles(Hash);
             CREATE INDEX IF NOT EXISTS idx_is_deleted ON DuplicateFiles(IsDeleted);
+            CREATE INDEX IF NOT EXISTS idx_mark_type ON DuplicateFiles(MarkType);
         ";
         indexCommand.ExecuteNonQuery();
     }
@@ -2042,12 +2345,13 @@ class Program
             var command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandText = @"
-                INSERT INTO DuplicateFiles (Hash, FilePath, FileName, FileSize, FileCreatedTime, FileCount, CreatedAt)
-                VALUES ($hash, $filePath, $fileName, $fileSize, $fileCreatedTime, $fileCount, $createdAt)
+                INSERT INTO DuplicateFiles (Hash, FilePath, FileName, FileSize, FileCreatedTime, FileLastModifiedTime, FileCount, CreatedAt)
+                VALUES ($hash, $filePath, $fileName, $fileSize, $fileCreatedTime, $fileLastModifiedTime, $fileCount, $createdAt)
                 ON CONFLICT(Hash, FilePath) DO UPDATE SET
                     FileName = excluded.FileName,
                     FileSize = excluded.FileSize,
                     FileCreatedTime = excluded.FileCreatedTime,
+                    FileLastModifiedTime = excluded.FileLastModifiedTime,
                     FileCount = excluded.FileCount,
                     CreatedAt = excluded.CreatedAt";
 
@@ -2056,6 +2360,7 @@ class Program
             var fileNameParam = new SqliteParameter("$fileName", "");
             var fileSizeParam = new SqliteParameter("$fileSize", 0L);
             var fileCreatedTimeParam = new SqliteParameter("$fileCreatedTime", "");
+            var fileLastModifiedTimeParam = new SqliteParameter("$fileLastModifiedTime", "");
             var fileCountParam = new SqliteParameter("$fileCount", 0);
             var createdAtParam = new SqliteParameter("$createdAt", createdAt);
 
@@ -2064,6 +2369,7 @@ class Program
             command.Parameters.Add(fileNameParam);
             command.Parameters.Add(fileSizeParam);
             command.Parameters.Add(fileCreatedTimeParam);
+            command.Parameters.Add(fileLastModifiedTimeParam);
             command.Parameters.Add(fileCountParam);
             command.Parameters.Add(createdAtParam);
 
@@ -2081,6 +2387,7 @@ class Program
                     fileNameParam.Value = fileInfo.Name;
                     fileSizeParam.Value = fileInfo.Length;
                     fileCreatedTimeParam.Value = fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss");
+                    fileLastModifiedTimeParam.Value = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss");
                     fileCountParam.Value = files.Count;
 
                     command.ExecuteNonQuery();
@@ -2193,13 +2500,69 @@ class Program
                     {
                         Console.WriteLine($"收到 {filesToUnmark.Count} 個來自 API 的取消標記請求...");
                         UnmarkFiles(filesToUnmark);
-                        
+
                         var responseString = "{\"success\": true, \"message\": \"取消標記成功！\"}";
                         var buffer = Encoding.UTF8.GetBytes(responseString);
                         response.ContentType = "application/json";
                         response.ContentLength64 = buffer.Length;
                         await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
                         Console.WriteLine("API 取消標記請求處理完成。");
+                    }
+                    else
+                    {
+                        var responseString = "{\"success\": false, \"message\": \"請求中未包含檔案路徑。\"}";
+                        var buffer = Encoding.UTF8.GetBytes(responseString);
+                        response.StatusCode = 400; // Bad Request
+                        response.ContentType = "application/json";
+                        response.ContentLength64 = buffer.Length;
+                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                    }
+                }
+                else if (request.Url?.AbsolutePath == "/mark-for-move" && request.HttpMethod == "POST")
+                {
+                    using var reader = new StreamReader(request.InputStream, request.ContentEncoding);
+                    var jsonPayload = await reader.ReadToEndAsync();
+                    var filesToMark = System.Text.Json.JsonSerializer.Deserialize<List<string>>(jsonPayload);
+
+                    if (filesToMark != null && filesToMark.Count > 0)
+                    {
+                        Console.WriteLine($"收到 {filesToMark.Count} 個來自 API 的標記移動請求...");
+                        MarkFilesForMove(filesToMark);
+
+                        var responseString = "{\"success\": true, \"message\": \"標記移動成功！\"}";
+                        var buffer = Encoding.UTF8.GetBytes(responseString);
+                        response.ContentType = "application/json";
+                        response.ContentLength64 = buffer.Length;
+                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                        Console.WriteLine("API 標記移動請求處理完成。");
+                    }
+                    else
+                    {
+                        var responseString = "{\"success\": false, \"message\": \"請求中未包含檔案路徑。\"}";
+                        var buffer = Encoding.UTF8.GetBytes(responseString);
+                        response.StatusCode = 400; // Bad Request
+                        response.ContentType = "application/json";
+                        response.ContentLength64 = buffer.Length;
+                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                    }
+                }
+                else if (request.Url?.AbsolutePath == "/unmark-for-move" && request.HttpMethod == "POST")
+                {
+                    using var reader = new StreamReader(request.InputStream, request.ContentEncoding);
+                    var jsonPayload = await reader.ReadToEndAsync();
+                    var filesToUnmark = System.Text.Json.JsonSerializer.Deserialize<List<string>>(jsonPayload);
+
+                    if (filesToUnmark != null && filesToUnmark.Count > 0)
+                    {
+                        Console.WriteLine($"收到 {filesToUnmark.Count} 個來自 API 的取消移動標記請求...");
+                        UnmarkFilesForMove(filesToUnmark);
+
+                        var responseString = "{\"success\": true, \"message\": \"取消移動標記成功！\"}";
+                        var buffer = Encoding.UTF8.GetBytes(responseString);
+                        response.ContentType = "application/json";
+                        response.ContentLength64 = buffer.Length;
+                        await response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+                        Console.WriteLine("API 取消移動標記請求處理完成。");
                     }
                     else
                     {
@@ -2264,6 +2627,7 @@ class Program
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 
         var markedFiles = LoadMarkedFiles();
+        var fileMarkInfo = LoadFileMarkInfo();
 
         // 1. 建立報表資料
         var reportData = new
@@ -2316,7 +2680,64 @@ class Program
                     g.FileCount,
                     WastedSpace = g.FileSize * (g.FileCount - 1),
                     WastedSpaceFormatted = FormatFileSize(g.FileSize * (g.FileCount - 1)),
-                    FilePaths = g.FilePaths.Select(p => new { Path = p, IsMarked = markedFiles.Contains(p) }).ToList()
+                    FilePaths = g.FilePaths.Select(p =>
+                    {
+                        // 取得檔案的標記資訊
+                        var markType = 0;
+                        string? targetFolder = null;
+                        if (fileMarkInfo.TryGetValue(p, out var info))
+                        {
+                            markType = info.markType;
+                            targetFolder = info.targetFolder;
+                        }
+
+                        // 取得檔案修改時間（從資料庫）
+                        string? fileLastModifiedTime = null;
+                        if (g.FilePathsWithModifiedTime.TryGetValue(p, out var modifiedTime))
+                        {
+                            fileLastModifiedTime = modifiedTime;
+                        }
+
+                        // 如果沒有標記，嘗試計算目標資料夾（根據檔案修改日期）
+                        if (targetFolder == null && !string.IsNullOrEmpty(fileLastModifiedTime))
+                        {
+                            try
+                            {
+                                var lastModified = DateTime.Parse(fileLastModifiedTime);
+                                targetFolder = lastModified.ToString("yyyy-MM");
+                            }
+                            catch
+                            {
+                                // 如果資料庫沒有資料或解析失敗，嘗試直接讀取檔案
+                                if (File.Exists(p))
+                                {
+                                    try
+                                    {
+                                        var fileInfo = new FileInfo(p);
+                                        targetFolder = fileInfo.LastWriteTime.ToString("yyyy-MM");
+                                        fileLastModifiedTime = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss");
+                                    }
+                                    catch
+                                    {
+                                        targetFolder = "-";
+                                    }
+                                }
+                                else
+                                {
+                                    targetFolder = "-";
+                                }
+                            }
+                        }
+
+                        return new
+                        {
+                            Path = p,
+                            IsMarked = markedFiles.Contains(p), // 保留向後相容
+                            MarkType = markType,
+                            TargetFolder = targetFolder ?? "-",
+                            FileLastModifiedTime = fileLastModifiedTime ?? "-"
+                        };
+                    }).ToList()
                 })
         };
 
@@ -2376,7 +2797,7 @@ class Program
     ) AnalyzeDuplicateFiles()
     {
         return DatabaseHelper.ExecuteQuery(
-            @"SELECT Hash, FilePath, FileSize, FileCount
+            @"SELECT Hash, FilePath, FileSize, FileCount, FileLastModifiedTime
               FROM DuplicateFiles
               WHERE (IsDeleted = 0 OR IsDeleted IS NULL) AND FileCount > 1
               ORDER BY Hash",
@@ -2393,6 +2814,7 @@ class Program
                     var filePath = reader.GetString(1);
                     var fileSize = reader.GetInt64(2);
                     var fileCount = reader.GetInt32(3);
+                    var fileLastModifiedTime = reader.IsDBNull(4) ? null : reader.GetString(4);
 
                     // 收集重複群組資料
                     if (!duplicateGroups.ContainsKey(hash))
@@ -2402,11 +2824,13 @@ class Program
                             Hash = hash,
                             FileSize = fileSize,
                             FileCount = fileCount,
-                            FilePaths = new List<string>()
+                            FilePaths = new List<string>(),
+                            FilePathsWithModifiedTime = new Dictionary<string, string?>()
                         };
                     }
 
                     duplicateGroups[hash].FilePaths.Add(filePath);
+                    duplicateGroups[hash].FilePathsWithModifiedTime[filePath] = fileLastModifiedTime;
 
                     // 統計資料夾資訊
                     var folder = Path.GetDirectoryName(filePath) ?? "";
@@ -2523,6 +2947,7 @@ class Program
         public long FileSize { get; set; }
         public int FileCount { get; set; }
         public List<string> FilePaths { get; set; } = new();
+        public Dictionary<string, string?> FilePathsWithModifiedTime { get; set; } = new();
     }
 
     /// <summary>
