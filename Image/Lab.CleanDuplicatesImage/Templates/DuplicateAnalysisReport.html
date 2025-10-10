@@ -52,7 +52,7 @@
         .toggle-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-right: 10px; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3); }
         .toggle-btn:hover { background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%); box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4); }
 
-        .collapsible { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .collapsible { max-height: 0; overflow: auto; transition: max-height 0.3s ease-out; }
         .collapsible.active { max-height: 5000px; }
     </style>
 </head>
@@ -118,6 +118,9 @@
                     <tbody id="large-files-tbody"></tbody>
                 </table>
             </div>
+            <div style="text-align: right; margin-top: 15px;">
+                <button class="toggle-btn" onclick="generateScript()">產生標記腳本</button>
+            </div>
         </div>
     </div>
 
@@ -136,6 +139,31 @@
         function toggleSection(sectionId) {
             var section = document.getElementById(sectionId);
             section.classList.toggle('active');
+        }
+
+        function generateScript() {
+            const filesToMark = [];
+            document.querySelectorAll('.delete-checkbox:checked').forEach(checkbox => {
+                filesToMark.push('"' + checkbox.value + '"');
+            });
+
+            if (filesToMark.length === 0) {
+                alert('請先勾選要標記刪除的檔案！');
+                return;
+            }
+
+            const command = 'Lab.CleanDuplicatesImage.exe --mark-delete ' + filesToMark.join(' ');
+            const scriptContent = `@echo off\r\nchcp 65001\r\n${command}\r\npause`;
+
+            const blob = new Blob([scriptContent], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'mark_files.bat';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            alert('標記腳本 (mark_files.bat) 已下載。\n請將此檔案放到與主程式 (Lab.CleanDuplicatesImage.exe) 相同的資料夾下執行。');
         }
 
         function renderSizeDistribution(distribution) {
@@ -281,12 +309,29 @@
                 if (file.FilePaths && file.FilePaths.length > 0) {
                     var ul = document.createElement('ul');
                     ul.style.margin = '0';
-                    ul.style.paddingLeft = '20px';
-                    file.FilePaths.forEach(function(path) {
+                    ul.style.paddingLeft = '0';
+                    ul.style.listStyleType = 'none';
+
+                    file.FilePaths.forEach(function(filePath) { // filePath is an object { Path, IsMarked }
                         var li = document.createElement('li');
+                        
+                        var checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.className = 'delete-checkbox';
+                        checkbox.value = filePath.Path;
+                        checkbox.checked = filePath.IsMarked;
+                        checkbox.style.marginRight = '8px';
+                        
                         var pathSpan = document.createElement('span');
                         pathSpan.className = 'path';
-                        pathSpan.textContent = path;
+                        pathSpan.textContent = filePath.Path;
+                        
+                        if (filePath.IsMarked) {
+                            li.style.textDecoration = 'line-through';
+                            li.style.color = '#888';
+                        }
+
+                        li.appendChild(checkbox);
                         li.appendChild(pathSpan);
                         ul.appendChild(li);
                     });
