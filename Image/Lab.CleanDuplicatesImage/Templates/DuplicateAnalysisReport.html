@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang='zh-TW'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>重複檔案分析報表</title>
+    <style>
+        body { font-family: 'Microsoft JhengHei', Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 1400px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #2d3748; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #4a5568; border-bottom: 2px solid #cbd5e0; padding-bottom: 8px; margin-top: 30px; }
+        .summary { background: linear-gradient(135deg, #f6f8fb 0%, #e9ecef 100%); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dee2e6; }
+        .summary-item { display: inline-block; margin-right: 30px; margin-bottom: 10px; font-weight: bold; }
+        .summary-item span { color: #667eea; font-size: 1.1em; }
+
+        .section { margin-bottom: 30px; }
+        .card { background-color: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: box-shadow 0.3s; }
+
+        /* 圖表樣式 */
+        .chart-container { margin: 20px 0; }
+        .bar-chart { width: 100%; margin-top: 10px; }
+        .bar-item { display: flex; align-items: center; margin-bottom: 10px; }
+        .bar-label { width: 200px; font-weight: 500; }
+        .bar-wrapper { flex: 1; background-color: #e2e8f0; border-radius: 4px; height: 30px; position: relative; }
+        .bar-fill { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 10px; color: white; font-weight: 600; }
+
+        /* 表格樣式 */
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .data-table th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px; text-align: left; font-weight: 600; }
+        .data-table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+        .data-table tr:hover { background-color: #f7fafc; }
+        .data-table tr:nth-child(even) { background-color: #f9f9f9; }
+
+        /* 徽章樣式 */
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: 600; margin-left: 5px; }
+        .badge-danger { background-color: #f56565; color: white; }
+        .badge-warning { background-color: #ed8936; color: white; }
+        .badge-info { background-color: #4299e1; color: white; }
+        .badge-success { background-color: #48bb78; color: white; }
+
+        /* 路徑樣式 */
+        .path { font-family: 'Consolas', monospace; color: #2d3748; word-break: break-all; font-size: 0.9em; }
+
+        /* 進度條樣式 */
+        .progress-bar { width: 100%; height: 8px; background-color: #e2e8f0; border-radius: 4px; overflow: hidden; margin-top: 5px; }
+        .progress-fill { height: 100%; transition: width 0.3s; }
+        .progress-danger { background-color: #f56565; }
+        .progress-warning { background-color: #ed8936; }
+        .progress-success { background-color: #48bb78; }
+
+        .toggle-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-right: 10px; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3); }
+        .toggle-btn:hover { background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%); box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4); }
+
+        .collapsible { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .collapsible.active { max-height: 5000px; }
+    </style>
+</head>
+<body>
+    <!-- 資料 JSON -->
+    <script type="application/json" id="reportData">{{REPORT_DATA}}</script>
+
+    <div class='container'>
+        <h1>重複檔案分析報表</h1>
+
+        <div class='summary'>
+            <div class="summary-item">產生時間：<span id="generated-time"></span></div>
+            <div class="summary-item">重複群組數：<span id="total-groups"></span></div>
+            <div class="summary-item">總檔案數：<span id="total-files"></span></div>
+            <div class="summary-item">重複檔案數：<span id="total-duplicates"></span></div>
+            <div class="summary-item">可節省空間：<span id="potential-savings"></span></div>
+        </div>
+
+        <!-- 檔案大小分布 -->
+        <div class="section">
+            <h2>📊 檔案大小分布</h2>
+            <div class="chart-container">
+                <div class="bar-chart" id="size-distribution-chart"></div>
+            </div>
+        </div>
+
+        <!-- 重複率最高的資料夾 -->
+        <div class="section">
+            <h2>📁 重複率最高的資料夾（前 50 名）</h2>
+            <button class="toggle-btn" onclick="toggleSection('folders-section')">展開/收合</button>
+            <div id="folders-section" class="collapsible active">
+                <table class="data-table" id="folders-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>資料夾路徑</th>
+                            <th style="width: 100px;">總檔案數</th>
+                            <th style="width: 100px;">重複檔案</th>
+                            <th style="width: 120px;">重複率</th>
+                            <th style="width: 150px;">重複大小</th>
+                        </tr>
+                    </thead>
+                    <tbody id="folders-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 大檔案重複 -->
+        <div class="section">
+            <h2>💾 大檔案重複（≥ 10 MB，前 100 名）</h2>
+            <button class="toggle-btn" onclick="toggleSection('large-files-section')">展開/收合</button>
+            <div id="large-files-section" class="collapsible active">
+                <table class="data-table" id="large-files-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th style="width: 150px;">檔案大小</th>
+                            <th style="width: 100px;">重複次數</th>
+                            <th style="width: 150px;">浪費空間</th>
+                            <th>範例路徑</th>
+                        </tr>
+                    </thead>
+                    <tbody id="large-files-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatFileSize(bytes) {
+            var sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            if (bytes === 0) return '0 B';
+            var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+            return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
+        }
+
+        function formatPercentage(value) {
+            return value.toFixed(2) + '%';
+        }
+
+        function toggleSection(sectionId) {
+            var section = document.getElementById(sectionId);
+            section.classList.toggle('active');
+        }
+
+        function renderSizeDistribution(distribution) {
+            var container = document.getElementById('size-distribution-chart');
+            var categories = [
+                { label: '小檔案 (< 1 MB)', count: distribution.Small, percentage: distribution.SmallPercentage },
+                { label: '中檔案 (1-10 MB)', count: distribution.Medium, percentage: distribution.MediumPercentage },
+                { label: '大檔案 (10-100 MB)', count: distribution.Large, percentage: distribution.LargePercentage },
+                { label: '超大檔案 (≥ 100 MB)', count: distribution.VeryLarge, percentage: distribution.VeryLargePercentage }
+            ];
+
+            categories.forEach(function(cat) {
+                var barItem = document.createElement('div');
+                barItem.className = 'bar-item';
+
+                var label = document.createElement('div');
+                label.className = 'bar-label';
+                label.textContent = cat.label;
+
+                var wrapper = document.createElement('div');
+                wrapper.className = 'bar-wrapper';
+
+                var fill = document.createElement('div');
+                fill.className = 'bar-fill';
+                fill.style.width = Math.min(cat.percentage, 100) + '%';
+                fill.textContent = cat.count + ' 組 (' + formatPercentage(cat.percentage) + ')';
+
+                wrapper.appendChild(fill);
+                barItem.appendChild(label);
+                barItem.appendChild(wrapper);
+                container.appendChild(barItem);
+            });
+        }
+
+        function renderFoldersTable(folders) {
+            var tbody = document.getElementById('folders-tbody');
+
+            folders.forEach(function(folder, index) {
+                var tr = document.createElement('tr');
+
+                // 排名
+                var tdRank = document.createElement('td');
+                tdRank.textContent = index + 1;
+                tr.appendChild(tdRank);
+
+                // 資料夾路徑
+                var tdPath = document.createElement('td');
+                var pathSpan = document.createElement('span');
+                pathSpan.className = 'path';
+                pathSpan.textContent = folder.Path;
+                tdPath.appendChild(pathSpan);
+                tr.appendChild(tdPath);
+
+                // 總檔案數
+                var tdTotal = document.createElement('td');
+                tdTotal.textContent = folder.TotalCount;
+                tr.appendChild(tdTotal);
+
+                // 重複檔案
+                var tdDuplicate = document.createElement('td');
+                tdDuplicate.textContent = folder.DuplicateCount;
+                tr.appendChild(tdDuplicate);
+
+                // 重複率
+                var tdRate = document.createElement('td');
+                tdRate.innerHTML = folder.DuplicateRateFormatted;
+
+                var badge = document.createElement('span');
+                badge.className = 'badge';
+                if (folder.DuplicateRate >= 0.8) {
+                    badge.className += ' badge-danger';
+                } else if (folder.DuplicateRate >= 0.5) {
+                    badge.className += ' badge-warning';
+                } else {
+                    badge.className += ' badge-info';
+                }
+
+                var progressBar = document.createElement('div');
+                progressBar.className = 'progress-bar';
+                var progressFill = document.createElement('div');
+                progressFill.className = 'progress-fill';
+                if (folder.DuplicateRate >= 0.8) {
+                    progressFill.className += ' progress-danger';
+                } else if (folder.DuplicateRate >= 0.5) {
+                    progressFill.className += ' progress-warning';
+                } else {
+                    progressFill.className += ' progress-success';
+                }
+                progressFill.style.width = (folder.DuplicateRate * 100) + '%';
+                progressBar.appendChild(progressFill);
+
+                tdRate.appendChild(progressBar);
+                tr.appendChild(tdRate);
+
+                // 重複大小
+                var tdSize = document.createElement('td');
+                tdSize.textContent = folder.DuplicateSizeFormatted;
+                tr.appendChild(tdSize);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderLargeFilesTable(largeFiles) {
+            var tbody = document.getElementById('large-files-tbody');
+
+            largeFiles.forEach(function(file, index) {
+                var tr = document.createElement('tr');
+
+                // 排名
+                var tdRank = document.createElement('td');
+                tdRank.textContent = index + 1;
+                tr.appendChild(tdRank);
+
+                // 檔案大小
+                var tdSize = document.createElement('td');
+                tdSize.textContent = file.FileSizeFormatted;
+                tr.appendChild(tdSize);
+
+                // 重複次數
+                var tdCount = document.createElement('td');
+                tdCount.textContent = file.FileCount;
+                var badge = document.createElement('span');
+                badge.className = 'badge';
+                if (file.FileCount >= 5) {
+                    badge.className += ' badge-danger';
+                } else if (file.FileCount >= 3) {
+                    badge.className += ' badge-warning';
+                } else {
+                    badge.className += ' badge-info';
+                }
+                badge.textContent = file.FileCount + '×';
+                tdCount.appendChild(badge);
+                tr.appendChild(tdCount);
+
+                // 浪費空間
+                var tdWasted = document.createElement('td');
+                tdWasted.innerHTML = '<strong>' + file.WastedSpaceFormatted + '</strong>';
+                tr.appendChild(tdWasted);
+
+                // 範例路徑
+                var tdPath = document.createElement('td');
+                var pathSpan = document.createElement('span');
+                pathSpan.className = 'path';
+                pathSpan.textContent = file.SamplePath || 'N/A';
+                tdPath.appendChild(pathSpan);
+                tr.appendChild(tdPath);
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderReport(data) {
+            // 渲染摘要
+            document.getElementById('generated-time').textContent = data.GeneratedAt;
+            document.getElementById('total-groups').textContent = data.Summary.TotalGroups;
+            document.getElementById('total-files').textContent = data.Summary.TotalFiles;
+            document.getElementById('total-duplicates').textContent = data.Summary.TotalDuplicates;
+            document.getElementById('potential-savings').textContent = data.Summary.PotentialSavingsFormatted;
+
+            // 渲染檔案大小分布圖表
+            renderSizeDistribution(data.FileSizeDistribution);
+
+            // 渲染資料夾表格
+            renderFoldersTable(data.TopFoldersByDuplicateRate);
+
+            // 渲染大檔案表格
+            renderLargeFilesTable(data.LargeFileDuplicates);
+        }
+
+        window.addEventListener('DOMContentLoaded', function() {
+            var reportData = JSON.parse(document.getElementById('reportData').textContent);
+            renderReport(reportData);
+        });
+    </script>
+</body>
+</html>
