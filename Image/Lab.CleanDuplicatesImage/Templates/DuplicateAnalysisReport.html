@@ -51,6 +51,7 @@
 
         .toggle-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-right: 10px; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3); }
         .toggle-btn:hover { background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%); box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4); }
+        .toggle-btn:disabled { background: #cbd5e0; color: #a0aec0; cursor: not-allowed; box-shadow: none; }
 
         .collapsible { max-height: 0; overflow: auto; transition: max-height 0.3s ease-out; }
         .collapsible.active { max-height: 5000px; }
@@ -113,13 +114,12 @@
                             <th style="width: 100px;">重複次數</th>
                             <th style="width: 150px;">浪費空間</th>
                             <th>檔案路徑</th>
+                            <th style="width: 120px;">標記刪除</th>
+                            <th style="width: 120px;">取消標記刪除</th>
                         </tr>
                     </thead>
                     <tbody id="large-files-tbody"></tbody>
                 </table>
-            </div>
-            <div style="text-align: right; margin-top: 15px;">
-                <button class="toggle-btn" onclick="generateScript()">產生標記腳本</button>
             </div>
         </div>
     </div>
@@ -141,29 +141,46 @@
             section.classList.toggle('active');
         }
 
-        function generateScript() {
-            const filesToMark = [];
-            document.querySelectorAll('.delete-checkbox:checked').forEach(checkbox => {
-                filesToMark.push('"' + checkbox.value + '"');
+
+        function markFile(filePath, mark, markButton, unmarkButton, tdPath) {
+            const files = [filePath];
+            const endpoint = mark ? 'mark-for-deletion' : 'unmark-for-deletion';
+
+            fetch(`http://localhost:12345/${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(files),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('伺服器回應錯誤: ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update UI based on mark status
+                    if (mark) {
+                        tdPath.style.textDecoration = 'line-through';
+                        tdPath.style.color = '#888';
+                        markButton.disabled = true;
+                        unmarkButton.disabled = false;
+                    } else {
+                        tdPath.style.textDecoration = 'none';
+                        tdPath.style.color = 'inherit';
+                        markButton.disabled = false;
+                        unmarkButton.disabled = true;
+                    }
+                } else {
+                    alert('操作失敗: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('API 呼叫失敗:', error);
+                alert('API 呼叫失敗！\n請確認主程式正在運行，並且 API 伺服器已啟動。');
             });
-
-            if (filesToMark.length === 0) {
-                alert('請先勾選要標記刪除的檔案！');
-                return;
-            }
-
-            const command = 'Lab.CleanDuplicatesImage.exe --mark-delete ' + filesToMark.join(' ');
-            const scriptContent = `@echo off\r\nchcp 65001\r\n${command}\r\npause`;
-
-            const blob = new Blob([scriptContent], { type: 'text/plain' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = 'mark_files.bat';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            
-            alert('標記腳本 (mark_files.bat) 已下載。\n請將此檔案放到與主程式 (Lab.CleanDuplicatesImage.exe) 相同的資料夾下執行。');
         }
 
         function renderSizeDistribution(distribution) {
@@ -271,77 +288,99 @@
             var tbody = document.getElementById('large-files-tbody');
 
             largeFiles.forEach(function(file, index) {
-                var tr = document.createElement('tr');
+                var fileCount = file.FilePaths.length;
+                if (fileCount === 0) return;
 
-                // 排名
-                var tdRank = document.createElement('td');
-                tdRank.textContent = index + 1;
-                tr.appendChild(tdRank);
+                file.FilePaths.forEach(function(filePath, pathIndex) {
+                    var tr = document.createElement('tr');
 
-                // 檔案大小
-                var tdSize = document.createElement('td');
-                tdSize.textContent = file.FileSizeFormatted;
-                tr.appendChild(tdSize);
+                    if (pathIndex === 0) {
+                        // 排名
+                        var tdRank = document.createElement('td');
+                        tdRank.rowSpan = fileCount;
+                        tdRank.textContent = index + 1;
+                        tdRank.style.verticalAlign = 'top';
+                        tr.appendChild(tdRank);
 
-                // 重複次數
-                var tdCount = document.createElement('td');
-                tdCount.textContent = file.FileCount;
-                var badge = document.createElement('span');
-                badge.className = 'badge';
-                if (file.FileCount >= 5) {
-                    badge.className += ' badge-danger';
-                } else if (file.FileCount >= 3) {
-                    badge.className += ' badge-warning';
-                } else {
-                    badge.className += ' badge-info';
-                }
-                badge.textContent = file.FileCount + '×';
-                tdCount.appendChild(badge);
-                tr.appendChild(tdCount);
+                        // 檔案大小
+                        var tdSize = document.createElement('td');
+                        tdSize.rowSpan = fileCount;
+                        tdSize.textContent = file.FileSizeFormatted;
+                        tdSize.style.verticalAlign = 'top';
+                        tr.appendChild(tdSize);
 
-                // 浪費空間
-                var tdWasted = document.createElement('td');
-                tdWasted.innerHTML = '<strong>' + file.WastedSpaceFormatted + '</strong>';
-                tr.appendChild(tdWasted);
-
-                // 檔案路徑
-                var tdPath = document.createElement('td');
-                if (file.FilePaths && file.FilePaths.length > 0) {
-                    var ul = document.createElement('ul');
-                    ul.style.margin = '0';
-                    ul.style.paddingLeft = '0';
-                    ul.style.listStyleType = 'none';
-
-                    file.FilePaths.forEach(function(filePath) { // filePath is an object { Path, IsMarked }
-                        var li = document.createElement('li');
-                        
-                        var checkbox = document.createElement('input');
-                        checkbox.type = 'checkbox';
-                        checkbox.className = 'delete-checkbox';
-                        checkbox.value = filePath.Path;
-                        checkbox.checked = filePath.IsMarked;
-                        checkbox.style.marginRight = '8px';
-                        
-                        var pathSpan = document.createElement('span');
-                        pathSpan.className = 'path';
-                        pathSpan.textContent = filePath.Path;
-                        
-                        if (filePath.IsMarked) {
-                            li.style.textDecoration = 'line-through';
-                            li.style.color = '#888';
+                        // 重複次數
+                        var tdCount = document.createElement('td');
+                        tdCount.rowSpan = fileCount;
+                        var badge = document.createElement('span');
+                        badge.className = 'badge';
+                        if (file.FileCount >= 5) {
+                            badge.className += ' badge-danger';
+                        } else if (file.FileCount >= 3) {
+                            badge.className += ' badge-warning';
+                        } else {
+                            badge.className += ' badge-info';
                         }
+                        badge.textContent = file.FileCount + '×';
+                        tdCount.appendChild(badge);
+                        tdCount.style.verticalAlign = 'top';
+                        tr.appendChild(tdCount);
 
-                        li.appendChild(checkbox);
-                        li.appendChild(pathSpan);
-                        ul.appendChild(li);
-                    });
-                    tdPath.appendChild(ul);
-                } else {
-                    tdPath.textContent = 'N/A';
-                }
-                tr.appendChild(tdPath);
+                        // 浪費空間
+                        var tdWasted = document.createElement('td');
+                        tdWasted.rowSpan = fileCount;
+                        tdWasted.innerHTML = '<strong>' + file.WastedSpaceFormatted + '</strong>';
+                        tdWasted.style.verticalAlign = 'top';
+                        tr.appendChild(tdWasted);
+                    }
 
-                tbody.appendChild(tr);
+                    // 檔案路徑
+                    var tdPath = document.createElement('td');
+
+                    var pathSpan = document.createElement('span');
+                    pathSpan.className = 'path';
+                    pathSpan.textContent = filePath.Path;
+
+                    tdPath.appendChild(pathSpan);
+                    tr.appendChild(tdPath);
+
+                    // Mark for deletion column
+                    var tdMark = document.createElement('td');
+                    var markButton = document.createElement('button');
+                    markButton.className = 'toggle-btn';
+                    markButton.textContent = '標記刪除';
+                    markButton.onclick = function() {
+                        markFile(filePath.Path, true, markButton, unmarkButton, tdPath);
+                    };
+                    tdMark.appendChild(markButton);
+                    tr.appendChild(tdMark);
+
+                    // Unmark for deletion column
+                    var tdUnmark = document.createElement('td');
+                    var unmarkButton = document.createElement('button');
+                    unmarkButton.className = 'toggle-btn';
+                    unmarkButton.textContent = '取消標記';
+                    unmarkButton.onclick = function() {
+                        markFile(filePath.Path, false, markButton, unmarkButton, tdPath);
+                    };
+                    tdUnmark.appendChild(unmarkButton);
+                    tr.appendChild(tdUnmark);
+
+                    // Set initial state based on IsMarked
+                    if (filePath.IsMarked) {
+                        tdPath.style.textDecoration = 'line-through';
+                        tdPath.style.color = '#888';
+                        markButton.disabled = true;
+                        unmarkButton.disabled = false;
+                    } else {
+                        tdPath.style.textDecoration = 'none';
+                        tdPath.style.color = 'inherit';
+                        markButton.disabled = false;
+                        unmarkButton.disabled = true;
+                    }
+
+                    tbody.appendChild(tr);
+                });
             });
         }
 
