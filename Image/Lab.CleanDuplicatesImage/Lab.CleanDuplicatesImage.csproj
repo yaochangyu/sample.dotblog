@@ -18,6 +18,9 @@
       <None Update="Templates\SkippedFilesReport.html">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="Templates\DuplicateAnalysisReport.html">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

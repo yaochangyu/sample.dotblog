@@ -180,13 +180,14 @@ class Program
             Console.WriteLine("5. 執行刪除（刪除已標記的檔案）");
             Console.WriteLine("6. 查看已標記略過檔案報表");
             Console.WriteLine("7. 查看已標記刪除檔案報表");
-            Console.WriteLine("8. 離開");
-            Console.Write("請輸入選項 (1-8): ");
+            Console.WriteLine("8. 重複檔案分析報表");
+            Console.WriteLine("9. 離開");
+            Console.Write("請輸入選項 (1-9): ");
 
             var menuChoice = Console.ReadLine()?.Trim();
             Console.WriteLine();
 
-            if (menuChoice == "8")
+            if (menuChoice == "9")
             {
                 Console.WriteLine("感謝使用，再見！");
                 return;
@@ -256,6 +257,14 @@ class Program
             {
                 // 查看已標記刪除檔案報表
                 GenerateMarkedForDeletionReport();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "8")
+            {
+                // 重複檔案分析報表
+                GenerateDuplicateAnalysisReport();
                 Console.WriteLine();
                 continue;
             }
@@ -1555,6 +1564,9 @@ class Program
         Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonFileName)}");
         Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(htmlFileName)}");
         Console.WriteLine($"總共 {groups.Count} 組，{totalFiles} 個檔案（存在：{totalExistingFiles}，遺失：{totalMissingFiles}）");
+
+        // 5. 自動開啟 HTML 報表
+        OpenHtmlReport(htmlFileName);
     }
 
     /// <summary>
@@ -1839,11 +1851,39 @@ class Program
         }
     }
 
+    /// <summary>
+    /// 使用系統預設瀏覽器開啟 HTML 報表
+    /// </summary>
+    static void OpenHtmlReport(string htmlFileName)
+    {
+        try
+        {
+            var fullPath = Path.GetFullPath(htmlFileName);
+            Console.WriteLine();
+            Console.WriteLine("正在開啟 HTML 報表...");
+
+            var processInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = fullPath,
+                UseShellExecute = true // 使用系統預設瀏覽器開啟
+            };
+
+            System.Diagnostics.Process.Start(processInfo);
+            Console.WriteLine("HTML 報表已在瀏覽器中開啟");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"無法開啟 HTML 報表: {ex.Message}");
+            Console.WriteLine("請手動開啟報表檔案");
+        }
+    }
+
     static void InitializeDatabase()
     {
         using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
         connection.Open();
 
+        // 第一步：建立基本資料表（不包含 IsDeleted 和 DeletedAt）
         var command = connection.CreateCommand();
         command.CommandText = @"
             CREATE TABLE IF NOT EXISTS DuplicateFiles (
@@ -1855,13 +1895,8 @@ class Program
                 FileCreatedTime TEXT NOT NULL,
                 FileCount INTEGER NOT NULL,
                 CreatedAt TEXT NOT NULL,
-                IsDeleted INTEGER NOT NULL DEFAULT 0,
-                DeletedAt TEXT,
                 UNIQUE(Hash, FilePath)
             );
-
-            CREATE INDEX IF NOT EXISTS idx_hash ON DuplicateFiles(Hash);
-            CREATE INDEX IF NOT EXISTS idx_is_deleted ON DuplicateFiles(IsDeleted);
 
             CREATE TABLE IF NOT EXISTS FilesToDelete (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1880,28 +1915,58 @@ class Program
         ";
         command.ExecuteNonQuery();
 
-        // 為現有資料表新增 IsDeleted 和 DeletedAt 欄位（如果不存在）
-        try
+        // 第二步：檢查並新增 IsDeleted 和 DeletedAt 欄位
+        var checkCommand = connection.CreateCommand();
+        checkCommand.CommandText = "PRAGMA table_info(DuplicateFiles)";
+        var existingColumns = new HashSet<string>();
+
+        using (var reader = checkCommand.ExecuteReader())
         {
-            var alterCommand1 = connection.CreateCommand();
-            alterCommand1.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN IsDeleted INTEGER NOT NULL DEFAULT 0";
-            alterCommand1.ExecuteNonQuery();
-        }
-        catch
-        {
-            // 欄位已存在，忽略錯誤
+            while (reader.Read())
+            {
+                existingColumns.Add(reader.GetString(1)); // column name is at index 1
+            }
         }
 
-        try
+        // 如果 IsDeleted 欄位不存在，則新增
+        if (!existingColumns.Contains("IsDeleted"))
         {
-            var alterCommand2 = connection.CreateCommand();
-            alterCommand2.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN DeletedAt TEXT";
-            alterCommand2.ExecuteNonQuery();
+            try
+            {
+                var alterCommand1 = connection.CreateCommand();
+                alterCommand1.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN IsDeleted INTEGER NOT NULL DEFAULT 0";
+                alterCommand1.ExecuteNonQuery();
+                Console.WriteLine("已新增 IsDeleted 欄位到 DuplicateFiles 資料表");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"警告：無法新增 IsDeleted 欄位: {ex.Message}");
+            }
         }
-        catch
+
+        // 如果 DeletedAt 欄位不存在，則新增
+        if (!existingColumns.Contains("DeletedAt"))
         {
-            // 欄位已存在，忽略錯誤
+            try
+            {
+                var alterCommand2 = connection.CreateCommand();
+                alterCommand2.CommandText = "ALTER TABLE DuplicateFiles ADD COLUMN DeletedAt TEXT";
+                alterCommand2.ExecuteNonQuery();
+                Console.WriteLine("已新增 DeletedAt 欄位到 DuplicateFiles 資料表");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"警告：無法新增 DeletedAt 欄位: {ex.Message}");
+            }
         }
+
+        // 第三步：建立索引（在欄位確定存在後）
+        var indexCommand = connection.CreateCommand();
+        indexCommand.CommandText = @"
+            CREATE INDEX IF NOT EXISTS idx_hash ON DuplicateFiles(Hash);
+            CREATE INDEX IF NOT EXISTS idx_is_deleted ON DuplicateFiles(IsDeleted);
+        ";
+        indexCommand.ExecuteNonQuery();
     }
 
     /// <summary>
@@ -1961,5 +2026,322 @@ class Program
                 }
             }
         });
+    }
+
+    /// <summary>
+    /// 產生重複檔案分析報表
+    /// </summary>
+    static void GenerateDuplicateAnalysisReport()
+    {
+        InitializeDatabase();
+
+        // 載入所有未刪除的重複檔案
+        var (duplicateData, totalFiles, totalDuplicates, totalDuplicateSize, fileSizeDistribution, folderStats) =
+            AnalyzeDuplicateFiles();
+
+        if (totalFiles == 0)
+        {
+            Console.WriteLine("資料庫中沒有重複檔案記錄！");
+            return;
+        }
+
+        // 產生 JSON 和 HTML 報表
+        SaveDuplicateAnalysisReport(duplicateData, totalFiles, totalDuplicates, totalDuplicateSize, fileSizeDistribution, folderStats);
+    }
+
+    /// <summary>
+    /// 儲存重複檔案分析報表（JSON 和 HTML）
+    /// </summary>
+    static void SaveDuplicateAnalysisReport(
+        List<DuplicateGroup> duplicateData,
+        int totalFiles,
+        int totalDuplicates,
+        long totalDuplicateSize,
+        FileSizeDistribution fileSizeDistribution,
+        List<FolderStatistics> folderStats)
+    {
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+        // 1. 建立報表資料
+        var reportData = new
+        {
+            GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            Summary = new
+            {
+                TotalGroups = duplicateData.Count,
+                TotalFiles = totalFiles,
+                TotalDuplicates = totalDuplicates,
+                TotalDuplicateSize = totalDuplicateSize,
+                TotalDuplicateSizeFormatted = FormatFileSize(totalDuplicateSize),
+                PotentialSavings = totalDuplicateSize,
+                PotentialSavingsFormatted = FormatFileSize(totalDuplicateSize)
+            },
+            FileSizeDistribution = new
+            {
+                Small = fileSizeDistribution.Small,
+                SmallPercentage = fileSizeDistribution.Small * 100.0 / duplicateData.Count,
+                Medium = fileSizeDistribution.Medium,
+                MediumPercentage = fileSizeDistribution.Medium * 100.0 / duplicateData.Count,
+                Large = fileSizeDistribution.Large,
+                LargePercentage = fileSizeDistribution.Large * 100.0 / duplicateData.Count,
+                VeryLarge = fileSizeDistribution.VeryLarge,
+                VeryLargePercentage = fileSizeDistribution.VeryLarge * 100.0 / duplicateData.Count
+            },
+            TopFoldersByDuplicateRate = folderStats
+                .OrderByDescending(f => f.DuplicateRate)
+                .ThenByDescending(f => f.DuplicateCount)
+                .Take(50)
+                .Select(f => new
+                {
+                    f.Path,
+                    f.TotalCount,
+                    f.DuplicateCount,
+                    DuplicateRate = f.DuplicateRate,
+                    DuplicateRateFormatted = $"{f.DuplicateRate:P2}",
+                    DuplicateSize = f.DuplicateSize,
+                    DuplicateSizeFormatted = FormatFileSize(f.DuplicateSize)
+                }),
+            LargeFileDuplicates = duplicateData
+                .Where(g => g.FileSize >= 10 * 1024 * 1024)
+                .OrderByDescending(g => g.FileSize * (g.FileCount - 1))
+                .Take(100)
+                .Select(g => new
+                {
+                    g.Hash,
+                    FileSize = g.FileSize,
+                    FileSizeFormatted = FormatFileSize(g.FileSize),
+                    g.FileCount,
+                    WastedSpace = g.FileSize * (g.FileCount - 1),
+                    WastedSpaceFormatted = FormatFileSize(g.FileSize * (g.FileCount - 1)),
+                    SamplePath = g.FilePaths.FirstOrDefault()
+                })
+        };
+
+        // 2. 產生 JSON 檔案
+        var jsonFileName = $"Reports/DuplicateAnalysisReport_{timestamp}.json";
+        var json = SerializeReportData(reportData, indent: true);
+        File.WriteAllText(jsonFileName, json, Encoding.UTF8);
+
+        // 3. 產生 HTML 檔案
+        var jsonCompact = SerializeReportData(reportData, indent: false);
+        var template = File.ReadAllText("Templates/DuplicateAnalysisReport.html", Encoding.UTF8);
+        var html = template.Replace("{{REPORT_DATA}}", jsonCompact);
+
+        var htmlFileName = $"Reports/DuplicateAnalysisReport_{timestamp}.html";
+        File.WriteAllText(htmlFileName, html, Encoding.UTF8);
+
+        // 4. 顯示統計資訊
+        Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonFileName)}");
+        Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(htmlFileName)}");
+        Console.WriteLine($"總共 {duplicateData.Count} 組重複檔案");
+        Console.WriteLine($"總檔案數：{totalFiles}，重複數：{totalDuplicates}");
+        Console.WriteLine($"可節省空間：{FormatFileSize(totalDuplicateSize)}");
+        Console.WriteLine();
+        Console.WriteLine("重複率最高的資料夾（前 10 名）：");
+        foreach (var folder in folderStats.OrderByDescending(f => f.DuplicateRate).Take(10))
+        {
+            Console.WriteLine($"  {folder.Path}");
+            Console.WriteLine($"    重複率：{folder.DuplicateRate:P2} ({folder.DuplicateCount}/{folder.TotalCount})");
+            Console.WriteLine($"    重複大小：{FormatFileSize(folder.DuplicateSize)}");
+        }
+        Console.WriteLine();
+        Console.WriteLine("大檔案重複（前 5 名）：");
+        foreach (var largeFile in duplicateData
+            .Where(g => g.FileSize >= 10 * 1024 * 1024)
+            .OrderByDescending(g => g.FileSize * (g.FileCount - 1))
+            .Take(5))
+        {
+            Console.WriteLine($"  大小：{FormatFileSize(largeFile.FileSize)}，重複 {largeFile.FileCount} 次");
+            Console.WriteLine($"    浪費空間：{FormatFileSize(largeFile.FileSize * (largeFile.FileCount - 1))}");
+            Console.WriteLine($"    範例：{largeFile.FilePaths.FirstOrDefault()}");
+        }
+
+        // 5. 自動開啟 HTML 報表
+        OpenHtmlReport(htmlFileName);
+    }
+
+    /// <summary>
+    /// 分析重複檔案並計算統計資料
+    /// </summary>
+    static (
+        List<DuplicateGroup> duplicateData,
+        int totalFiles,
+        int totalDuplicates,
+        long totalDuplicateSize,
+        FileSizeDistribution fileSizeDistribution,
+        List<FolderStatistics> folderStats
+    ) AnalyzeDuplicateFiles()
+    {
+        return DatabaseHelper.ExecuteQuery(
+            @"SELECT Hash, FilePath, FileSize, FileCount
+              FROM DuplicateFiles
+              WHERE (IsDeleted = 0 OR IsDeleted IS NULL) AND FileCount > 1
+              ORDER BY Hash",
+            reader =>
+            {
+                var duplicateGroups = new Dictionary<string, DuplicateGroup>();
+                var folderFileCount = new Dictionary<string, int>();
+                var folderDuplicateCount = new Dictionary<string, int>();
+                var folderDuplicateSize = new Dictionary<string, long>();
+
+                while (reader.Read())
+                {
+                    var hash = reader.GetString(0);
+                    var filePath = reader.GetString(1);
+                    var fileSize = reader.GetInt64(2);
+                    var fileCount = reader.GetInt32(3);
+
+                    // 收集重複群組資料
+                    if (!duplicateGroups.ContainsKey(hash))
+                    {
+                        duplicateGroups[hash] = new DuplicateGroup
+                        {
+                            Hash = hash,
+                            FileSize = fileSize,
+                            FileCount = fileCount,
+                            FilePaths = new List<string>()
+                        };
+                    }
+
+                    duplicateGroups[hash].FilePaths.Add(filePath);
+
+                    // 統計資料夾資訊
+                    var folder = Path.GetDirectoryName(filePath) ?? "";
+
+                    if (!folderFileCount.ContainsKey(folder))
+                    {
+                        folderFileCount[folder] = 0;
+                        folderDuplicateCount[folder] = 0;
+                        folderDuplicateSize[folder] = 0;
+                    }
+
+                    folderFileCount[folder]++;
+                    folderDuplicateCount[folder]++;
+                    folderDuplicateSize[folder] += fileSize;
+                }
+
+                var duplicateData = duplicateGroups.Values.ToList();
+                var totalFiles = duplicateData.Sum(g => g.FileCount);
+                var totalDuplicates = duplicateData.Sum(g => g.FileCount - 1);
+                var totalDuplicateSize = duplicateData.Sum(g => g.FileSize * (g.FileCount - 1));
+
+                // 計算檔案大小分布
+                var fileSizeDistribution = new FileSizeDistribution
+                {
+                    Small = duplicateData.Count(g => g.FileSize < 1024 * 1024),
+                    Medium = duplicateData.Count(g => g.FileSize >= 1024 * 1024 && g.FileSize < 10 * 1024 * 1024),
+                    Large = duplicateData.Count(g => g.FileSize >= 10 * 1024 * 1024 && g.FileSize < 100 * 1024 * 1024),
+                    VeryLarge = duplicateData.Count(g => g.FileSize >= 100 * 1024 * 1024)
+                };
+
+                // 建立資料夾統計資料
+                var folderStats = folderFileCount
+                    .Select(kvp => new FolderStatistics
+                    {
+                        Path = kvp.Key,
+                        TotalCount = kvp.Value,
+                        DuplicateCount = folderDuplicateCount[kvp.Key],
+                        DuplicateSize = folderDuplicateSize[kvp.Key],
+                        DuplicateRate = (double)folderDuplicateCount[kvp.Key] / kvp.Value
+                    })
+                    .ToList();
+
+                return (duplicateData, totalFiles, totalDuplicates, totalDuplicateSize, fileSizeDistribution, folderStats);
+            });
+    }
+
+    /// <summary>
+    /// 儲存詳細分析報表到 JSON 檔案
+    /// </summary>
+    static void SaveDetailedAnalysisReport(
+        List<DuplicateGroup> duplicateData,
+        List<FolderStatistics> folderStats,
+        FileSizeDistribution fileSizeDistribution)
+    {
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var reportData = new
+        {
+            GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            Summary = new
+            {
+                TotalGroups = duplicateData.Count,
+                TotalFiles = duplicateData.Sum(g => g.FileCount),
+                TotalDuplicates = duplicateData.Sum(g => g.FileCount - 1),
+                TotalDuplicateSize = duplicateData.Sum(g => g.FileSize * (g.FileCount - 1)),
+                PotentialSavings = duplicateData.Sum(g => g.FileSize * (g.FileCount - 1))
+            },
+            FileSizeDistribution = fileSizeDistribution,
+            TopFoldersByDuplicateRate = folderStats
+                .OrderByDescending(f => f.DuplicateRate)
+                .ThenByDescending(f => f.DuplicateCount)
+                .Take(50)
+                .Select(f => new
+                {
+                    f.Path,
+                    f.TotalCount,
+                    f.DuplicateCount,
+                    DuplicateRate = $"{f.DuplicateRate:P2}",
+                    DuplicateSize = f.DuplicateSize,
+                    DuplicateSizeFormatted = FormatFileSize(f.DuplicateSize)
+                }),
+            LargeFileDuplicates = duplicateData
+                .Where(g => g.FileSize > 10 * 1024 * 1024)
+                .OrderByDescending(g => g.FileSize * (g.FileCount - 1))
+                .Take(100)
+                .Select(g => new
+                {
+                    g.Hash,
+                    FileSize = g.FileSize,
+                    FileSizeFormatted = FormatFileSize(g.FileSize),
+                    g.FileCount,
+                    WastedSpace = g.FileSize * (g.FileCount - 1),
+                    WastedSpaceFormatted = FormatFileSize(g.FileSize * (g.FileCount - 1)),
+                    SamplePath = g.FilePaths.FirstOrDefault()
+                })
+        };
+
+        var jsonFileName = $"Reports/DuplicateAnalysisReport_{timestamp}.json";
+        var json = System.Text.Json.JsonSerializer.Serialize(reportData, new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        });
+
+        File.WriteAllText(jsonFileName, json, Encoding.UTF8);
+        Console.WriteLine($"詳細分析報表已產生：{Path.GetFullPath(jsonFileName)}");
+    }
+
+    /// <summary>
+    /// 重複檔案群組資料
+    /// </summary>
+    class DuplicateGroup
+    {
+        public string Hash { get; set; } = "";
+        public long FileSize { get; set; }
+        public int FileCount { get; set; }
+        public List<string> FilePaths { get; set; } = new();
+    }
+
+    /// <summary>
+    /// 檔案大小分布統計
+    /// </summary>
+    class FileSizeDistribution
+    {
+        public int Small { get; set; }      // < 1 MB
+        public int Medium { get; set; }     // 1-10 MB
+        public int Large { get; set; }      // 10-100 MB
+        public int VeryLarge { get; set; }  // > 100 MB
+    }
+
+    /// <summary>
+    /// 資料夾統計資料
+    /// </summary>
+    class FolderStatistics
+    {
+        public string Path { get; set; } = "";
+        public int TotalCount { get; set; }
+        public int DuplicateCount { get; set; }
+        public long DuplicateSize { get; set; }
+        public double DuplicateRate { get; set; }
     }
 }
