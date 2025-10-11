@@ -142,13 +142,14 @@ class Program
             Console.WriteLine("8. 查看已標記略過檔案報表");
             Console.WriteLine("9. 查看已標記刪除檔案報表");
             Console.WriteLine("10. 啟動 API 服務並產生重複檔案分析報表");
-            Console.WriteLine("11. 離開");
-            Console.Write("請輸入選項 (1-11): ");
+            Console.WriteLine("11. 查看檔案標記狀態綜合報表");
+            Console.WriteLine("12. 離開");
+            Console.Write("請輸入選項 (1-12): ");
 
             var menuChoice = Console.ReadLine()?.Trim();
             Console.WriteLine();
 
-            if (menuChoice == "11")
+            if (menuChoice == "12")
             {
                 if (_httpListener?.IsListening == true)
                 {
@@ -247,6 +248,14 @@ class Program
             {
                 // 重複檔案分析報表
                 RunApiServerAndGenerateReport().Wait();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "11")
+            {
+                // 檔案標記狀態綜合報表
+                GenerateComprehensiveFileStatusReport();
                 Console.WriteLine();
                 continue;
             }
@@ -1935,6 +1944,193 @@ class Program
         return LoadFilesGroupedByHash("SkippedHashes", "SkippedAt");
     }
 
+    /// <summary>
+    /// 綜合報表的檔案資料結構
+    /// </summary>
+    record ComprehensiveFileInfo(
+        string FilePath,
+        string Hash,
+        long FileSize,
+        string FileCreatedTime,
+        string FileLastModifiedTime,
+        bool Exists,
+        int MarkType,
+        string? MarkedAt = null,
+        int? IsProcessed = null,
+        string? ProcessedAt = null,
+        string? TargetPath = null
+    );
+
+    /// <summary>
+    /// 載入未標記的檔案 (MarkType = 0)
+    /// </summary>
+    static List<ComprehensiveFileInfo> LoadUnmarkedFiles()
+    {
+        try
+        {
+            return DatabaseHelper.ExecuteQuery(
+                @"SELECT FilePath, Hash, FileSize, FileCreatedTime, FileLastModifiedTime
+                  FROM DuplicateFiles
+                  WHERE MarkType = 0
+                  ORDER BY FileSize DESC",
+                reader =>
+                {
+                    var files = new List<ComprehensiveFileInfo>();
+                    while (reader.Read())
+                    {
+                        var filePath = reader.GetString(0);
+                        files.Add(new ComprehensiveFileInfo(
+                            FilePath: filePath,
+                            Hash: reader.GetString(1),
+                            FileSize: reader.GetInt64(2),
+                            FileCreatedTime: reader.GetString(3),
+                            FileLastModifiedTime: reader.GetString(4),
+                            Exists: File.Exists(filePath),
+                            MarkType: 0
+                        ));
+                    }
+                    return files;
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"載入未標記檔案時發生錯誤: {ex.Message}");
+            return new List<ComprehensiveFileInfo>();
+        }
+    }
+
+    /// <summary>
+    /// 載入已標記刪除的檔案 (MarkType = 1) 及執行狀態
+    /// </summary>
+    static List<ComprehensiveFileInfo> LoadMarkedForDeletionFiles()
+    {
+        try
+        {
+            return DatabaseHelper.ExecuteQuery(
+                @"SELECT df.FilePath, df.Hash, df.FileSize, df.FileCreatedTime, df.FileLastModifiedTime,
+                         ftd.MarkedAt, ftd.IsProcessed, ftd.ProcessedAt
+                  FROM DuplicateFiles df
+                  LEFT JOIN FilesToDelete ftd ON df.FilePath = ftd.FilePath
+                  WHERE df.MarkType = 1
+                  ORDER BY df.FileSize DESC",
+                reader =>
+                {
+                    var files = new List<ComprehensiveFileInfo>();
+                    while (reader.Read())
+                    {
+                        var filePath = reader.GetString(0);
+                        files.Add(new ComprehensiveFileInfo(
+                            FilePath: filePath,
+                            Hash: reader.GetString(1),
+                            FileSize: reader.GetInt64(2),
+                            FileCreatedTime: reader.GetString(3),
+                            FileLastModifiedTime: reader.GetString(4),
+                            Exists: File.Exists(filePath),
+                            MarkType: 1,
+                            MarkedAt: reader.IsDBNull(5) ? null : reader.GetString(5),
+                            IsProcessed: reader.IsDBNull(6) ? null : reader.GetInt32(6),
+                            ProcessedAt: reader.IsDBNull(7) ? null : reader.GetString(7)
+                        ));
+                    }
+                    return files;
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"載入已標記刪除檔案時發生錯誤: {ex.Message}");
+            return new List<ComprehensiveFileInfo>();
+        }
+    }
+
+    /// <summary>
+    /// 載入已標記移動的檔案 (MarkType = 2) 及執行狀態
+    /// </summary>
+    static List<ComprehensiveFileInfo> LoadMarkedForMoveFiles()
+    {
+        try
+        {
+            return DatabaseHelper.ExecuteQuery(
+                @"SELECT df.FilePath, df.Hash, df.FileSize, df.FileCreatedTime, df.FileLastModifiedTime,
+                         ftm.MarkedAt, ftm.IsProcessed, ftm.ProcessedAt, ftm.TargetPath
+                  FROM DuplicateFiles df
+                  LEFT JOIN FileToMove ftm ON df.FilePath = ftm.SourcePath
+                  WHERE df.MarkType = 2
+                  ORDER BY df.FileSize DESC",
+                reader =>
+                {
+                    var files = new List<ComprehensiveFileInfo>();
+                    while (reader.Read())
+                    {
+                        var filePath = reader.GetString(0);
+                        files.Add(new ComprehensiveFileInfo(
+                            FilePath: filePath,
+                            Hash: reader.GetString(1),
+                            FileSize: reader.GetInt64(2),
+                            FileCreatedTime: reader.GetString(3),
+                            FileLastModifiedTime: reader.GetString(4),
+                            Exists: File.Exists(filePath),
+                            MarkType: 2,
+                            MarkedAt: reader.IsDBNull(5) ? null : reader.GetString(5),
+                            IsProcessed: reader.IsDBNull(6) ? null : reader.GetInt32(6),
+                            ProcessedAt: reader.IsDBNull(7) ? null : reader.GetString(7),
+                            TargetPath: reader.IsDBNull(8) ? null : reader.GetString(8)
+                        ));
+                    }
+                    return files;
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"載入已標記移動檔案時發生錯誤: {ex.Message}");
+            return new List<ComprehensiveFileInfo>();
+        }
+    }
+
+    /// <summary>
+    /// 載入已標記略過的檔案 (MarkType = 3)
+    /// </summary>
+    static List<ComprehensiveFileInfo> LoadSkippedFiles()
+    {
+        try
+        {
+            return DatabaseHelper.ExecuteQuery(
+                @"SELECT df.FilePath, df.Hash, df.FileSize, df.FileCreatedTime, df.FileLastModifiedTime,
+                         sh.SkippedAt
+                  FROM DuplicateFiles df
+                  LEFT JOIN SkippedHashes sh ON df.FilePath = sh.FilePath AND df.Hash = sh.Hash
+                  WHERE df.MarkType = 3
+                  ORDER BY df.FileSize DESC",
+                reader =>
+                {
+                    var files = new List<ComprehensiveFileInfo>();
+                    while (reader.Read())
+                    {
+                        var filePath = reader.GetString(0);
+                        files.Add(new ComprehensiveFileInfo(
+                            FilePath: filePath,
+                            Hash: reader.GetString(1),
+                            FileSize: reader.GetInt64(2),
+                            FileCreatedTime: reader.GetString(3),
+                            FileLastModifiedTime: reader.GetString(4),
+                            Exists: File.Exists(filePath),
+                            MarkType: 3,
+                            MarkedAt: reader.IsDBNull(5) ? null : reader.GetString(5)
+                        ));
+                    }
+                    return files;
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"載入已標記略過檔案時發生錯誤: {ex.Message}");
+            return new List<ComprehensiveFileInfo>();
+        }
+    }
+
     static void UnskipHashes(List<string> hashes)
     {
         DatabaseHelper.ExecuteTransaction((connection, transaction) =>
@@ -2088,6 +2284,136 @@ class Program
         GenerateReport(markedFilesGrouped, "MarkedForDeletionReport", "MarkedForDeletionReport.html", "MarkedAt");
     }
 
+    /// <summary>
+    /// 產生檔案標記狀態綜合報表
+    /// </summary>
+    static void GenerateComprehensiveFileStatusReport()
+    {
+        InitializeDatabase();
+
+        Console.WriteLine("正在載入檔案資料...");
+
+        // 載入四種類型的檔案
+        var unmarkedFiles = LoadUnmarkedFiles();
+        var markedForDeletion = LoadMarkedForDeletionFiles();
+        var markedForMove = LoadMarkedForMoveFiles();
+        var skippedFiles = LoadSkippedFiles();
+
+        var totalFiles = unmarkedFiles.Count + markedForDeletion.Count + markedForMove.Count + skippedFiles.Count;
+
+        if (totalFiles == 0)
+        {
+            Console.WriteLine("目前沒有任何檔案記錄！");
+            return;
+        }
+
+        Console.WriteLine($"已載入 {totalFiles} 個檔案記錄");
+        Console.WriteLine($"  - 未標記: {unmarkedFiles.Count}");
+        Console.WriteLine($"  - 已標記刪除: {markedForDeletion.Count}");
+        Console.WriteLine($"  - 已標記移動: {markedForMove.Count}");
+        Console.WriteLine($"  - 已標記略過: {skippedFiles.Count}");
+        Console.WriteLine();
+
+        // 建立報表資料
+        var reportData = CreateComprehensiveReportData(unmarkedFiles, markedForDeletion, markedForMove, skippedFiles);
+
+        // 產生檔案名稱
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var jsonFileName = $"Reports/ComprehensiveFileStatusReport_{timestamp}.json";
+        var htmlFileName = $"Reports/ComprehensiveFileStatusReport_{timestamp}.html";
+
+        // 確保 Reports 目錄存在
+        Directory.CreateDirectory("Reports");
+
+        // 產生 JSON 檔案
+        var json = SerializeReportData(reportData, indent: true);
+        File.WriteAllText(jsonFileName, json, Encoding.UTF8);
+
+        // 產生 HTML 檔案
+        var jsonCompact = SerializeReportData(reportData, indent: false);
+        var template = File.ReadAllText("Templates/ComprehensiveFileStatusReport.html", Encoding.UTF8);
+        var html = template.Replace("{{REPORT_DATA}}", jsonCompact);
+        File.WriteAllText(htmlFileName, html, Encoding.UTF8);
+
+        // 顯示統計資訊
+        Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonFileName)}");
+        Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(htmlFileName)}");
+        Console.WriteLine($"總共 {totalFiles} 個檔案記錄");
+
+        // 自動開啟 HTML 報表
+        OpenHtmlReport(htmlFileName);
+    }
+
+    /// <summary>
+    /// 建立綜合報表資料結構
+    /// </summary>
+    static object CreateComprehensiveReportData(
+        List<ComprehensiveFileInfo> unmarkedFiles,
+        List<ComprehensiveFileInfo> markedForDeletion,
+        List<ComprehensiveFileInfo> markedForMove,
+        List<ComprehensiveFileInfo> skippedFiles)
+    {
+        return new
+        {
+            GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            Summary = new
+            {
+                TotalFiles = unmarkedFiles.Count + markedForDeletion.Count + markedForMove.Count + skippedFiles.Count,
+                UnmarkedCount = unmarkedFiles.Count,
+                MarkedForDeletionCount = markedForDeletion.Count,
+                MarkedForMoveCount = markedForMove.Count,
+                SkippedCount = skippedFiles.Count,
+                UnmarkedSize = unmarkedFiles.Sum(f => f.FileSize),
+                MarkedForDeletionSize = markedForDeletion.Sum(f => f.FileSize),
+                MarkedForMoveSize = markedForMove.Sum(f => f.FileSize),
+                SkippedSize = skippedFiles.Sum(f => f.FileSize)
+            },
+            UnmarkedFiles = unmarkedFiles.Select(f => new
+            {
+                f.FilePath,
+                f.Hash,
+                f.FileSize,
+                f.FileCreatedTime,
+                f.FileLastModifiedTime,
+                f.Exists
+            }).ToList(),
+            MarkedForDeletion = markedForDeletion.Select(f => new
+            {
+                f.FilePath,
+                f.Hash,
+                f.FileSize,
+                f.FileCreatedTime,
+                f.FileLastModifiedTime,
+                f.Exists,
+                f.MarkedAt,
+                IsProcessed = f.IsProcessed ?? 0,
+                f.ProcessedAt
+            }).ToList(),
+            MarkedForMove = markedForMove.Select(f => new
+            {
+                f.FilePath,
+                f.Hash,
+                f.FileSize,
+                f.FileCreatedTime,
+                f.FileLastModifiedTime,
+                f.Exists,
+                f.MarkedAt,
+                IsProcessed = f.IsProcessed ?? 0,
+                f.ProcessedAt,
+                f.TargetPath
+            }).ToList(),
+            SkippedFiles = skippedFiles.Select(f => new
+            {
+                f.FilePath,
+                f.Hash,
+                f.FileSize,
+                f.FileCreatedTime,
+                f.FileLastModifiedTime,
+                f.Exists,
+                SkippedAt = f.MarkedAt
+            }).ToList()
+        };
+    }
 
     static string FormatFileSize(long bytes)
     {
