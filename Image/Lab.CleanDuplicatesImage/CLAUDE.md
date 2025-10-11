@@ -16,6 +16,23 @@ dotnet build
 dotnet run
 ```
 
+## 設定檔
+
+專案使用 `appsettings.json` 進行設定:
+
+```json
+{
+  "AppSettings": {
+    "DefaultMoveTargetBasePath": "D:\\Temp"
+  }
+}
+```
+
+**設定說明**:
+- `DefaultMoveTargetBasePath`: 移動檔案的目標基礎路徑,檔案會根據修改日期(yyyy-MM)自動建立子資料夾
+- 例如: `D:\Temp\2025-03\file.jpg`
+- 此設定在標記檔案為「待移動」時使用
+
 ## 核心架構
 
 ### 資料模型（Data Models）
@@ -30,6 +47,16 @@ dotnet run
   - `ExecuteTransaction()`: 執行帶交易的批次操作
 
 - **資料庫檔案**: `duplicates.db`（SQLite）
+
+  **資料庫初始化**:
+  - 使用 `InitializeDatabase()` 方法 (Program.cs:2654) 進行五階段初始化:
+    1. 建立四個基本資料表 (CREATE TABLE IF NOT EXISTS)
+    2. 動態檢查並新增 DuplicateFiles 欄位 (MarkType, FileLastModifiedTime)
+    3. 為 FilesToDelete 新增處理狀態欄位 (IsProcessed, ProcessedAt)
+    4. 為 FileToMove 新增處理狀態欄位 (IsProcessed, ProcessedAt)
+    5. 建立索引以優化查詢效能 (idx_hash, idx_mark_type)
+  - 使用 `PRAGMA table_info()` 檢查欄位存在性,確保向後相容
+  - 所有 ALTER TABLE 操作都有 try-catch 保護
 
   **主要資料表結構**:
 
@@ -55,6 +82,8 @@ dotnet run
      - `Hash`: 對應的雜湊值
      - `FilePath`: 檔案路徑（唯一）
      - `MarkedAt`: 標記時間
+     - `IsProcessed`: 處理狀態（0=未處理, 1=已處理）
+     - `ProcessedAt`: 處理時間戳記
 
   3. **SkippedHashes** - 標記略過的檔案群組
      - `Id`: 主鍵
@@ -69,20 +98,32 @@ dotnet run
      - `SourcePath`: 來源路徑（唯一）
      - `TargetPath`: 目標路徑（根據檔案修改日期計算：yyyy-MM）
      - `MarkedAt`: 標記時間
+     - `IsProcessed`: 處理狀態（0=未處理, 1=已處理）
+     - `ProcessedAt`: 處理時間戳記
 
 ### Program.cs 主要功能
 
 **重複檔案掃描與管理**:
 - `ScanAndWriteDuplicates()`: 掃描資料夾並計算檔案雜湊值
 - `InteractiveDeleteDuplicates()`: 互動式選擇要刪除的重複檔案
+  - **互動指令**:
+    - `d [編號]`: 標記檔案為待刪除（例如: `d 1,2,3`）
+    - `m [編號]`: 標記檔案為待移動（例如: `m 1,2,3`）
+    - `s`: 略過整個檔案群組
+    - `p [編號]`: 預覽指定檔案（例如: `p 1,2,3`）
+    - `n`: 跳過當前群組
+    - `q`: 退出互動模式
 - `MarkFileForDeletion()` / `ExecuteMarkedDeletions()`: 標記和執行刪除
 - `MarkHashAsSkipped()`: 標記要略過的檔案群組
 
 **報表生成**:
 - `GenerateReport()`: 統一的報表生成方法（JSON 和 HTML）
 - `GenerateDuplicateAnalysisReport()`: 生成包含移動標記功能的互動式 HTML 報表
-- 使用 `Templates/` 資料夾中的 HTML 範本
-- 輸出到 `Reports/` 資料夾
+- **Templates 資料夾**: 包含 HTML 範本檔案
+  - `DuplicateAnalysisReport.html`: 重複檔案分析報表範本
+  - `MarkedForDeletionReport.html`: 待刪除檔案報表範本
+  - `SkippedFilesReport.html`: 已略過檔案報表範本
+- **Reports 資料夾**: 自動生成的報表輸出目錄（JSON 和 HTML 格式）
 
 **API 服務器**:
 - 內建 HTTP 伺服器（使用 `HttpListener`）用於提供互動式報表
@@ -113,12 +154,13 @@ dotnet run
 
 **影片**: `.mp4`, `.avi`, `.mkv`, `.mov`, `.wmv`, `.flv`, `.webm`, `.m4v`, `.mpg`, `.mpeg`
 
-## 重構歷史
+## 專案架構說明
 
-此專案經歷了多階段重構以消除重複程式碼並改善架構（詳見 `重構計畫.md`）:
-- **階段 1-3**: 提取共用方法、統一報表生成、建立資料模型
-- **階段 4-5**: 建立 `DatabaseHelper` 並統一所有資料庫存取
-- 從原始 1990 行減少到約 1913 行（減少約 4%），但可維護性和可讀性大幅提升
+此專案經過多階段重構,採用輕量級架構設計。核心特點:
+- 使用 `DatabaseHelper` 統一資料庫存取層
+- 採用 `record` 型別實現不可變資料模型
+- 共用方法消除重複程式碼
+- 詳細的重構歷史請參閱 `重構計畫.md`
 
 ## 開發注意事項
 
