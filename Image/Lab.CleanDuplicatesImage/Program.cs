@@ -1403,6 +1403,19 @@ class Program
                 filePathParam.Value = filePath;
                 command.ExecuteNonQuery();
             }
+
+            // 更新 DuplicateFiles 的 MarkType 為 3 (跳過標記)
+            var updateCommand = connection.CreateCommand();
+            updateCommand.Transaction = transaction;
+            updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 3 WHERE FilePath = $filePath";
+            var updateFilePathParam = new SqliteParameter("$filePath", "");
+            updateCommand.Parameters.Add(updateFilePathParam);
+
+            foreach (var filePath in filePaths)
+            {
+                updateFilePathParam.Value = filePath;
+                updateCommand.ExecuteNonQuery();
+            }
         });
     }
 
@@ -2178,7 +2191,7 @@ class Program
             }
         }
 
-        // 如果 MarkType 欄位不存在，則新增（0=無標記, 1=刪除標記, 2=移動標記）
+        // 如果 MarkType 欄位不存在，則新增（0=無標記, 1=刪除標記, 2=移動標記, 3=跳過標記）
         if (!existingColumns.Contains("MarkType"))
         {
             try
