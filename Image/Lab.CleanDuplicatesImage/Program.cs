@@ -14,6 +14,16 @@ record AppSettings
     public string DefaultMoveTargetBasePath { get; init; } = @"C:\Users\clove\OneDrive\圖片";
 }
 
+/// <summary>
+/// 命令處理結果
+/// </summary>
+enum CommandResult
+{
+    Continue,    // 繼續等待下一個命令
+    NextGroup,   // 移至下一個檔案組
+    Quit         // 結束整個互動流程
+}
+
 class Program
 {
     /// <summary>
@@ -444,232 +454,296 @@ class Program
                     "輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）",
                     "輸入 'k' 保留所有檔案並跳過此組",
                     "輸入 'a' 自動保留最舊的檔案，標記其他為待刪除",
-                    "輸入 'q' 結束作業"
+                    "輸入 'q' 結束作業",
+                    "支援多命令：用分號分隔（例如: d 1,2;m 3,4）"
                 );
 
-                var choice = Console.ReadLine()?.Trim().ToLower();
-
-                if (choice == "q")
-                {
-                    Console.WriteLine("已結束標記作業");
-                    return;
-                }
-
-                if (HandlePreviewCommand(choice, validFilePaths))
+                var input = Console.ReadLine()?.Trim();
+                if (string.IsNullOrWhiteSpace(input))
                 {
                     continue;
                 }
 
-                if (choice == "k")
+                // 用分號分割多個命令
+                var commands = input.Split(';')
+                    .Select(cmd => cmd.Trim())
+                    .Where(cmd => !string.IsNullOrWhiteSpace(cmd))
+                    .ToList();
+
+                CommandResult finalResult = CommandResult.Continue;
+
+                // 逐一執行每個命令
+                for (int i = 0; i < commands.Count; i++)
                 {
-                    MarkHashAsSkipped(group.Key, validFilePaths);
-                    Console.WriteLine("已跳過此組並記錄，下次不會再顯示此組");
-                    Console.WriteLine();
-                    break;
-                }
+                    var command = commands[i];
+                    var isLastCommand = (i == commands.Count - 1);
 
-                if (choice == "a")
-                {
-                    var oldestFile = filesInGroup
-                        .OrderBy(f => DateTime.Parse(f.CreatedTime))
-                        .First();
+                    var result = ProcessSingleCommand(
+                        command,
+                        group.Key,
+                        filesInGroup,
+                        validFilePaths,
+                        handledFiles,
+                        isLastCommand);
 
-                    var autoDeletePaths = filesInGroup
-                        .Where(f => f.Path != oldestFile.Path)
-                        .Select(f => f.Path)
-                        .ToList();
-
-                    Console.WriteLine($"保留最舊的檔案: {oldestFile.Path}");
-                    Console.WriteLine($"建立時間: {oldestFile.CreatedTime}");
-                    Console.WriteLine($"最後修改日期: {oldestFile.LastModifiedTime}");
-                    Console.WriteLine();
-                    Console.WriteLine($"將標記以下 {autoDeletePaths.Count} 個檔案為待刪除：");
-                    foreach (var filePath in autoDeletePaths)
+                    // 如果遇到 Quit 或 NextGroup，記錄並停止處理後續命令
+                    if (result == CommandResult.Quit || result == CommandResult.NextGroup)
                     {
-                        var fileToMark = filesInGroup.First(f => f.Path == filePath);
-                        Console.WriteLine($"  - {filePath}");
-                        Console.WriteLine($"    建立時間: {fileToMark.CreatedTime}");
-                        Console.WriteLine($"    最後修改日期: {fileToMark.LastModifiedTime}");
-                    }
-
-                    Console.WriteLine();
-                    if (ConfirmAction("確認標記？"))
-                    {
-                        if (MarkFilesForDeletion(group.Key, autoDeletePaths))
-                        {
-                            Console.WriteLine("標記完成！");
-                            handledFiles.UnionWith(autoDeletePaths);
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("已取消標記");
-                    }
-
-                    Console.WriteLine();
-                    break;
-                }
-
-                // 處理移動標記命令（m 或 m 1,3,5）
-                if (choice?.StartsWith("m") == true)
-                {
-                    var indicesStr = choice.Trim();
-                    List<int> moveIndices;
-
-                    // 處理 "m" (標記所有檔案)
-                    if (indicesStr == "m")
-                    {
-                        // 標記所有檔案
-                        moveIndices = Enumerable.Range(1, filesInGroup.Count).ToList();
-                    }
-                    // 處理 "m 1,3,5" 格式
-                    else if (indicesStr.StartsWith("m "))
-                    {
-                        indicesStr = indicesStr.Substring(2).Trim();
-                        moveIndices = ParseIndices(indicesStr, filesInGroup.Count);
-                    }
-                    else
-                    {
-                        Console.WriteLine("無效的命令格式，請使用 'm 編號' 或 'm' 格式（例如: m 1,2,3 或 m）");
-                        Console.WriteLine();
-                        continue;
-                    }
-
-                    if (moveIndices.Count == 0)
-                    {
-                        Console.WriteLine("無效的編號，請重新輸入！");
-                        Console.WriteLine();
-                        continue;
-                    }
-
-                    var filesToMove = moveIndices.Select(i => filesInGroup[i - 1]).ToList();
-
-                    Console.WriteLine($"將標記以下 {filesToMove.Count} 個檔案為待移動：");
-                    foreach (var file in filesToMove)
-                    {
-                        var targetPath = CalculateTargetPath(file.Path, _settings.DefaultMoveTargetBasePath);
-                        Console.WriteLine($"  - 來源: {file.Path}");
-                        Console.WriteLine($"  - 目標: {targetPath}");
-                        Console.WriteLine();
-                    }
-
-                    if (ConfirmAction("確認標記為移動？"))
-                    {
-                        var moveFilePaths = filesToMove.Select(f => f.Path).ToList();
-                        if (MarkFilesForMove(group.Key, moveFilePaths))
-                        {
-                            Console.WriteLine("標記移動完成！");
-                            handledFiles.UnionWith(moveFilePaths);
-                            Console.WriteLine();
-                            break; // 移至下一組
-                        }
-                        else
-                        {
-                            Console.WriteLine("標記移動失敗，請重試。");
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("已取消標記");
-                    }
-
-                    Console.WriteLine();
-                    continue;
-                }
-
-                // 處理刪除標記命令（d 或 d 1,3,5）
-                if (choice?.StartsWith("d") == true)
-                {
-                    var indicesStr = choice.Trim();
-                    List<int> indices;
-
-                    // 處理 "d" (標記所有檔案)
-                    if (indicesStr == "d")
-                    {
-                        // 標記所有檔案
-                        indices = Enumerable.Range(1, filesInGroup.Count).ToList();
-                    }
-                    // 處理 "d 1,3,5" 格式
-                    else if (indicesStr.StartsWith("d "))
-                    {
-                        indicesStr = indicesStr.Substring(2).Trim();
-                        indices = ParseIndices(indicesStr, filesInGroup.Count);
-                    }
-                    else
-                    {
-                        Console.WriteLine("無效的命令格式，請使用 'd 編號' 或 'd' 格式（例如: d 1,2,3 或 d）");
-                        Console.WriteLine();
-                        continue;
-                    }
-
-                    if (indices.Count == 0)
-                    {
-                        Console.WriteLine("無效的編號，請重新輸入！");
-                        Console.WriteLine();
-                        continue;
-                    }
-
-                    var filesToDelete = indices.Select(i => filesInGroup[i - 1].Path).ToList();
-
-                    var alreadyHandled = filesToDelete.Where(f => handledFiles.Contains(f)).ToList();
-                    var newMarks = filesToDelete.Where(f => !handledFiles.Contains(f)).ToList();
-
-                    if (alreadyHandled.Count > 0)
-                    {
-                        Console.WriteLine($"以下 {alreadyHandled.Count} 個檔案已經被標記：");
-                        foreach (var file in alreadyHandled)
-                        {
-                            Console.WriteLine($"  - {file}");
-                        }
-
-                        Console.WriteLine("這些檔案會先取消標記，然後重新標記");
-                        Console.WriteLine();
-                    }
-
-                    if (newMarks.Count > 0)
-                    {
-                        Console.WriteLine($"將標記以下 {newMarks.Count} 個檔案為待刪除：");
-                        foreach (var file in newMarks)
-                        {
-                            Console.WriteLine($"  - {file}");
-                        }
-                    }
-
-                    if (ConfirmAction("確認標記？"))
-                    {
-                        if (alreadyHandled.Count > 0)
-                        {
-                            UnmarkFiles(alreadyHandled);
-                            handledFiles.ExceptWith(alreadyHandled);
-                        }
-
-                        if (MarkFilesForDeletion(group.Key, filesToDelete))
-                        {
-                            Console.WriteLine("標記完成！");
-                            handledFiles.UnionWith(filesToDelete);
-                        }
-
-                        Console.WriteLine();
+                        finalResult = result;
                         break;
                     }
-                    else
-                    {
-                        Console.WriteLine("已取消標記");
-                        Console.WriteLine();
-                    }
-
-                    continue;
                 }
 
-                // 如果沒有匹配任何已知命令,提示使用者
-                Console.WriteLine("無效的命令！請查看上方選單使用正確的命令格式。");
-                Console.WriteLine();
+                // 根據最終結果決定流程
+                if (finalResult == CommandResult.Quit)
+                {
+                    return;
+                }
+                else if (finalResult == CommandResult.NextGroup)
+                {
+                    break;
+                }
+                // CommandResult.Continue: 繼續等待下一個輸入
             }
 
             groupIndex++;
         }
 
         Console.WriteLine("所有重複檔案處理完成！");
+    }
+
+    /// <summary>
+    /// 處理單一命令
+    /// </summary>
+    /// <param name="isLastCommand">是否為最後一個命令（多命令場景下使用）</param>
+    static CommandResult ProcessSingleCommand(
+        string command,
+        string hash,
+        List<FileDetails> filesInGroup,
+        List<string> validFilePaths,
+        HashSet<string> handledFiles,
+        bool isLastCommand = true)
+    {
+        command = command?.Trim().ToLower() ?? "";
+
+        // 處理退出命令
+        if (command == "q")
+        {
+            Console.WriteLine("已結束標記作業");
+            return CommandResult.Quit;
+        }
+
+        // 處理預覽命令
+        if (HandlePreviewCommand(command, validFilePaths))
+        {
+            return CommandResult.Continue;
+        }
+
+        // 處理跳過命令
+        if (command == "k")
+        {
+            MarkHashAsSkipped(hash, validFilePaths);
+            Console.WriteLine("已跳過此組並記錄，下次不會再顯示此組");
+            Console.WriteLine();
+            return CommandResult.NextGroup;
+        }
+
+        // 處理自動標記命令
+        if (command == "a")
+        {
+            var oldestFile = filesInGroup
+                .OrderBy(f => DateTime.Parse(f.CreatedTime))
+                .First();
+
+            var autoDeletePaths = filesInGroup
+                .Where(f => f.Path != oldestFile.Path)
+                .Select(f => f.Path)
+                .ToList();
+
+            Console.WriteLine($"保留最舊的檔案: {oldestFile.Path}");
+            Console.WriteLine($"建立時間: {oldestFile.CreatedTime}");
+            Console.WriteLine($"最後修改日期: {oldestFile.LastModifiedTime}");
+            Console.WriteLine();
+            Console.WriteLine($"將標記以下 {autoDeletePaths.Count} 個檔案為待刪除：");
+            foreach (var filePath in autoDeletePaths)
+            {
+                var fileToMark = filesInGroup.First(f => f.Path == filePath);
+                Console.WriteLine($"  - {filePath}");
+                Console.WriteLine($"    建立時間: {fileToMark.CreatedTime}");
+                Console.WriteLine($"    最後修改日期: {fileToMark.LastModifiedTime}");
+            }
+
+            Console.WriteLine();
+            if (ConfirmAction("確認標記？"))
+            {
+                if (MarkFilesForDeletion(hash, autoDeletePaths))
+                {
+                    Console.WriteLine("標記完成！");
+                    handledFiles.UnionWith(autoDeletePaths);
+                }
+            }
+            else
+            {
+                Console.WriteLine("已取消標記");
+            }
+
+            Console.WriteLine();
+            return isLastCommand ? CommandResult.NextGroup : CommandResult.Continue;
+        }
+
+        // 處理移動標記命令（m 或 m 1,3,5）
+        if (command.StartsWith("m"))
+        {
+            var indicesStr = command.Trim();
+            List<int> moveIndices;
+
+            // 處理 "m" (標記所有檔案)
+            if (indicesStr == "m")
+            {
+                moveIndices = Enumerable.Range(1, filesInGroup.Count).ToList();
+            }
+            // 處理 "m 1,3,5" 格式
+            else if (indicesStr.StartsWith("m "))
+            {
+                indicesStr = indicesStr.Substring(2).Trim();
+                moveIndices = ParseIndices(indicesStr, filesInGroup.Count);
+            }
+            else
+            {
+                Console.WriteLine("無效的命令格式，請使用 'm 編號' 或 'm' 格式（例如: m 1,2,3 或 m）");
+                Console.WriteLine();
+                return CommandResult.Continue;
+            }
+
+            if (moveIndices.Count == 0)
+            {
+                Console.WriteLine("無效的編號，請重新輸入！");
+                Console.WriteLine();
+                return CommandResult.Continue;
+            }
+
+            var filesToMove = moveIndices.Select(i => filesInGroup[i - 1]).ToList();
+
+            Console.WriteLine($"將標記以下 {filesToMove.Count} 個檔案為待移動：");
+            foreach (var file in filesToMove)
+            {
+                var targetPath = CalculateTargetPath(file.Path, _settings.DefaultMoveTargetBasePath);
+                Console.WriteLine($"  - 來源: {file.Path}");
+                Console.WriteLine($"  - 目標: {targetPath}");
+                Console.WriteLine();
+            }
+
+            if (ConfirmAction("確認標記為移動？"))
+            {
+                var moveFilePaths = filesToMove.Select(f => f.Path).ToList();
+                if (MarkFilesForMove(hash, moveFilePaths))
+                {
+                    Console.WriteLine("標記移動完成！");
+                    handledFiles.UnionWith(moveFilePaths);
+                    Console.WriteLine();
+                    return isLastCommand ? CommandResult.NextGroup : CommandResult.Continue;
+                }
+                else
+                {
+                    Console.WriteLine("標記移動失敗，請重試。");
+                }
+            }
+            else
+            {
+                Console.WriteLine("已取消標記");
+            }
+
+            Console.WriteLine();
+            return CommandResult.Continue;
+        }
+
+        // 處理刪除標記命令（d 或 d 1,3,5）
+        if (command.StartsWith("d"))
+        {
+            var indicesStr = command.Trim();
+            List<int> indices;
+
+            // 處理 "d" (標記所有檔案)
+            if (indicesStr == "d")
+            {
+                indices = Enumerable.Range(1, filesInGroup.Count).ToList();
+            }
+            // 處理 "d 1,3,5" 格式
+            else if (indicesStr.StartsWith("d "))
+            {
+                indicesStr = indicesStr.Substring(2).Trim();
+                indices = ParseIndices(indicesStr, filesInGroup.Count);
+            }
+            else
+            {
+                Console.WriteLine("無效的命令格式，請使用 'd 編號' 或 'd' 格式（例如: d 1,2,3 或 d）");
+                Console.WriteLine();
+                return CommandResult.Continue;
+            }
+
+            if (indices.Count == 0)
+            {
+                Console.WriteLine("無效的編號，請重新輸入！");
+                Console.WriteLine();
+                return CommandResult.Continue;
+            }
+
+            var filesToDelete = indices.Select(i => filesInGroup[i - 1].Path).ToList();
+
+            var alreadyHandled = filesToDelete.Where(f => handledFiles.Contains(f)).ToList();
+            var newMarks = filesToDelete.Where(f => !handledFiles.Contains(f)).ToList();
+
+            if (alreadyHandled.Count > 0)
+            {
+                Console.WriteLine($"以下 {alreadyHandled.Count} 個檔案已經被標記：");
+                foreach (var file in alreadyHandled)
+                {
+                    Console.WriteLine($"  - {file}");
+                }
+
+                Console.WriteLine("這些檔案會先取消標記，然後重新標記");
+                Console.WriteLine();
+            }
+
+            if (newMarks.Count > 0)
+            {
+                Console.WriteLine($"將標記以下 {newMarks.Count} 個檔案為待刪除：");
+                foreach (var file in newMarks)
+                {
+                    Console.WriteLine($"  - {file}");
+                }
+            }
+
+            if (ConfirmAction("確認標記？"))
+            {
+                if (alreadyHandled.Count > 0)
+                {
+                    UnmarkFiles(alreadyHandled);
+                    handledFiles.ExceptWith(alreadyHandled);
+                }
+
+                if (MarkFilesForDeletion(hash, filesToDelete))
+                {
+                    Console.WriteLine("標記完成！");
+                    handledFiles.UnionWith(filesToDelete);
+                }
+
+                Console.WriteLine();
+                return isLastCommand ? CommandResult.NextGroup : CommandResult.Continue;
+            }
+            else
+            {
+                Console.WriteLine("已取消標記");
+                Console.WriteLine();
+            }
+
+            return CommandResult.Continue;
+        }
+
+        // 無效的命令
+        Console.WriteLine("無效的命令！請查看上方選單使用正確的命令格式。");
+        Console.WriteLine();
+        return CommandResult.Continue;
     }
 
     static bool MarkFilesForDeletion(string hash, List<string> files)
