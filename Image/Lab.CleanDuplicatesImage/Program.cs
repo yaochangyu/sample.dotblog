@@ -859,23 +859,23 @@ class Program
                 Console.WriteLine($"✓ 已刪除: {path}");
                 successCount++;
 
-                // 從標記表中移除
-                var deleteMarkCommand = connection.CreateCommand();
-                deleteMarkCommand.CommandText = "DELETE FROM FilesToDelete WHERE FilePath = $path";
-                var markPathParam = deleteMarkCommand.CreateParameter();
-                markPathParam.ParameterName = "$path";
-                markPathParam.Value = path;
-                deleteMarkCommand.Parameters.Add(markPathParam);
-                deleteMarkCommand.ExecuteNonQuery();
+                // 更新 FilesToDelete 的 IsProcessed 旗標
+                var updateProcessedCommand = connection.CreateCommand();
+                updateProcessedCommand.CommandText = @"
+                    UPDATE FilesToDelete
+                    SET IsProcessed = 1, ProcessedAt = $processedAt
+                    WHERE FilePath = $path";
+                var processedAtParam = updateProcessedCommand.CreateParameter();
+                processedAtParam.ParameterName = "$processedAt";
+                processedAtParam.Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                updateProcessedCommand.Parameters.Add(processedAtParam);
+                var pathParam = updateProcessedCommand.CreateParameter();
+                pathParam.ParameterName = "$path";
+                pathParam.Value = path;
+                updateProcessedCommand.Parameters.Add(pathParam);
+                updateProcessedCommand.ExecuteNonQuery();
 
-                // 清除 DuplicateFiles 的 MarkType
-                var updateCommand = connection.CreateCommand();
-                updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE FilePath = $path";
-                var updatePathParam = updateCommand.CreateParameter();
-                updatePathParam.ParameterName = "$path";
-                updatePathParam.Value = path;
-                updateCommand.Parameters.Add(updatePathParam);
-                updateCommand.ExecuteNonQuery();
+                // 注意：不再清除 DuplicateFiles 的 MarkType，保持 MarkType = 1
             }
             catch (Exception ex)
             {
@@ -1021,22 +1021,17 @@ class Program
                 Console.WriteLine($"✓ 已移動: {Path.GetFileName(sourcePath)} → {targetPath}");
                 successCount++;
 
-                // 從標記表中移除
-                var deleteMarkCommand = connection.CreateCommand();
-                deleteMarkCommand.CommandText = "DELETE FROM FileToMove WHERE SourcePath = $path";
-                var markPathParam = deleteMarkCommand.CreateParameter();
-                markPathParam.ParameterName = "$path";
-                markPathParam.Value = sourcePath;
-                deleteMarkCommand.Parameters.Add(markPathParam);
-                deleteMarkCommand.ExecuteNonQuery();
-
-                // 清除 DuplicateFiles 的 MarkType
+                // 更新處理狀態
                 var updateCommand = connection.CreateCommand();
-                updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE FilePath = $path";
-                var updatePathParam = updateCommand.CreateParameter();
-                updatePathParam.ParameterName = "$path";
-                updatePathParam.Value = sourcePath;
-                updateCommand.Parameters.Add(updatePathParam);
+                updateCommand.CommandText = "UPDATE FileToMove SET IsProcessed = 1, ProcessedAt = $processedAt WHERE SourcePath = $path";
+                var processedAtParam = updateCommand.CreateParameter();
+                processedAtParam.ParameterName = "$processedAt";
+                processedAtParam.Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                updateCommand.Parameters.Add(processedAtParam);
+                var pathParam = updateCommand.CreateParameter();
+                pathParam.ParameterName = "$path";
+                pathParam.Value = sourcePath;
+                updateCommand.Parameters.Add(pathParam);
                 updateCommand.ExecuteNonQuery();
             }
             catch (Exception ex)
@@ -1055,26 +1050,21 @@ class Program
             {
                 foreach (var (sourcePath, _, _) in missingFiles)
                 {
-                    // 從 FileToMove 移除
-                    var deleteCommand = connection.CreateCommand();
-                    deleteCommand.CommandText = "DELETE FROM FileToMove WHERE SourcePath = $path";
-                    var pathParam = deleteCommand.CreateParameter();
+                    // 更新 FileToMove 處理狀態
+                    var updateCommand = connection.CreateCommand();
+                    updateCommand.CommandText = "UPDATE FileToMove SET IsProcessed = 1, ProcessedAt = $processedAt WHERE SourcePath = $path";
+                    var processedAtParam = updateCommand.CreateParameter();
+                    processedAtParam.ParameterName = "$processedAt";
+                    processedAtParam.Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    updateCommand.Parameters.Add(processedAtParam);
+                    var pathParam = updateCommand.CreateParameter();
                     pathParam.ParameterName = "$path";
                     pathParam.Value = sourcePath;
-                    deleteCommand.Parameters.Add(pathParam);
-                    deleteCommand.ExecuteNonQuery();
-
-                    // 清除 DuplicateFiles 的 MarkType
-                    var updateCommand = connection.CreateCommand();
-                    updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE FilePath = $path";
-                    var updatePathParam = updateCommand.CreateParameter();
-                    updatePathParam.ParameterName = "$path";
-                    updatePathParam.Value = sourcePath;
-                    updateCommand.Parameters.Add(updatePathParam);
+                    updateCommand.Parameters.Add(pathParam);
                     updateCommand.ExecuteNonQuery();
                 }
 
-                Console.WriteLine("已清除記錄！");
+                Console.WriteLine("已標記為已處理！");
             }
         }
     }
@@ -1528,7 +1518,7 @@ class Program
         try
         {
             return DatabaseHelper.ExecuteQuery(
-                "SELECT FilePath, MarkedAt FROM FilesToDelete ORDER BY MarkedAt",
+                "SELECT FilePath, MarkedAt FROM FilesToDelete WHERE IsProcessed = 0 ORDER BY MarkedAt",
                 reader =>
                 {
                     var files = new List<(string, string)>();
@@ -1551,7 +1541,7 @@ class Program
         try
         {
             return DatabaseHelper.ExecuteQuery(
-                "SELECT SourcePath, TargetPath, MarkedAt FROM FileToMove ORDER BY MarkedAt",
+                "SELECT SourcePath, TargetPath, MarkedAt FROM FileToMove WHERE IsProcessed = 0 ORDER BY MarkedAt",
                 reader =>
                 {
                     var files = new List<(string, string, string)>();
@@ -2684,7 +2674,93 @@ class Program
             }
         }
 
-        // 第三步：建立索引（在欄位確定存在後）
+        // 第三步：為 FilesToDelete 新增 IsProcessed 和 ProcessedAt 欄位
+        var checkFilesToDeleteCommand = connection.CreateCommand();
+        checkFilesToDeleteCommand.CommandText = "PRAGMA table_info(FilesToDelete)";
+        var filesToDeleteColumns = new HashSet<string>();
+
+        using (var reader = checkFilesToDeleteCommand.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                filesToDeleteColumns.Add(reader.GetString(1));
+            }
+        }
+
+        if (!filesToDeleteColumns.Contains("IsProcessed"))
+        {
+            try
+            {
+                var alterCommand = connection.CreateCommand();
+                alterCommand.CommandText = "ALTER TABLE FilesToDelete ADD COLUMN IsProcessed INTEGER NOT NULL DEFAULT 0";
+                alterCommand.ExecuteNonQuery();
+                Console.WriteLine("已新增 IsProcessed 欄位到 FilesToDelete 資料表");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"警告：無法新增 IsProcessed 欄位到 FilesToDelete: {ex.Message}");
+            }
+        }
+
+        if (!filesToDeleteColumns.Contains("ProcessedAt"))
+        {
+            try
+            {
+                var alterCommand = connection.CreateCommand();
+                alterCommand.CommandText = "ALTER TABLE FilesToDelete ADD COLUMN ProcessedAt TEXT";
+                alterCommand.ExecuteNonQuery();
+                Console.WriteLine("已新增 ProcessedAt 欄位到 FilesToDelete 資料表");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"警告：無法新增 ProcessedAt 欄位到 FilesToDelete: {ex.Message}");
+            }
+        }
+
+        // 第四步：為 FileToMove 新增 IsProcessed 和 ProcessedAt 欄位
+        var checkFileToMoveCommand = connection.CreateCommand();
+        checkFileToMoveCommand.CommandText = "PRAGMA table_info(FileToMove)";
+        var fileToMoveColumns = new HashSet<string>();
+
+        using (var reader = checkFileToMoveCommand.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                fileToMoveColumns.Add(reader.GetString(1));
+            }
+        }
+
+        if (!fileToMoveColumns.Contains("IsProcessed"))
+        {
+            try
+            {
+                var alterCommand = connection.CreateCommand();
+                alterCommand.CommandText = "ALTER TABLE FileToMove ADD COLUMN IsProcessed INTEGER NOT NULL DEFAULT 0";
+                alterCommand.ExecuteNonQuery();
+                Console.WriteLine("已新增 IsProcessed 欄位到 FileToMove 資料表");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"警告：無法新增 IsProcessed 欄位到 FileToMove: {ex.Message}");
+            }
+        }
+
+        if (!fileToMoveColumns.Contains("ProcessedAt"))
+        {
+            try
+            {
+                var alterCommand = connection.CreateCommand();
+                alterCommand.CommandText = "ALTER TABLE FileToMove ADD COLUMN ProcessedAt TEXT";
+                alterCommand.ExecuteNonQuery();
+                Console.WriteLine("已新增 ProcessedAt 欄位到 FileToMove 資料表");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"警告：無法新增 ProcessedAt 欄位到 FileToMove: {ex.Message}");
+            }
+        }
+
+        // 第五步：建立索引（在欄位確定存在後）
         var indexCommand = connection.CreateCommand();
         indexCommand.CommandText = @"
             CREATE INDEX IF NOT EXISTS idx_hash ON DuplicateFiles(Hash);
