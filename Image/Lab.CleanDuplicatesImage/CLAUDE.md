@@ -74,6 +74,7 @@ dotnet run
        - `0` = 無標記（未處理）
        - `1` = 刪除標記
        - `2` = 移動標記
+       - `3` = 跳過標記（保留所有檔案）
      - 唯一約束: `(Hash, FilePath)`
      - 索引: `idx_hash`, `idx_mark_type`
 
@@ -109,7 +110,8 @@ dotnet run
   - **互動指令**:
     - `d [編號]`: 標記檔案為待刪除（例如: `d 1,2,3`）
     - `m [編號]`: 標記檔案為待移動（例如: `m 1,2,3`）
-    - `s`: 略過整個檔案群組
+    - `k`: 保留所有檔案並跳過此組（設定 MarkType = 3）
+    - `a`: 自動保留最舊的檔案，標記其他為待刪除
     - `p [編號]`: 預覽指定檔案（例如: `p 1,2,3`）
     - `n`: 跳過當前群組
     - `q`: 退出互動模式
@@ -191,8 +193,14 @@ dotnet run
    - 目標路徑根據檔案修改日期計算（yyyy-MM 格式）
    - 下次執行「選項 2」時自動排除
 
-3. **取消標記**:
-   - 刪除對應的 `FilesToDelete` 或 `FileToMove` 記錄
+3. **保留檔案並跳過** (`k` 命令):
+   - 寫入 `SkippedHashes` 資料表
+   - 更新 `DuplicateFiles.MarkType = 3`
+   - 表示該組檔案已確認保留，不再顯示
+   - 下次執行「選項 2」時自動排除
+
+4. **取消標記**:
+   - 刪除對應的 `FilesToDelete`、`FileToMove` 或 `SkippedHashes` 記錄
    - 重置 `DuplicateFiles.MarkType = 0`
    - 檔案重新出現在互動式選單中
 
@@ -209,6 +217,9 @@ SELECT * FROM DuplicateFiles WHERE MarkType = 1
 
 -- 查詢待移動的檔案
 SELECT * FROM DuplicateFiles WHERE MarkType = 2
+
+-- 查詢已跳過保留的檔案
+SELECT * FROM DuplicateFiles WHERE MarkType = 3
 ```
 
 ### 程式碼風格
