@@ -424,8 +424,8 @@ class Program
             {
                 var validFilePaths = filesInGroup.Select(f => f.Path).ToList();
                 DisplayMenu(
-                    "輸入編號標記該檔案為待刪除（可用逗號分隔多個，例如: 1,3,5）",
-                    "輸入 'm 編號' 標記該檔案為待移動（可用逗號分隔多個，例如: m 1,3,5）",
+                    "輸入 'd' 或 'd 編號' 標記該檔案為刪除（例如: d 1,2 或 d 標記所有）",
+                    "輸入 'm' 或 'm 編號' 標記該檔案為移動（例如: m 1,2 或 m 標記所有）",
                     "輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）",
                     "輸入 'k' 保留所有檔案並跳過此組",
                     "輸入 'a' 自動保留最舊的檔案，標記其他為待刪除",
@@ -495,11 +495,30 @@ class Program
                     break;
                 }
 
-                // 處理移動標記命令（m 1,3,5）
-                if (choice?.StartsWith("m ") == true)
+                // 處理移動標記命令（m 或 m 1,3,5）
+                if (choice?.StartsWith("m") == true)
                 {
-                    var indicesStr = choice.Substring(2).Trim();
-                    var moveIndices = ParseIndices(indicesStr, filesInGroup.Count);
+                    var indicesStr = choice.Trim();
+                    List<int> moveIndices;
+
+                    // 處理 "m" (標記所有檔案)
+                    if (indicesStr == "m")
+                    {
+                        // 標記所有檔案
+                        moveIndices = Enumerable.Range(1, filesInGroup.Count).ToList();
+                    }
+                    // 處理 "m 1,3,5" 格式
+                    else if (indicesStr.StartsWith("m "))
+                    {
+                        indicesStr = indicesStr.Substring(2).Trim();
+                        moveIndices = ParseIndices(indicesStr, filesInGroup.Count);
+                    }
+                    else
+                    {
+                        Console.WriteLine("無效的命令格式，請使用 'm 編號' 或 'm' 格式（例如: m 1,2,3 或 m）");
+                        Console.WriteLine();
+                        continue;
+                    }
 
                     if (moveIndices.Count == 0)
                     {
@@ -543,70 +562,93 @@ class Program
                     continue;
                 }
 
-                var indices = ParseIndices(choice, filesInGroup.Count);
-
-                if (indices.Count == 0)
+                // 處理刪除標記命令（d 或 d 1,3,5）
+                if (choice?.StartsWith("d") == true)
                 {
-                    Console.WriteLine("無效的選擇，請重新輸入！");
-                    Console.WriteLine();
-                    continue;
-                }
+                    var indicesStr = choice.Trim();
+                    List<int> indices;
 
-                if (indices.Count == filesInGroup.Count)
-                {
-                    Console.WriteLine("錯誤：不能刪除所有檔案，至少要保留一個！");
-                    Console.WriteLine();
-                    continue;
-                }
-
-                var filesToDelete = indices.Select(i => filesInGroup[i - 1].Path).ToList();
-
-                var alreadyHandled = filesToDelete.Where(f => handledFiles.Contains(f)).ToList();
-                var newMarks = filesToDelete.Where(f => !handledFiles.Contains(f)).ToList();
-
-                if (alreadyHandled.Count > 0)
-                {
-                    Console.WriteLine($"以下 {alreadyHandled.Count} 個檔案已經被標記：");
-                    foreach (var file in alreadyHandled)
+                    // 處理 "d" (標記所有檔案)
+                    if (indicesStr == "d")
                     {
-                        Console.WriteLine($"  - {file}");
+                        // 標記所有檔案
+                        indices = Enumerable.Range(1, filesInGroup.Count).ToList();
+                    }
+                    // 處理 "d 1,3,5" 格式
+                    else if (indicesStr.StartsWith("d "))
+                    {
+                        indicesStr = indicesStr.Substring(2).Trim();
+                        indices = ParseIndices(indicesStr, filesInGroup.Count);
+                    }
+                    else
+                    {
+                        Console.WriteLine("無效的命令格式，請使用 'd 編號' 或 'd' 格式（例如: d 1,2,3 或 d）");
+                        Console.WriteLine();
+                        continue;
                     }
 
-                    Console.WriteLine("這些檔案會先取消標記，然後重新標記");
-                    Console.WriteLine();
-                }
-
-                if (newMarks.Count > 0)
-                {
-                    Console.WriteLine($"將標記以下 {newMarks.Count} 個檔案為待刪除：");
-                    foreach (var file in newMarks)
+                    if (indices.Count == 0)
                     {
-                        Console.WriteLine($"  - {file}");
+                        Console.WriteLine("無效的編號，請重新輸入！");
+                        Console.WriteLine();
+                        continue;
                     }
-                }
 
-                if (ConfirmAction("確認標記？"))
-                {
+                    var filesToDelete = indices.Select(i => filesInGroup[i - 1].Path).ToList();
+
+                    var alreadyHandled = filesToDelete.Where(f => handledFiles.Contains(f)).ToList();
+                    var newMarks = filesToDelete.Where(f => !handledFiles.Contains(f)).ToList();
+
                     if (alreadyHandled.Count > 0)
                     {
-                        UnmarkFiles(alreadyHandled);
-                        handledFiles.ExceptWith(alreadyHandled);
+                        Console.WriteLine($"以下 {alreadyHandled.Count} 個檔案已經被標記：");
+                        foreach (var file in alreadyHandled)
+                        {
+                            Console.WriteLine($"  - {file}");
+                        }
+
+                        Console.WriteLine("這些檔案會先取消標記，然後重新標記");
+                        Console.WriteLine();
                     }
 
-                    if (MarkFilesForDeletion(group.Key, filesToDelete))
+                    if (newMarks.Count > 0)
                     {
-                        Console.WriteLine("標記完成！");
-                        handledFiles.UnionWith(filesToDelete);
+                        Console.WriteLine($"將標記以下 {newMarks.Count} 個檔案為待刪除：");
+                        foreach (var file in newMarks)
+                        {
+                            Console.WriteLine($"  - {file}");
+                        }
                     }
 
-                    Console.WriteLine();
-                    break;
+                    if (ConfirmAction("確認標記？"))
+                    {
+                        if (alreadyHandled.Count > 0)
+                        {
+                            UnmarkFiles(alreadyHandled);
+                            handledFiles.ExceptWith(alreadyHandled);
+                        }
+
+                        if (MarkFilesForDeletion(group.Key, filesToDelete))
+                        {
+                            Console.WriteLine("標記完成！");
+                            handledFiles.UnionWith(filesToDelete);
+                        }
+
+                        Console.WriteLine();
+                        break;
+                    }
+                    else
+                    {
+                        Console.WriteLine("已取消標記");
+                        Console.WriteLine();
+                    }
+
+                    continue;
                 }
-                else
-                {
-                    Console.WriteLine("已取消標記");
-                    Console.WriteLine();
-                }
+
+                // 如果沒有匹配任何已知命令,提示使用者
+                Console.WriteLine("無效的命令！請查看上方選單使用正確的命令格式。");
+                Console.WriteLine();
             }
 
             groupIndex++;
