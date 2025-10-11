@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang='zh-TW'>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+    <title>檔案標記狀態綜合報表</title>
+    <style>
+        body { font-family: 'Microsoft JhengHei', Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 1400px; margin: 0 auto; background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #2d3748; border-bottom: 3px solid #667eea; padding-bottom: 10px; }
+        h2 { color: #4a5568; margin-top: 30px; padding: 10px; border-left: 4px solid #667eea; background-color: #f7fafc; }
+
+        /* 摘要區塊 */
+        .summary { background: linear-gradient(135deg, #f6f8fb 0%, #e9ecef 100%); padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #dee2e6; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }
+        .summary-item { background: white; padding: 15px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .summary-label { color: #718096; font-size: 0.9em; margin-bottom: 5px; }
+        .summary-value { color: #2d3748; font-size: 1.5em; font-weight: bold; }
+        .summary-size { color: #4a5568; font-size: 0.85em; margin-top: 5px; }
+
+        /* 分頁標籤 */
+        .tabs { display: flex; border-bottom: 2px solid #e2e8f0; margin-bottom: 20px; gap: 5px; }
+        .tab { padding: 12px 24px; cursor: pointer; background-color: #f7fafc; border: 1px solid #e2e8f0; border-bottom: none; border-radius: 6px 6px 0 0; transition: all 0.3s; }
+        .tab:hover { background-color: #edf2f7; }
+        .tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-color: #667eea; font-weight: 600; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* 檔案項目 */
+        .file-list { max-height: 600px; overflow-y: auto; }
+        .file-item { background-color: white; padding: 12px; margin-bottom: 10px; border-left: 4px solid #667eea; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .file-item.missing { border-left-color: #e53e3e; background-color: #fff5f5; }
+        .file-path { font-family: 'Consolas', monospace; color: #2d3748; word-break: break-all; font-weight: 500; margin-bottom: 8px; }
+        .file-info { color: #718096; font-size: 0.9em; margin-top: 5px; display: flex; flex-wrap: wrap; gap: 15px; }
+        .file-info-item { display: flex; align-items: center; gap: 5px; }
+
+        /* 徽章 */
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.85em; font-weight: 600; margin-right: 8px; }
+        .badge-exists { background-color: #48bb78; color: white; }
+        .badge-missing { background-color: #f56565; color: white; }
+        .badge-processed { background-color: #4299e1; color: white; }
+        .badge-pending { background-color: #ed8936; color: white; }
+        .badge-unmarked { background-color: #cbd5e0; color: #2d3748; }
+
+        /* 按鈕 */
+        .toggle-all { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-bottom: 15px; font-weight: 600; box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3); }
+        .toggle-all:hover { background: linear-gradient(135deg, #5568d3 0%, #653a8b 100%); box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4); }
+
+        /* 空狀態 */
+        .empty-state { text-align: center; padding: 40px; color: #a0aec0; font-style: italic; }
+
+        /* 統計標籤 */
+        .count-badge { background-color: #667eea; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.85em; margin-left: 8px; }
+    </style>
+</head>
+<body>
+    <!-- 資料 JSON -->
+    <script type="application/json" id="reportData">{{REPORT_DATA}}</script>
+
+    <div class='container'>
+        <h1>檔案標記狀態綜合報表</h1>
+
+        <!-- 摘要 -->
+        <div class='summary'>
+            <div style="font-weight: bold; font-size: 1.1em; margin-bottom: 10px;">
+                產生時間：<span id="generated-time"></span>
+            </div>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-label">總檔案數</div>
+                    <div class="summary-value" id="total-files">0</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">未標記</div>
+                    <div class="summary-value" id="unmarked-count">0</div>
+                    <div class="summary-size" id="unmarked-size"></div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">已標記刪除</div>
+                    <div class="summary-value" id="deletion-count">0</div>
+                    <div class="summary-size" id="deletion-size"></div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">已標記移動</div>
+                    <div class="summary-value" id="move-count">0</div>
+                    <div class="summary-size" id="move-size"></div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">已標記略過</div>
+                    <div class="summary-value" id="skipped-count">0</div>
+                    <div class="summary-size" id="skipped-size"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分頁 -->
+        <div class="tabs">
+            <div class="tab active" data-tab="unmarked">
+                未標記 <span class="count-badge" id="tab-unmarked-count">0</span>
+            </div>
+            <div class="tab" data-tab="deletion">
+                已標記刪除 <span class="count-badge" id="tab-deletion-count">0</span>
+            </div>
+            <div class="tab" data-tab="move">
+                已標記移動 <span class="count-badge" id="tab-move-count">0</span>
+            </div>
+            <div class="tab" data-tab="skipped">
+                已標記略過 <span class="count-badge" id="tab-skipped-count">0</span>
+            </div>
+        </div>
+
+        <!-- 未標記檔案 -->
+        <div class="tab-content active" id="content-unmarked">
+            <h2>未標記檔案 (MarkType = 0)</h2>
+            <div class="file-list" id="list-unmarked"></div>
+        </div>
+
+        <!-- 已標記刪除 -->
+        <div class="tab-content" id="content-deletion">
+            <h2>已標記刪除檔案 (MarkType = 1)</h2>
+            <div class="file-list" id="list-deletion"></div>
+        </div>
+
+        <!-- 已標記移動 -->
+        <div class="tab-content" id="content-move">
+            <h2>已標記移動檔案 (MarkType = 2)</h2>
+            <div class="file-list" id="list-move"></div>
+        </div>
+
+        <!-- 已標記略過 -->
+        <div class="tab-content" id="content-skipped">
+            <h2>已標記略過檔案 (MarkType = 3)</h2>
+            <div class="file-list" id="list-skipped"></div>
+        </div>
+    </div>
+
+    <script>
+        function formatFileSize(bytes) {
+            var sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+            if (bytes === 0) return '0 B';
+            var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+            return (bytes / Math.pow(1024, i)).toFixed(2) + ' ' + sizes[i];
+        }
+
+        function switchTab(tabName) {
+            // 移除所有 active 類別
+            document.querySelectorAll('.tab').forEach(function(tab) {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(function(content) {
+                content.classList.remove('active');
+            });
+
+            // 添加 active 到選中的分頁
+            document.querySelector('.tab[data-tab="' + tabName + '"]').classList.add('active');
+            document.getElementById('content-' + tabName).classList.add('active');
+        }
+
+        function renderFileItem(file, type) {
+            var item = document.createElement('div');
+            item.className = 'file-item' + (file.Exists ? '' : ' missing');
+
+            var badges = '';
+            badges += file.Exists
+                ? '<span class="badge badge-exists">✓ 存在</span>'
+                : '<span class="badge badge-missing">✗ 遺失</span>';
+
+            if (type === 'deletion' || type === 'move') {
+                badges += file.IsProcessed === 1
+                    ? '<span class="badge badge-processed">✓ 已處理</span>'
+                    : '<span class="badge badge-pending">⏳ 待處理</span>';
+            }
+
+            var infoItems = [
+                '<span class="file-info-item">📦 大小：' + formatFileSize(file.FileSize) + '</span>',
+                '<span class="file-info-item">📅 建立：' + file.FileCreatedTime + '</span>',
+                '<span class="file-info-item">✏️ 修改：' + file.FileLastModifiedTime + '</span>'
+            ];
+
+            if (type === 'deletion' || type === 'move' || type === 'skipped') {
+                var timeLabel = type === 'skipped' ? '略過時間' : '標記時間';
+                var timeValue = type === 'skipped' ? file.SkippedAt : file.MarkedAt;
+                if (timeValue) {
+                    infoItems.push('<span class="file-info-item">🕒 ' + timeLabel + '：' + timeValue + '</span>');
+                }
+            }
+
+            if (type === 'deletion' || type === 'move') {
+                if (file.ProcessedAt) {
+                    infoItems.push('<span class="file-info-item">✅ 處理時間：' + file.ProcessedAt + '</span>');
+                }
+            }
+
+            if (type === 'move' && file.TargetPath) {
+                infoItems.push('<span class="file-info-item">📂 目標：' + file.TargetPath + '</span>');
+            }
+
+            item.innerHTML =
+                badges +
+                '<div class="file-path">📄 ' + file.FilePath + '</div>' +
+                '<div class="file-info">' + infoItems.join('') + '</div>' +
+                '<div style="font-family: Consolas; font-size: 0.8em; color: #a0aec0; margin-top: 5px;">🔑 Hash: ' + file.Hash + '</div>';
+
+            return item;
+        }
+
+        function renderFileList(files, containerId, type) {
+            var container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            if (files.length === 0) {
+                container.innerHTML = '<div class="empty-state">目前沒有檔案</div>';
+                return;
+            }
+
+            files.forEach(function(file) {
+                container.appendChild(renderFileItem(file, type));
+            });
+        }
+
+        function renderReport(reportData) {
+            // 渲染摘要
+            document.getElementById('generated-time').textContent = reportData.GeneratedAt;
+            document.getElementById('total-files').textContent = reportData.Summary.TotalFiles;
+
+            document.getElementById('unmarked-count').textContent = reportData.Summary.UnmarkedCount;
+            document.getElementById('unmarked-size').textContent = formatFileSize(reportData.Summary.UnmarkedSize);
+
+            document.getElementById('deletion-count').textContent = reportData.Summary.MarkedForDeletionCount;
+            document.getElementById('deletion-size').textContent = formatFileSize(reportData.Summary.MarkedForDeletionSize);
+
+            document.getElementById('move-count').textContent = reportData.Summary.MarkedForMoveCount;
+            document.getElementById('move-size').textContent = formatFileSize(reportData.Summary.MarkedForMoveSize);
+
+            document.getElementById('skipped-count').textContent = reportData.Summary.SkippedCount;
+            document.getElementById('skipped-size').textContent = formatFileSize(reportData.Summary.SkippedSize);
+
+            // 更新分頁標籤計數
+            document.getElementById('tab-unmarked-count').textContent = reportData.Summary.UnmarkedCount;
+            document.getElementById('tab-deletion-count').textContent = reportData.Summary.MarkedForDeletionCount;
+            document.getElementById('tab-move-count').textContent = reportData.Summary.MarkedForMoveCount;
+            document.getElementById('tab-skipped-count').textContent = reportData.Summary.SkippedCount;
+
+            // 渲染檔案列表
+            renderFileList(reportData.UnmarkedFiles, 'list-unmarked', 'unmarked');
+            renderFileList(reportData.MarkedForDeletion, 'list-deletion', 'deletion');
+            renderFileList(reportData.MarkedForMove, 'list-move', 'move');
+            renderFileList(reportData.SkippedFiles, 'list-skipped', 'skipped');
+        }
+
+        // 分頁切換事件
+        document.querySelectorAll('.tab').forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                switchTab(this.dataset.tab);
+            });
+        });
+
+        // 載入報表
+        window.addEventListener('DOMContentLoaded', function() {
+            var reportData = JSON.parse(document.getElementById('reportData').textContent);
+            renderReport(reportData);
+        });
+    </script>
+</body>
+</html>

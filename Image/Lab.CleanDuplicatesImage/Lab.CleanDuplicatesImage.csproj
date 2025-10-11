@@ -26,6 +26,9 @@
       <None Update="Templates\DuplicateAnalysisReport.html">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="Templates\ComprehensiveFileStatusReport.html">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>
