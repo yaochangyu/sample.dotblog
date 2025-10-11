@@ -2,15 +2,29 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Net;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Configuration;
 
 namespace Lab.CleanDuplicatesImage;
+
+/// <summary>
+/// 應用程式設定
+/// </summary>
+record AppSettings
+{
+    public string DefaultMoveTargetBasePath { get; init; } = @"C:\Users\clove\OneDrive\圖片";
+}
 
 class Program
 {
     /// <summary>
-    /// 移動檔案的預設目標基礎路徑
+    /// 設定檔案名稱
     /// </summary>
-    private const string DefaultMoveTargetBasePath = @"C:\Users\clove\OneDrive\圖片";
+    private const string SettingsFileName = "appsettings.json";
+
+    /// <summary>
+    /// 應用程式設定實例
+    /// </summary>
+    private static AppSettings _settings = LoadSettings();
     
     static Dictionary<string, string?> GetHashesForFilePaths(List<string> filePaths)
     {
@@ -58,6 +72,43 @@ class Program
 
     // SQLite 資料庫檔案名稱
     private const string DatabaseFileName = "duplicates.db";
+
+    /// <summary>
+    /// 載入應用程式設定
+    /// </summary>
+    static AppSettings LoadSettings()
+    {
+        try
+        {
+            var configBuilder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile(SettingsFileName, optional: true, reloadOnChange: false);
+
+            var configRoot = configBuilder.Build();
+            var settings = configRoot.GetSection("AppSettings").Get<AppSettings>();
+
+            if (settings != null)
+            {
+                Console.WriteLine($"已載入設定檔: {SettingsFileName}");
+                Console.WriteLine($"預設移動目標路徑: {settings.DefaultMoveTargetBasePath}");
+                Console.WriteLine();
+                return settings;
+            }
+            else
+            {
+                Console.WriteLine($"找不到設定檔 {SettingsFileName}，使用預設設定");
+                Console.WriteLine();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"載入設定檔失敗: {ex.Message}");
+            Console.WriteLine("使用預設設定");
+            Console.WriteLine();
+        }
+
+        return new AppSettings();
+    }
 
     static void Main(string[] args)
     {
@@ -550,7 +601,7 @@ class Program
                     Console.WriteLine($"將標記以下 {filesToMove.Count} 個檔案為待移動：");
                     foreach (var file in filesToMove)
                     {
-                        var targetPath = CalculateTargetPath(file.Path);
+                        var targetPath = CalculateTargetPath(file.Path, _settings.DefaultMoveTargetBasePath);
                         Console.WriteLine($"  - 來源: {file.Path}");
                         Console.WriteLine($"  - 目標: {targetPath}");
                         Console.WriteLine();
@@ -1832,11 +1883,8 @@ class Program
     /// <summary>
     /// 計算目標檔案路徑（根據檔案修改日期 yyyy-MM）
     /// </summary>
-    static string CalculateTargetPath(string sourceFilePath, string? baseTargetPath = null)
+    static string CalculateTargetPath(string sourceFilePath, string baseTargetPath)
     {
-        // 如果未指定基礎路徑，使用預設常數
-        baseTargetPath ??= DefaultMoveTargetBasePath;
-
         try
         {
             var fileInfo = new FileInfo(sourceFilePath);
@@ -1902,7 +1950,7 @@ class Program
             {
                 try
                 {
-                    var targetPath = CalculateTargetPath(file);
+                    var targetPath = CalculateTargetPath(file, _settings.DefaultMoveTargetBasePath);
                     sourcePathParam.Value = file;
                     targetPathParam.Value = targetPath;
                     insertCommand.ExecuteNonQuery();
