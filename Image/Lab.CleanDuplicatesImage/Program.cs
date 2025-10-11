@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Net;
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 
@@ -23,6 +24,22 @@ enum CommandResult
     NextGroup,   // 移至下一個檔案組
     Quit         // 結束整個互動流程
 }
+
+/// <summary>
+/// 資料夾重命名動作記錄
+/// </summary>
+/// <param name="OriginalName">原始資料夾名稱</param>
+/// <param name="NewName">新資料夾名稱</param>
+/// <param name="FullPath">完整路徑</param>
+/// <param name="ParentPath">父資料夾路徑</param>
+/// <param name="HasConflict">是否有命名衝突</param>
+record RenameAction(
+    string OriginalName,
+    string NewName,
+    string FullPath,
+    string ParentPath,
+    bool HasConflict = false
+);
 
 class Program
 {
@@ -119,13 +136,14 @@ class Program
             Console.WriteLine("6. 執行刪除（刪除已標記的檔案）");
             Console.WriteLine("7. 執行移動（移動已標記的檔案）");
             Console.WriteLine("8. 查看檔案標記狀態綜合報表");
-            Console.WriteLine("9. 離開");
-            Console.Write("請輸入選項 (1-9): ");
+            Console.WriteLine("10. 資料夾民國年轉西元年");
+            Console.WriteLine("11. 離開");
+            Console.Write("請輸入選項 (1-11): ");
 
             var menuChoice = Console.ReadLine()?.Trim();
             Console.WriteLine();
 
-            if (menuChoice == "9")
+            if (menuChoice == "11")
             {
                 Console.WriteLine("感謝使用，再見！");
                 return;
@@ -203,6 +221,14 @@ class Program
             {
                 // 檔案標記狀態綜合報表
                 GenerateComprehensiveFileStatusReport();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "10")
+            {
+                // 資料夾民國年轉西元年
+                RunROCFolderRename();
                 Console.WriteLine();
                 continue;
             }
@@ -3114,5 +3140,211 @@ class Program
             }
         });
     }
+
+    #region 資料夾民國年轉西元年功能
+
+    /// <summary>
+    /// 執行資料夾民國年轉西元年流程
+    /// </summary>
+    static void RunROCFolderRename()
+    {
+        Console.WriteLine("=== 資料夾民國年轉西元年 ===");
+        Console.WriteLine();
+
+        // 輸入資料夾路徑
+        Console.Write("請輸入要掃描的資料夾路徑: ");
+        var basePath = Console.ReadLine()?.Trim();
+
+        if (string.IsNullOrWhiteSpace(basePath))
+        {
+            Console.WriteLine("路徑不可為空！");
+            return;
+        }
+
+        // 驗證路徑是否存在
+        if (!Directory.Exists(basePath))
+        {
+            Console.WriteLine($"資料夾不存在: {basePath}");
+            return;
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("開始掃描資料夾...");
+        Console.WriteLine();
+
+        // 掃描符合民國年格式的資料夾
+        var renameActions = ScanROCFolders(basePath);
+
+        if (renameActions.Count == 0)
+        {
+            Console.WriteLine("未找到符合民國年格式的資料夾！");
+            Console.WriteLine();
+            Console.WriteLine("支援格式範例:");
+            Console.WriteLine("  【民國 99 年以前 (兩位數)】");
+            Console.WriteLine("  - 990101 帥爆了 → 2010-0101 帥爆了 (6位數字 YYMMDD)");
+            Console.WriteLine("  - 9901帥爆了 → 2010-01 帥爆了 (4位數字 YYMM)");
+            Console.WriteLine("  - 990101-1 帥爆了 → 2010-0101-1 帥爆了 (含流水號)");
+            Console.WriteLine();
+            Console.WriteLine("  【民國 100 年以後 (三位數)】");
+            Console.WriteLine("  - 1000101 帥爆了 → 2011-0101 帥爆了 (7位數字 YYYMMDD)");
+            Console.WriteLine("  - 10001帥爆了 → 2011-01 帥爆了 (5位數字 YYYMM)");
+            Console.WriteLine("  - 1140101-1 帥爆了 → 2025-0101-1 帥爆了 (含流水號)");
+            return;
+        }
+
+        // 預覽轉換結果
+        PreviewROCConversion(renameActions);
+
+        // 確認是否執行
+        Console.WriteLine();
+        if (!ConfirmAction("確定要執行重命名嗎？"))
+        {
+            Console.WriteLine("已取消操作");
+            return;
+        }
+
+        // 執行重命名
+        Console.WriteLine();
+        ExecuteROCFolderRename(renameActions);
+    }
+
+    /// <summary>
+    /// 掃描指定路徑下所有符合民國年格式的資料夾
+    /// </summary>
+    static List<RenameAction> ScanROCFolders(string basePath)
+    {
+        var renameActions = new List<RenameAction>();
+
+        try
+        {
+            // 獲取所有子資料夾（僅一層，不遞迴）
+            var directories = Directory.GetDirectories(basePath);
+
+            foreach (var dir in directories)
+            {
+                var dirInfo = new DirectoryInfo(dir);
+                var originalName = dirInfo.Name;
+                var newName = CalendarConvert.ConvertROCToADFolderName(originalName);
+
+                if (newName != null)
+                {
+                    // 檢查目標名稱是否已存在
+                    var targetPath = Path.Combine(dirInfo.Parent!.FullName, newName);
+                    var hasConflict = Directory.Exists(targetPath) &&
+                                     !string.Equals(targetPath, dir, StringComparison.OrdinalIgnoreCase);
+
+                    renameActions.Add(new RenameAction(
+                        OriginalName: originalName,
+                        NewName: newName,
+                        FullPath: dir,
+                        ParentPath: dirInfo.Parent!.FullName,
+                        HasConflict: hasConflict
+                    ));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"掃描資料夾時發生錯誤: {ex.Message}");
+        }
+
+        return renameActions;
+    }
+
+    /// <summary>
+    /// 預覽轉換結果
+    /// </summary>
+    static void PreviewROCConversion(List<RenameAction> actions)
+    {
+        Console.WriteLine($"找到 {actions.Count} 個符合民國年格式的資料夾");
+        Console.WriteLine();
+        Console.WriteLine("轉換預覽：");
+        Console.WriteLine(new string('=', 80));
+        Console.WriteLine($"{"序號",-5} {"原始名稱",-30} {"新名稱",-30} {"狀態",-10}");
+        Console.WriteLine(new string('-', 80));
+
+        var validCount = 0;
+        var conflictCount = 0;
+
+        for (int i = 0; i < actions.Count; i++)
+        {
+            var action = actions[i];
+            var status = action.HasConflict ? "❌ 衝突" : "✓ 可重命名";
+
+            if (!action.HasConflict)
+                validCount++;
+            else
+                conflictCount++;
+
+            // 截斷過長的名稱
+            var originalDisplay = action.OriginalName.Length > 28
+                ? action.OriginalName.Substring(0, 25) + "..."
+                : action.OriginalName;
+            var newDisplay = action.NewName.Length > 28
+                ? action.NewName.Substring(0, 25) + "..."
+                : action.NewName;
+
+            Console.WriteLine($"{i + 1,-5} {originalDisplay,-30} {newDisplay,-30} {status,-10}");
+        }
+
+        Console.WriteLine(new string('=', 80));
+        Console.WriteLine();
+        Console.WriteLine($"統計: 總共 {actions.Count} 個 | 可重命名 {validCount} 個 | 衝突 {conflictCount} 個");
+
+        if (conflictCount > 0)
+        {
+            Console.WriteLine();
+            Console.WriteLine("⚠️  注意: 有命名衝突的資料夾將被自動略過");
+        }
+    }
+
+    /// <summary>
+    /// 執行資料夾重命名
+    /// </summary>
+    static void ExecuteROCFolderRename(List<RenameAction> actions)
+    {
+        Console.WriteLine("開始執行重命名...");
+        Console.WriteLine();
+
+        var successCount = 0;
+        var skipCount = 0;
+        var errorCount = 0;
+
+        foreach (var action in actions)
+        {
+            try
+            {
+                // 略過有衝突的項目
+                if (action.HasConflict)
+                {
+                    Console.WriteLine($"略過 (衝突): {action.OriginalName}");
+                    skipCount++;
+                    continue;
+                }
+
+                // 執行重命名
+                var targetPath = Path.Combine(action.ParentPath, action.NewName);
+                Directory.Move(action.FullPath, targetPath);
+
+                Console.WriteLine($"✓ {action.OriginalName} → {action.NewName}");
+                successCount++;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ 失敗: {action.OriginalName} - {ex.Message}");
+                errorCount++;
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine(new string('=', 80));
+        Console.WriteLine("執行結果：");
+        Console.WriteLine($"  成功: {successCount} 個");
+        Console.WriteLine($"  略過: {skipCount} 個");
+        Console.WriteLine($"  失敗: {errorCount} 個");
+        Console.WriteLine(new string('=', 80));
+    }
+
+    #endregion
 
 }
