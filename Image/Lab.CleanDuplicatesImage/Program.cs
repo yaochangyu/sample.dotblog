@@ -335,13 +335,13 @@ class Program
             return;
         }
 
-        // 載入已標記的檔案及其 Hash
-        var markedFiles = LoadMarkedFiles();
-        var markedFilesByHash = LoadMarkedFilesByHash();
+        // 載入已處理的檔案及其 Hash
+        var handledFiles = LoadHandledFiles();
+        var handledFilesByHash = LoadHandledFilesByHash();
         var skippedHashes = LoadSkippedHashes();
 
-        // 過濾出尚未完全標記的群組（至少保留一個檔案未標記）
-        var groupsWithUnmarkedFiles = duplicateGroups
+        // 過濾出尚未完全處理的群組（至少保留一個檔案未處理）
+        var groupsWithUnhandeledFiles = duplicateGroups
             .Where(g =>
             {
                 var hash = g.Key;
@@ -353,21 +353,21 @@ class Program
                 }
 
                 var allFilePaths = g.Value.Select(f => f.Path).ToList();
-                var unmarkedFiles = allFilePaths.Where(f => !markedFiles.Contains(f)).ToList();
+                var unhandledFiles = allFilePaths.Where(f => !handledFiles.Contains(f)).ToList();
 
                 // 檢查此 hash 是否已經完全處理過
-                if (markedFilesByHash.ContainsKey(hash))
+                if (handledFilesByHash.ContainsKey(hash))
                 {
-                    var markedCount = markedFilesByHash[hash].Count;
+                    var handledCount = handledFilesByHash[hash].Count;
                     var totalCount = allFilePaths.Count;
 
-                    if (markedCount >= totalCount - 1)
+                    if (handledCount >= totalCount - 1)
                     {
                         return false;
                     }
                 }
 
-                return unmarkedFiles.Count > 0;
+                return unhandledFiles.Count > 0;
             })
             .Select(g => new
             {
@@ -378,27 +378,27 @@ class Program
             .Select(x => x.Group)
             .ToList();
 
-        if (groupsWithUnmarkedFiles.Count == 0)
+        if (groupsWithUnhandeledFiles.Count == 0)
         {
-            Console.WriteLine("所有重複檔案都已標記完成！");
-            Console.WriteLine($"已標記 {markedFiles.Count} 個檔案為待刪除");
-            Console.WriteLine("請使用選項 3 查看或管理已標記的檔案");
+            Console.WriteLine("所有重複檔案都已處理完成！");
+            Console.WriteLine($"已處理 {handledFiles.Count} 個檔案");
+            Console.WriteLine("請使用選項 3 或 4 查看或管理已標記的檔案");
             return;
         }
 
         Console.WriteLine();
-        Console.WriteLine($"找到 {groupsWithUnmarkedFiles.Count} 組尚有未標記檔案的重複檔案");
-        if (markedFiles.Count > 0)
+        Console.WriteLine($"找到 {groupsWithUnhandeledFiles.Count} 組尚有未處理檔案的重複檔案");
+        if (handledFiles.Count > 0)
         {
-            Console.WriteLine($"已標記 {markedFiles.Count} 個檔案為待刪除");
+            Console.WriteLine($"已處理 {handledFiles.Count} 個檔案");
         }
 
         Console.WriteLine();
 
         int groupIndex = 1;
-        foreach (var group in groupsWithUnmarkedFiles)
+        foreach (var group in groupsWithUnhandeledFiles)
         {
-            Console.WriteLine($"=== 重複組 {groupIndex}/{groupsWithUnmarkedFiles.Count} ===");
+            Console.WriteLine($"=== 重複組 {groupIndex}/{groupsWithUnhandeledFiles.Count} ===");
             Console.WriteLine($"Hash: {group.Key}");
             Console.WriteLine($"共 {group.Value.Count} 個檔案:");
             Console.WriteLine();
@@ -409,8 +409,8 @@ class Program
             for (int i = 0; i < filesInGroup.Count; i++)
             {
                 var fileDetails = filesInGroup[i];
-                var isMarked = markedFiles.Contains(fileDetails.Path);
-                var markIndicator = isMarked ? " [已標記]" : "";
+                var isHandled = handledFiles.Contains(fileDetails.Path);
+                var markIndicator = isHandled ? " [已處理]" : "";
 
                 Console.WriteLine($"[{i + 1}] {fileDetails.Path}{markIndicator}");
                 Console.WriteLine($"    大小: {FormatFileSize(fileDetails.Size)}");
@@ -483,7 +483,7 @@ class Program
                         if (MarkFilesForDeletion(group.Key, autoDeletePaths))
                         {
                             Console.WriteLine("標記完成！");
-                            markedFiles.UnionWith(autoDeletePaths);
+                            handledFiles.UnionWith(autoDeletePaths);
                         }
                     }
                     else
@@ -525,6 +525,13 @@ class Program
                         if (MarkFilesForMove(group.Key, moveFilePaths))
                         {
                             Console.WriteLine("標記移動完成！");
+                            handledFiles.UnionWith(moveFilePaths);
+                            Console.WriteLine();
+                            break; // 移至下一組
+                        }
+                        else
+                        {
+                            Console.WriteLine("標記移動失敗，請重試。");
                         }
                     }
                     else
@@ -554,13 +561,13 @@ class Program
 
                 var filesToDelete = indices.Select(i => filesInGroup[i - 1].Path).ToList();
 
-                var alreadyMarked = filesToDelete.Where(f => markedFiles.Contains(f)).ToList();
-                var newMarks = filesToDelete.Where(f => !markedFiles.Contains(f)).ToList();
+                var alreadyHandled = filesToDelete.Where(f => handledFiles.Contains(f)).ToList();
+                var newMarks = filesToDelete.Where(f => !handledFiles.Contains(f)).ToList();
 
-                if (alreadyMarked.Count > 0)
+                if (alreadyHandled.Count > 0)
                 {
-                    Console.WriteLine($"以下 {alreadyMarked.Count} 個檔案已經被標記：");
-                    foreach (var file in alreadyMarked)
+                    Console.WriteLine($"以下 {alreadyHandled.Count} 個檔案已經被標記：");
+                    foreach (var file in alreadyHandled)
                     {
                         Console.WriteLine($"  - {file}");
                     }
@@ -580,16 +587,16 @@ class Program
 
                 if (ConfirmAction("確認標記？"))
                 {
-                    if (alreadyMarked.Count > 0)
+                    if (alreadyHandled.Count > 0)
                     {
-                        UnmarkFiles(alreadyMarked);
-                        markedFiles.ExceptWith(alreadyMarked);
+                        UnmarkFiles(alreadyHandled);
+                        handledFiles.ExceptWith(alreadyHandled);
                     }
 
                     if (MarkFilesForDeletion(group.Key, filesToDelete))
                     {
                         Console.WriteLine("標記完成！");
-                        markedFiles.UnionWith(filesToDelete);
+                        handledFiles.UnionWith(filesToDelete);
                     }
 
                     Console.WriteLine();
@@ -1221,12 +1228,12 @@ class Program
         DatabaseHelper.ExecuteNonQuery("DELETE FROM FilesToDelete");
     }
 
-    static HashSet<string> LoadMarkedFiles()
+    static HashSet<string> LoadHandledFiles()
     {
         try
         {
             return DatabaseHelper.ExecuteQuery(
-                "SELECT FilePath FROM FilesToDelete",
+                "SELECT FilePath FROM DuplicateFiles WHERE MarkType > 0",
                 reader =>
                 {
                     var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1244,12 +1251,12 @@ class Program
         }
     }
 
-    static Dictionary<string, HashSet<string>> LoadMarkedFilesByHash()
+    static Dictionary<string, HashSet<string>> LoadHandledFilesByHash()
     {
         try
         {
             return DatabaseHelper.ExecuteQuery(
-                "SELECT Hash, FilePath FROM FilesToDelete WHERE Hash IS NOT NULL",
+                "SELECT Hash, FilePath FROM DuplicateFiles WHERE MarkType > 0 AND Hash IS NOT NULL",
                 reader =>
                 {
                     var filesByHash = new Dictionary<string, HashSet<string>>();
@@ -1428,9 +1435,9 @@ class Program
 
         DatabaseHelper.ExecuteTransaction((connection, transaction) =>
         {
-            var command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = @"
+            var insertCommand = connection.CreateCommand();
+            insertCommand.Transaction = transaction;
+            insertCommand.CommandText = @"
                 INSERT OR REPLACE INTO FileToMove (Hash, SourcePath, TargetPath, MarkedAt)
                 VALUES ($hash, $sourcePath, $targetPath, $markedAt)";
 
@@ -1439,10 +1446,16 @@ class Program
             var targetPathParam = new SqliteParameter("$targetPath", "");
             var markedAtParam = new SqliteParameter("$markedAt", markedAt);
 
-            command.Parameters.Add(hashParam);
-            command.Parameters.Add(sourcePathParam);
-            command.Parameters.Add(targetPathParam);
-            command.Parameters.Add(markedAtParam);
+            insertCommand.Parameters.Add(hashParam);
+            insertCommand.Parameters.Add(sourcePathParam);
+            insertCommand.Parameters.Add(targetPathParam);
+            insertCommand.Parameters.Add(markedAtParam);
+
+            var updateCommand = connection.CreateCommand();
+            updateCommand.Transaction = transaction;
+            updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 2 WHERE FilePath = $filePath";
+            var updatePathParam = new SqliteParameter("$filePath", "");
+            updateCommand.Parameters.Add(updatePathParam);
 
             foreach (var file in files)
             {
@@ -1451,7 +1464,10 @@ class Program
                     var targetPath = CalculateTargetPath(file);
                     sourcePathParam.Value = file;
                     targetPathParam.Value = targetPath;
-                    command.ExecuteNonQuery();
+                    insertCommand.ExecuteNonQuery();
+
+                    updatePathParam.Value = file;
+                    updateCommand.ExecuteNonQuery();
                 }
                 catch (Exception ex)
                 {
@@ -2471,7 +2487,7 @@ class Program
     {
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
 
-        var markedFiles = LoadMarkedFiles();
+        var handledFiles = LoadHandledFiles();
         var fileMarkInfo = LoadFileMarkInfo();
 
         // 1. 建立報表資料
@@ -2577,7 +2593,7 @@ class Program
                         return new
                         {
                             Path = p,
-                            IsMarked = markedFiles.Contains(p), // 保留向後相容
+                            IsMarked = handledFiles.Contains(p), // 保留向後相容
                             MarkType = markType,
                             TargetFolder = targetFolder ?? "-",
                             FileLastModifiedTime = fileLastModifiedTime ?? "-"
