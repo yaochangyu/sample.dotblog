@@ -10,7 +10,7 @@ namespace Lab.CleanDuplicatesImage;
 /// <summary>
 /// 應用程式設定
 /// </summary>
-record AppSettings
+public record AppSettings
 {
     public string DefaultMoveTargetBasePath { get; init; } = @"C:\Users\clove\OneDrive\圖片";
 }
@@ -136,6 +136,7 @@ class Program
             Console.WriteLine("6. 執行刪除（刪除已標記的檔案）");
             Console.WriteLine("7. 執行移動（移動已標記的檔案）");
             Console.WriteLine("8. 查看檔案標記狀態綜合報表");
+            Console.WriteLine("9. 移動資料夾到預設位置");
             Console.WriteLine("10. 資料夾民國年轉西元年");
             Console.WriteLine("11. 離開");
             Console.Write("請輸入選項 (1-11): ");
@@ -221,6 +222,15 @@ class Program
             {
                 // 檔案標記狀態綜合報表
                 GenerateComprehensiveFileStatusReport();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "9")
+            {
+                // 移動資料夾到預設位置
+                var moveFolderHelper = new MoveFolderHelper(_settings);
+                moveFolderHelper.RunMoveFolderToDefaultLocation();
                 Console.WriteLine();
                 continue;
             }
