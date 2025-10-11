@@ -1147,7 +1147,7 @@ class Program
         while (true)
         {
             DisplayMenu(
-                "輸入編號取消略過該群組（可用逗號分隔多個，例如: 1,3,5）",
+                "輸入 'c' 或 'c 編號' 取消略過該群組（例如: c 1,2 或 c 取消所有）",
                 "輸入 'p' 或 'p 編號' 預覽群組檔案（例如: p 1,2 或 p 預覽所有）",
                 "輸入 'a' 清除所有略過標記",
                 "輸入 'q' 返回主選單"
@@ -1216,35 +1216,63 @@ class Program
                 }
             }
 
-            var indices = ParseIndices(choice, groupList.Count);
-
-            if (indices.Count == 0)
+            // 處理取消略過指令
+            if (choice?.StartsWith("c") == true)
             {
-                Console.WriteLine("無效的選擇，請重新輸入！");
-                Console.WriteLine();
+                // 如果只輸入 'c'，取消所有略過標記
+                if (choice == "c")
+                {
+                    if (ConfirmAction($"確認要取消所有 {groupList.Count} 組的略過標記嗎？"))
+                    {
+                        var allHashes = groupList.Select(g => g.hash).ToList();
+                        UnskipHashes(allHashes);
+                        Console.WriteLine("已取消所有略過標記！");
+                        return;
+                    }
+                    else
+                    {
+                        Console.WriteLine("已取消操作");
+                        Console.WriteLine();
+                        continue;
+                    }
+                }
+
+                // 處理 'c 1,2,3' 格式
+                var indicesStr = choice.Substring(1).Trim();
+                var indices = ParseIndices(indicesStr, groupList.Count);
+
+                if (indices.Count == 0)
+                {
+                    Console.WriteLine("無效的選擇，請重新輸入！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                var hashesToUnskip = indices.Select(i => groupList[i - 1].hash).ToList();
+
+                Console.WriteLine($"確認要取消以下 {hashesToUnskip.Count} 組的略過標記：");
+                foreach (var index in indices)
+                {
+                    var (hash, files) = groupList[index - 1];
+                    Console.WriteLine($"  [{index}] Hash: {hash} ({files.Count} 個檔案)");
+                }
+
+                if (ConfirmAction("確認取消略過標記？"))
+                {
+                    UnskipHashes(hashesToUnskip);
+                    Console.WriteLine("已取消略過標記！");
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("已取消操作");
+                    Console.WriteLine();
+                }
                 continue;
             }
 
-            var hashesToUnskip = indices.Select(i => groupList[i - 1].hash).ToList();
-
-            Console.WriteLine($"確認要取消以下 {hashesToUnskip.Count} 組的略過標記：");
-            foreach (var index in indices)
-            {
-                var (hash, files) = groupList[index - 1];
-                Console.WriteLine($"  [{index}] Hash: {hash} ({files.Count} 個檔案)");
-            }
-
-            if (ConfirmAction("確認取消略過標記？"))
-            {
-                UnskipHashes(hashesToUnskip);
-                Console.WriteLine("已取消略過標記！");
-                return;
-            }
-            else
-            {
-                Console.WriteLine("已取消操作");
-                Console.WriteLine();
-            }
+            Console.WriteLine("無效的選擇，請重新輸入！");
+            Console.WriteLine();
         }
     }
 
@@ -1294,7 +1322,7 @@ class Program
         while (true)
         {
             DisplayMenu(
-                "輸入編號取消標記（可用逗號分隔多個，例如: 1,3,5）",
+                "輸入 'c' 或 'c 編號' 取消標記（例如: c 1,2 或 c 取消所有）",
                 "輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）",
                 "輸入 'a' 清除所有標記",
                 "輸入 'q' 返回主選單"
@@ -1341,41 +1369,69 @@ class Program
                 }
             }
 
-            if (existingFiles.Count == 0)
+            // 處理取消標記指令
+            if (choice?.StartsWith("c") == true)
             {
-                Console.WriteLine("沒有存在的檔案可以取消標記！");
-                Console.WriteLine();
+                if (existingFiles.Count == 0)
+                {
+                    Console.WriteLine("沒有存在的檔案可以取消標記！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                // 如果只輸入 'c'，取消所有標記
+                if (choice == "c")
+                {
+                    if (ConfirmAction($"確認要取消所有 {existingFiles.Count} 個檔案的標記嗎？"))
+                    {
+                        var allPaths = existingFiles.Select(f => f.path).ToList();
+                        UnmarkFiles(allPaths);
+                        Console.WriteLine("已取消所有標記！");
+                        return;
+                    }
+                    else
+                    {
+                        Console.WriteLine("已取消操作");
+                        Console.WriteLine();
+                        continue;
+                    }
+                }
+
+                // 處理 'c 1,2,3' 格式
+                var indicesStr = choice.Substring(1).Trim();
+                var indices = ParseIndices(indicesStr, existingFiles.Count);
+
+                if (indices.Count == 0)
+                {
+                    Console.WriteLine("無效的選擇，請重新輸入！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                var filesToUnmark = indices.Select(i => existingFiles[i - 1].path).ToList();
+
+                Console.WriteLine($"確認要取消以下 {filesToUnmark.Count} 個檔案的標記：");
+                foreach (var file in filesToUnmark)
+                {
+                    Console.WriteLine($"  - {file}");
+                }
+
+                if (ConfirmAction("確認取消標記？"))
+                {
+                    UnmarkFiles(filesToUnmark);
+                    Console.WriteLine("已取消標記！");
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("已取消操作");
+                    Console.WriteLine();
+                }
                 continue;
             }
 
-            var indices = ParseIndices(choice, existingFiles.Count);
-
-            if (indices.Count == 0)
-            {
-                Console.WriteLine("無效的選擇，請重新輸入！");
-                Console.WriteLine();
-                continue;
-            }
-
-            var filesToUnmark = indices.Select(i => existingFiles[i - 1].path).ToList();
-
-            Console.WriteLine($"確認要取消以下 {filesToUnmark.Count} 個檔案的標記：");
-            foreach (var file in filesToUnmark)
-            {
-                Console.WriteLine($"  - {file}");
-            }
-
-            if (ConfirmAction("確認取消標記？"))
-            {
-                UnmarkFiles(filesToUnmark);
-                Console.WriteLine("已取消標記！");
-                return;
-            }
-            else
-            {
-                Console.WriteLine("已取消操作");
-                Console.WriteLine();
-            }
+            Console.WriteLine("無效的選擇，請重新輸入！");
+            Console.WriteLine();
         }
     }
 
@@ -1427,7 +1483,7 @@ class Program
         while (true)
         {
             DisplayMenu(
-                "輸入編號取消標記（可用逗號分隔多個，例如: 1,3,5）",
+                "輸入 'c' 或 'c 編號' 取消標記（例如: c 1,2 或 c 取消所有）",
                 "輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）",
                 "輸入 'a' 清除所有標記",
                 "輸入 'q' 返回主選單"
@@ -1475,41 +1531,69 @@ class Program
                 }
             }
 
-            if (existingFiles.Count == 0)
+            // 處理取消標記指令
+            if (choice?.StartsWith("c") == true)
             {
-                Console.WriteLine("沒有存在的檔案可以取消標記！");
-                Console.WriteLine();
+                if (existingFiles.Count == 0)
+                {
+                    Console.WriteLine("沒有存在的檔案可以取消標記！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                // 如果只輸入 'c'，取消所有標記
+                if (choice == "c")
+                {
+                    if (ConfirmAction($"確認要取消所有 {existingFiles.Count} 個檔案的移動標記嗎？"))
+                    {
+                        var allSourcePaths = existingFiles.Select(f => f.sourcePath).ToList();
+                        UnmarkMoveFiles(allSourcePaths);
+                        Console.WriteLine("已取消所有移動標記！");
+                        return;
+                    }
+                    else
+                    {
+                        Console.WriteLine("已取消操作");
+                        Console.WriteLine();
+                        continue;
+                    }
+                }
+
+                // 處理 'c 1,2,3' 格式
+                var indicesStr = choice.Substring(1).Trim();
+                var indices = ParseIndices(indicesStr, existingFiles.Count);
+
+                if (indices.Count == 0)
+                {
+                    Console.WriteLine("無效的選擇，請重新輸入！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                var filesToUnmark = indices.Select(i => existingFiles[i - 1].sourcePath).ToList();
+
+                Console.WriteLine($"確認要取消以下 {filesToUnmark.Count} 個檔案的移動標記：");
+                foreach (var file in filesToUnmark)
+                {
+                    Console.WriteLine($"  - {file}");
+                }
+
+                if (ConfirmAction("確認取消移動標記？"))
+                {
+                    UnmarkMoveFiles(filesToUnmark);
+                    Console.WriteLine("已取消移動標記！");
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("已取消操作");
+                    Console.WriteLine();
+                }
                 continue;
             }
 
-            var indices = ParseIndices(choice, existingFiles.Count);
-
-            if (indices.Count == 0)
-            {
-                Console.WriteLine("無效的選擇，請重新輸入！");
-                Console.WriteLine();
-                continue;
-            }
-
-            var filesToUnmark = indices.Select(i => existingFiles[i - 1].sourcePath).ToList();
-
-            Console.WriteLine($"確認要取消以下 {filesToUnmark.Count} 個檔案的移動標記：");
-            foreach (var file in filesToUnmark)
-            {
-                Console.WriteLine($"  - {file}");
-            }
-
-            if (ConfirmAction("確認取消移動標記？"))
-            {
-                UnmarkMoveFiles(filesToUnmark);
-                Console.WriteLine("已取消移動標記！");
-                return;
-            }
-            else
-            {
-                Console.WriteLine("已取消操作");
-                Console.WriteLine();
-            }
+            Console.WriteLine("無效的選擇，請重新輸入！");
+            Console.WriteLine();
         }
     }
 
