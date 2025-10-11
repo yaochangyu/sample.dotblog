@@ -1865,17 +1865,27 @@ class Program
     {
         DatabaseHelper.ExecuteTransaction((connection, transaction) =>
         {
-            var command = connection.CreateCommand();
-            command.Transaction = transaction;
-            command.CommandText = "DELETE FROM SkippedHashes WHERE Hash = $hash";
+            // 從 SkippedHashes 移除
+            var deleteCommand = connection.CreateCommand();
+            deleteCommand.Transaction = transaction;
+            deleteCommand.CommandText = "DELETE FROM SkippedHashes WHERE Hash = $hash";
+            var deleteHashParam = new SqliteParameter("$hash", "");
+            deleteCommand.Parameters.Add(deleteHashParam);
 
-            var hashParam = new SqliteParameter("$hash", "");
-            command.Parameters.Add(hashParam);
+            // 清除 DuplicateFiles 的 MarkType
+            var updateCommand = connection.CreateCommand();
+            updateCommand.Transaction = transaction;
+            updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE Hash = $hash AND MarkType = 3";
+            var updateHashParam = new SqliteParameter("$hash", "");
+            updateCommand.Parameters.Add(updateHashParam);
 
             foreach (var hash in hashes)
             {
-                hashParam.Value = hash;
-                command.ExecuteNonQuery();
+                deleteHashParam.Value = hash;
+                deleteCommand.ExecuteNonQuery();
+
+                updateHashParam.Value = hash;
+                updateCommand.ExecuteNonQuery();
             }
         });
     }
