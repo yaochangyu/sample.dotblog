@@ -84,18 +84,20 @@ class Program
             Console.WriteLine("1. 掃描重複檔案");
             Console.WriteLine("2. 查看並標記重複檔案");
             Console.WriteLine("3. 查看已標記刪除檔案（可取消標記）");
-            Console.WriteLine("4. 查看已標記略過檔案（可取消略過）");
-            Console.WriteLine("5. 執行刪除（刪除已標記的檔案）");
-            Console.WriteLine("6. 查看已標記略過檔案報表");
-            Console.WriteLine("7. 查看已標記刪除檔案報表");
-            Console.WriteLine("8. 啟動 API 服務並產生重複檔案分析報表");
-            Console.WriteLine("9. 離開");
-            Console.Write("請輸入選項 (1-9): ");
+            Console.WriteLine("4. 查看已標記移動檔案（可取消標記）");
+            Console.WriteLine("5. 查看已標記略過檔案（可取消略過）");
+            Console.WriteLine("6. 執行刪除（刪除已標記的檔案）");
+            Console.WriteLine("7. 執行移動（移動已標記的檔案）");
+            Console.WriteLine("8. 查看已標記略過檔案報表");
+            Console.WriteLine("9. 查看已標記刪除檔案報表");
+            Console.WriteLine("10. 啟動 API 服務並產生重複檔案分析報表");
+            Console.WriteLine("11. 離開");
+            Console.Write("請輸入選項 (1-11): ");
 
             var menuChoice = Console.ReadLine()?.Trim();
             Console.WriteLine();
 
-            if (menuChoice == "9")
+            if (menuChoice == "11")
             {
                 if (_httpListener?.IsListening == true)
                 {
@@ -144,13 +146,21 @@ class Program
 
             if (menuChoice == "4")
             {
+                // 查看已標記移動檔案
+                ViewMarkedForMoveFiles();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "5")
+            {
                 // 查看已標記略過檔案
                 ViewSkippedFiles();
                 Console.WriteLine();
                 continue;
             }
 
-            if (menuChoice == "5")
+            if (menuChoice == "6")
             {
                 // 執行實際刪除
                 ExecuteMarkedDeletions();
@@ -158,7 +168,15 @@ class Program
                 continue;
             }
 
-            if (menuChoice == "6")
+            if (menuChoice == "7")
+            {
+                // 執行標記的移動
+                ExecuteMarkedMoves();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "8")
             {
                 // 查看已標記略過檔案報表
                 GenerateSkippedFilesReport();
@@ -166,7 +184,7 @@ class Program
                 continue;
             }
 
-            if (menuChoice == "7")
+            if (menuChoice == "9")
             {
                 // 查看已標記刪除檔案報表
                 GenerateMarkedForDeletionReport();
@@ -174,7 +192,7 @@ class Program
                 continue;
             }
 
-            if (menuChoice == "8")
+            if (menuChoice == "10")
             {
                 // 重複檔案分析報表
                 RunApiServerAndGenerateReport().Wait();
@@ -848,6 +866,188 @@ class Program
         }
     }
 
+    static void ExecuteMarkedMoves()
+    {
+        InitializeDatabase();
+
+        using var connection = new SqliteConnection($"Data Source={DatabaseFileName}");
+        connection.Open();
+
+        var command = connection.CreateCommand();
+        command.CommandText = "SELECT SourcePath, TargetPath, MarkedAt FROM FileToMove ORDER BY MarkedAt";
+
+        var markedFiles = new List<(string sourcePath, string targetPath, string markedAt)>();
+
+        using (var reader = command.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                markedFiles.Add((reader.GetString(0), reader.GetString(1), reader.GetString(2)));
+            }
+        }
+
+        if (markedFiles.Count == 0)
+        {
+            Console.WriteLine("沒有標記為待移動的檔案！");
+            return;
+        }
+
+        Console.WriteLine($"找到 {markedFiles.Count} 個標記為待移動的檔案：");
+        Console.WriteLine();
+
+        var existingFiles = markedFiles.Where(f => File.Exists(f.sourcePath)).ToList();
+        var missingFiles = markedFiles.Where(f => !File.Exists(f.sourcePath)).ToList();
+
+        if (existingFiles.Count > 0)
+        {
+            Console.WriteLine("存在的檔案：");
+            foreach (var (sourcePath, targetPath, markedAt) in existingFiles)
+            {
+                var fileInfo = new FileInfo(sourcePath);
+                Console.WriteLine($"  - 來源: {sourcePath}");
+                Console.WriteLine($"    目標: {targetPath}");
+                Console.WriteLine($"    大小: {FormatFileSize(fileInfo.Length)}，標記時間: {markedAt}");
+                Console.WriteLine();
+            }
+        }
+
+        if (missingFiles.Count > 0)
+        {
+            Console.WriteLine($"已不存在的檔案 ({missingFiles.Count} 個)：");
+            foreach (var (sourcePath, targetPath, _) in missingFiles)
+            {
+                Console.WriteLine($"  - 來源: {sourcePath}");
+                Console.WriteLine($"    目標: {targetPath}");
+            }
+
+            Console.WriteLine();
+        }
+
+        if (existingFiles.Count == 0)
+        {
+            Console.WriteLine("所有標記的檔案都已不存在！");
+            if (ConfirmAction("是否要清除這些記錄？"))
+            {
+                ClearMoveMarks();
+            }
+
+            return;
+        }
+
+        if (!ConfirmAction($"確認要移動這 {existingFiles.Count} 個檔案嗎？"))
+        {
+            Console.WriteLine("已取消移動操作");
+            return;
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("開始移動檔案...");
+
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var (sourcePath, targetPath, _) in existingFiles)
+        {
+            try
+            {
+                // 確保目標目錄存在
+                var targetDir = Path.GetDirectoryName(targetPath);
+                if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
+                {
+                    Directory.CreateDirectory(targetDir);
+                }
+
+                // 檢查目標檔案是否已存在
+                if (File.Exists(targetPath))
+                {
+                    Console.WriteLine($"⚠ 目標檔案已存在，跳過: {targetPath}");
+                    failCount++;
+                    continue;
+                }
+
+                // 移動檔案
+                File.Move(sourcePath, targetPath);
+                Console.WriteLine($"✓ 已移動: {Path.GetFileName(sourcePath)} → {targetPath}");
+                successCount++;
+
+                // 從標記表中移除
+                var deleteMarkCommand = connection.CreateCommand();
+                deleteMarkCommand.CommandText = "DELETE FROM FileToMove WHERE SourcePath = $path";
+                var markPathParam = deleteMarkCommand.CreateParameter();
+                markPathParam.ParameterName = "$path";
+                markPathParam.Value = sourcePath;
+                deleteMarkCommand.Parameters.Add(markPathParam);
+                deleteMarkCommand.ExecuteNonQuery();
+
+                // 清除 DuplicateFiles 的 MarkType
+                var updateCommand = connection.CreateCommand();
+                updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE FilePath = $path";
+                var updatePathParam = updateCommand.CreateParameter();
+                updatePathParam.ParameterName = "$path";
+                updatePathParam.Value = sourcePath;
+                updateCommand.Parameters.Add(updatePathParam);
+                updateCommand.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ 移動失敗 [{sourcePath}]: {ex.Message}");
+                failCount++;
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"移動完成！成功: {successCount}，失敗: {failCount}");
+
+        if (missingFiles.Count > 0)
+        {
+            if (ConfirmAction($"是否要清除 {missingFiles.Count} 個已不存在的檔案記錄？"))
+            {
+                foreach (var (sourcePath, _, _) in missingFiles)
+                {
+                    // 從 FileToMove 移除
+                    var deleteCommand = connection.CreateCommand();
+                    deleteCommand.CommandText = "DELETE FROM FileToMove WHERE SourcePath = $path";
+                    var pathParam = deleteCommand.CreateParameter();
+                    pathParam.ParameterName = "$path";
+                    pathParam.Value = sourcePath;
+                    deleteCommand.Parameters.Add(pathParam);
+                    deleteCommand.ExecuteNonQuery();
+
+                    // 清除 DuplicateFiles 的 MarkType
+                    var updateCommand = connection.CreateCommand();
+                    updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE FilePath = $path";
+                    var updatePathParam = updateCommand.CreateParameter();
+                    updatePathParam.ParameterName = "$path";
+                    updatePathParam.Value = sourcePath;
+                    updateCommand.Parameters.Add(updatePathParam);
+                    updateCommand.ExecuteNonQuery();
+                }
+
+                Console.WriteLine("已清除記錄！");
+            }
+        }
+    }
+
+    static void ClearMoveMarks()
+    {
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
+        {
+            // 清除所有 FileToMove 記錄
+            var deleteCommand = connection.CreateCommand();
+            deleteCommand.Transaction = transaction;
+            deleteCommand.CommandText = "DELETE FROM FileToMove";
+            var count = deleteCommand.ExecuteNonQuery();
+
+            // 清除所有 MarkType = 2 的標記
+            var updateCommand = connection.CreateCommand();
+            updateCommand.Transaction = transaction;
+            updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE MarkType = 2";
+            updateCommand.ExecuteNonQuery();
+
+            Console.WriteLine($"已清除 {count} 筆移動標記記錄");
+        });
+    }
+
     static void ClearDeletedMarks()
     {
         DatabaseHelper.ExecuteTransaction((connection, transaction) =>
@@ -1138,6 +1338,140 @@ class Program
         }
     }
 
+    static void ViewMarkedForMoveFiles()
+    {
+        InitializeDatabase();
+
+        var markedFiles = LoadMarkedForMoveFilesWithDetails();
+
+        if (markedFiles.Count == 0)
+        {
+            Console.WriteLine("目前沒有已標記移動的檔案！");
+            return;
+        }
+
+        Console.WriteLine($"=== 已標記移動檔案清單 (共 {markedFiles.Count} 個) ===");
+        Console.WriteLine();
+
+        var existingFiles = markedFiles.Where(f => File.Exists(f.sourcePath)).ToList();
+        var missingFiles = markedFiles.Where(f => !File.Exists(f.sourcePath)).ToList();
+
+        if (existingFiles.Count > 0)
+        {
+            Console.WriteLine($"存在的檔案 ({existingFiles.Count} 個)：");
+            for (int i = 0; i < existingFiles.Count; i++)
+            {
+                var (sourcePath, targetPath, markedAt) = existingFiles[i];
+                var fileInfo = new FileInfo(sourcePath);
+                Console.WriteLine($"[{i + 1}] 來源: {sourcePath}");
+                Console.WriteLine($"    目標: {targetPath}");
+                Console.WriteLine($"    大小: {FormatFileSize(fileInfo.Length)}，標記時間: {markedAt}");
+                Console.WriteLine();
+            }
+        }
+
+        if (missingFiles.Count > 0)
+        {
+            Console.WriteLine($"檔案不存在 ({missingFiles.Count} 個)：");
+            foreach (var (sourcePath, targetPath, markedAt) in missingFiles)
+            {
+                Console.WriteLine($"  - 來源: {sourcePath}");
+                Console.WriteLine($"    目標: {targetPath} (標記時間: {markedAt})");
+            }
+
+            Console.WriteLine();
+        }
+
+        // 操作選單
+        while (true)
+        {
+            DisplayMenu(
+                "輸入編號取消標記（可用逗號分隔多個，例如: 1,3,5）",
+                "輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）",
+                "輸入 'a' 清除所有標記",
+                "輸入 'q' 返回主選單"
+            );
+
+            var choice = Console.ReadLine()?.Trim().ToLower();
+            Console.WriteLine();
+
+            if (choice == "q")
+            {
+                return;
+            }
+
+            // 處理預覽指令
+            if (choice?.StartsWith("p") == true)
+            {
+                if (existingFiles.Count == 0)
+                {
+                    Console.WriteLine("沒有存在的檔案可以預覽！");
+                    Console.WriteLine();
+                    continue;
+                }
+
+                var existingPaths = existingFiles.Select(f => f.sourcePath).ToList();
+                if (HandlePreviewCommand(choice, existingPaths))
+                {
+                    continue;
+                }
+            }
+
+            if (choice == "a")
+            {
+                if (ConfirmAction($"確認要清除所有 {markedFiles.Count} 個移動標記嗎？"))
+                {
+                    var allSourcePaths = markedFiles.Select(f => f.sourcePath).ToList();
+                    UnmarkMoveFiles(allSourcePaths);
+                    Console.WriteLine("已清除所有移動標記！");
+                    return;
+                }
+                else
+                {
+                    Console.WriteLine("已取消操作");
+                    Console.WriteLine();
+                    continue;
+                }
+            }
+
+            if (existingFiles.Count == 0)
+            {
+                Console.WriteLine("沒有存在的檔案可以取消標記！");
+                Console.WriteLine();
+                continue;
+            }
+
+            var indices = ParseIndices(choice, existingFiles.Count);
+
+            if (indices.Count == 0)
+            {
+                Console.WriteLine("無效的選擇，請重新輸入！");
+                Console.WriteLine();
+                continue;
+            }
+
+            var filesToUnmark = indices.Select(i => existingFiles[i - 1].sourcePath).ToList();
+
+            Console.WriteLine($"確認要取消以下 {filesToUnmark.Count} 個檔案的移動標記：");
+            foreach (var file in filesToUnmark)
+            {
+                Console.WriteLine($"  - {file}");
+            }
+
+            if (ConfirmAction("確認取消移動標記？"))
+            {
+                UnmarkMoveFiles(filesToUnmark);
+                Console.WriteLine("已取消移動標記！");
+                return;
+            }
+            else
+            {
+                Console.WriteLine("已取消操作");
+                Console.WriteLine();
+            }
+        }
+    }
+
     static List<(string path, string markedAt)> LoadMarkedForDeletionFilesWithDetails()
     {
         try
@@ -1158,6 +1492,29 @@ class Program
         {
             // 資料表可能不存在，忽略錯誤
             return new List<(string, string)>();
+        }
+    }
+
+    static List<(string sourcePath, string targetPath, string markedAt)> LoadMarkedForMoveFilesWithDetails()
+    {
+        try
+        {
+            return DatabaseHelper.ExecuteQuery(
+                "SELECT SourcePath, TargetPath, MarkedAt FROM FileToMove ORDER BY MarkedAt",
+                reader =>
+                {
+                    var files = new List<(string, string, string)>();
+                    while (reader.Read())
+                    {
+                        files.Add((reader.GetString(0), reader.GetString(1), reader.GetString(2)));
+                    }
+                    return files;
+                });
+        }
+        catch
+        {
+            // 資料表可能不存在，忽略錯誤
+            return new List<(string, string, string)>();
         }
     }
 
@@ -1185,6 +1542,35 @@ class Program
             updateCommand.Parameters.Add(updatePathParam);
 
             foreach (var path in filePaths)
+            {
+                deletePathParam.Value = path;
+                deleteCommand.ExecuteNonQuery();
+
+                updatePathParam.Value = path;
+                updateCommand.ExecuteNonQuery();
+            }
+        });
+    }
+
+    static void UnmarkMoveFiles(List<string> sourcePaths)
+    {
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
+        {
+            // 從 FileToMove 移除
+            var deleteCommand = connection.CreateCommand();
+            deleteCommand.Transaction = transaction;
+            deleteCommand.CommandText = "DELETE FROM FileToMove WHERE SourcePath = $path";
+            var deletePathParam = new SqliteParameter("$path", "");
+            deleteCommand.Parameters.Add(deletePathParam);
+
+            // 清除 DuplicateFiles 的 MarkType
+            var updateCommand = connection.CreateCommand();
+            updateCommand.Transaction = transaction;
+            updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE FilePath = $path AND MarkType = 2";
+            var updatePathParam = new SqliteParameter("$path", "");
+            updateCommand.Parameters.Add(updatePathParam);
+
+            foreach (var path in sourcePaths)
             {
                 deletePathParam.Value = path;
                 deleteCommand.ExecuteNonQuery();
