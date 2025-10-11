@@ -120,21 +120,9 @@ dotnet run
 
 **報表生成**:
 - `GenerateReport()`: 統一的報表生成方法（JSON 和 HTML）
-- `GenerateDuplicateAnalysisReport()`: 生成包含移動標記功能的互動式 HTML 報表
 - **Templates 資料夾**: 包含 HTML 範本檔案
-  - `DuplicateAnalysisReport.html`: 重複檔案分析報表範本
-  - `MarkedForDeletionReport.html`: 待刪除檔案報表範本
-  - `SkippedFilesReport.html`: 已略過檔案報表範本
+  - `ComprehensiveFileStatusReport.html`: 檔案標記狀態綜合報表範本
 - **Reports 資料夾**: 自動生成的報表輸出目錄（JSON 和 HTML 格式）
-
-**API 服務器**:
-- 內建 HTTP 伺服器（使用 `HttpListener`）用於提供互動式報表
-- API 端點:
-  - `POST /api/mark-for-deletion`: 標記檔案為待刪除
-  - `POST /api/unmark-file`: 取消標記檔案
-  - `POST /api/mark-for-move`: 標記檔案為待移動
-  - `POST /api/unmark-move`: 取消移動標記
-  - `GET /api/duplicate-analysis`: 取得重複檔案分析資料
 
 ### 共用工具方法
 
