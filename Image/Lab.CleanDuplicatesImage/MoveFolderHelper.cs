@@ -132,8 +132,8 @@ public class MoveFolderHelper
 
         try
         {
-            // 遞迴掃描所有檔案
-            var allFiles = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
+            // 僅掃描當前目錄的檔案（不包含子目錄）
+            var allFiles = Directory.GetFiles(folderPath, "*.*", SearchOption.TopDirectoryOnly);
 
             foreach (var filePath in allFiles)
             {
