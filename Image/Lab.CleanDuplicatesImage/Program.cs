@@ -13,6 +13,7 @@ namespace Lab.CleanDuplicatesImage;
 public record AppSettings
 {
     public string DefaultMoveTargetBasePath { get; init; } = @"C:\Users\clove\OneDrive\圖片";
+    public List<string> WorkFolderKeywords { get; init; } = new();
 }
 
 /// <summary>
@@ -138,13 +139,14 @@ class Program
             Console.WriteLine("8. 查看檔案標記狀態綜合報表");
             Console.WriteLine("9. 移動資料夾到預設位置");
             Console.WriteLine("10. 資料夾民國年轉西元年");
-            Console.WriteLine("11. 離開");
-            Console.Write("請輸入選項 (1-11): ");
+            Console.WriteLine("11. 自動歸檔重複檔案（依權重自動標記）");
+            Console.WriteLine("12. 離開");
+            Console.Write("請輸入選項 (1-12): ");
 
             var menuChoice = Console.ReadLine()?.Trim();
             Console.WriteLine();
 
-            if (menuChoice == "11")
+            if (menuChoice == "12")
             {
                 Console.WriteLine("感謝使用，再見！");
                 return;
@@ -239,6 +241,14 @@ class Program
             {
                 // 資料夾民國年轉西元年
                 RunROCFolderRename();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "11")
+            {
+                // 自動歸檔重複檔案（依權重自動標記）
+                AutoArchiveDuplicates();
                 Console.WriteLine();
                 continue;
             }
@@ -971,6 +981,151 @@ class Program
                 Console.WriteLine("已清除記錄！");
             }
         }
+    }
+
+    /// <summary>
+    /// 計算檔案的歸檔權重
+    /// </summary>
+    /// <param name="filePath">檔案路徑</param>
+    /// <returns>權重分數 (100: 工作資料夾, 90: 主相簿, 80: 其他)</returns>
+    static int CalculateFileWeight(string filePath)
+    {
+        // 100分：專案/工作主資料夾（從設定檔讀取關鍵字）
+        foreach (var keyword in _settings.WorkFolderKeywords)
+        {
+            if (filePath.Contains(keyword, StringComparison.OrdinalIgnoreCase))
+            {
+                return 100;
+            }
+        }
+
+        // 90分：主相簿歸檔（路徑包含 OneDrive\圖片\）
+        if (filePath.Contains(@"OneDrive\圖片\", StringComparison.OrdinalIgnoreCase))
+        {
+            return 90;
+        }
+
+        // 80分：其他資料夾
+        return 80;
+    }
+
+    /// <summary>
+    /// 自動歸檔重複檔案（依權重自動標記）
+    /// </summary>
+    static void AutoArchiveDuplicates()
+    {
+        Console.WriteLine("=== 自動歸檔重複檔案 ===");
+        Console.WriteLine();
+
+        InitializeDatabase();
+        var duplicateFileGroups = LoadDuplicateGroupsWithDetails();
+
+        if (duplicateFileGroups.Count == 0)
+        {
+            Console.WriteLine("資料庫中沒有重複檔案記錄，請先執行掃描！");
+            return;
+        }
+
+        var duplicateGroups = duplicateFileGroups.Where(g => g.Value.Count > 1).ToList();
+
+        if (duplicateGroups.Count == 0)
+        {
+            Console.WriteLine("沒有找到重複檔案！");
+            return;
+        }
+
+        Console.WriteLine($"找到 {duplicateGroups.Count} 組重複檔案");
+        Console.WriteLine("開始分析權重並自動標記...");
+        Console.WriteLine();
+
+        int totalGroups = duplicateGroups.Count;
+        int processedGroups = 0;
+        int keptFiles = 0;
+        int markedForDeletion = 0;
+        int markedForMove = 0;
+
+        foreach (var group in duplicateGroups)
+        {
+            var hash = group.Key;
+            var files = group.Value;
+
+            // 計算每個檔案的權重和修改時間
+            var fileWeights = files.Select(f => new
+            {
+                File = f,
+                Weight = CalculateFileWeight(f.Path),
+                ModifiedTime = DateTime.TryParse(f.LastModifiedTime, out var dt) ? dt : DateTime.MaxValue
+            }).ToList();
+
+            // 找出權重最高的檔案
+            var maxWeight = fileWeights.Max(fw => fw.Weight);
+            var candidatesWithMaxWeight = fileWeights.Where(fw => fw.Weight == maxWeight).ToList();
+
+            // 如果有多個相同權重，保留修改日期最舊的
+            var fileToKeep = candidatesWithMaxWeight
+                .OrderBy(fw => fw.ModifiedTime)
+                .First();
+
+            Console.WriteLine($"[{processedGroups + 1}/{totalGroups}] Hash: {hash.Substring(0, 16)}...");
+            Console.WriteLine($"  保留檔案 (權重 {fileToKeep.Weight}): {fileToKeep.File.Path}");
+            Console.WriteLine($"  修改時間: {fileToKeep.File.LastModifiedTime}");
+
+            keptFiles++;
+
+            // 處理其餘檔案
+            var filesToProcess = fileWeights.Where(fw => fw.File.Path != fileToKeep.File.Path).ToList();
+
+            foreach (var fw in filesToProcess)
+            {
+                if (fw.Weight >= 90)
+                {
+                    // 權重 >= 90：標記為刪除
+                    try
+                    {
+                        MarkFileForDeletion(hash, fw.File.Path);
+                        Console.WriteLine($"  [刪除] (權重 {fw.Weight}): {fw.File.Path}");
+                        markedForDeletion++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"  [失敗] 標記刪除失敗: {fw.File.Path}, 錯誤: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    // 權重 < 90：標記為移動
+                    try
+                    {
+                        if (MarkFilesForMove(hash, new List<string> { fw.File.Path }))
+                        {
+                            var targetPath = CalculateTargetPath(fw.File.Path, _settings.DefaultMoveTargetBasePath);
+                            Console.WriteLine($"  [移動] (權重 {fw.Weight}): {fw.File.Path}");
+                            Console.WriteLine($"    -> {targetPath}");
+                            markedForMove++;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"  [失敗] 標記移動失敗: {fw.File.Path}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"  [失敗] 標記移動失敗: {fw.File.Path}, 錯誤: {ex.Message}");
+                    }
+                }
+            }
+
+            Console.WriteLine();
+            processedGroups++;
+        }
+
+        Console.WriteLine("=== 自動歸檔完成 ===");
+        Console.WriteLine($"處理組數: {processedGroups}");
+        Console.WriteLine($"保留檔案: {keptFiles}");
+        Console.WriteLine($"標記刪除: {markedForDeletion}");
+        Console.WriteLine($"標記移動: {markedForMove}");
+        Console.WriteLine();
+        Console.WriteLine("您可以使用選項 3、4 查看標記結果，並使用選項 6、7 執行刪除或移動。");
     }
 
     static void ExecuteMarkedMoves()
