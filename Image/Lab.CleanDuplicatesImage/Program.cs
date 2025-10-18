@@ -2511,8 +2511,11 @@ class Program
         // 載入重複檔案群組統計
         var groupStats = LoadDuplicateGroupStatistics();
 
-        // 計算群組相關統計（只計算重複數量 > 1 的群組）
-        var duplicateGroups = groupStats.Values.Where(g => g.DuplicateCount > 1).ToList();
+        // 計算群組相關統計（只計算重複數量 > 1 的群組，並按最大檔案大小降序排列）
+        var duplicateGroups = groupStats.Values
+            .Where(g => g.DuplicateCount > 1)
+            .OrderByDescending(g => g.MaxFileSize)
+            .ToList();
         var totalDuplicateGroups = duplicateGroups.Count;
         var maxDuplicateCount = duplicateGroups.Any() ? duplicateGroups.Max(g => g.DuplicateCount) : 0;
 
