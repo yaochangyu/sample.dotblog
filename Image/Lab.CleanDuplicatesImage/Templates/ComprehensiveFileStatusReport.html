@@ -51,6 +51,43 @@
 
         /* 統計標籤 */
         .count-badge { background-color: #667eea; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.85em; margin-left: 8px; }
+
+        /* 群組檔案列表 */
+        .group-files-container { margin-top: 10px; }
+        .group-files-toggle {
+            background-color: #f7fafc;
+            border: 1px solid #e2e8f0;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-block;
+            font-weight: 500;
+            color: #4a5568;
+            transition: all 0.3s;
+        }
+        .group-files-toggle:hover { background-color: #edf2f7; }
+        .group-files-list {
+            margin-top: 10px;
+            padding-left: 20px;
+            border-left: 2px solid #e2e8f0;
+            display: none;
+        }
+        .group-files-list.expanded { display: block; }
+        .group-file-item {
+            padding: 8px;
+            margin: 5px 0;
+            background-color: #f7fafc;
+            border-radius: 4px;
+            border-left: 3px solid #cbd5e0;
+        }
+        .group-file-item.mark-0 { border-left-color: #cbd5e0; }
+        .group-file-item.mark-1 { border-left-color: #fc8181; background-color: #fff5f5; }
+        .group-file-item.mark-2 { border-left-color: #63b3ed; background-color: #ebf8ff; }
+        .group-file-item.mark-3 { border-left-color: #68d391; background-color: #f0fff4; }
+        .badge-mark-0 { background-color: #cbd5e0; color: #2d3748; }
+        .badge-mark-1 { background-color: #fc8181; color: white; }
+        .badge-mark-2 { background-color: #63b3ed; color: white; }
+        .badge-mark-3 { background-color: #68d391; color: white; }
     </style>
 </head>
 <body>
@@ -69,6 +106,15 @@
                 <div class="summary-item">
                     <div class="summary-label">總檔案數</div>
                     <div class="summary-value" id="total-files">0</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">重複檔案群組</div>
+                    <div class="summary-value" id="duplicate-groups-count">0</div>
+                    <div class="summary-size" id="duplicate-groups-size"></div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">最大重複數</div>
+                    <div class="summary-value" id="max-duplicate-count">0</div>
                 </div>
                 <div class="summary-item">
                     <div class="summary-label">未標記</div>
@@ -95,7 +141,10 @@
 
         <!-- 分頁 -->
         <div class="tabs">
-            <div class="tab active" data-tab="unmarked">
+            <div class="tab active" data-tab="groups">
+                重複檔案群組 <span class="count-badge" id="tab-groups-count">0</span>
+            </div>
+            <div class="tab" data-tab="unmarked">
                 未標記 <span class="count-badge" id="tab-unmarked-count">0</span>
             </div>
             <div class="tab" data-tab="deletion">
@@ -109,8 +158,14 @@
             </div>
         </div>
 
+        <!-- 重複檔案群組總覽 -->
+        <div class="tab-content active" id="content-groups">
+            <h2>重複檔案群組總覽（按檔案大小降序排列）</h2>
+            <div class="file-list" id="list-groups"></div>
+        </div>
+
         <!-- 未標記檔案 -->
-        <div class="tab-content active" id="content-unmarked">
+        <div class="tab-content" id="content-unmarked">
             <h2>未標記檔案 (MarkType = 0)</h2>
             <div class="file-list" id="list-unmarked"></div>
         </div>
@@ -161,6 +216,12 @@
             item.className = 'file-item' + (file.Exists ? '' : ' missing');
 
             var badges = '';
+
+            // 重複次數標籤（優先顯示）
+            if (file.DuplicateCount && file.DuplicateCount > 1) {
+                badges += '<span class="badge" style="background-color: #9f7aea;">🔁 重複 ' + file.DuplicateCount + ' 次</span>';
+            }
+
             badges += file.Exists
                 ? '<span class="badge badge-exists">✓ 存在</span>'
                 : '<span class="badge badge-missing">✗ 遺失</span>';
@@ -204,6 +265,93 @@
             return item;
         }
 
+        function getMarkTypeBadge(markType) {
+            var badges = {
+                0: '<span class="badge badge-mark-0">未標記</span>',
+                1: '<span class="badge badge-mark-1">已標記刪除</span>',
+                2: '<span class="badge badge-mark-2">已標記移動</span>',
+                3: '<span class="badge badge-mark-3">已標記略過</span>'
+            };
+            return badges[markType] || '<span class="badge badge-unmarked">未知</span>';
+        }
+
+        function renderGroupItem(group, index) {
+            var item = document.createElement('div');
+            item.className = 'file-item';
+            item.style.borderLeftColor = group.DuplicateCount > 5 ? '#e53e3e' : '#667eea';
+
+            var duplicateBadge = '<span class="badge" style="background-color: #9f7aea;">🔁 重複 ' + group.DuplicateCount + ' 次</span>';
+
+            var infoItems = [
+                '<span class="file-info-item">📦 每個檔案：' + formatFileSize(group.MaxFileSize) + '</span>',
+                '<span class="file-info-item">📊 群組總大小：' + formatFileSize(group.TotalSize) + '</span>',
+                '<span class="file-info-item">💾 可節省空間：' + formatFileSize(group.TotalSize - group.MaxFileSize) + '</span>'
+            ];
+
+            // 檔案列表 HTML
+            var filesHtml = '';
+            if (group.Files && group.Files.length > 0) {
+                filesHtml = '<div class="group-files-container">' +
+                    '<div class="group-files-toggle" onclick="toggleGroupFiles(' + index + ')">' +
+                    '▶ 展開檔案列表 (' + group.Files.length + ')' +
+                    '</div>' +
+                    '<div class="group-files-list" id="group-files-' + index + '">';
+
+                group.Files.forEach(function(file) {
+                    var existsBadge = file.Exists
+                        ? '<span class="badge badge-exists">✓ 存在</span>'
+                        : '<span class="badge badge-missing">✗ 遺失</span>';
+
+                    filesHtml += '<div class="group-file-item mark-' + file.MarkType + '">' +
+                        getMarkTypeBadge(file.MarkType) + existsBadge +
+                        '<div class="file-path" style="margin-top: 5px;">📄 ' + file.FilePath + '</div>' +
+                        '<div class="file-info">' +
+                        '<span class="file-info-item">📦 ' + formatFileSize(file.FileSize) + '</span>' +
+                        '<span class="file-info-item">📅 建立：' + file.FileCreatedTime + '</span>' +
+                        '<span class="file-info-item">✏️ 修改：' + file.FileLastModifiedTime + '</span>' +
+                        '</div>' +
+                        '</div>';
+                });
+
+                filesHtml += '</div></div>';
+            }
+
+            item.innerHTML =
+                duplicateBadge +
+                '<div class="file-path">🔑 Hash: ' + group.Hash + '</div>' +
+                '<div class="file-info">' + infoItems.join('') + '</div>' +
+                filesHtml;
+
+            return item;
+        }
+
+        function toggleGroupFiles(index) {
+            var filesList = document.getElementById('group-files-' + index);
+            var toggle = filesList.previousElementSibling;
+
+            if (filesList.classList.contains('expanded')) {
+                filesList.classList.remove('expanded');
+                toggle.innerHTML = '▶ 展開檔案列表 (' + filesList.children.length + ')';
+            } else {
+                filesList.classList.add('expanded');
+                toggle.innerHTML = '▼ 收合檔案列表 (' + filesList.children.length + ')';
+            }
+        }
+
+        function renderGroupList(groups, containerId) {
+            var container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            if (groups.length === 0) {
+                container.innerHTML = '<div class="empty-state">目前沒有重複檔案群組</div>';
+                return;
+            }
+
+            groups.forEach(function(group, index) {
+                container.appendChild(renderGroupItem(group, index));
+            });
+        }
+
         function renderFileList(files, containerId, type) {
             var container = document.getElementById(containerId);
             container.innerHTML = '';
@@ -223,6 +371,10 @@
             document.getElementById('generated-time').textContent = reportData.GeneratedAt;
             document.getElementById('total-files').textContent = reportData.Summary.TotalFiles;
 
+            document.getElementById('duplicate-groups-count').textContent = reportData.Summary.TotalDuplicateGroups;
+            document.getElementById('duplicate-groups-size').textContent = formatFileSize(reportData.Summary.TotalDuplicateGroupsSize);
+            document.getElementById('max-duplicate-count').textContent = reportData.Summary.MaxDuplicateCount;
+
             document.getElementById('unmarked-count').textContent = reportData.Summary.UnmarkedCount;
             document.getElementById('unmarked-size').textContent = formatFileSize(reportData.Summary.UnmarkedSize);
 
@@ -236,12 +388,14 @@
             document.getElementById('skipped-size').textContent = formatFileSize(reportData.Summary.SkippedSize);
 
             // 更新分頁標籤計數
+            document.getElementById('tab-groups-count').textContent = reportData.Summary.TotalDuplicateGroups;
             document.getElementById('tab-unmarked-count').textContent = reportData.Summary.UnmarkedCount;
             document.getElementById('tab-deletion-count').textContent = reportData.Summary.MarkedForDeletionCount;
             document.getElementById('tab-move-count').textContent = reportData.Summary.MarkedForMoveCount;
             document.getElementById('tab-skipped-count').textContent = reportData.Summary.SkippedCount;
 
             // 渲染檔案列表
+            renderGroupList(reportData.DuplicateGroups, 'list-groups');
             renderFileList(reportData.UnmarkedFiles, 'list-unmarked', 'unmarked');
             renderFileList(reportData.MarkedForDeletion, 'list-deletion', 'deletion');
             renderFileList(reportData.MarkedForMove, 'list-move', 'move');
