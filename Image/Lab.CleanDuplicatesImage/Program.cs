@@ -2039,6 +2039,16 @@ class Program
     }
 
     /// <summary>
+    /// 重複檔案群組統計資訊
+    /// </summary>
+    record DuplicateGroupInfo(
+        string Hash,
+        int DuplicateCount,
+        long TotalSize,
+        long MaxFileSize
+    );
+
+    /// <summary>
     /// 綜合報表的檔案資料結構
     /// </summary>
     record ComprehensiveFileInfo(
@@ -2049,6 +2059,7 @@ class Program
         string FileLastModifiedTime,
         bool Exists,
         int MarkType,
+        int DuplicateCount = 1,
         string? MarkedAt = null,
         int? IsProcessed = null,
         string? ProcessedAt = null,
@@ -2063,10 +2074,11 @@ class Program
         try
         {
             return DatabaseHelper.ExecuteQuery(
-                @"SELECT FilePath, Hash, FileSize, FileCreatedTime, FileLastModifiedTime
-                  FROM DuplicateFiles
-                  WHERE MarkType = 0
-                  ORDER BY FileSize DESC",
+                @"SELECT df.FilePath, df.Hash, df.FileSize, df.FileCreatedTime, df.FileLastModifiedTime,
+                         (SELECT COUNT(*) FROM DuplicateFiles WHERE Hash = df.Hash) as DuplicateCount
+                  FROM DuplicateFiles df
+                  WHERE df.MarkType = 0
+                  ORDER BY df.FileSize DESC",
                 reader =>
                 {
                     var files = new List<ComprehensiveFileInfo>();
@@ -2080,7 +2092,8 @@ class Program
                             FileCreatedTime: reader.GetString(3),
                             FileLastModifiedTime: reader.GetString(4),
                             Exists: File.Exists(filePath),
-                            MarkType: 0
+                            MarkType: 0,
+                            DuplicateCount: reader.GetInt32(5)
                         ));
                     }
                     return files;
@@ -2103,7 +2116,8 @@ class Program
         {
             return DatabaseHelper.ExecuteQuery(
                 @"SELECT df.FilePath, df.Hash, df.FileSize, df.FileCreatedTime, df.FileLastModifiedTime,
-                         ftd.MarkedAt, ftd.IsProcessed, ftd.ProcessedAt
+                         ftd.MarkedAt, ftd.IsProcessed, ftd.ProcessedAt,
+                         (SELECT COUNT(*) FROM DuplicateFiles WHERE Hash = df.Hash) as DuplicateCount
                   FROM DuplicateFiles df
                   LEFT JOIN FilesToDelete ftd ON df.FilePath = ftd.FilePath
                   WHERE df.MarkType = 1
@@ -2122,6 +2136,7 @@ class Program
                             FileLastModifiedTime: reader.GetString(4),
                             Exists: File.Exists(filePath),
                             MarkType: 1,
+                            DuplicateCount: reader.GetInt32(8),
                             MarkedAt: reader.IsDBNull(5) ? null : reader.GetString(5),
                             IsProcessed: reader.IsDBNull(6) ? null : reader.GetInt32(6),
                             ProcessedAt: reader.IsDBNull(7) ? null : reader.GetString(7)
@@ -2147,7 +2162,8 @@ class Program
         {
             return DatabaseHelper.ExecuteQuery(
                 @"SELECT df.FilePath, df.Hash, df.FileSize, df.FileCreatedTime, df.FileLastModifiedTime,
-                         ftm.MarkedAt, ftm.IsProcessed, ftm.ProcessedAt, ftm.TargetPath
+                         ftm.MarkedAt, ftm.IsProcessed, ftm.ProcessedAt, ftm.TargetPath,
+                         (SELECT COUNT(*) FROM DuplicateFiles WHERE Hash = df.Hash) as DuplicateCount
                   FROM DuplicateFiles df
                   LEFT JOIN FileToMove ftm ON df.FilePath = ftm.SourcePath
                   WHERE df.MarkType = 2
@@ -2166,6 +2182,7 @@ class Program
                             FileLastModifiedTime: reader.GetString(4),
                             Exists: File.Exists(filePath),
                             MarkType: 2,
+                            DuplicateCount: reader.GetInt32(9),
                             MarkedAt: reader.IsDBNull(5) ? null : reader.GetString(5),
                             IsProcessed: reader.IsDBNull(6) ? null : reader.GetInt32(6),
                             ProcessedAt: reader.IsDBNull(7) ? null : reader.GetString(7),
@@ -2192,7 +2209,8 @@ class Program
         {
             return DatabaseHelper.ExecuteQuery(
                 @"SELECT df.FilePath, df.Hash, df.FileSize, df.FileCreatedTime, df.FileLastModifiedTime,
-                         sh.SkippedAt
+                         sh.SkippedAt,
+                         (SELECT COUNT(*) FROM DuplicateFiles WHERE Hash = df.Hash) as DuplicateCount
                   FROM DuplicateFiles df
                   LEFT JOIN SkippedHashes sh ON df.FilePath = sh.FilePath AND df.Hash = sh.Hash
                   WHERE df.MarkType = 3
@@ -2211,6 +2229,7 @@ class Program
                             FileLastModifiedTime: reader.GetString(4),
                             Exists: File.Exists(filePath),
                             MarkType: 3,
+                            DuplicateCount: reader.GetInt32(6),
                             MarkedAt: reader.IsDBNull(5) ? null : reader.GetString(5)
                         ));
                     }
@@ -2222,6 +2241,46 @@ class Program
         {
             Console.WriteLine($"載入已標記略過檔案時發生錯誤: {ex.Message}");
             return new List<ComprehensiveFileInfo>();
+        }
+    }
+
+    /// <summary>
+    /// 載入重複檔案群組統計資訊（按最大檔案大小降序排列）
+    /// </summary>
+    static Dictionary<string, DuplicateGroupInfo> LoadDuplicateGroupStatistics()
+    {
+        try
+        {
+            return DatabaseHelper.ExecuteQuery(
+                @"SELECT Hash, COUNT(*) as DuplicateCount, SUM(FileSize) as TotalSize, MAX(FileSize) as MaxFileSize
+                  FROM DuplicateFiles
+                  GROUP BY Hash
+                  ORDER BY MaxFileSize DESC",
+                reader =>
+                {
+                    var groups = new Dictionary<string, DuplicateGroupInfo>();
+                    while (reader.Read())
+                    {
+                        var hash = reader.GetString(0);
+                        var count = reader.GetInt32(1);
+                        var totalSize = reader.GetInt64(2);
+                        var maxFileSize = reader.GetInt64(3);
+
+                        groups[hash] = new DuplicateGroupInfo(
+                            Hash: hash,
+                            DuplicateCount: count,
+                            TotalSize: totalSize,
+                            MaxFileSize: maxFileSize
+                        );
+                    }
+                    return groups;
+                }
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"載入重複檔案群組統計時發生錯誤: {ex.Message}");
+            return new Dictionary<string, DuplicateGroupInfo>();
         }
     }
 
@@ -2378,8 +2437,21 @@ class Program
         Console.WriteLine($"  - 已標記略過: {skippedFiles.Count}");
         Console.WriteLine();
 
+        Console.WriteLine("正在建立報表資料...");
+
         // 建立報表資料
-        var reportData = CreateComprehensiveReportData(unmarkedFiles, markedForDeletion, markedForMove, skippedFiles);
+        object reportData;
+        try
+        {
+            reportData = CreateComprehensiveReportData(unmarkedFiles, markedForDeletion, markedForMove, skippedFiles);
+            Console.WriteLine("報表資料建立完成");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"建立報表資料時發生錯誤: {ex.Message}");
+            Console.WriteLine($"錯誤堆疊: {ex.StackTrace}");
+            return;
+        }
 
         // 產生檔案名稱
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -2390,21 +2462,39 @@ class Program
         Directory.CreateDirectory("Reports");
 
         // 產生 JSON 檔案
-        var json = SerializeReportData(reportData, indent: true);
-        File.WriteAllText(jsonFileName, json, Encoding.UTF8);
+        Console.WriteLine("正在產生 JSON 報表...");
+        try
+        {
+            var json = SerializeReportData(reportData, indent: true);
+            File.WriteAllText(jsonFileName, json, Encoding.UTF8);
+            Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonFileName)}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"產生 JSON 報表時發生錯誤: {ex.Message}");
+        }
 
         // 產生 HTML 檔案
-        var jsonCompact = SerializeReportData(reportData, indent: false);
-        var template = File.ReadAllText("Templates/ComprehensiveFileStatusReport.html", Encoding.UTF8);
-        var html = template.Replace("{{REPORT_DATA}}", jsonCompact);
-        File.WriteAllText(htmlFileName, html, Encoding.UTF8);
+        Console.WriteLine("正在產生 HTML 報表...");
+        try
+        {
+            var jsonCompact = SerializeReportData(reportData, indent: false);
+            var template = File.ReadAllText("Templates/ComprehensiveFileStatusReport.html", Encoding.UTF8);
+            var html = template.Replace("{{REPORT_DATA}}", jsonCompact);
+            File.WriteAllText(htmlFileName, html, Encoding.UTF8);
+            Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(htmlFileName)}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"產生 HTML 報表時發生錯誤: {ex.Message}");
+            return;
+        }
 
         // 顯示統計資訊
-        Console.WriteLine($"JSON 報表已產生：{Path.GetFullPath(jsonFileName)}");
-        Console.WriteLine($"HTML 報表已產生：{Path.GetFullPath(htmlFileName)}");
-        Console.WriteLine($"總共 {totalFiles} 個檔案記錄");
+        Console.WriteLine($"\n總共 {totalFiles} 個檔案記錄");
 
         // 自動開啟 HTML 報表
+        Console.WriteLine("正在開啟 HTML 報表...");
         OpenHtmlReport(htmlFileName);
     }
 
@@ -2417,6 +2507,30 @@ class Program
         List<ComprehensiveFileInfo> markedForMove,
         List<ComprehensiveFileInfo> skippedFiles)
     {
+        Console.WriteLine("  載入重複檔案群組統計...");
+        // 載入重複檔案群組統計
+        var groupStats = LoadDuplicateGroupStatistics();
+
+        // 計算群組相關統計（只計算重複數量 > 1 的群組）
+        var duplicateGroups = groupStats.Values.Where(g => g.DuplicateCount > 1).ToList();
+        var totalDuplicateGroups = duplicateGroups.Count;
+        var maxDuplicateCount = duplicateGroups.Any() ? duplicateGroups.Max(g => g.DuplicateCount) : 0;
+
+        Console.WriteLine($"  找到 {totalDuplicateGroups} 個重複檔案群組");
+
+        // 合併所有檔案列表並按 Hash 分組（效能優化：避免重複查詢）
+        Console.WriteLine("  合併檔案列表並分組...");
+        var allFiles = new List<ComprehensiveFileInfo>();
+        allFiles.AddRange(unmarkedFiles);
+        allFiles.AddRange(markedForDeletion);
+        allFiles.AddRange(markedForMove);
+        allFiles.AddRange(skippedFiles);
+
+        var filesByHash = allFiles.GroupBy(f => f.Hash)
+                                   .ToDictionary(g => g.Key, g => g.OrderByDescending(f => f.FileSize).ToList());
+
+        Console.WriteLine("  建立報表資料結構...");
+
         return new
         {
             GeneratedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
@@ -2430,8 +2544,36 @@ class Program
                 UnmarkedSize = unmarkedFiles.Sum(f => f.FileSize),
                 MarkedForDeletionSize = markedForDeletion.Sum(f => f.FileSize),
                 MarkedForMoveSize = markedForMove.Sum(f => f.FileSize),
-                SkippedSize = skippedFiles.Sum(f => f.FileSize)
+                SkippedSize = skippedFiles.Sum(f => f.FileSize),
+                // 新增：重複檔案群組統計
+                TotalDuplicateGroups = totalDuplicateGroups,
+                MaxDuplicateCount = maxDuplicateCount,
+                TotalDuplicateGroupsSize = duplicateGroups.Sum(g => g.TotalSize)
             },
+            // 新增：重複檔案群組列表（按最大檔案大小降序排列）
+            DuplicateGroups = duplicateGroups.Select(g =>
+            {
+                var files = filesByHash.ContainsKey(g.Hash)
+                    ? filesByHash[g.Hash].Select(f => (object)new
+                    {
+                        f.FilePath,
+                        f.FileSize,
+                        f.MarkType,
+                        f.FileCreatedTime,
+                        f.FileLastModifiedTime,
+                        f.Exists
+                    }).ToList()
+                    : new List<object>();
+
+                return new
+                {
+                    g.Hash,
+                    g.DuplicateCount,
+                    g.TotalSize,
+                    g.MaxFileSize,
+                    Files = files
+                };
+            }).ToList(),
             UnmarkedFiles = unmarkedFiles.Select(f => new
             {
                 f.FilePath,
@@ -2439,7 +2581,8 @@ class Program
                 f.FileSize,
                 f.FileCreatedTime,
                 f.FileLastModifiedTime,
-                f.Exists
+                f.Exists,
+                f.DuplicateCount
             }).ToList(),
             MarkedForDeletion = markedForDeletion.Select(f => new
             {
@@ -2449,6 +2592,7 @@ class Program
                 f.FileCreatedTime,
                 f.FileLastModifiedTime,
                 f.Exists,
+                f.DuplicateCount,
                 f.MarkedAt,
                 IsProcessed = f.IsProcessed ?? 0,
                 f.ProcessedAt
@@ -2461,6 +2605,7 @@ class Program
                 f.FileCreatedTime,
                 f.FileLastModifiedTime,
                 f.Exists,
+                f.DuplicateCount,
                 f.MarkedAt,
                 IsProcessed = f.IsProcessed ?? 0,
                 f.ProcessedAt,
@@ -2474,6 +2619,7 @@ class Program
                 f.FileCreatedTime,
                 f.FileLastModifiedTime,
                 f.Exists,
+                f.DuplicateCount,
                 SkippedAt = f.MarkedAt
             }).ToList()
         };
