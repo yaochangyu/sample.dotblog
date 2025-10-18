@@ -987,26 +987,88 @@ class Program
     /// 計算檔案的歸檔權重
     /// </summary>
     /// <param name="filePath">檔案路徑</param>
-    /// <returns>權重分數 (100: 工作資料夾, 90: 主相簿, 80: 其他)</returns>
+    /// <returns>權重分數 (基礎分 + 加分項 - 減分項)</returns>
+    /// <remarks>
+    /// 基礎權重：
+    /// - 100分：工作資料夾（WorkFolderKeywords 關鍵字匹配）
+    /// - 90分：主相簿（DefaultMoveTargetBasePath 路徑下）
+    /// - 80分：其他資料夾
+    ///
+    /// 加分項：
+    /// - DefaultMoveTargetBasePath 下每個子目錄層級 +1 分
+    ///
+    /// 減分項：
+    /// - 檔名包含 "(1)"：-10 分
+    /// - 檔名包含 "-DESKTOP-0M8E5B6"：-10 分
+    /// </remarks>
     static int CalculateFileWeight(string filePath)
     {
+        int baseWeight = 0;
+        int bonusScore = 0;
+        int penaltyScore = 0;
+
+        // === 基礎權重 ===
         // 100分：專案/工作主資料夾（從設定檔讀取關鍵字）
+        bool isWorkFolder = false;
         foreach (var keyword in _settings.WorkFolderKeywords)
         {
             if (filePath.Contains(keyword, StringComparison.OrdinalIgnoreCase))
             {
-                return 100;
+                baseWeight = 100;
+                isWorkFolder = true;
+                break;
             }
         }
 
-        // 90分：主相簿歸檔（路徑包含 OneDrive\圖片\）
-        if (filePath.Contains(@"OneDrive\圖片\", StringComparison.OrdinalIgnoreCase))
+        if (!isWorkFolder)
         {
-            return 90;
+            // 90分：主相簿歸檔（路徑在 DefaultMoveTargetBasePath 下）
+            string primaryAlbumPath = _settings.DefaultMoveTargetBasePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (filePath.StartsWith(primaryAlbumPath, StringComparison.OrdinalIgnoreCase))
+            {
+                baseWeight = 90;
+
+                // === 加分項：計算主相簿路徑之後的子目錄層級 ===
+                // 確保從主相簿路徑後的第一個分隔符號開始計算
+                int startIndex = primaryAlbumPath.Length;
+                if (startIndex < filePath.Length)
+                {
+                    string afterPrimaryAlbum = filePath.Substring(startIndex);
+                    // 移除開頭的分隔符號（如果有）
+                    afterPrimaryAlbum = afterPrimaryAlbum.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                    // 計算路徑分隔符號數量（每個分隔符號代表一層目錄）
+                    int directorySeparatorCount = afterPrimaryAlbum.Count(c => c == Path.DirectorySeparatorChar || c == Path.AltDirectorySeparatorChar);
+                    // 分隔符號數量就是子目錄層級數（最後一個分隔符號後面是檔名）
+                    if (directorySeparatorCount > 0)
+                    {
+                        bonusScore = directorySeparatorCount;
+                    }
+                }
+            }
+            else
+            {
+                // 80分：其他資料夾
+                baseWeight = 80;
+            }
         }
 
-        // 80分：其他資料夾
-        return 80;
+        // === 減分項：檔名判斷 ===
+        string fileName = Path.GetFileName(filePath);
+
+        // 檔名包含 "(1)" 扣 10 分
+        if (fileName.Contains("(1)", StringComparison.OrdinalIgnoreCase))
+        {
+            penaltyScore += 10;
+        }
+
+        // 檔名包含 "-DESKTOP-0M8E5B6" 扣 10 分
+        if (fileName.Contains("-DESKTOP-0M8E5B6", StringComparison.OrdinalIgnoreCase))
+        {
+            penaltyScore += 10;
+        }
+
+        return baseWeight + bonusScore - penaltyScore;
     }
 
     /// <summary>
@@ -1042,7 +1104,6 @@ class Program
         int processedGroups = 0;
         int keptFiles = 0;
         int markedForDeletion = 0;
-        int markedForMove = 0;
 
         foreach (var group in duplicateGroups)
         {
@@ -1077,41 +1138,16 @@ class Program
 
             foreach (var fw in filesToProcess)
             {
-                if (fw.Weight >= 90)
+                // 所有不保留的檔案都標記為刪除
+                try
                 {
-                    // 權重 >= 90：標記為刪除
-                    try
-                    {
-                        MarkFileForDeletion(hash, fw.File.Path);
-                        Console.WriteLine($"  [刪除] (權重 {fw.Weight}): {fw.File.Path}");
-                        markedForDeletion++;
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"  [失敗] 標記刪除失敗: {fw.File.Path}, 錯誤: {ex.Message}");
-                    }
+                    MarkFileForDeletion(hash, fw.File.Path);
+                    Console.WriteLine($"  [刪除] (權重 {fw.Weight}): {fw.File.Path}");
+                    markedForDeletion++;
                 }
-                else
+                catch (Exception ex)
                 {
-                    // 權重 < 90：標記為移動
-                    try
-                    {
-                        if (MarkFilesForMove(hash, new List<string> { fw.File.Path }))
-                        {
-                            var targetPath = CalculateTargetPath(fw.File.Path, _settings.DefaultMoveTargetBasePath);
-                            Console.WriteLine($"  [移動] (權重 {fw.Weight}): {fw.File.Path}");
-                            Console.WriteLine($"    -> {targetPath}");
-                            markedForMove++;
-                        }
-                        else
-                        {
-                            Console.WriteLine($"  [失敗] 標記移動失敗: {fw.File.Path}");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"  [失敗] 標記移動失敗: {fw.File.Path}, 錯誤: {ex.Message}");
-                    }
+                    Console.WriteLine($"  [失敗] 標記刪除失敗: {fw.File.Path}, 錯誤: {ex.Message}");
                 }
             }
 
@@ -1123,9 +1159,8 @@ class Program
         Console.WriteLine($"處理組數: {processedGroups}");
         Console.WriteLine($"保留檔案: {keptFiles}");
         Console.WriteLine($"標記刪除: {markedForDeletion}");
-        Console.WriteLine($"標記移動: {markedForMove}");
         Console.WriteLine();
-        Console.WriteLine("您可以使用選項 3、4 查看標記結果，並使用選項 6、7 執行刪除或移動。");
+        Console.WriteLine("您可以使用選項 3 查看標記結果，並使用選項 6 執行刪除。");
     }
 
     static void ExecuteMarkedMoves()
