@@ -118,6 +118,16 @@ dotnet run
 - `MarkFileForDeletion()` / `ExecuteMarkedDeletions()`: 標記和執行刪除
 - `MarkHashAsSkipped()`: 標記要略過的檔案群組
 
+**清除標記功能**:
+- `ClearDeletedMarks()`: 清除待刪除標記（FilesToDelete + MarkType = 1）
+- `ClearMoveMarks()`: 清除待移動標記（FileToMove + MarkType = 2）
+- `ClearAllSkippedMarks()`: 清除略過標記（SkippedHashes + MarkType = 3）
+- `ResetAllMarksToUnmarked()`: **統一清除所有標記**，將所有檔案回到未標記狀態
+  - 整合呼叫上述三個清除方法
+  - 使用選單選項 12 執行
+  - 包含確認對話框，避免誤操作
+  - 適用於需要重新開始標記流程的情境
+
 **報表生成**:
 - `GenerateReport()`: 統一的報表生成方法（JSON 和 HTML）
 - **Templates 資料夾**: 包含 HTML 範本檔案
