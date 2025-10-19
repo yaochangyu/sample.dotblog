@@ -1131,18 +1131,20 @@ class Program
 
             processedGroups++;
 
-            // 優化的進度顯示：每 50 組或每 5% 更新一次
+            // 單行進度顯示：每 50 組或每 5% 更新一次（使用 \r 在同一行更新）
             var percentage = (double)processedGroups / totalGroups * 100;
             var currentPercentage = (int)(percentage / 5) * 5; // 每 5% 為一個區間
 
             // 每 50 組或每達到新的 5% 區間時更新
             if (processedGroups % 50 == 0 || (currentPercentage > lastReportedPercentage && currentPercentage % 5 == 0))
             {
-                Console.WriteLine($"[{currentPercentage}%] 已處理 {processedGroups}/{totalGroups} 組 | 保留: {keptFiles} | 標記刪除: {markedForDeletion}");
+                Console.Write($"\r[{currentPercentage}%] 已處理 {processedGroups}/{totalGroups} 組 | 保留: {keptFiles} | 標記刪除: {markedForDeletion}  ");
                 lastReportedPercentage = currentPercentage;
             }
         }
 
+        // 完成處理後換行
+        Console.WriteLine();
         Console.WriteLine();
         Console.WriteLine("=== 自動歸檔完成 ===");
         Console.WriteLine($"處理組數: {processedGroups}");
