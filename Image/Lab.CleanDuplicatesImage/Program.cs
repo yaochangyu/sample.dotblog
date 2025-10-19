@@ -1692,17 +1692,19 @@ class Program
         Console.WriteLine($"=== 已標記刪除檔案清單 (共 {markedFiles.Count} 個) ===");
         Console.WriteLine();
 
-        var existingFiles = markedFiles.Where(f => File.Exists(f.path)).ToList();
-        var missingFiles = markedFiles.Where(f => !File.Exists(f.path)).ToList();
+        // 為所有檔案添加連續編號（包括存在和不存在的檔案）
+        var allFilesWithIndex = markedFiles.Select((f, index) => (index: index + 1, file: f, exists: File.Exists(f.path))).ToList();
+        var existingFiles = allFilesWithIndex.Where(f => f.exists).ToList();
+        var missingFiles = allFilesWithIndex.Where(f => !f.exists).ToList();
 
         if (existingFiles.Count > 0)
         {
             Console.WriteLine($"存在的檔案 ({existingFiles.Count} 個)：");
-            for (int i = 0; i < existingFiles.Count; i++)
+            foreach (var (index, file, _) in existingFiles)
             {
-                var (path, markedAt) = existingFiles[i];
+                var (path, markedAt) = file;
                 var fileInfo = new FileInfo(path);
-                Console.WriteLine($"[{i + 1}] {path}");
+                Console.WriteLine($"[{index}] {path}");
                 Console.WriteLine($"    大小: {FormatFileSize(fileInfo.Length)}，標記時間: {markedAt}");
                 Console.WriteLine();
             }
@@ -1710,10 +1712,11 @@ class Program
 
         if (missingFiles.Count > 0)
         {
-            Console.WriteLine($"已標記刪除的檔案 ({missingFiles.Count} 個)：");
-            foreach (var (path, markedAt) in missingFiles)
+            Console.WriteLine($"檔案不存在 ({missingFiles.Count} 個)：");
+            foreach (var (index, file, _) in missingFiles)
             {
-                Console.WriteLine($"  - {path} (標記時間: {markedAt})");
+                var (path, markedAt) = file;
+                Console.WriteLine($"[{index}] {path} (標記時間: {markedAt})");
             }
 
             Console.WriteLine();
@@ -1747,7 +1750,7 @@ class Program
                     continue;
                 }
 
-                var existingPaths = existingFiles.Select(f => f.path).ToList();
+                var existingPaths = existingFiles.Select(f => f.file.path).ToList();
                 if (HandlePreviewCommand(choice, existingPaths))
                 {
                     continue;
@@ -1773,19 +1776,12 @@ class Program
             // 處理取消標記指令
             if (choice?.StartsWith("c") == true)
             {
-                if (existingFiles.Count == 0)
-                {
-                    Console.WriteLine("沒有存在的檔案可以取消標記！");
-                    Console.WriteLine();
-                    continue;
-                }
-
                 // 如果只輸入 'c'，取消所有標記
                 if (choice == "c")
                 {
-                    if (ConfirmAction($"確認要取消所有 {existingFiles.Count} 個檔案的標記嗎？"))
+                    if (ConfirmAction($"確認要取消所有 {markedFiles.Count} 個檔案的標記嗎？"))
                     {
-                        var allPaths = existingFiles.Select(f => f.path).ToList();
+                        var allPaths = markedFiles.Select(f => f.path).ToList();
                         UnmarkFiles(allPaths);
                         Console.WriteLine("已取消所有標記！");
                         return;
@@ -1800,7 +1796,7 @@ class Program
 
                 // 處理 'c 1,2,3' 格式
                 var indicesStr = choice.Substring(1).Trim();
-                var indices = ParseIndices(indicesStr, existingFiles.Count);
+                var indices = ParseIndices(indicesStr, allFilesWithIndex.Count);
 
                 if (indices.Count == 0)
                 {
@@ -1809,7 +1805,7 @@ class Program
                     continue;
                 }
 
-                var filesToUnmark = indices.Select(i => existingFiles[i - 1].path).ToList();
+                var filesToUnmark = indices.Select(i => allFilesWithIndex[i - 1].file.path).ToList();
 
                 Console.WriteLine($"確認要取消以下 {filesToUnmark.Count} 個檔案的標記：");
                 foreach (var file in filesToUnmark)
@@ -1851,17 +1847,19 @@ class Program
         Console.WriteLine($"=== 已標記移動檔案清單 (共 {markedFiles.Count} 個) ===");
         Console.WriteLine();
 
-        var existingFiles = markedFiles.Where(f => File.Exists(f.sourcePath)).ToList();
-        var missingFiles = markedFiles.Where(f => !File.Exists(f.sourcePath)).ToList();
+        // 為所有檔案添加連續編號（包括存在和不存在的檔案）
+        var allFilesWithIndex = markedFiles.Select((f, index) => (index: index + 1, file: f, exists: File.Exists(f.sourcePath))).ToList();
+        var existingFiles = allFilesWithIndex.Where(f => f.exists).ToList();
+        var missingFiles = allFilesWithIndex.Where(f => !f.exists).ToList();
 
         if (existingFiles.Count > 0)
         {
             Console.WriteLine($"存在的檔案 ({existingFiles.Count} 個)：");
-            for (int i = 0; i < existingFiles.Count; i++)
+            foreach (var (index, file, _) in existingFiles)
             {
-                var (sourcePath, targetPath, markedAt) = existingFiles[i];
+                var (sourcePath, targetPath, markedAt) = file;
                 var fileInfo = new FileInfo(sourcePath);
-                Console.WriteLine($"[{i + 1}] 來源: {sourcePath}");
+                Console.WriteLine($"[{index}] 來源: {sourcePath}");
                 Console.WriteLine($"    目標: {targetPath}");
                 Console.WriteLine($"    大小: {FormatFileSize(fileInfo.Length)}，標記時間: {markedAt}");
                 Console.WriteLine();
@@ -1871,9 +1869,10 @@ class Program
         if (missingFiles.Count > 0)
         {
             Console.WriteLine($"檔案不存在 ({missingFiles.Count} 個)：");
-            foreach (var (sourcePath, targetPath, markedAt) in missingFiles)
+            foreach (var (index, file, _) in missingFiles)
             {
-                Console.WriteLine($"  - 來源: {sourcePath}");
+                var (sourcePath, targetPath, markedAt) = file;
+                Console.WriteLine($"[{index}] 來源: {sourcePath}");
                 Console.WriteLine($"    目標: {targetPath} (標記時間: {markedAt})");
             }
 
@@ -1908,7 +1907,7 @@ class Program
                     continue;
                 }
 
-                var existingPaths = existingFiles.Select(f => f.sourcePath).ToList();
+                var existingPaths = existingFiles.Select(f => f.file.sourcePath).ToList();
                 if (HandlePreviewCommand(choice, existingPaths))
                 {
                     continue;
@@ -1935,19 +1934,12 @@ class Program
             // 處理取消標記指令
             if (choice?.StartsWith("c") == true)
             {
-                if (existingFiles.Count == 0)
-                {
-                    Console.WriteLine("沒有存在的檔案可以取消標記！");
-                    Console.WriteLine();
-                    continue;
-                }
-
                 // 如果只輸入 'c'，取消所有標記
                 if (choice == "c")
                 {
-                    if (ConfirmAction($"確認要取消所有 {existingFiles.Count} 個檔案的移動標記嗎？"))
+                    if (ConfirmAction($"確認要取消所有 {markedFiles.Count} 個檔案的移動標記嗎？"))
                     {
-                        var allSourcePaths = existingFiles.Select(f => f.sourcePath).ToList();
+                        var allSourcePaths = markedFiles.Select(f => f.sourcePath).ToList();
                         UnmarkMoveFiles(allSourcePaths);
                         Console.WriteLine("已取消所有移動標記！");
                         return;
@@ -1962,7 +1954,7 @@ class Program
 
                 // 處理 'c 1,2,3' 格式
                 var indicesStr = choice.Substring(1).Trim();
-                var indices = ParseIndices(indicesStr, existingFiles.Count);
+                var indices = ParseIndices(indicesStr, allFilesWithIndex.Count);
 
                 if (indices.Count == 0)
                 {
@@ -1971,7 +1963,7 @@ class Program
                     continue;
                 }
 
-                var filesToUnmark = indices.Select(i => existingFiles[i - 1].sourcePath).ToList();
+                var filesToUnmark = indices.Select(i => allFilesWithIndex[i - 1].file.sourcePath).ToList();
 
                 Console.WriteLine($"確認要取消以下 {filesToUnmark.Count} 個檔案的移動標記：");
                 foreach (var file in filesToUnmark)
