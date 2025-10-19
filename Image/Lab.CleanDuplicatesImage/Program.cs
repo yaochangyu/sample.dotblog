@@ -130,23 +130,26 @@ class Program
             Console.WriteLine("請選擇功能：");
             Console.WriteLine("1. 掃描重複檔案");
             Console.WriteLine("2. 查看並標記重複檔案");
-            Console.WriteLine("3. 查看已標記刪除檔案（可取消標記）");
-            Console.WriteLine("4. 查看已標記移動檔案（可取消標記）");
-            Console.WriteLine("5. 查看已標記略過檔案（可取消略過）");
-            Console.WriteLine("6. 執行刪除（刪除已標記的檔案）");
-            Console.WriteLine("7. 執行移動（移動已標記的檔案）");
-            Console.WriteLine("8. 查看檔案標記狀態綜合報表");
-            Console.WriteLine("9. 移動資料夾到預設位置");
-            Console.WriteLine("10. 資料夾民國年轉西元年");
-            Console.WriteLine("11. 自動歸檔重複檔案（依權重自動標記）");
-            Console.WriteLine("12. 自動清除所有標記（回到未標記狀態）");
-            Console.WriteLine("13. 離開");
-            Console.Write("請輸入選項 (1-13): ");
+            Console.WriteLine("3. 查看並標記重複檔案 by HashCode");
+            Console.WriteLine("4. 查看已標記刪除檔案（可取消標記）");
+            Console.WriteLine("5. 查看已標記移動檔案（可取消標記）");
+            Console.WriteLine("6. 查看已標記略過檔案（可取消略過）");
+            Console.WriteLine("7. 執行刪除（刪除已標記的檔案）");
+            Console.WriteLine("8. 執行移動（移動已標記的檔案）");
+            Console.WriteLine("9. 查看檔案標記狀態綜合報表");
+            Console.WriteLine("10. 移動資料夾到預設位置");
+            Console.WriteLine("11. 資料夾民國年轉西元年");
+            Console.WriteLine("12. 自動歸檔重複檔案（依權重自動標記）");
+            Console.WriteLine("13. 自動清除所有標記（回到未標記狀態）");
+            Console.WriteLine("14. 依 Hash 取消標記（輸入完整 Hash 取消所有標記）");
+            Console.WriteLine("15. 依 Hash 標記檔案（輸入完整 Hash 標記未標記的檔案）");
+            Console.WriteLine("16. 離開");
+            Console.Write("請輸入選項 (1-16): ");
 
             var menuChoice = Console.ReadLine()?.Trim();
             Console.WriteLine();
 
-            if (menuChoice == "13")
+            if (menuChoice == "16")
             {
                 Console.WriteLine("感謝使用，再見！");
                 return;
@@ -182,13 +185,24 @@ class Program
 
             if (menuChoice == "3")
             {
+                // 依 Hash 查看並標記重複檔案
+                InteractiveDeleteDuplicatesByHash();
+                Console.WriteLine();
+                Console.WriteLine("提示：標記為待刪除的檔案儲存在資料庫的 FilesToDelete 資料表中");
+                Console.WriteLine("您可以查看該資料表後再決定是否實際刪除檔案");
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "4")
+            {
                 // 查看已標記刪除檔案
                 ViewMarkedForDeletionFiles();
                 Console.WriteLine();
                 continue;
             }
 
-            if (menuChoice == "4")
+            if (menuChoice == "5")
             {
                 // 查看已標記移動檔案
                 ViewMarkedForMoveFiles();
@@ -196,7 +210,7 @@ class Program
                 continue;
             }
 
-            if (menuChoice == "5")
+            if (menuChoice == "6")
             {
                 // 查看已標記略過檔案
                 ViewSkippedFiles();
@@ -204,7 +218,7 @@ class Program
                 continue;
             }
 
-            if (menuChoice == "6")
+            if (menuChoice == "7")
             {
                 // 執行實際刪除
                 ExecuteMarkedDeletions();
@@ -212,7 +226,7 @@ class Program
                 continue;
             }
 
-            if (menuChoice == "7")
+            if (menuChoice == "8")
             {
                 // 執行標記的移動
                 ExecuteMarkedMoves();
@@ -220,7 +234,7 @@ class Program
                 continue;
             }
 
-            if (menuChoice == "8")
+            if (menuChoice == "9")
             {
                 // 檔案標記狀態綜合報表
                 GenerateComprehensiveFileStatusReport();
@@ -228,7 +242,7 @@ class Program
                 continue;
             }
 
-            if (menuChoice == "9")
+            if (menuChoice == "10")
             {
                 // 移動資料夾到預設位置
                 var moveFolderHelper = new MoveFolderHelper(_settings);
@@ -237,7 +251,7 @@ class Program
                 continue;
             }
 
-            if (menuChoice == "10")
+            if (menuChoice == "11")
             {
                 // 資料夾民國年轉西元年
                 RunROCFolderRename();
@@ -245,7 +259,7 @@ class Program
                 continue;
             }
 
-            if (menuChoice == "11")
+            if (menuChoice == "12")
             {
                 // 自動歸檔重複檔案（依權重自動標記）
                 AutoArchiveDuplicates();
@@ -253,10 +267,26 @@ class Program
                 continue;
             }
 
-            if (menuChoice == "12")
+            if (menuChoice == "13")
             {
                 // 清除所有標記（回到未標記狀態）
                 ResetAllMarksToUnmarked();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "14")
+            {
+                // 依 Hash 取消標記
+                UnmarkByHash();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "15")
+            {
+                // 依 Hash 標記檔案
+                MarkByHash();
                 Console.WriteLine();
                 continue;
             }
@@ -564,6 +594,140 @@ class Program
         }
 
         Console.WriteLine("所有重複檔案處理完成！");
+    }
+
+    /// <summary>
+    /// 依 Hash 查看並標記重複檔案（互動模式）
+    /// </summary>
+    static void InteractiveDeleteDuplicatesByHash()
+    {
+        Console.WriteLine("=== 依 Hash 查看並標記重複檔案 ===");
+        Console.WriteLine();
+
+        Console.Write("請輸入 Hash (64 字元 SHA-256): ");
+        string? hashInput = Console.ReadLine()?.Trim();
+
+        if (!ValidateHashInput(hashInput))
+        {
+            Console.WriteLine("錯誤：無效的 Hash 格式。Hash 必須為 64 字元的 SHA-256 (0-9, a-f, A-F)");
+            return;
+        }
+
+        InitializeDatabase();
+
+        // 查詢該 hash 的所有未標記檔案 (MarkType = 0)
+        var files = DatabaseHelper.ExecuteQuery(
+            @"SELECT FilePath, FileSize, FileCreatedTime, FileLastModifiedTime
+              FROM DuplicateFiles
+              WHERE Hash = $hash AND MarkType = 0",
+            reader =>
+            {
+                var fileList = new List<FileDetails>();
+                while (reader.Read())
+                {
+                    fileList.Add(new FileDetails(
+                        reader.GetString(0),
+                        reader.GetInt64(1),
+                        reader.GetString(2),
+                        reader.IsDBNull(3) ? "-" : reader.GetString(3)
+                    ));
+                }
+                return fileList;
+            },
+            cmd => cmd.Parameters.Add(new SqliteParameter("$hash", hashInput!))
+        );
+
+        if (files.Count == 0)
+        {
+            Console.WriteLine($"找不到 Hash 為 {hashInput} 的未標記檔案");
+            Console.WriteLine("（可能所有檔案都已被標記，或該 Hash 不存在）");
+            return;
+        }
+
+        if (files.Count == 1)
+        {
+            Console.WriteLine($"該 Hash 僅有 1 個檔案，不是重複檔案：");
+            Console.WriteLine($"  {files[0].Path}");
+            return;
+        }
+
+        Console.WriteLine($"=== 重複檔案群組 ===");
+        Console.WriteLine($"Hash: {hashInput}");
+        Console.WriteLine($"共 {files.Count} 個檔案:");
+        Console.WriteLine();
+
+        // 顯示檔案清單
+        for (int i = 0; i < files.Count; i++)
+        {
+            var fileDetails = files[i];
+            Console.WriteLine($"[{i + 1}] {fileDetails.Path}");
+            Console.WriteLine($"    大小: {FormatFileSize(fileDetails.Size)}");
+            Console.WriteLine($"    建立時間: {fileDetails.CreatedTime}");
+            Console.WriteLine($"    最後修改日期: {fileDetails.LastModifiedTime}");
+            Console.WriteLine();
+        }
+
+        // 載入已處理的檔案（用於追蹤本次互動中標記的檔案）
+        var handledFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // 進入互動模式
+        while (true)
+        {
+            var validFilePaths = files.Select(f => f.Path).ToList();
+            DisplayMenu(
+                "輸入 'd' 或 'd 編號' 標記該檔案為刪除（例如: d 1,2 或 d 標記所有）",
+                "輸入 'm' 或 'm 編號' 標記該檔案為移動（例如: m 1,2 或 m 標記所有）",
+                "輸入 'p' 或 'p 編號' 預覽檔案（例如: p 1,2 或 p 預覽所有）",
+                "輸入 'k' 保留所有檔案並跳過此組",
+                "輸入 'a' 自動保留最舊的檔案，標記其他為待刪除",
+                "輸入 'q' 結束作業",
+                "支援多命令：用分號分隔（例如: d 1,2;m 3,4）"
+            );
+
+            var input = Console.ReadLine()?.Trim();
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                continue;
+            }
+
+            // 用分號分割多個命令
+            var commands = input.Split(';')
+                .Select(cmd => cmd.Trim())
+                .Where(cmd => !string.IsNullOrWhiteSpace(cmd))
+                .ToList();
+
+            CommandResult finalResult = CommandResult.Continue;
+
+            // 逐一執行每個命令
+            for (int i = 0; i < commands.Count; i++)
+            {
+                var command = commands[i];
+                var isLastCommand = (i == commands.Count - 1);
+
+                var result = ProcessSingleCommand(
+                    command,
+                    hashInput!,
+                    files,
+                    validFilePaths,
+                    handledFiles,
+                    isLastCommand);
+
+                // 如果遇到 Quit 或 NextGroup，記錄並停止處理後續命令
+                if (result == CommandResult.Quit || result == CommandResult.NextGroup)
+                {
+                    finalResult = result;
+                    break;
+                }
+            }
+
+            // 根據最終結果決定流程
+            if (finalResult == CommandResult.Quit || finalResult == CommandResult.NextGroup)
+            {
+                Console.WriteLine("已完成標記作業");
+                return;
+            }
+            // CommandResult.Continue: 繼續等待下一個輸入
+        }
     }
 
     /// <summary>
@@ -2489,6 +2653,270 @@ class Program
         Console.WriteLine();
         Console.WriteLine("=== 所有標記已清除完成 ===");
         Console.WriteLine("所有檔案已回到未標記狀態，您可以重新開始標記流程。");
+    }
+
+    /// <summary>
+    /// 驗證 Hash 輸入格式
+    /// </summary>
+    /// <param name="input">使用者輸入的 hash 字串</param>
+    /// <returns>是否為有效的 64 字元 SHA-256 hash</returns>
+    static bool ValidateHashInput(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+            return false;
+
+        // SHA-256 hash 長度為 64 字元
+        if (input.Length != 64)
+            return false;
+
+        // 只能包含 0-9, a-f, A-F
+        return input.All(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'));
+    }
+
+    /// <summary>
+    /// 依 Hash 取消標記
+    /// </summary>
+    static void UnmarkByHash()
+    {
+        Console.WriteLine("=== 依 Hash 取消標記 ===");
+        Console.WriteLine();
+
+        Console.Write("請輸入 Hash (64 字元 SHA-256): ");
+        string? hashInput = Console.ReadLine()?.Trim();
+
+        if (!ValidateHashInput(hashInput))
+        {
+            Console.WriteLine("錯誤：無效的 Hash 格式。Hash 必須為 64 字元的 SHA-256 (0-9, a-f, A-F)");
+            return;
+        }
+
+        InitializeDatabase();
+
+        // 查詢該 hash 的所有檔案
+        var files = DatabaseHelper.ExecuteQuery(
+            @"SELECT FilePath, MarkType, FileSize, FileCreatedTime, FileLastModifiedTime
+              FROM DuplicateFiles
+              WHERE Hash = $hash",
+            reader =>
+            {
+                var fileList = new List<(string path, int markType, long size, string created, string modified)>();
+                while (reader.Read())
+                {
+                    fileList.Add((
+                        reader.GetString(0),
+                        reader.GetInt32(1),
+                        reader.GetInt64(2),
+                        reader.GetString(3),
+                        reader.IsDBNull(4) ? "-" : reader.GetString(4)
+                    ));
+                }
+                return fileList;
+            },
+            cmd => cmd.Parameters.Add(new SqliteParameter("$hash", hashInput!))
+        );
+
+        if (files.Count == 0)
+        {
+            Console.WriteLine($"找不到 Hash 為 {hashInput} 的檔案");
+            return;
+        }
+
+        Console.WriteLine($"找到 {files.Count} 個檔案：");
+        Console.WriteLine();
+
+        for (int i = 0; i < files.Count; i++)
+        {
+            var (path, markType, size, created, modified) = files[i];
+            string markStatus = markType switch
+            {
+                1 => "[已標記刪除]",
+                2 => "[已標記移動]",
+                3 => "[已標記略過]",
+                _ => "[未標記]"
+            };
+            Console.WriteLine($"{i + 1}. {markStatus} {path}");
+            Console.WriteLine($"   大小: {FormatFileSize(size)}, 建立: {created}, 修改: {modified}");
+            Console.WriteLine();
+        }
+
+        if (!ConfirmAction($"確定要取消該 Hash 的所有標記嗎？"))
+        {
+            Console.WriteLine("已取消操作");
+            return;
+        }
+
+        // 使用交易執行取消標記
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
+        {
+            // 1. 從 FilesToDelete 刪除
+            var cmd1 = connection.CreateCommand();
+            cmd1.Transaction = transaction;
+            cmd1.CommandText = "DELETE FROM FilesToDelete WHERE Hash = $hash";
+            cmd1.Parameters.Add(new SqliteParameter("$hash", hashInput));
+            cmd1.ExecuteNonQuery();
+
+            // 2. 從 FileToMove 刪除
+            var cmd2 = connection.CreateCommand();
+            cmd2.Transaction = transaction;
+            cmd2.CommandText = "DELETE FROM FileToMove WHERE Hash = $hash";
+            cmd2.Parameters.Add(new SqliteParameter("$hash", hashInput));
+            cmd2.ExecuteNonQuery();
+
+            // 3. 從 SkippedHashes 刪除
+            var cmd3 = connection.CreateCommand();
+            cmd3.Transaction = transaction;
+            cmd3.CommandText = "DELETE FROM SkippedHashes WHERE Hash = $hash";
+            cmd3.Parameters.Add(new SqliteParameter("$hash", hashInput));
+            cmd3.ExecuteNonQuery();
+
+            // 4. 更新 DuplicateFiles 的 MarkType
+            var cmd4 = connection.CreateCommand();
+            cmd4.Transaction = transaction;
+            cmd4.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE Hash = $hash";
+            cmd4.Parameters.Add(new SqliteParameter("$hash", hashInput));
+            cmd4.ExecuteNonQuery();
+        });
+
+        Console.WriteLine($"已成功取消標記 {files.Count} 個檔案");
+    }
+
+    /// <summary>
+    /// 依 Hash 增加標記
+    /// </summary>
+    static void MarkByHash()
+    {
+        Console.WriteLine("=== 依 Hash 增加標記 ===");
+        Console.WriteLine();
+
+        Console.Write("請輸入 Hash (64 字元 SHA-256): ");
+        string? hashInput = Console.ReadLine()?.Trim();
+
+        if (!ValidateHashInput(hashInput))
+        {
+            Console.WriteLine("錯誤：無效的 Hash 格式。Hash 必須為 64 字元的 SHA-256 (0-9, a-f, A-F)");
+            return;
+        }
+
+        InitializeDatabase();
+
+        // 查詢該 hash 的所有未標記檔案
+        var files = DatabaseHelper.ExecuteQuery(
+            @"SELECT FilePath, FileSize, FileCreatedTime, FileLastModifiedTime
+              FROM DuplicateFiles
+              WHERE Hash = $hash AND MarkType = 0",
+            reader =>
+            {
+                var fileList = new List<(string path, long size, string created, string modified)>();
+                while (reader.Read())
+                {
+                    fileList.Add((
+                        reader.GetString(0),
+                        reader.GetInt64(1),
+                        reader.GetString(2),
+                        reader.IsDBNull(3) ? "-" : reader.GetString(3)
+                    ));
+                }
+                return fileList;
+            },
+            cmd => cmd.Parameters.Add(new SqliteParameter("$hash", hashInput!))
+        );
+
+        if (files.Count == 0)
+        {
+            Console.WriteLine($"找不到 Hash 為 {hashInput} 的未標記檔案");
+            Console.WriteLine("（可能所有檔案都已被標記，或該 Hash 不存在）");
+            return;
+        }
+
+        Console.WriteLine($"找到 {files.Count} 個未標記的檔案：");
+        Console.WriteLine();
+
+        for (int i = 0; i < files.Count; i++)
+        {
+            var (path, size, created, modified) = files[i];
+            Console.WriteLine($"{i + 1}. {path}");
+            Console.WriteLine($"   大小: {FormatFileSize(size)}, 建立: {created}, 修改: {modified}");
+            Console.WriteLine();
+        }
+
+        Console.WriteLine("請選擇標記類型：");
+        Console.WriteLine("1. 刪除標記（標記所有檔案為待刪除）");
+        Console.WriteLine("2. 移動標記（標記所有檔案為待移動）");
+        Console.WriteLine("3. 略過標記（保留所有檔案，標記為已略過）");
+        Console.Write("請輸入選項 (1-3): ");
+
+        string? markChoice = Console.ReadLine()?.Trim();
+
+        if (markChoice != "1" && markChoice != "2" && markChoice != "3")
+        {
+            Console.WriteLine("無效的選項");
+            return;
+        }
+
+        string markTypeName = markChoice switch
+        {
+            "1" => "刪除",
+            "2" => "移動",
+            "3" => "略過",
+            _ => ""
+        };
+
+        if (!ConfirmAction($"確定要將這 {files.Count} 個檔案標記為{markTypeName}嗎？"))
+        {
+            Console.WriteLine("已取消操作");
+            return;
+        }
+
+        int successCount = 0;
+        int failedCount = 0;
+
+        // 根據選擇執行標記操作
+        try
+        {
+            if (markChoice == "1") // 刪除標記
+            {
+                foreach (var (path, _, _, _) in files)
+                {
+                    try
+                    {
+                        MarkFileForDeletion(hashInput!, path);
+                        successCount++;
+                    }
+                    catch
+                    {
+                        failedCount++;
+                    }
+                }
+            }
+            else if (markChoice == "2") // 移動標記
+            {
+                var filePaths = files.Select(f => f.path).ToList();
+                if (MarkFilesForMove(hashInput!, filePaths))
+                {
+                    successCount = files.Count;
+                }
+                else
+                {
+                    failedCount = files.Count;
+                }
+            }
+            else if (markChoice == "3") // 略過標記
+            {
+                var filePaths = files.Select(f => f.path).ToList();
+                MarkHashAsSkipped(hashInput!, filePaths);
+                successCount = files.Count;
+            }
+
+            Console.WriteLine($"已成功標記 {successCount} 個檔案為{markTypeName}");
+            if (failedCount > 0)
+            {
+                Console.WriteLine($"失敗：{failedCount} 個檔案");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"標記失敗：{ex.Message}");
+        }
     }
 
     /// <summary>
