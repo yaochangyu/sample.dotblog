@@ -998,13 +998,13 @@ class Program
     /// <returns>權重分數 (基礎分 + 加分項 - 減分項)</returns>
     /// <remarks>
     /// 基礎權重：
-    /// - 90分：主相簿（DefaultMoveTargetBasePath 路徑下）
-    /// - 80分：其他資料夾
+    /// - 80分：所有檔案的起點權重
     ///
-    /// 加分項（僅適用於主相簿）：
-    /// - 資料夾路徑長度每 15 個字元 +1 分（不含檔名）
-    /// - 範例："2015-0717 丸子跟媽咪在圖書館-肚子的病毒疹好多" (31字元) = +2 分
-    /// - 範例："2015-07\1040717" (16字元) = +1 分
+    /// 加分項（適用於所有檔案）：
+    /// - 完整目錄路徑長度每 5 個字元 +1 分（不含檔名）
+    /// - 描述性長路徑會獲得更高權重
+    /// - 範例："C:\Users\clove\OneDrive\安茹蕾烘焙工作-配方本\安如蕾烘焙工作" (42字元) = +8 分
+    /// - 範例："C:\Users\clove\OneDrive\圖片\2022-11" (34字元) = +6 分
     ///
     /// 減分項：
     /// - 檔名包含 "(1)"：-10 分
@@ -1012,40 +1012,17 @@ class Program
     /// </remarks>
     static int CalculateFileWeight(string filePath)
     {
-        int baseWeight = 0;
+        int baseWeight = 80; // 所有檔案統一起點
         int bonusScore = 0;
         int penaltyScore = 0;
 
-        // === 基礎權重 ===
-        string primaryAlbumPath = _settings.DefaultMoveTargetBasePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        if (filePath.StartsWith(primaryAlbumPath, StringComparison.OrdinalIgnoreCase))
+        // === 加分項：完整目錄路徑長度 ===
+        // 取得完整目錄路徑（不含檔名）
+        string? directoryPath = Path.GetDirectoryName(filePath);
+        if (!string.IsNullOrEmpty(directoryPath))
         {
-            // 90分：主相簿歸檔（路徑在 DefaultMoveTargetBasePath 下）
-            baseWeight = 90;
-
-            // === 加分項：資料夾路徑長度 ===
-            // 計算主相簿之後的資料夾路徑長度（不含檔名），描述性資料夾名稱通常更長
-            int startIndex = primaryAlbumPath.Length;
-            if (startIndex < filePath.Length)
-            {
-                string afterPrimaryAlbum = filePath.Substring(startIndex);
-                // 移除開頭的分隔符號
-                afterPrimaryAlbum = afterPrimaryAlbum.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-                // 取得資料夾路徑（移除檔名）
-                string folderPath = Path.GetDirectoryName(afterPrimaryAlbum) ?? "";
-
-                // 每 15 個字元給 1 分（描述性資料夾名稱如 "2015-0717 丸子跟媽咪在圖書館" 比數字資料夾 "2015-07\1040717" 更有價值）
-                if (folderPath.Length > 0)
-                {
-                    bonusScore = folderPath.Length / 15;
-                }
-            }
-        }
-        else
-        {
-            // 80分：其他資料夾
-            baseWeight = 80;
+            // 每 5 個字元給 1 分（描述性長路徑如 "C:\Users\clove\OneDrive\安茹蕾烘焙工作-配方本\安如蕾烘焙工作" 比短路徑更有價值）
+            bonusScore = directoryPath.Length / 5;
         }
 
         // === 減分項：檔名判斷 ===
