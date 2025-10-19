@@ -284,7 +284,7 @@
             return badges[markType] || '<span class="badge badge-unmarked">未知</span>';
         }
 
-        function renderGroupItem(group, index) {
+        function renderGroupItem(group, index, idPrefix) {
             var item = document.createElement('div');
             item.className = 'file-item';
             item.style.borderLeftColor = group.DuplicateCount > 5 ? '#e53e3e' : '#667eea';
@@ -300,11 +300,12 @@
             // 檔案列表 HTML
             var filesHtml = '';
             if (group.Files && group.Files.length > 0) {
+                var uniqueId = idPrefix + '-' + index;
                 filesHtml = '<div class="group-files-container">' +
-                    '<div class="group-files-toggle" onclick="toggleGroupFiles(' + index + ')">' +
+                    '<div class="group-files-toggle" onclick="toggleGroupFiles(\'' + uniqueId + '\')">' +
                     '▶ 展開檔案列表 (' + group.Files.length + ')' +
                     '</div>' +
-                    '<div class="group-files-list" id="group-files-' + index + '">';
+                    '<div class="group-files-list" id="group-files-' + uniqueId + '">';
 
                 group.Files.forEach(function(file) {
                     var existsBadge = file.Exists
@@ -334,8 +335,8 @@
             return item;
         }
 
-        function toggleGroupFiles(index) {
-            var filesList = document.getElementById('group-files-' + index);
+        function toggleGroupFiles(uniqueId) {
+            var filesList = document.getElementById('group-files-' + uniqueId);
             var toggle = filesList.previousElementSibling;
 
             if (filesList.classList.contains('expanded')) {
@@ -356,8 +357,10 @@
                 return;
             }
 
+            // 使用 containerId 作為唯一前綴，避免 ID 衝突
+            var idPrefix = containerId.replace('list-', '');
             groups.forEach(function(group, index) {
-                container.appendChild(renderGroupItem(group, index));
+                container.appendChild(renderGroupItem(group, index, idPrefix));
             });
         }
 
