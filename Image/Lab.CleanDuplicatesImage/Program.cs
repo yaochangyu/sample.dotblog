@@ -13,7 +13,6 @@ namespace Lab.CleanDuplicatesImage;
 public record AppSettings
 {
     public string DefaultMoveTargetBasePath { get; init; } = @"C:\Users\clove\OneDrive\圖片";
-    public List<string> WorkFolderKeywords { get; init; } = new();
 }
 
 /// <summary>
@@ -999,7 +998,6 @@ class Program
     /// <returns>權重分數 (基礎分 + 加分項 - 減分項)</returns>
     /// <remarks>
     /// 基礎權重：
-    /// - 100分：工作資料夾（WorkFolderKeywords 關鍵字匹配）
     /// - 90分：主相簿（DefaultMoveTargetBasePath 路徑下）
     /// - 80分：其他資料夾
     ///
@@ -1019,50 +1017,35 @@ class Program
         int penaltyScore = 0;
 
         // === 基礎權重 ===
-        // 100分：專案/工作主資料夾（從設定檔讀取關鍵字）
-        bool isWorkFolder = false;
-        foreach (var keyword in _settings.WorkFolderKeywords)
-        {
-            if (filePath.Contains(keyword, StringComparison.OrdinalIgnoreCase))
-            {
-                baseWeight = 100;
-                isWorkFolder = true;
-                break;
-            }
-        }
-
-        if (!isWorkFolder)
+        string primaryAlbumPath = _settings.DefaultMoveTargetBasePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (filePath.StartsWith(primaryAlbumPath, StringComparison.OrdinalIgnoreCase))
         {
             // 90分：主相簿歸檔（路徑在 DefaultMoveTargetBasePath 下）
-            string primaryAlbumPath = _settings.DefaultMoveTargetBasePath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            if (filePath.StartsWith(primaryAlbumPath, StringComparison.OrdinalIgnoreCase))
+            baseWeight = 90;
+
+            // === 加分項：資料夾路徑長度 ===
+            // 計算主相簿之後的資料夾路徑長度（不含檔名），描述性資料夾名稱通常更長
+            int startIndex = primaryAlbumPath.Length;
+            if (startIndex < filePath.Length)
             {
-                baseWeight = 90;
+                string afterPrimaryAlbum = filePath.Substring(startIndex);
+                // 移除開頭的分隔符號
+                afterPrimaryAlbum = afterPrimaryAlbum.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-                // === 加分項：資料夾路徑長度 ===
-                // 計算主相簿之後的資料夾路徑長度（不含檔名），描述性資料夾名稱通常更長
-                int startIndex = primaryAlbumPath.Length;
-                if (startIndex < filePath.Length)
+                // 取得資料夾路徑（移除檔名）
+                string folderPath = Path.GetDirectoryName(afterPrimaryAlbum) ?? "";
+
+                // 每 15 個字元給 1 分（描述性資料夾名稱如 "2015-0717 丸子跟媽咪在圖書館" 比數字資料夾 "2015-07\1040717" 更有價值）
+                if (folderPath.Length > 0)
                 {
-                    string afterPrimaryAlbum = filePath.Substring(startIndex);
-                    // 移除開頭的分隔符號
-                    afterPrimaryAlbum = afterPrimaryAlbum.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-
-                    // 取得資料夾路徑（移除檔名）
-                    string folderPath = Path.GetDirectoryName(afterPrimaryAlbum) ?? "";
-
-                    // 每 15 個字元給 1 分（描述性資料夾名稱如 "2015-0717 丸子跟媽咪在圖書館" 比數字資料夾 "2015-07\1040717" 更有價值）
-                    if (folderPath.Length > 0)
-                    {
-                        bonusScore = folderPath.Length / 15;
-                    }
+                    bonusScore = folderPath.Length / 15;
                 }
             }
-            else
-            {
-                // 80分：其他資料夾
-                baseWeight = 80;
-            }
+        }
+        else
+        {
+            // 80分：其他資料夾
+            baseWeight = 80;
         }
 
         // === 減分項：檔名判斷 ===
@@ -1109,6 +1092,11 @@ class Program
         }
 
         Console.WriteLine($"找到 {duplicateGroups.Count} 組重複檔案");
+        Console.WriteLine();
+        Console.Write("是否顯示詳細的權重計算資訊？(y/N): ");
+        var showDetails = Console.ReadLine()?.Trim().Equals("y", StringComparison.OrdinalIgnoreCase) == true;
+        Console.WriteLine();
+
         Console.WriteLine("開始分析權重並自動標記...");
         Console.WriteLine();
 
@@ -1117,11 +1105,13 @@ class Program
         int keptFiles = 0;
         int markedForDeletion = 0;
         int lastReportedPercentage = 0;
+        int groupIndex = 0;
 
         foreach (var group in duplicateGroups)
         {
             var hash = group.Key;
             var files = group.Value;
+            groupIndex++;
 
             // 計算每個檔案的權重和修改時間
             var fileWeights = files.Select(f => new
@@ -1130,6 +1120,23 @@ class Program
                 Weight = CalculateFileWeight(f.Path),
                 ModifiedTime = DateTime.TryParse(f.LastModifiedTime, out var dt) ? dt : DateTime.MaxValue
             }).ToList();
+
+            if (showDetails)
+            {
+                Console.WriteLine();
+                Console.WriteLine($"━━━ 群組 {groupIndex}/{totalGroups} ━━━");
+                Console.WriteLine($"Hash: {hash.Substring(0, 16)}...");
+                Console.WriteLine($"檔案數量: {files.Count}");
+                Console.WriteLine();
+
+                foreach (var fw in fileWeights.OrderByDescending(fw => fw.Weight))
+                {
+                    Console.WriteLine($"  權重: {fw.Weight:D3} 分 | {Path.GetFileName(fw.File.Path)}");
+                    Console.WriteLine($"         修改時間: {fw.File.LastModifiedTime}");
+                    Console.WriteLine($"         路徑: {fw.File.Path}");
+                    Console.WriteLine();
+                }
+            }
 
             // 找出權重最高的檔案
             var maxWeight = fileWeights.Max(fw => fw.Weight);
@@ -1142,7 +1149,22 @@ class Program
                 .ThenByDescending(fw => fw.File.Path.Length)
                 .First();
 
+            if (showDetails)
+            {
+                Console.WriteLine($"  ✓ 保留: {Path.GetFileName(fileToKeep.File.Path)}");
+                Console.WriteLine($"         權重: {fileToKeep.Weight} 分 | 修改時間: {fileToKeep.File.LastModifiedTime}");
+                Console.WriteLine($"         路徑: {fileToKeep.File.Path}");
+                Console.WriteLine();
+            }
+
             keptFiles++;
+
+            // 確保至少保留一個檔案
+            if (files.Count == 1)
+            {
+                processedGroups++;
+                continue;
+            }
 
             // 處理其餘檔案
             var filesToProcess = fileWeights.Where(fw => fw.File.Path != fileToKeep.File.Path).ToList();
@@ -1154,6 +1176,14 @@ class Program
                 {
                     MarkFileForDeletion(hash, fw.File.Path);
                     markedForDeletion++;
+
+                    if (showDetails)
+                    {
+                        Console.WriteLine($"  ✗ 標記刪除: {Path.GetFileName(fw.File.Path)}");
+                        Console.WriteLine($"         權重: {fw.Weight} 分 | 修改時間: {fw.File.LastModifiedTime}");
+                        Console.WriteLine($"         路徑: {fw.File.Path}");
+                        Console.WriteLine();
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -1164,22 +1194,29 @@ class Program
 
             processedGroups++;
 
-            // 即時進度顯示（在同一行更新）
-            var percentage = (double)processedGroups / totalGroups * 100;
-            Console.Write($"\r處理中... {percentage:F1}% ({processedGroups}/{totalGroups}) | 保留: {keptFiles} | 標記刪除: {markedForDeletion}");
-
-            // 每 10% 印一次階段報告
-            var currentPercentage = (int)(percentage / 10) * 10;
-            if (currentPercentage > lastReportedPercentage && currentPercentage % 10 == 0)
+            // 即時進度顯示（在同一行更新，僅在非詳細模式下）
+            if (!showDetails)
             {
-                Console.WriteLine();
-                Console.WriteLine($"  [{currentPercentage}% 完成] 已處理 {processedGroups} 組，保留 {keptFiles} 個檔案，標記刪除 {markedForDeletion} 個檔案");
-                lastReportedPercentage = currentPercentage;
+                var percentage = (double)processedGroups / totalGroups * 100;
+                Console.Write($"\r處理中... {percentage:F1}% ({processedGroups}/{totalGroups}) | 保留: {keptFiles} | 標記刪除: {markedForDeletion}");
+
+                // 每 10% 印一次階段報告
+                var currentPercentage = (int)(percentage / 10) * 10;
+                if (currentPercentage > lastReportedPercentage && currentPercentage % 10 == 0)
+                {
+                    Console.WriteLine();
+                    Console.WriteLine($"  [{currentPercentage}% 完成] 已處理 {processedGroups} 組，保留 {keptFiles} 個檔案，標記刪除 {markedForDeletion} 個檔案");
+                    lastReportedPercentage = currentPercentage;
+                }
             }
         }
 
-        Console.WriteLine(); // 換行，避免進度條被覆蓋
+        if (!showDetails)
+        {
+            Console.WriteLine(); // 換行，避免進度條被覆蓋
+        }
 
+        Console.WriteLine();
         Console.WriteLine("=== 自動歸檔完成 ===");
         Console.WriteLine($"處理組數: {processedGroups}");
         Console.WriteLine($"保留檔案: {keptFiles}");
