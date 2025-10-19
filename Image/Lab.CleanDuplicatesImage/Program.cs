@@ -140,13 +140,14 @@ class Program
             Console.WriteLine("9. 移動資料夾到預設位置");
             Console.WriteLine("10. 資料夾民國年轉西元年");
             Console.WriteLine("11. 自動歸檔重複檔案（依權重自動標記）");
-            Console.WriteLine("12. 離開");
-            Console.Write("請輸入選項 (1-12): ");
+            Console.WriteLine("12. 自動清除所有標記（回到未標記狀態）");
+            Console.WriteLine("13. 離開");
+            Console.Write("請輸入選項 (1-13): ");
 
             var menuChoice = Console.ReadLine()?.Trim();
             Console.WriteLine();
 
-            if (menuChoice == "12")
+            if (menuChoice == "13")
             {
                 Console.WriteLine("感謝使用，再見！");
                 return;
@@ -249,6 +250,14 @@ class Program
             {
                 // 自動歸檔重複檔案（依權重自動標記）
                 AutoArchiveDuplicates();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "12")
+            {
+                // 清除所有標記（回到未標記狀態）
+                ResetAllMarksToUnmarked();
                 Console.WriteLine();
                 continue;
             }
@@ -2441,7 +2450,65 @@ class Program
 
     static void ClearAllSkippedMarks()
     {
-        DatabaseHelper.ExecuteNonQuery("DELETE FROM SkippedHashes");
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
+        {
+            // 清除所有 SkippedHashes 記錄
+            var deleteCommand = connection.CreateCommand();
+            deleteCommand.Transaction = transaction;
+            deleteCommand.CommandText = "DELETE FROM SkippedHashes";
+            var count = deleteCommand.ExecuteNonQuery();
+
+            // 清除所有 MarkType = 3 的標記
+            var updateCommand = connection.CreateCommand();
+            updateCommand.Transaction = transaction;
+            updateCommand.CommandText = "UPDATE DuplicateFiles SET MarkType = 0 WHERE MarkType = 3";
+            updateCommand.ExecuteNonQuery();
+
+            Console.WriteLine($"已清除 {count} 筆略過標記記錄");
+        });
+    }
+
+    /// <summary>
+    /// 清除所有標記，將所有檔案回到未標記狀態
+    /// </summary>
+    static void ResetAllMarksToUnmarked()
+    {
+        Console.WriteLine("=== 清除所有標記 ===");
+        Console.WriteLine();
+        Console.WriteLine("此操作將清除：");
+        Console.WriteLine("  - 所有待刪除標記（FilesToDelete + MarkType = 1）");
+        Console.WriteLine("  - 所有待移動標記（FileToMove + MarkType = 2）");
+        Console.WriteLine("  - 所有略過標記（SkippedHashes + MarkType = 3）");
+        Console.WriteLine("  - 將所有檔案回到未標記狀態（MarkType = 0）");
+        Console.WriteLine();
+
+        if (!ConfirmAction("確認要清除所有標記嗎？"))
+        {
+            Console.WriteLine("已取消操作");
+            return;
+        }
+
+        InitializeDatabase();
+
+        Console.WriteLine();
+        Console.WriteLine("正在清除標記...");
+        Console.WriteLine();
+
+        // 清除刪除標記
+        Console.WriteLine("1. 清除待刪除標記...");
+        ClearDeletedMarks();
+
+        // 清除移動標記
+        Console.WriteLine("2. 清除待移動標記...");
+        ClearMoveMarks();
+
+        // 清除略過標記
+        Console.WriteLine("3. 清除略過標記...");
+        ClearAllSkippedMarks();
+
+        Console.WriteLine();
+        Console.WriteLine("=== 所有標記已清除完成 ===");
+        Console.WriteLine("所有檔案已回到未標記狀態，您可以重新開始標記流程。");
     }
 
     /// <summary>
