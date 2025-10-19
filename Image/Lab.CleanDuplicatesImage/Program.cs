@@ -1113,6 +1113,7 @@ class Program
         int processedGroups = 0;
         int keptFiles = 0;
         int markedForDeletion = 0;
+        int lastReportedPercentage = 0;
 
         foreach (var group in duplicateGroups)
         {
@@ -1138,10 +1139,6 @@ class Program
                 .ThenByDescending(fw => fw.File.Path.Length)
                 .First();
 
-            Console.WriteLine($"[{processedGroups + 1}/{totalGroups}] Hash: {hash.Substring(0, 16)}...");
-            Console.WriteLine($"  保留檔案 (權重 {fileToKeep.Weight}): {fileToKeep.File.Path}");
-            Console.WriteLine($"  修改時間: {fileToKeep.File.LastModifiedTime}");
-
             keptFiles++;
 
             // 處理其餘檔案
@@ -1153,18 +1150,32 @@ class Program
                 try
                 {
                     MarkFileForDeletion(hash, fw.File.Path);
-                    Console.WriteLine($"  [刪除] (權重 {fw.Weight}): {fw.File.Path}");
                     markedForDeletion++;
                 }
                 catch (Exception ex)
                 {
+                    Console.WriteLine();
                     Console.WriteLine($"  [失敗] 標記刪除失敗: {fw.File.Path}, 錯誤: {ex.Message}");
                 }
             }
 
-            Console.WriteLine();
             processedGroups++;
+
+            // 即時進度顯示（在同一行更新）
+            var percentage = (double)processedGroups / totalGroups * 100;
+            Console.Write($"\r處理中... {percentage:F1}% ({processedGroups}/{totalGroups}) | 保留: {keptFiles} | 標記刪除: {markedForDeletion}");
+
+            // 每 10% 印一次階段報告
+            var currentPercentage = (int)(percentage / 10) * 10;
+            if (currentPercentage > lastReportedPercentage && currentPercentage % 10 == 0)
+            {
+                Console.WriteLine();
+                Console.WriteLine($"  [{currentPercentage}% 完成] 已處理 {processedGroups} 組，保留 {keptFiles} 個檔案，標記刪除 {markedForDeletion} 個檔案");
+                lastReportedPercentage = currentPercentage;
+            }
         }
+
+        Console.WriteLine(); // 換行，避免進度條被覆蓋
 
         Console.WriteLine("=== 自動歸檔完成 ===");
         Console.WriteLine($"處理組數: {processedGroups}");
