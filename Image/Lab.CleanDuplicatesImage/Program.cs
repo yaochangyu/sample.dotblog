@@ -2634,6 +2634,14 @@ class Program
             .Where(g => g.DuplicateCount > 1)
             .OrderByDescending(g => g.MaxFileSize)
             .ToList();
+
+        // 按重複次數排序的群組列表（次要排序為總大小）
+        var duplicateGroupsByCount = groupStats.Values
+            .Where(g => g.DuplicateCount > 1)
+            .OrderByDescending(g => g.DuplicateCount)
+            .ThenByDescending(g => g.TotalSize)
+            .ToList();
+
         var totalDuplicateGroups = duplicateGroups.Count;
         var maxDuplicateCount = duplicateGroups.Any() ? duplicateGroups.Max(g => g.DuplicateCount) : 0;
 
@@ -2673,6 +2681,30 @@ class Program
             },
             // 新增：重複檔案群組列表（按最大檔案大小降序排列）
             DuplicateGroups = duplicateGroups.Select(g =>
+            {
+                var files = filesByHash.ContainsKey(g.Hash)
+                    ? filesByHash[g.Hash].Select(f => (object)new
+                    {
+                        f.FilePath,
+                        f.FileSize,
+                        f.MarkType,
+                        f.FileCreatedTime,
+                        f.FileLastModifiedTime,
+                        f.Exists
+                    }).ToList()
+                    : new List<object>();
+
+                return new
+                {
+                    g.Hash,
+                    g.DuplicateCount,
+                    g.TotalSize,
+                    g.MaxFileSize,
+                    Files = files
+                };
+            }).ToList(),
+            // 新增：重複檔案群組列表（按重複次數降序排列）
+            DuplicateGroupsByCount = duplicateGroupsByCount.Select(g =>
             {
                 var files = filesByHash.ContainsKey(g.Hash)
                     ? filesByHash[g.Hash].Select(f => (object)new
