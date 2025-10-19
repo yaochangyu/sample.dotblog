@@ -1092,11 +1092,6 @@ class Program
         }
 
         Console.WriteLine($"找到 {duplicateGroups.Count} 組重複檔案");
-        Console.WriteLine();
-        Console.Write("是否顯示詳細的權重計算資訊？(y/N): ");
-        var showDetails = Console.ReadLine()?.Trim().Equals("y", StringComparison.OrdinalIgnoreCase) == true;
-        Console.WriteLine();
-
         Console.WriteLine("開始分析權重並自動標記...");
         Console.WriteLine();
 
@@ -1105,13 +1100,11 @@ class Program
         int keptFiles = 0;
         int markedForDeletion = 0;
         int lastReportedPercentage = 0;
-        int groupIndex = 0;
 
         foreach (var group in duplicateGroups)
         {
             var hash = group.Key;
             var files = group.Value;
-            groupIndex++;
 
             // 計算每個檔案的權重和修改時間
             var fileWeights = files.Select(f => new
@@ -1120,23 +1113,6 @@ class Program
                 Weight = CalculateFileWeight(f.Path),
                 ModifiedTime = DateTime.TryParse(f.LastModifiedTime, out var dt) ? dt : DateTime.MaxValue
             }).ToList();
-
-            if (showDetails)
-            {
-                Console.WriteLine();
-                Console.WriteLine($"━━━ 群組 {groupIndex}/{totalGroups} ━━━");
-                Console.WriteLine($"Hash: {hash.Substring(0, 16)}...");
-                Console.WriteLine($"檔案數量: {files.Count}");
-                Console.WriteLine();
-
-                foreach (var fw in fileWeights.OrderByDescending(fw => fw.Weight))
-                {
-                    Console.WriteLine($"  權重: {fw.Weight:D3} 分 | {Path.GetFileName(fw.File.Path)}");
-                    Console.WriteLine($"         修改時間: {fw.File.LastModifiedTime}");
-                    Console.WriteLine($"         路徑: {fw.File.Path}");
-                    Console.WriteLine();
-                }
-            }
 
             // 找出權重最高的檔案
             var maxWeight = fileWeights.Max(fw => fw.Weight);
@@ -1148,14 +1124,6 @@ class Program
                 .OrderBy(fw => fw.ModifiedTime)
                 .ThenByDescending(fw => fw.File.Path.Length)
                 .First();
-
-            if (showDetails)
-            {
-                Console.WriteLine($"  ✓ 保留: {Path.GetFileName(fileToKeep.File.Path)}");
-                Console.WriteLine($"         權重: {fileToKeep.Weight} 分 | 修改時間: {fileToKeep.File.LastModifiedTime}");
-                Console.WriteLine($"         路徑: {fileToKeep.File.Path}");
-                Console.WriteLine();
-            }
 
             keptFiles++;
 
@@ -1176,44 +1144,26 @@ class Program
                 {
                     MarkFileForDeletion(hash, fw.File.Path);
                     markedForDeletion++;
-
-                    if (showDetails)
-                    {
-                        Console.WriteLine($"  ✗ 標記刪除: {Path.GetFileName(fw.File.Path)}");
-                        Console.WriteLine($"         權重: {fw.Weight} 分 | 修改時間: {fw.File.LastModifiedTime}");
-                        Console.WriteLine($"         路徑: {fw.File.Path}");
-                        Console.WriteLine();
-                    }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine();
-                    Console.WriteLine($"  [失敗] 標記刪除失敗: {fw.File.Path}, 錯誤: {ex.Message}");
+                    Console.WriteLine($"[失敗] 標記刪除失敗: {fw.File.Path}, 錯誤: {ex.Message}");
                 }
             }
 
             processedGroups++;
 
-            // 即時進度顯示（在同一行更新，僅在非詳細模式下）
-            if (!showDetails)
+            // 優化的進度顯示：每 50 組或每 5% 更新一次
+            var percentage = (double)processedGroups / totalGroups * 100;
+            var currentPercentage = (int)(percentage / 5) * 5; // 每 5% 為一個區間
+
+            // 每 50 組或每達到新的 5% 區間時更新
+            if (processedGroups % 50 == 0 || (currentPercentage > lastReportedPercentage && currentPercentage % 5 == 0))
             {
-                var percentage = (double)processedGroups / totalGroups * 100;
-                Console.Write($"\r處理中... {percentage:F1}% ({processedGroups}/{totalGroups}) | 保留: {keptFiles} | 標記刪除: {markedForDeletion}");
-
-                // 每 10% 印一次階段報告
-                var currentPercentage = (int)(percentage / 10) * 10;
-                if (currentPercentage > lastReportedPercentage && currentPercentage % 10 == 0)
-                {
-                    Console.WriteLine();
-                    Console.WriteLine($"  [{currentPercentage}% 完成] 已處理 {processedGroups} 組，保留 {keptFiles} 個檔案，標記刪除 {markedForDeletion} 個檔案");
-                    lastReportedPercentage = currentPercentage;
-                }
+                Console.WriteLine($"[{currentPercentage}%] 已處理 {processedGroups}/{totalGroups} 組 | 保留: {keptFiles} | 標記刪除: {markedForDeletion}");
+                lastReportedPercentage = currentPercentage;
             }
-        }
-
-        if (!showDetails)
-        {
-            Console.WriteLine(); // 換行，避免進度條被覆蓋
         }
 
         Console.WriteLine();
