@@ -1123,8 +1123,10 @@ class Program
             var candidatesWithMaxWeight = fileWeights.Where(fw => fw.Weight == maxWeight).ToList();
 
             // 如果有多個相同權重，保留修改日期最舊的
+            // 如果修改日期也相同，保留路徑最長的（通常表示資料夾名稱更詳細）
             var fileToKeep = candidatesWithMaxWeight
                 .OrderBy(fw => fw.ModifiedTime)
+                .ThenByDescending(fw => fw.File.Path.Length)
                 .First();
 
             Console.WriteLine($"[{processedGroups + 1}/{totalGroups}] Hash: {hash.Substring(0, 16)}...");
