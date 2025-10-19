@@ -1003,8 +1003,10 @@ class Program
     /// - 90分：主相簿（DefaultMoveTargetBasePath 路徑下）
     /// - 80分：其他資料夾
     ///
-    /// 加分項：
-    /// - DefaultMoveTargetBasePath 下每個子目錄層級 +1 分
+    /// 加分項（僅適用於主相簿）：
+    /// - 資料夾路徑長度每 15 個字元 +1 分（不含檔名）
+    /// - 範例："2015-0717 丸子跟媽咪在圖書館-肚子的病毒疹好多" (31字元) = +2 分
+    /// - 範例："2015-07\1040717" (16字元) = +1 分
     ///
     /// 減分項：
     /// - 檔名包含 "(1)"：-10 分
@@ -1037,21 +1039,22 @@ class Program
             {
                 baseWeight = 90;
 
-                // === 加分項：計算主相簿路徑之後的子目錄層級 ===
-                // 確保從主相簿路徑後的第一個分隔符號開始計算
+                // === 加分項：資料夾路徑長度 ===
+                // 計算主相簿之後的資料夾路徑長度（不含檔名），描述性資料夾名稱通常更長
                 int startIndex = primaryAlbumPath.Length;
                 if (startIndex < filePath.Length)
                 {
                     string afterPrimaryAlbum = filePath.Substring(startIndex);
-                    // 移除開頭的分隔符號（如果有）
+                    // 移除開頭的分隔符號
                     afterPrimaryAlbum = afterPrimaryAlbum.TrimStart(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-                    // 計算路徑分隔符號數量（每個分隔符號代表一層目錄）
-                    int directorySeparatorCount = afterPrimaryAlbum.Count(c => c == Path.DirectorySeparatorChar || c == Path.AltDirectorySeparatorChar);
-                    // 分隔符號數量就是子目錄層級數（最後一個分隔符號後面是檔名）
-                    if (directorySeparatorCount > 0)
+                    // 取得資料夾路徑（移除檔名）
+                    string folderPath = Path.GetDirectoryName(afterPrimaryAlbum) ?? "";
+
+                    // 每 15 個字元給 1 分（描述性資料夾名稱如 "2015-0717 丸子跟媽咪在圖書館" 比數字資料夾 "2015-07\1040717" 更有價值）
+                    if (folderPath.Length > 0)
                     {
-                        bonusScore = directorySeparatorCount;
+                        bonusScore = folderPath.Length / 15;
                     }
                 }
             }
