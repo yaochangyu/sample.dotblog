@@ -144,6 +144,9 @@
             <div class="tab active" data-tab="groups">
                 重複檔案群組 <span class="count-badge" id="tab-groups-count">0</span>
             </div>
+            <div class="tab" data-tab="groups-by-count">
+                重複檔案群組 (按重複次數) <span class="count-badge" id="tab-groups-by-count-count">0</span>
+            </div>
             <div class="tab" data-tab="unmarked">
                 未標記 <span class="count-badge" id="tab-unmarked-count">0</span>
             </div>
@@ -162,6 +165,12 @@
         <div class="tab-content active" id="content-groups">
             <h2>重複檔案群組總覽（按檔案大小降序排列）</h2>
             <div class="file-list" id="list-groups"></div>
+        </div>
+
+        <!-- 重複檔案群組總覽（按重複次數排序） -->
+        <div class="tab-content" id="content-groups-by-count">
+            <h2>重複檔案群組總覽（按重複次數降序排列）</h2>
+            <div class="file-list" id="list-groups-by-count"></div>
         </div>
 
         <!-- 未標記檔案 -->
@@ -389,6 +398,7 @@
 
             // 更新分頁標籤計數
             document.getElementById('tab-groups-count').textContent = reportData.Summary.TotalDuplicateGroups;
+            document.getElementById('tab-groups-by-count-count').textContent = reportData.Summary.TotalDuplicateGroups;
             document.getElementById('tab-unmarked-count').textContent = reportData.Summary.UnmarkedCount;
             document.getElementById('tab-deletion-count').textContent = reportData.Summary.MarkedForDeletionCount;
             document.getElementById('tab-move-count').textContent = reportData.Summary.MarkedForMoveCount;
@@ -396,6 +406,7 @@
 
             // 渲染檔案列表
             renderGroupList(reportData.DuplicateGroups, 'list-groups');
+            renderGroupList(reportData.DuplicateGroupsByCount, 'list-groups-by-count');
             renderFileList(reportData.UnmarkedFiles, 'list-unmarked', 'unmarked');
             renderFileList(reportData.MarkedForDeletion, 'list-deletion', 'deletion');
             renderFileList(reportData.MarkedForMove, 'list-move', 'move');
