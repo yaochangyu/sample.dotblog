@@ -184,18 +184,13 @@ dotnet run
 計算公式：**最終權重 = 基礎權重 + 加分項 - 減分項**
 
 **基礎權重**：
-- **100 分**：工作資料夾
-  - 檔案路徑包含 `WorkFolderKeywords` 中任一關鍵字
-  - 設定位置：`appsettings.json` → `WorkFolderKeywords`
-  - 範例：`["安茹蕾烘焙工作-配方本", "安如蕾烘焙工作"]`
-
 - **90 分**：主相簿
   - 檔案位於 `DefaultMoveTargetBasePath` 路徑下
   - 設定位置：`appsettings.json` → `DefaultMoveTargetBasePath`
   - 範例：`"C:\\Users\\clove\\OneDrive\\圖片"`
 
 - **80 分**：其他資料夾
-  - 不符合上述條件的所有檔案
+  - 不在主相簿路徑下的所有檔案
 
 **加分項**：
 - **資料夾路徑長度加分**（僅適用於主相簿）
@@ -220,7 +215,7 @@ dotnet run
 
 | 檔案路徑 | 基礎分 | 路徑長度加分 | 檔名減分 | 最終分數 | 說明 |
 |---------|--------|------------|---------|---------|------|
-| `D:\安茹蕾烘焙工作\食譜.jpg` | 100 | 0 | 0 | **100** | 工作資料夾，最高優先權 |
+| `C:\Users\clove\OneDrive\圖片\安茹蕾烘焙工作-配方本\安如蕾烘焙工作\食譜.jpg` | 90 | +2 (33字元) | 0 | **92** | 描述性長路徑資料夾 |
 | `C:\Users\clove\OneDrive\圖片\2015-0717 丸子跟媽咪在圖書館-肚子的病毒疹好多\照片.jpg` | 90 | +2 (31字元) | 0 | **92** | 描述性資料夾名稱 |
 | `C:\Users\clove\OneDrive\圖片\2024\01\照片.jpg` | 90 | +0 (7字元) | 0 | **90** | 數字巢狀資料夾 |
 | `C:\Users\clove\OneDrive\圖片\2024\照片.jpg` | 90 | +0 (4字元) | 0 | **90** | 1 層子目錄 |
@@ -248,19 +243,15 @@ dotnet run
 ```json
 {
   "AppSettings": {
-    "DefaultMoveTargetBasePath": "C:\\Users\\clove\\OneDrive\\圖片",
-    "WorkFolderKeywords": [
-      "安茹蕾烘焙工作-配方本",
-      "安如蕾烘焙工作"
-    ]
+    "DefaultMoveTargetBasePath": "C:\\Users\\clove\\OneDrive\\圖片"
   }
 }
 ```
 
 **設定調整建議**：
-- 將重要的工作專案資料夾關鍵字加入 `WorkFolderKeywords`
 - `DefaultMoveTargetBasePath` 應指向您的主要相簿位置
 - 修改設定後無需重新編譯，重新執行程式即可生效
+- 權重系統會自動根據資料夾路徑長度判斷重要性，描述性資料夾名稱會獲得更高權重
 
 ## 支援的檔案格式
 
