@@ -37,7 +37,12 @@ dotnet run
 
 ### 資料模型（Data Models）
 - **FileRecord.cs**: 表示單一檔案的記錄，包含路徑、時間戳記、檔案存在性、大小、建立/修改時間
+  - `Create()` 靜態方法：從檔案路徑建立記錄，自動檢查檔案存在性
 - **FileGroup.cs**: 表示一組重複檔案，包含共享的雜湊值和檔案清單
+  - `Timestamp`: 取得群組的時間戳記
+  - `ExistingFileCount` / `MissingFileCount`: 檔案統計
+- **FileMoveInfo** (MoveFolderHelper.cs): 檔案移動資訊記錄
+  - 包含來源/目標路徑、檔案名稱、修改時間、大小、雜湊值
 
 ### 資料庫層（Database Layer）
 - **DatabaseHelper.cs**: 提供統一的資料庫存取介面
@@ -148,6 +153,28 @@ dotnet run
 **使用者互動**:
 - `ConfirmAction()`: 統一的確認對話框（Y/n 格式）
 
+### 輔助工具類別
+
+**CalendarConvert.cs** - 民國年/西元年轉換工具:
+- `ConvertROCToADFolderName()`: 將民國年資料夾名稱轉換為西元年格式
+  - 支援格式：
+    - 完整日期：`1000101` → `2011-0101`
+    - 帶流水號：`990101-1` → `2010-0101-1`
+    - 帶後綴文字：`990101帥爆了` → `2010-0101 帥爆了`
+    - 年月格式：`10001` → `2011-01`
+  - 使用 `TaiwanCalendar` 進行日期驗證
+  - 無效日期自動略過（回傳 null）
+
+**MoveFolderHelper.cs** - 資料夾移動輔助類別:
+- `RunMoveFolderToDefaultLocation()`: 移動資料夾到預設位置
+  - 根據檔案修改日期（yyyy-MM）自動分類
+  - 支援檔案衝突處理：
+    - 相同 Hash：覆蓋目標檔案
+    - 不同 Hash：檔名加上 Guid
+- `ScanFilesForMove()`: 掃描資料夾並計算目標路徑
+- `ExecuteFolderMove()`: 執行批次移動操作
+- 僅處理頂層檔案（不包含子目錄）
+
 ### 權重計算系統
 
 **自動歸檔功能（選項 11）** 使用權重系統來判斷要保留哪個重複檔案。
@@ -241,11 +268,18 @@ dotnet run
 
 ## 專案架構說明
 
-此專案經過多階段重構,採用輕量級架構設計。核心特點:
+此專案經過多階段重構，採用輕量級架構設計。核心特點：
 - 使用 `DatabaseHelper` 統一資料庫存取層
 - 採用 `record` 型別實現不可變資料模型
 - 共用方法消除重複程式碼
 - 詳細的重構歷史請參閱 `重構計畫.md`
+
+### NuGet 套件依賴
+
+專案使用以下 NuGet 套件（.NET 9.0）：
+- **Microsoft.Data.Sqlite** (9.0.9)：SQLite 資料庫存取
+- **Microsoft.Extensions.Configuration.Json** (9.0.0)：JSON 設定檔讀取
+- **Microsoft.Extensions.Configuration.Binder** (9.0.0)：設定綁定至物件
 
 ## 開發注意事項
 
@@ -315,3 +349,31 @@ SELECT * FROM DuplicateFiles WHERE MarkType = 3
 - 檔案操作應檢查檔案存在性
 - 資料庫交易在失敗時自動回滾
 - 提供清晰的錯誤訊息給使用者
+
+### 檔案組織結構
+
+專案包含以下關鍵資料夾與檔案：
+- **Templates/**: HTML 報表範本檔案（編譯時複製到輸出目錄）
+- **Reports/**: 自動生成的報表輸出目錄（執行時建立）
+- **appsettings.json**: 設定檔（編譯時複製到輸出目錄）
+- **duplicates.db**: SQLite 資料庫檔案（首次執行時自動建立）
+
+### 常見工作流程
+
+**初次使用**:
+1. 修改 `appsettings.json` 設定工作資料夾關鍵字和主相簿路徑
+2. 執行「選項 1」掃描重複檔案
+3. 執行「選項 11」自動標記要刪除的檔案（基於權重計算）
+4. 執行「選項 2」檢視並調整標記
+5. 執行「選項 6」實際刪除標記的檔案
+
+**手動標記**:
+1. 執行「選項 2」進入互動模式
+2. 使用 `d` / `m` / `k` 指令標記檔案
+3. 使用 `p` 指令預覽檔案內容
+4. 完成後執行「選項 6」或「選項 7」
+
+**清除標記重新開始**:
+1. 執行「選項 12」清除所有標記
+2. 所有檔案回到未標記狀態（MarkType = 0）
+3. 可重新執行標記流程
