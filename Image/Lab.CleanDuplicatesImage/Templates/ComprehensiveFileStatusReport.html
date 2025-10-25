@@ -199,6 +199,93 @@
     </div>
 
     <script>
+        // ===== 虛擬滾動核心類別 =====
+        class VirtualScroller {
+            constructor(items, renderItemFn, containerId) {
+                this.items = items;                  // 完整資料集
+                this.renderItemFn = renderItemFn;    // 項目渲染函式
+                this.container = document.getElementById(containerId);
+                this.visibleCount = 20;              // 固定 20 筆
+                this.bufferSize = 5;                 // 上下緩衝區各 5 筆
+                this.estimatedItemHeight = 120;      // 預估項目高度
+                this.startIndex = 0;
+                this.endIndex = 20;
+                this.throttleTimer = null;
+
+                this.init();
+            }
+
+            init() {
+                // 處理空資料狀態
+                if (this.items.length === 0) {
+                    this.container.innerHTML = '<div class="empty-state">目前沒有檔案</div>';
+                    return;
+                }
+
+                // 建立虛擬滾動 DOM 結構
+                this.container.innerHTML = '<div class="virtual-scroll-wrapper" style="overflow-y: auto; max-height: 600px;"><div class="spacer-top"></div><div class="visible-items"></div><div class="spacer-bottom"></div></div>';
+
+                this.wrapper = this.container.querySelector('.virtual-scroll-wrapper');
+                this.spacerTop = this.container.querySelector('.spacer-top');
+                this.visibleItemsContainer = this.container.querySelector('.visible-items');
+                this.spacerBottom = this.container.querySelector('.spacer-bottom');
+
+                // 綁定滾動事件
+                var self = this;
+                this.wrapper.addEventListener('scroll', function() {
+                    self.onScroll();
+                });
+
+                // 初次渲染
+                this.render();
+            }
+
+            onScroll() {
+                // 節流處理
+                if (this.throttleTimer) return;
+
+                var self = this;
+                this.throttleTimer = setTimeout(function() {
+                    self.updateVisibleRange();
+                    self.render();
+                    self.throttleTimer = null;
+                }, 100);
+            }
+
+            updateVisibleRange() {
+                var scrollTop = this.wrapper.scrollTop;
+                this.startIndex = Math.floor(scrollTop / this.estimatedItemHeight) - this.bufferSize;
+                this.startIndex = Math.max(0, this.startIndex);
+
+                this.endIndex = this.startIndex + this.visibleCount + (this.bufferSize * 2);
+                this.endIndex = Math.min(this.items.length, this.endIndex);
+            }
+
+            render() {
+                // 清空可見項目容器
+                this.visibleItemsContainer.innerHTML = '';
+
+                // 渲染可見範圍內的項目
+                for (var i = this.startIndex; i < this.endIndex; i++) {
+                    var itemElement = this.renderItemFn(this.items[i], i);
+                    this.visibleItemsContainer.appendChild(itemElement);
+                }
+
+                // 更新佔位元素高度
+                this.spacerTop.style.height = (this.startIndex * this.estimatedItemHeight) + 'px';
+                this.spacerBottom.style.height = ((this.items.length - this.endIndex) * this.estimatedItemHeight) + 'px';
+            }
+
+            scrollToTop() {
+                if (this.wrapper) {
+                    this.wrapper.scrollTop = 0;
+                    this.startIndex = 0;
+                    this.endIndex = this.visibleCount;
+                }
+            }
+        }
+
+        // ===== 工具函式 =====
         function formatFileSize(bytes) {
             var sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
             if (bytes === 0) return '0 B';
@@ -218,9 +305,25 @@
             // 添加 active 到選中的分頁
             document.querySelector('.tab[data-tab="' + tabName + '"]').classList.add('active');
             document.getElementById('content-' + tabName).classList.add('active');
+
+            // 重置對應虛擬滾動器的滾動位置
+            var scrollerMap = {
+                'groups': 'groups',
+                'groups-by-count': 'groupsByCount',
+                'unmarked': 'unmarked',
+                'deletion': 'deletion',
+                'move': 'move',
+                'skipped': 'skipped'
+            };
+
+            var scrollerKey = scrollerMap[tabName];
+            if (scrollerKey && virtualScrollers[scrollerKey]) {
+                virtualScrollers[scrollerKey].scrollToTop();
+                virtualScrollers[scrollerKey].render();
+            }
         }
 
-        function renderFileItem(file, type) {
+        function renderFileItem(file, type, index) {
             var item = document.createElement('div');
             item.className = 'file-item' + (file.Exists ? '' : ' missing');
 
@@ -300,7 +403,9 @@
             // 檔案列表 HTML
             var filesHtml = '';
             if (group.Files && group.Files.length > 0) {
-                var uniqueId = idPrefix + '-' + index;
+                // 如果沒有提供 idPrefix，使用 'group' 作為預設前綴
+                var prefix = idPrefix || 'group';
+                var uniqueId = prefix + '-' + index;
                 filesHtml = '<div class="group-files-container">' +
                     '<div class="group-files-toggle" onclick="toggleGroupFiles(\'' + uniqueId + '\')">' +
                     '▶ 展開檔案列表 (' + group.Files.length + ')' +
@@ -349,34 +454,24 @@
         }
 
         function renderGroupList(groups, containerId) {
-            var container = document.getElementById(containerId);
-            container.innerHTML = '';
-
-            if (groups.length === 0) {
-                container.innerHTML = '<div class="empty-state">目前沒有重複檔案群組</div>';
-                return;
-            }
-
             // 使用 containerId 作為唯一前綴，避免 ID 衝突
             var idPrefix = containerId.replace('list-', '');
-            groups.forEach(function(group, index) {
-                container.appendChild(renderGroupItem(group, index, idPrefix));
-            });
+
+            // 建立虛擬滾動器
+            return new VirtualScroller(groups, function(group, index) {
+                return renderGroupItem(group, index, idPrefix);
+            }, containerId);
         }
 
         function renderFileList(files, containerId, type) {
-            var container = document.getElementById(containerId);
-            container.innerHTML = '';
-
-            if (files.length === 0) {
-                container.innerHTML = '<div class="empty-state">目前沒有檔案</div>';
-                return;
-            }
-
-            files.forEach(function(file) {
-                container.appendChild(renderFileItem(file, type));
-            });
+            // 建立虛擬滾動器
+            return new VirtualScroller(files, function(file, index) {
+                return renderFileItem(file, type, index);
+            }, containerId);
         }
+
+        // 全域虛擬滾動器管理物件
+        var virtualScrollers = {};
 
         function renderReport(reportData) {
             // 渲染摘要
@@ -407,13 +502,13 @@
             document.getElementById('tab-move-count').textContent = reportData.Summary.MarkedForMoveCount;
             document.getElementById('tab-skipped-count').textContent = reportData.Summary.SkippedCount;
 
-            // 渲染檔案列表
-            renderGroupList(reportData.DuplicateGroups, 'list-groups');
-            renderGroupList(reportData.DuplicateGroupsByCount, 'list-groups-by-count');
-            renderFileList(reportData.UnmarkedFiles, 'list-unmarked', 'unmarked');
-            renderFileList(reportData.MarkedForDeletion, 'list-deletion', 'deletion');
-            renderFileList(reportData.MarkedForMove, 'list-move', 'move');
-            renderFileList(reportData.SkippedFiles, 'list-skipped', 'skipped');
+            // 渲染檔案列表並建立虛擬滾動器
+            virtualScrollers.groups = renderGroupList(reportData.DuplicateGroups, 'list-groups');
+            virtualScrollers.groupsByCount = renderGroupList(reportData.DuplicateGroupsByCount, 'list-groups-by-count');
+            virtualScrollers.unmarked = renderFileList(reportData.UnmarkedFiles, 'list-unmarked', 'unmarked');
+            virtualScrollers.deletion = renderFileList(reportData.MarkedForDeletion, 'list-deletion', 'deletion');
+            virtualScrollers.move = renderFileList(reportData.MarkedForMove, 'list-move', 'move');
+            virtualScrollers.skipped = renderFileList(reportData.SkippedFiles, 'list-skipped', 'skipped');
         }
 
         // 分頁切換事件
