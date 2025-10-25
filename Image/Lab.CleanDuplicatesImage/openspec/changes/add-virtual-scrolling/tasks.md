@@ -7,27 +7,27 @@
 **預估時間**: 2 小時
 **依賴項**: 無
 
-- [ ] 在 `ComprehensiveFileStatusReport.html` 中新增 `VirtualScroller` 類別定義
-- [ ] 實作建構函式，接受 `items`、`renderItemFn`、`containerId` 參數
-- [ ] 實作 `init()` 方法，建立虛擬滾動 DOM 結構
-  - [ ] 建立 `.virtual-scroll-wrapper` 容器（設定 `max-height: 600px`）
-  - [ ] 建立 `.spacer-top` 佔位元素
-  - [ ] 建立 `.visible-items` 可見項目容器
-  - [ ] 建立 `.spacer-bottom` 佔位元素
-- [ ] 實作 `updateVisibleRange()` 方法，計算當前可見範圍
-  - [ ] 根據 `scrollTop` 計算 `startIndex`
-  - [ ] 加入上方 5 筆緩衝區
-  - [ ] 計算 `endIndex`，加入下方 5 筆緩衝區
-  - [ ] 邊界檢查，確保索引不越界
-- [ ] 實作 `render()` 方法，渲染可見項目
-  - [ ] 清空 `.visible-items` 容器
-  - [ ] 遍歷 `startIndex` 到 `endIndex`，呼叫 `renderItemFn` 生成 DOM
-  - [ ] 更新 `.spacer-top` 高度為 `startIndex * estimatedItemHeight`
-  - [ ] 更新 `.spacer-bottom` 高度為 `(totalItems - endIndex) * estimatedItemHeight`
-- [ ] 實作 `onScroll()` 方法，處理滾動事件
-  - [ ] 加入 100ms 節流機制
-  - [ ] 呼叫 `updateVisibleRange()` 和 `render()`
-- [ ] 實作 `scrollToTop()` 方法，重置滾動位置
+- [x] 在 `ComprehensiveFileStatusReport.html` 中新增 `VirtualScroller` 類別定義
+- [x] 實作建構函式，接受 `items`、`renderItemFn`、`containerId` 參數
+- [x] 實作 `init()` 方法，建立虛擬滾動 DOM 結構
+  - [x] 建立 `.virtual-scroll-wrapper` 容器（設定 `max-height: 600px`）
+  - [x] 建立 `.spacer-top` 佔位元素
+  - [x] 建立 `.visible-items` 可見項目容器
+  - [x] 建立 `.spacer-bottom` 佔位元素
+- [x] 實作 `updateVisibleRange()` 方法，計算當前可見範圍
+  - [x] 根據 `scrollTop` 計算 `startIndex`
+  - [x] 加入上方 5 筆緩衝區
+  - [x] 計算 `endIndex`，加入下方 5 筆緩衝區
+  - [x] 邊界檢查，確保索引不越界
+- [x] 實作 `render()` 方法，渲染可見項目
+  - [x] 清空 `.visible-items` 容器
+  - [x] 遍歷 `startIndex` 到 `endIndex`，呼叫 `renderItemFn` 生成 DOM
+  - [x] 更新 `.spacer-top` 高度為 `startIndex * estimatedItemHeight`
+  - [x] 更新 `.spacer-bottom` 高度為 `(totalItems - endIndex) * estimatedItemHeight`
+- [x] 實作 `onScroll()` 方法，處理滾動事件
+  - [x] 加入 100ms 節流機制
+  - [x] 呼叫 `updateVisibleRange()` 和 `render()`
+- [x] 實作 `scrollToTop()` 方法，重置滾動位置
 
 **驗證標準**:
 - ✅ `VirtualScroller` 類別可成功初始化
@@ -42,21 +42,21 @@
 **預估時間**: 1.5 小時
 **依賴項**: Task 1
 
-- [ ] 修改 `renderGroupList()` 函式
-  - [ ] 移除原有的 DOM 渲染邏輯
-  - [ ] 改為初始化 `VirtualScroller` 實例
-  - [ ] 傳入 `groups` 資料、`renderGroupItem` 函式、容器 ID
-- [ ] 修改 `renderFileList()` 函式
-  - [ ] 移除原有的 DOM 渲染邏輯
-  - [ ] 改為初始化 `VirtualScroller` 實例
-  - [ ] 傳入 `files` 資料、`renderFileItem` 函式、容器 ID
-- [ ] 修改 `renderGroupItem()` 函式
-  - [ ] 確保接受第二個參數 `index`
-  - [ ] 使用 `index` 生成唯一的群組 ID（`idPrefix + '-' + index`）
-  - [ ] 維持現有的展開/收合邏輯
-- [ ] 修改 `renderFileItem()` 函式
-  - [ ] 確保接受第二個參數 `index`（即使不使用，也需接受以保持介面一致）
-  - [ ] 維持現有的渲染邏輯
+- [x] 修改 `renderGroupList()` 函式
+  - [x] 移除原有的 DOM 渲染邏輯
+  - [x] 改為初始化 `VirtualScroller` 實例
+  - [x] 傳入 `groups` 資料、`renderGroupItem` 函式、容器 ID
+- [x] 修改 `renderFileList()` 函式
+  - [x] 移除原有的 DOM 渲染邏輯
+  - [x] 改為初始化 `VirtualScroller` 實例
+  - [x] 傳入 `files` 資料、`renderFileItem` 函式、容器 ID
+- [x] 修改 `renderGroupItem()` 函式
+  - [x] 確保接受第二個參數 `index`
+  - [x] 使用 `index` 生成唯一的群組 ID（`idPrefix + '-' + index`）
+  - [x] 維持現有的展開/收合邏輯
+- [x] 修改 `renderFileItem()` 函式
+  - [x] 確保接受第二個參數 `index`（即使不使用，也需接受以保持介面一致）
+  - [x] 維持現有的渲染邏輯
 
 **驗證標準**:
 - ✅ 報表載入時正確初始化 6 個虛擬滾動器
@@ -70,14 +70,14 @@
 **預估時間**: 30 分鐘
 **依賴項**: Task 1, Task 2
 
-- [ ] 在 `renderReport()` 函式中建立 `virtualScrollers` 物件
-  - [ ] 為 `DuplicateGroups` 建立虛擬滾動器（key: `'groups'`）
-  - [ ] 為 `DuplicateGroupsByCount` 建立虛擬滾動器（key: `'groupsByCount'`）
-  - [ ] 為 `UnmarkedFiles` 建立虛擬滾動器（key: `'unmarked'`）
-  - [ ] 為 `MarkedForDeletion` 建立虛擬滾動器（key: `'deletion'`）
-  - [ ] 為 `MarkedForMove` 建立虛擬滾動器（key: `'move'`）
-  - [ ] 為 `SkippedFiles` 建立虛擬滾動器（key: `'skipped'`）
-- [ ] 將 `virtualScrollers` 儲存為全域變數，供標籤頁切換使用
+- [x] 在 `renderReport()` 函式中建立 `virtualScrollers` 物件
+  - [x] 為 `DuplicateGroups` 建立虛擬滾動器（key: `'groups'`）
+  - [x] 為 `DuplicateGroupsByCount` 建立虛擬滾動器（key: `'groupsByCount'`）
+  - [x] 為 `UnmarkedFiles` 建立虛擬滾動器（key: `'unmarked'`）
+  - [x] 為 `MarkedForDeletion` 建立虛擬滾動器（key: `'deletion'`）
+  - [x] 為 `MarkedForMove` 建立虛擬滾動器（key: `'move'`）
+  - [x] 為 `SkippedFiles` 建立虛擬滾動器（key: `'skipped'`）
+- [x] 將 `virtualScrollers` 儲存為全域變數，供標籤頁切換使用
 
 **驗證標準**:
 - ✅ `virtualScrollers` 物件包含 6 個虛擬滾動器實例
@@ -90,11 +90,11 @@
 **預估時間**: 30 分鐘
 **依賴項**: Task 3
 
-- [ ] 修改 `switchTab()` 函式
-  - [ ] 在切換標籤頁時，取得對應的虛擬滾動器實例
-  - [ ] 呼叫 `scrollToTop()` 重置滾動位置
-  - [ ] 呼叫 `render()` 重新渲染前 20 筆資料
-- [ ] 確保原有的標籤頁切換邏輯（移除/添加 `active` 類別）維持不變
+- [x] 修改 `switchTab()` 函式
+  - [x] 在切換標籤頁時，取得對應的虛擬滾動器實例
+  - [x] 呼叫 `scrollToTop()` 重置滾動位置
+  - [x] 呼叫 `render()` 重新渲染前 20 筆資料
+- [x] 確保原有的標籤頁切換邏輯（移除/添加 `active` 類別）維持不變
 
 **驗證標準**:
 - ✅ 切換標籤頁時，滾動位置重置為頂部
@@ -108,11 +108,11 @@
 **預估時間**: 15 分鐘
 **依賴項**: Task 1
 
-- [ ] 在 `VirtualScroller.init()` 中檢查 `items.length`
-- [ ] 如果資料為空（`items.length === 0`），顯示空狀態訊息
-  - [ ] 設定容器 `innerHTML` 為 `<div class="empty-state">目前沒有檔案</div>`
-  - [ ] 不初始化虛擬滾動 DOM 結構
-- [ ] 確保空狀態使用現有的 `.empty-state` CSS 樣式
+- [x] 在 `VirtualScroller.init()` 中檢查 `items.length`
+- [x] 如果資料為空（`items.length === 0`），顯示空狀態訊息
+  - [x] 設定容器 `innerHTML` 為 `<div class="empty-state">目前沒有檔案</div>`
+  - [x] 不初始化虛擬滾動 DOM 結構
+- [x] 確保空狀態使用現有的 `.empty-state` CSS 樣式
 
 **驗證標準**:
 - ✅ 當標籤頁無資料時，顯示「目前沒有檔案」訊息
