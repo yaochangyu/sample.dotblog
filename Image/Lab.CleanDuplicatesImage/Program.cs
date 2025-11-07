@@ -142,13 +142,14 @@ class Program
             Console.WriteLine("12. 自動歸檔重複檔案（依權重自動標記）");
             Console.WriteLine("13. 自動清除所有標記（回到未標記狀態）");
             Console.WriteLine("14. 掃描大檔案");
-            Console.WriteLine("15. 離開");
-            Console.Write("請輸入選項 (1-15): ");
+            Console.WriteLine("15. 查看並標記大檔案");
+            Console.WriteLine("16. 離開");
+            Console.Write("請輸入選項 (1-16): ");
 
             var menuChoice = Console.ReadLine()?.Trim();
             Console.WriteLine();
 
-            if (menuChoice == "15")
+            if (menuChoice == "16")
             {
                 Console.WriteLine("感謝使用，再見！");
                 return;
@@ -278,6 +279,14 @@ class Program
             {
                 // 掃描大檔案
                 RunScanLargeFiles();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "15")
+            {
+                // 查看並標記大檔案
+                InteractiveMarkLargeFiles();
                 Console.WriteLine();
                 continue;
             }
@@ -4467,6 +4476,190 @@ class Program
                 fileCreatedTimeParam.Value = file.FileCreatedTime;
                 fileLastModifiedTimeParam.Value = file.FileLastModifiedTime;
 
+                command.ExecuteNonQuery();
+            }
+        });
+    }
+
+    /// <summary>
+    /// 從資料庫載入大檔案列表（排除已標記為刪除的檔案）
+    /// </summary>
+    static List<LargeFileInfo> LoadLargeFilesFromDatabase()
+    {
+        if (!File.Exists(DatabaseFileName))
+        {
+            return new List<LargeFileInfo>();
+        }
+
+        return DatabaseHelper.ExecuteQuery(
+            @"SELECT FilePath, FileName, FileSize, FileSizeMB, FileExtension, FileCreatedTime, FileLastModifiedTime
+              FROM LargeFiles
+              WHERE FilePath NOT IN (SELECT FilePath FROM FilesToDelete WHERE IsProcessed = 0)
+              ORDER BY FileSize DESC",
+            reader =>
+            {
+                var files = new List<LargeFileInfo>();
+                while (reader.Read())
+                {
+                    var fileCreatedTime = reader.IsDBNull(5) ? "-" : reader.GetString(5);
+                    var fileLastModifiedTime = reader.IsDBNull(6) ? "-" : reader.GetString(6);
+                    var fileExtension = reader.IsDBNull(4) ? "" : reader.GetString(4);
+
+                    files.Add(new LargeFileInfo(
+                        FilePath: reader.GetString(0),
+                        FileName: reader.GetString(1),
+                        FileSize: reader.GetInt64(2),
+                        FileSizeMB: reader.GetDouble(3),
+                        FileExtension: fileExtension,
+                        FileCreatedTime: fileCreatedTime,
+                        FileLastModifiedTime: fileLastModifiedTime
+                    ));
+                }
+                return files;
+            }
+        );
+    }
+
+    /// <summary>
+    /// 互動式標記大檔案為刪除（逐一處理模式）
+    /// </summary>
+    static void InteractiveMarkLargeFiles()
+    {
+        Console.WriteLine("=== 查看並標記大檔案 ===");
+        Console.WriteLine();
+
+        InitializeDatabase();
+        var largeFiles = LoadLargeFilesFromDatabase();
+
+        if (largeFiles.Count == 0)
+        {
+            Console.WriteLine("資料庫中沒有大檔案記錄，請先執行掃描！");
+            Console.WriteLine("提示：使用選項 14 掃描大檔案");
+            return;
+        }
+
+        Console.WriteLine($"找到 {largeFiles.Count} 個大檔案（依大小降序排列）");
+        Console.WriteLine();
+
+        // 逐一處理每個大檔案
+        int fileIndex = 1;
+        foreach (var file in largeFiles)
+        {
+            Console.WriteLine($"=== 大檔案 {fileIndex}/{largeFiles.Count} ===");
+            Console.WriteLine();
+
+            // 顯示檔案詳細資訊
+            Console.WriteLine($"檔案名稱: {file.FileName}");
+            Console.WriteLine($"完整路徑: {file.FilePath}");
+            Console.WriteLine($"檔案大小: {FormatFileSize(file.FileSize)} ({file.FileSizeMB:F2} MB)");
+            Console.WriteLine($"副檔名: {file.FileExtension}");
+            Console.WriteLine($"建立時間: {file.FileCreatedTime}");
+            Console.WriteLine($"最後修改: {file.FileLastModifiedTime}");
+            Console.WriteLine();
+
+            // 檢查檔案是否存在
+            var fileExists = File.Exists(file.FilePath);
+            if (!fileExists)
+            {
+                Console.WriteLine("⚠️  警告：檔案不存在於檔案系統中");
+                Console.WriteLine();
+            }
+
+            // 詢問操作
+            while (true)
+            {
+                DisplayMenu(
+                    "輸入 'd' 標記此檔案為刪除",
+                    "輸入 'p' 預覽此檔案",
+                    "輸入 'n' 跳過此檔案，處理下一個",
+                    "輸入 'q' 結束作業"
+                );
+
+                var input = Console.ReadLine()?.Trim().ToLower();
+                if (string.IsNullOrWhiteSpace(input))
+                {
+                    continue;
+                }
+
+                // 標記為刪除
+                if (input == "d")
+                {
+                    MarkLargeFilesForDeletion(new List<string> { file.FilePath });
+                    Console.WriteLine("✓ 已標記此檔案為待刪除");
+                    Console.WriteLine();
+                    break; // 處理下一個檔案
+                }
+
+                // 預覽檔案
+                if (input == "p")
+                {
+                    if (fileExists)
+                    {
+                        HandlePreviewCommand("1", new List<string> { file.FilePath });
+                    }
+                    else
+                    {
+                        Console.WriteLine("錯誤：檔案不存在，無法預覽");
+                    }
+                    Console.WriteLine();
+                    continue; // 繼續詢問此檔案的操作
+                }
+
+                // 跳過此檔案
+                if (input == "n")
+                {
+                    Console.WriteLine("已跳過此檔案");
+                    Console.WriteLine();
+                    break; // 處理下一個檔案
+                }
+
+                // 結束作業
+                if (input == "q")
+                {
+                    Console.WriteLine("已結束標記作業");
+                    Console.WriteLine($"已處理 {fileIndex - 1}/{largeFiles.Count} 個檔案");
+                    Console.WriteLine();
+                    Console.WriteLine("提示：使用選項 7 執行實際刪除");
+                    return;
+                }
+
+                Console.WriteLine("錯誤：無效的命令");
+            }
+
+            fileIndex++;
+        }
+
+        Console.WriteLine("所有大檔案處理完成！");
+        Console.WriteLine($"共處理 {largeFiles.Count} 個檔案");
+        Console.WriteLine();
+        Console.WriteLine("提示：使用選項 7 執行實際刪除");
+    }
+
+    /// <summary>
+    /// 標記大檔案為刪除
+    /// </summary>
+    static void MarkLargeFilesForDeletion(List<string> filePaths)
+    {
+        var markedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
+        {
+            var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+                INSERT INTO FilesToDelete (Hash, FilePath, MarkedAt, IsProcessed)
+                VALUES ('', $filePath, $markedAt, 0)
+                ON CONFLICT(FilePath) DO NOTHING";
+
+            var filePathParam = new SqliteParameter("$filePath", "");
+            var markedAtParam = new SqliteParameter("$markedAt", markedAt);
+
+            command.Parameters.Add(filePathParam);
+            command.Parameters.Add(markedAtParam);
+
+            foreach (var filePath in filePaths)
+            {
+                filePathParam.Value = filePath;
                 command.ExecuteNonQuery();
             }
         });
