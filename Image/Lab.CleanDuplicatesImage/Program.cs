@@ -141,13 +141,14 @@ class Program
             Console.WriteLine("11. 資料夾民國年轉西元年");
             Console.WriteLine("12. 自動歸檔重複檔案（依權重自動標記）");
             Console.WriteLine("13. 自動清除所有標記（回到未標記狀態）");
-            Console.WriteLine("14. 離開");
-            Console.Write("請輸入選項 (1-14): ");
+            Console.WriteLine("14. 掃描大檔案");
+            Console.WriteLine("15. 離開");
+            Console.Write("請輸入選項 (1-15): ");
 
             var menuChoice = Console.ReadLine()?.Trim();
             Console.WriteLine();
 
-            if (menuChoice == "14")
+            if (menuChoice == "15")
             {
                 Console.WriteLine("感謝使用，再見！");
                 return;
@@ -269,6 +270,14 @@ class Program
             {
                 // 清除所有標記（回到未標記狀態）
                 ResetAllMarksToUnmarked();
+                Console.WriteLine();
+                continue;
+            }
+
+            if (menuChoice == "14")
+            {
+                // 掃描大檔案
+                RunScanLargeFiles();
                 Console.WriteLine();
                 continue;
             }
@@ -3720,6 +3729,19 @@ class Program
                 TargetPath TEXT NOT NULL,
                 MarkedAt TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS LargeFiles (
+                Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                FilePath TEXT NOT NULL UNIQUE,
+                FileName TEXT NOT NULL,
+                FileSize INTEGER NOT NULL,
+                FileSizeMB REAL NOT NULL,
+                FileExtension TEXT,
+                FileCreatedTime TEXT,
+                FileLastModifiedTime TEXT,
+                SizeThresholdMB INTEGER NOT NULL,
+                ScannedAt TEXT NOT NULL
+            );
         ";
         command.ExecuteNonQuery();
 
@@ -4145,6 +4167,309 @@ class Program
         Console.WriteLine($"  略過: {skipCount} 個");
         Console.WriteLine($"  失敗: {errorCount} 個");
         Console.WriteLine(new string('=', 80));
+    }
+
+    #endregion
+
+    #region 掃描大檔案功能
+
+    /// <summary>
+    /// 執行掃描大檔案功能
+    /// </summary>
+    static void RunScanLargeFiles()
+    {
+        Console.WriteLine("=== 掃描大檔案 ===");
+        Console.WriteLine();
+
+        // 步驟 1: 輸入檔案大小門檻
+        int sizeThresholdMB;
+        while (true)
+        {
+            Console.Write("請輸入檔案大小門檻（MB，或輸入 'q' 離開）: ");
+            var input = Console.ReadLine()?.Trim();
+
+            if (string.IsNullOrEmpty(input))
+            {
+                Console.WriteLine("錯誤：請輸入有效的數字！");
+                continue;
+            }
+
+            if (input.Equals("q", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("已取消掃描");
+                return;
+            }
+
+            if (int.TryParse(input, out sizeThresholdMB) && sizeThresholdMB > 0)
+            {
+                break;
+            }
+
+            Console.WriteLine("錯誤：請輸入大於 0 的整數！");
+        }
+
+        Console.WriteLine();
+
+        // 步驟 2: 輸入要掃描的資料夾路徑
+        var folderPaths = new List<string>();
+
+        while (folderPaths.Count == 0)
+        {
+            Console.Write("請輸入要掃描的資料夾路徑（可用逗點分隔多個路徑，或輸入 'q' 離開）: ");
+            var input = Console.ReadLine()?.Trim();
+
+            if (string.IsNullOrEmpty(input))
+            {
+                Console.WriteLine("錯誤：至少需要輸入一個路徑！");
+                continue;
+            }
+
+            if (input.Equals("q", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("已取消掃描");
+                return;
+            }
+
+            // 用逗點分隔路徑
+            var paths = input.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim())
+                .ToList();
+
+            var invalidPaths = new List<string>();
+            var validPaths = new List<string>();
+
+            foreach (var path in paths)
+            {
+                if (Directory.Exists(path))
+                {
+                    validPaths.Add(path);
+                }
+                else
+                {
+                    invalidPaths.Add(path);
+                }
+            }
+
+            if (invalidPaths.Count > 0)
+            {
+                Console.WriteLine("以下路徑不存在或無效：");
+                foreach (var path in invalidPaths)
+                {
+                    Console.WriteLine($"  - {path}");
+                }
+                Console.WriteLine();
+            }
+
+            if (validPaths.Count > 0)
+            {
+                folderPaths.AddRange(validPaths);
+                Console.WriteLine($"已加入 {validPaths.Count} 個有效路徑");
+            }
+
+            if (folderPaths.Count == 0)
+            {
+                Console.WriteLine("沒有有效的路徑，請重新輸入！");
+                Console.WriteLine();
+            }
+        }
+
+        Console.WriteLine();
+        Console.WriteLine($"檔案大小門檻: {sizeThresholdMB} MB ({sizeThresholdMB * 1024 * 1024:N0} bytes)");
+        Console.WriteLine($"開始掃描 {folderPaths.Count} 個資料夾:");
+        foreach (var path in folderPaths)
+        {
+            Console.WriteLine($"  - {path}");
+        }
+
+        Console.WriteLine();
+
+        try
+        {
+            // 初始化資料庫
+            InitializeDatabase();
+
+            // 掃描所有資料夾
+            var allLargeFiles = new List<LargeFileInfo>();
+
+            foreach (var folderPath in folderPaths)
+            {
+                Console.WriteLine($"正在掃描資料夾: {folderPath}");
+                var largeFiles = ScanLargeFiles(folderPath, sizeThresholdMB);
+                allLargeFiles.AddRange(largeFiles);
+                Console.WriteLine();
+            }
+
+            // 寫入資料庫
+            if (allLargeFiles.Count > 0)
+            {
+                WriteLargeFilesToDatabase(allLargeFiles, sizeThresholdMB);
+                Console.WriteLine($"已將 {allLargeFiles.Count} 個大檔案記錄寫入資料庫");
+            }
+            else
+            {
+                Console.WriteLine("未找到符合條件的大檔案");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("所有資料夾掃描完成！");
+            Console.WriteLine($"結果已儲存至: {DatabaseFileName}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"發生錯誤: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 大檔案資訊記錄
+    /// </summary>
+    record LargeFileInfo(
+        string FilePath,
+        string FileName,
+        long FileSize,
+        double FileSizeMB,
+        string FileExtension,
+        string FileCreatedTime,
+        string FileLastModifiedTime
+    );
+
+    /// <summary>
+    /// 掃描資料夾中的大檔案
+    /// </summary>
+    static List<LargeFileInfo> ScanLargeFiles(string folderPath, int sizeThresholdMB)
+    {
+        const int progressInterval = 100;
+        var largeFiles = new List<LargeFileInfo>();
+        var sizeThresholdBytes = (long)sizeThresholdMB * 1024 * 1024;
+
+        try
+        {
+            // 掃描所有檔案（包含子目錄）
+            var allFiles = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories);
+
+            Console.WriteLine($"找到 {allFiles.Length} 個檔案，正在分析檔案大小...");
+
+            var processedCount = 0;
+
+            foreach (var filePath in allFiles)
+            {
+                try
+                {
+                    var fileInfo = new FileInfo(filePath);
+
+                    // 檢查檔案大小是否超過門檻
+                    if (fileInfo.Exists && fileInfo.Length >= sizeThresholdBytes)
+                    {
+                        var largeFileInfo = new LargeFileInfo(
+                            FilePath: filePath,
+                            FileName: fileInfo.Name,
+                            FileSize: fileInfo.Length,
+                            FileSizeMB: Math.Round(fileInfo.Length / (1024.0 * 1024.0), 2),
+                            FileExtension: fileInfo.Extension,
+                            FileCreatedTime: fileInfo.CreationTime.ToString("yyyy-MM-dd HH:mm:ss"),
+                            FileLastModifiedTime: fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss")
+                        );
+
+                        largeFiles.Add(largeFileInfo);
+                    }
+
+                    processedCount++;
+
+                    // 顯示進度
+                    if (processedCount % progressInterval == 0)
+                    {
+                        Console.WriteLine($"已處理 {processedCount}/{allFiles.Length} 個檔案，找到 {largeFiles.Count} 個大檔案...");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"處理檔案時發生錯誤 [{filePath}]: {ex.Message}");
+                }
+            }
+
+            Console.WriteLine($"掃描完成！總共找到 {largeFiles.Count} 個大檔案（≥ {sizeThresholdMB} MB）");
+
+            // 顯示前 10 個最大的檔案
+            if (largeFiles.Count > 0)
+            {
+                Console.WriteLine();
+                Console.WriteLine("最大的檔案 (前 10 名):");
+                var topFiles = largeFiles.OrderByDescending(f => f.FileSize).Take(10);
+
+                var index = 1;
+                foreach (var file in topFiles)
+                {
+                    Console.WriteLine($"{index,2}. {FormatFileSize(file.FileSize)} - {file.FileName}");
+                    Console.WriteLine($"    路徑: {file.FilePath}");
+                    index++;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"掃描資料夾時發生錯誤: {ex.Message}");
+        }
+
+        return largeFiles;
+    }
+
+    /// <summary>
+    /// 將大檔案資訊寫入資料庫
+    /// </summary>
+    static void WriteLargeFilesToDatabase(List<LargeFileInfo> largeFiles, int sizeThresholdMB)
+    {
+        var scannedAt = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+        DatabaseHelper.ExecuteTransaction((connection, transaction) =>
+        {
+            var command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandText = @"
+                INSERT INTO LargeFiles (FilePath, FileName, FileSize, FileSizeMB, FileExtension, FileCreatedTime, FileLastModifiedTime, SizeThresholdMB, ScannedAt)
+                VALUES ($filePath, $fileName, $fileSize, $fileSizeMB, $fileExtension, $fileCreatedTime, $fileLastModifiedTime, $sizeThresholdMB, $scannedAt)
+                ON CONFLICT(FilePath) DO UPDATE SET
+                    FileName = excluded.FileName,
+                    FileSize = excluded.FileSize,
+                    FileSizeMB = excluded.FileSizeMB,
+                    FileExtension = excluded.FileExtension,
+                    FileCreatedTime = excluded.FileCreatedTime,
+                    FileLastModifiedTime = excluded.FileLastModifiedTime,
+                    SizeThresholdMB = excluded.SizeThresholdMB,
+                    ScannedAt = excluded.ScannedAt";
+
+            var filePathParam = new SqliteParameter("$filePath", "");
+            var fileNameParam = new SqliteParameter("$fileName", "");
+            var fileSizeParam = new SqliteParameter("$fileSize", 0L);
+            var fileSizeMBParam = new SqliteParameter("$fileSizeMB", 0.0);
+            var fileExtensionParam = new SqliteParameter("$fileExtension", "");
+            var fileCreatedTimeParam = new SqliteParameter("$fileCreatedTime", "");
+            var fileLastModifiedTimeParam = new SqliteParameter("$fileLastModifiedTime", "");
+            var sizeThresholdMBParam = new SqliteParameter("$sizeThresholdMB", sizeThresholdMB);
+            var scannedAtParam = new SqliteParameter("$scannedAt", scannedAt);
+
+            command.Parameters.Add(filePathParam);
+            command.Parameters.Add(fileNameParam);
+            command.Parameters.Add(fileSizeParam);
+            command.Parameters.Add(fileSizeMBParam);
+            command.Parameters.Add(fileExtensionParam);
+            command.Parameters.Add(fileCreatedTimeParam);
+            command.Parameters.Add(fileLastModifiedTimeParam);
+            command.Parameters.Add(sizeThresholdMBParam);
+            command.Parameters.Add(scannedAtParam);
+
+            foreach (var file in largeFiles)
+            {
+                filePathParam.Value = file.FilePath;
+                fileNameParam.Value = file.FileName;
+                fileSizeParam.Value = file.FileSize;
+                fileSizeMBParam.Value = file.FileSizeMB;
+                fileExtensionParam.Value = file.FileExtension ?? "";
+                fileCreatedTimeParam.Value = file.FileCreatedTime;
+                fileLastModifiedTimeParam.Value = file.FileLastModifiedTime;
+
+                command.ExecuteNonQuery();
+            }
+        });
     }
 
     #endregion
