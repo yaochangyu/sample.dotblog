@@ -4384,18 +4384,22 @@ class Program
 
                     processedCount++;
 
-                    // 顯示進度
+                    // 顯示進度（單行覆蓋式更新）
                     if (processedCount % progressInterval == 0)
                     {
-                        Console.WriteLine($"已處理 {processedCount}/{allFiles.Length} 個檔案，找到 {largeFiles.Count} 個大檔案...");
+                        Console.Write($"\r已處理 {processedCount}/{allFiles.Length} 個檔案，找到 {largeFiles.Count} 個大檔案...     ");
                     }
                 }
                 catch (Exception ex)
                 {
+                    // 錯誤訊息使用 WriteLine 換行顯示
+                    Console.WriteLine();
                     Console.WriteLine($"處理檔案時發生錯誤 [{filePath}]: {ex.Message}");
                 }
             }
 
+            // 最後更新進度並換行
+            Console.WriteLine();
             Console.WriteLine($"掃描完成！總共找到 {largeFiles.Count} 個大檔案（≥ {sizeThresholdMB} MB）");
 
             // 顯示前 10 個最大的檔案
