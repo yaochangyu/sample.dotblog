@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet new:*)",
+      "Bash(dotnet sln:*)",
+      "Bash(dotnet add package:*)",
+      "Bash(dotnet build:*)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "mysql",
+    "postgresql",
+    "memory",
+    "fetch",
+    "filesystem",
+    "browserbase"
+  ]
+}
