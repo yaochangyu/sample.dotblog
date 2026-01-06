@@ -30,15 +30,17 @@ public class CacheController : ControllerBase
                 await Task.Delay(100, cancellationToken); // 模擬資料庫查詢
                 return $"Data generated at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}";
             },
-            TimeSpan.FromMinutes(5));
+            TimeSpan.FromMinutes(5),
+            tags: ["demo", "hybrid-cache"]);
 
         return Ok(new
         {
             source = "HybridCache (L1: Memory + L2: Redis)",
             key,
             value,
+            tags = new[] { "demo", "hybrid-cache" },
             timestamp = DateTime.UtcNow,
-            description = "HybridCache 自動處理兩級快取，優先從 L1 (記憶體) 讀取，未命中時從 L2 (Redis) 讀取"
+            description = "HybridCache 自動處理兩級快取，優先從 L1 (記憶體) 讀取，未命中時從 L2 (Redis) 讀取。使用 tags 標籤便於批量清除快取"
         });
     }
 
@@ -59,13 +61,15 @@ public class CacheController : ControllerBase
             {
                 Expiration = TimeSpan.FromMinutes(10),
                 LocalCacheExpiration = TimeSpan.FromMinutes(2) // L1 快取 2 分鐘，L2 快取 10 分鐘
-            });
+            },
+            tags: ["demo", "direct-access"]);
 
         return Ok(new
         {
             source = "HybridCache Direct (L1: 2min, L2: 10min)",
             key,
             value,
+            tags = new[] { "demo", "direct-access" },
             timestamp = DateTime.UtcNow,
             description = "L1 (記憶體) 快取 2 分鐘，L2 (Redis) 快取 10 分鐘"
         });
@@ -95,15 +99,17 @@ public class CacheController : ControllerBase
             new HybridCacheEntryOptions
             {
                 Expiration = TimeSpan.FromMinutes(15)
-            });
+            },
+            tags: ["user-data", $"user:{userId}"]);
 
         return Ok(new
         {
             source = "HybridCache Complex Object",
             key,
             value = userData,
+            tags = new[] { "user-data", $"user:{userId}" },
             timestamp = DateTime.UtcNow,
-            description = "HybridCache 自動處理複雜物件的序列化/反序列化"
+            description = "HybridCache 自動處理複雜物件的序列化/反序列化。可透過 tag 批量清除所有使用者資料或特定使用者資料"
         });
     }
 
@@ -113,15 +119,18 @@ public class CacheController : ControllerBase
     [HttpPost("hybrid-set")]
     public async Task<IActionResult> SetHybridCache(
         [FromQuery] string key,
+        [FromQuery] string? tag,
         [FromBody] string value)
     {
-        await _cacheService.SetAsync(key, value, TimeSpan.FromMinutes(10));
+        string[]? tags = !string.IsNullOrEmpty(tag) ? [tag] : null;
+        await _cacheService.SetAsync(key, value, TimeSpan.FromMinutes(10), tags);
 
         return Ok(new
         {
             message = "Cache set successfully",
             key,
             value,
+            tags,
             expiration = "10 minutes"
         });
     }
@@ -204,6 +213,22 @@ public class CacheController : ControllerBase
         {
             message = $"Cache cleared for key: {key}",
             description = "HybridCache 會同時清除 L1 (記憶體) 和 L2 (Redis) 的快取"
+        });
+    }
+
+    /// <summary>
+    /// 透過標籤批量清除快取
+    /// </summary>
+    [HttpDelete("hybrid/tag/{tag}")]
+    public async Task<IActionResult> DeleteHybridCacheByTag(string tag)
+    {
+        await _cacheService.RemoveByTagAsync(tag);
+
+        return Ok(new
+        {
+            message = $"Cache cleared for tag: {tag}",
+            tag,
+            description = "HybridCache 會同時清除所有帶有指定標籤的快取項目（L1 和 L2）"
         });
     }
 

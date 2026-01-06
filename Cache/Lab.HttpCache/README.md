@@ -126,8 +126,12 @@ Content-Type: application/json
 
 #### 刪除快取
 ```bash
-# 刪除快取 (同時清除 L1 和 L2)
+# 刪除單一快取 (同時清除 L1 和 L2)
 DELETE /api/cache/hybrid/test1
+
+# 透過標籤批量刪除快取
+DELETE /api/cache/hybrid/tag/demo
+# 這會刪除所有帶有 "demo" 標籤的快取項目
 ```
 
 #### 快取統計資訊
@@ -238,10 +242,12 @@ builder.Services.AddHybridCache(options =>
     options.DefaultEntryOptions = new HybridCacheEntryOptions
     {
         Expiration = TimeSpan.FromMinutes(5),        // L2 (Redis) 過期時間
-        LocalCacheExpiration = TimeSpan.FromMinutes(5) // L1 (Memory) 過期時間
+        LocalCacheExpiration = TimeSpan.FromMinutes(1) // L1 (Memory) 過期時間 - 應比 L2 短
     };
 });
 ```
+
+> **重要提示：** 根據最佳實踐，L1 快取時間應該比 L2 短，這樣可以確保分散式環境中的資料一致性。
 
 ## HybridCache 使用範例
 
@@ -268,25 +274,71 @@ public class MyService
             },
             new HybridCacheEntryOptions
             {
-                Expiration = TimeSpan.FromMinutes(10),
-                LocalCacheExpiration = TimeSpan.FromMinutes(2)
-            });
+                Expiration = TimeSpan.FromMinutes(10),        // L2 快取 10 分鐘
+                LocalCacheExpiration = TimeSpan.FromMinutes(2) // L1 快取 2 分鐘 (應比 L2 短)
+            },
+            tags: ["user-data", $"user:{userId}"]);  // 使用標籤便於批量清除
     }
 }
+```
+
+### 使用 Tags 標籤進行快取管理
+
+```csharp
+// 建立帶有標籤的快取
+await _cache.GetOrCreateAsync(
+    "product:123",
+    async ct => await GetProductAsync("123", ct),
+    options,
+    tags: ["product", "category:electronics"]);
+
+await _cache.GetOrCreateAsync(
+    "product:456",
+    async ct => await GetProductAsync("456", ct),
+    options,
+    tags: ["product", "category:electronics"]);
+
+// 批量清除所有電子產品相關的快取
+await _cache.RemoveByTagAsync("category:electronics");
+// 這會同時清除 product:123 和 product:456
 ```
 
 ### 手動設定快取
 
 ```csharp
 // 設定快取
-await _cache.SetAsync("mykey", myValue, new HybridCacheEntryOptions
-{
-    Expiration = TimeSpan.FromHours(1)
-});
+await _cache.SetAsync(
+    "mykey",
+    myValue,
+    new HybridCacheEntryOptions
+    {
+        Expiration = TimeSpan.FromHours(1)
+    },
+    tags: ["my-tag"]);
 
-// 移除快取
+// 移除單一快取
 await _cache.RemoveAsync("mykey");
+
+// 透過標籤批量移除
+await _cache.RemoveByTagAsync("my-tag");
 ```
+
+### Tags 標籤使用最佳實踐
+
+1. **為所有快取項目添加標籤**：便於批量管理和清除
+   ```csharp
+   tags: ["user-data", $"user:{userId}"]
+   ```
+
+2. **使用階層式標籤**：支援更細緻的快取控制
+   ```csharp
+   tags: ["product", "category:electronics", "brand:apple"]
+   ```
+
+3. **清除策略**：
+   - 當使用者資料更新時：`RemoveByTagAsync($"user:{userId}")`
+   - 當某個分類的產品更新時：`RemoveByTagAsync("category:electronics")`
+   - 清除所有產品快取：`RemoveByTagAsync("product")`
 
 ## 快取過期時間建議
 
@@ -343,7 +395,8 @@ HybridCache 自動處理複雜物件的序列化，不需要手動轉換。
 1. **Redis 連線**：確保 Redis 服務正在執行
 2. **序列化**：HybridCache 使用的物件必須可序列化
 3. **快取鍵命名**：建議使用有意義的前綴，如 `user:{id}`、`product:{id}`
-4. **過期時間**：L1 過期時間應該 ≤ L2 過期時間
+4. **過期時間**：L1 過期時間應該 < L2 過期時間（最佳實踐）
+5. **Tags 標籤**：為所有快取項目添加標籤，便於批量清除和管理
 
 ## 停止服務
 
