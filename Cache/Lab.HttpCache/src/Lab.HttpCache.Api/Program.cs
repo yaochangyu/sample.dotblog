@@ -22,8 +22,8 @@ builder.Services.AddHybridCache(options =>
 {
     options.DefaultEntryOptions = new Microsoft.Extensions.Caching.Hybrid.HybridCacheEntryOptions
     {
-        Expiration = TimeSpan.FromMinutes(5),
-        LocalCacheExpiration = TimeSpan.FromMinutes(5)
+        Expiration = TimeSpan.FromMinutes(5),           // L2 快取時間
+        LocalCacheExpiration = TimeSpan.FromMinutes(1)  // L1 快取時間應比 L2 短
     };
 });
 
