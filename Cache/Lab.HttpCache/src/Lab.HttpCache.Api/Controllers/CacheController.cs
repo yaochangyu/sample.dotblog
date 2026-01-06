@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Lab.HttpCache.Api.Services;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Lab.HttpCache.Api.Controllers;
 
@@ -7,110 +8,121 @@ namespace Lab.HttpCache.Api.Controllers;
 [Route("api/[controller]")]
 public class CacheController : ControllerBase
 {
-    private readonly IMemoryCacheService _memoryCacheService;
-    private readonly IRedisCacheService _redisCacheService;
-    private readonly ITwoLevelCacheService _twoLevelCacheService;
+    private readonly ICacheService _cacheService;
+    private readonly HybridCache _hybridCache;
 
-    public CacheController(
-        IMemoryCacheService memoryCacheService,
-        IRedisCacheService redisCacheService,
-        ITwoLevelCacheService twoLevelCacheService)
+    public CacheController(ICacheService cacheService, HybridCache hybridCache)
     {
-        _memoryCacheService = memoryCacheService;
-        _redisCacheService = redisCacheService;
-        _twoLevelCacheService = twoLevelCacheService;
+        _cacheService = cacheService;
+        _hybridCache = hybridCache;
     }
 
     /// <summary>
-    /// 展示 Memory Cache 的使用
+    /// 展示 HybridCache 基本使用 - 使用封裝的服務
     /// </summary>
-    [HttpGet("memory")]
-    public IActionResult GetMemoryCache([FromQuery] string key = "memory-test")
+    [HttpGet("hybrid")]
+    public async Task<IActionResult> GetHybridCache([FromQuery] string key = "hybrid-test")
     {
-        var cachedValue = _memoryCacheService.Get<string>(key);
-
-        if (cachedValue != null)
-        {
-            return Ok(new
+        var value = await _cacheService.GetOrCreateAsync(
+            key,
+            async cancellationToken =>
             {
-                source = "Memory Cache",
-                key,
-                value = cachedValue,
-                timestamp = DateTime.UtcNow
-            });
-        }
-
-        var newValue = $"Data generated at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}";
-        _memoryCacheService.Set(key, newValue, TimeSpan.FromMinutes(5));
+                await Task.Delay(100, cancellationToken); // 模擬資料庫查詢
+                return $"Data generated at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}";
+            },
+            TimeSpan.FromMinutes(5));
 
         return Ok(new
         {
-            source = "New Data (cached in Memory)",
+            source = "HybridCache (L1: Memory + L2: Redis)",
             key,
-            value = newValue,
-            timestamp = DateTime.UtcNow
+            value,
+            timestamp = DateTime.UtcNow,
+            description = "HybridCache 自動處理兩級快取，優先從 L1 (記憶體) 讀取，未命中時從 L2 (Redis) 讀取"
         });
     }
 
     /// <summary>
-    /// 展示 Redis Cache 的使用
+    /// 展示 HybridCache 直接使用 - 使用 GetOrCreateAsync
     /// </summary>
-    [HttpGet("redis")]
-    public async Task<IActionResult> GetRedisCache([FromQuery] string key = "redis-test")
+    [HttpGet("hybrid-direct")]
+    public async Task<IActionResult> GetHybridCacheDirect([FromQuery] string key = "hybrid-direct-test")
     {
-        var cachedValue = await _redisCacheService.GetAsync<string>(key);
-
-        if (cachedValue != null)
-        {
-            return Ok(new
+        var value = await _hybridCache.GetOrCreateAsync(
+            key,
+            async cancellationToken =>
             {
-                source = "Redis Cache",
-                key,
-                value = cachedValue,
-                timestamp = DateTime.UtcNow
+                await Task.Delay(100, cancellationToken); // 模擬資料庫查詢
+                return $"Data generated at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}";
+            },
+            new HybridCacheEntryOptions
+            {
+                Expiration = TimeSpan.FromMinutes(10),
+                LocalCacheExpiration = TimeSpan.FromMinutes(2) // L1 快取 2 分鐘，L2 快取 10 分鐘
             });
-        }
-
-        var newValue = $"Data generated at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}";
-        await _redisCacheService.SetAsync(key, newValue, TimeSpan.FromMinutes(10));
 
         return Ok(new
         {
-            source = "New Data (cached in Redis)",
+            source = "HybridCache Direct (L1: 2min, L2: 10min)",
             key,
-            value = newValue,
-            timestamp = DateTime.UtcNow
+            value,
+            timestamp = DateTime.UtcNow,
+            description = "L1 (記憶體) 快取 2 分鐘，L2 (Redis) 快取 10 分鐘"
         });
     }
 
     /// <summary>
-    /// 展示二級快取的使用
+    /// 展示 HybridCache 的序列化 - 複雜物件
     /// </summary>
-    [HttpGet("two-level")]
-    public async Task<IActionResult> GetTwoLevelCache([FromQuery] string key = "two-level-test")
+    [HttpGet("hybrid-complex")]
+    public async Task<IActionResult> GetHybridCacheComplex([FromQuery] string userId = "user-123")
     {
-        var cachedValue = await _twoLevelCacheService.GetAsync<string>(key);
+        var key = $"user:{userId}";
 
-        if (cachedValue != null)
-        {
-            return Ok(new
+        var userData = await _hybridCache.GetOrCreateAsync(
+            key,
+            async cancellationToken =>
             {
-                source = "Two-Level Cache (Memory or Redis)",
-                key,
-                value = cachedValue,
-                timestamp = DateTime.UtcNow
+                await Task.Delay(100, cancellationToken); // 模擬資料庫查詢
+                return new UserData
+                {
+                    Id = userId,
+                    Name = "測試使用者",
+                    Email = "test@example.com",
+                    CreatedAt = DateTime.UtcNow
+                };
+            },
+            new HybridCacheEntryOptions
+            {
+                Expiration = TimeSpan.FromMinutes(15)
             });
-        }
-
-        var newValue = $"Data generated at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}";
-        await _twoLevelCacheService.SetAsync(key, newValue, TimeSpan.FromMinutes(10));
 
         return Ok(new
         {
-            source = "New Data (cached in both Memory and Redis)",
+            source = "HybridCache Complex Object",
             key,
-            value = newValue,
-            timestamp = DateTime.UtcNow
+            value = userData,
+            timestamp = DateTime.UtcNow,
+            description = "HybridCache 自動處理複雜物件的序列化/反序列化"
+        });
+    }
+
+    /// <summary>
+    /// 展示 HybridCache 的手動設定
+    /// </summary>
+    [HttpPost("hybrid-set")]
+    public async Task<IActionResult> SetHybridCache(
+        [FromQuery] string key,
+        [FromBody] string value)
+    {
+        await _cacheService.SetAsync(key, value, TimeSpan.FromMinutes(10));
+
+        return Ok(new
+        {
+            message = "Cache set successfully",
+            key,
+            value,
+            expiration = "10 minutes"
         });
     }
 
@@ -125,7 +137,8 @@ public class CacheController : ControllerBase
         {
             source = "HTTP Response Cache (60 seconds)",
             value = $"Data generated at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}",
-            timestamp = DateTime.UtcNow
+            timestamp = DateTime.UtcNow,
+            description = "使用 ResponseCache Attribute 設定客戶端快取"
         });
     }
 
@@ -147,7 +160,8 @@ public class CacheController : ControllerBase
             {
                 CacheControl = "public, max-age=120",
                 Expires = Response.Headers.Expires.ToString()
-            }
+            },
+            description = "手動設定 Cache-Control 和 Expires 標頭"
         });
     }
 
@@ -173,34 +187,65 @@ public class CacheController : ControllerBase
             source = "HTTP ETag",
             value = data,
             timestamp = DateTime.UtcNow,
-            etag
+            etag,
+            description = "使用 ETag 進行條件請求，相同內容回傳 304 Not Modified"
         });
     }
 
     /// <summary>
     /// 清除指定的快取
     /// </summary>
-    [HttpDelete("{cacheType}/{key}")]
-    public async Task<IActionResult> DeleteCache(string cacheType, string key)
+    [HttpDelete("hybrid/{key}")]
+    public async Task<IActionResult> DeleteHybridCache(string key)
     {
-        switch (cacheType.ToLower())
-        {
-            case "memory":
-                _memoryCacheService.Remove(key);
-                break;
-            case "redis":
-                await _redisCacheService.RemoveAsync(key);
-                break;
-            case "two-level":
-                await _twoLevelCacheService.RemoveAsync(key);
-                break;
-            default:
-                return BadRequest($"Unknown cache type: {cacheType}");
-        }
+        await _cacheService.RemoveAsync(key);
 
         return Ok(new
         {
-            message = $"Cache cleared for key: {key} in {cacheType} cache"
+            message = $"Cache cleared for key: {key}",
+            description = "HybridCache 會同時清除 L1 (記憶體) 和 L2 (Redis) 的快取"
         });
     }
+
+    /// <summary>
+    /// 取得快取統計資訊
+    /// </summary>
+    [HttpGet("stats")]
+    public IActionResult GetCacheStats()
+    {
+        return Ok(new
+        {
+            hybridCache = new
+            {
+                description = "HybridCache (.NET 9+)",
+                features = new[]
+                {
+                    "自動兩級快取 (L1: Memory, L2: Distributed)",
+                    "Stampede Protection (防止快取穿透)",
+                    "自動序列化/反序列化",
+                    "支援標籤式快取失效 (Tag-based invalidation)",
+                    "更好的效能和記憶體使用"
+                }
+            },
+            httpCache = new
+            {
+                description = "HTTP Cache (Client-side)",
+                features = new[]
+                {
+                    "ResponseCache Attribute",
+                    "Cache-Control 標頭",
+                    "ETag 條件請求",
+                    "減少伺服器負載"
+                }
+            }
+        });
+    }
+}
+
+public record UserData
+{
+    public string Id { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+    public string Email { get; init; } = string.Empty;
+    public DateTime CreatedAt { get; init; }
 }
