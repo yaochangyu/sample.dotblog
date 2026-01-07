@@ -1,3 +1,4 @@
+using Lab.HttpCache.Api;
 using Lab.HttpCache.Api.Providers;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,6 +39,8 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    app.MapSwaggerUI();      
+    app.MapApiDocsNavigator();  // 根路徑
 }
 
 app.UseHttpsRedirection();
