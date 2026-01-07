@@ -1,12 +1,12 @@
 using Microsoft.Extensions.Caching.Hybrid;
 
-namespace Lab.HttpCache.Api.Services;
+namespace Lab.HttpCache.Api.Providers;
 
-public class HybridCacheService : ICacheService
+public class HybridCacheProvider : ICacheProvider
 {
     private readonly HybridCache _hybridCache;
 
-    public HybridCacheService(HybridCache hybridCache)
+    public HybridCacheProvider(HybridCache hybridCache)
     {
         _hybridCache = hybridCache;
     }

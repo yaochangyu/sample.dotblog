@@ -1,6 +1,6 @@
-namespace Lab.HttpCache.Api.Services;
+namespace Lab.HttpCache.Api.Providers;
 
-public interface ICacheService
+public interface ICacheProvider
 {
     Task<T> GetOrCreateAsync<T>(string key, Func<CancellationToken, Task<T>> factory, TimeSpan? expiration = null, string[]? tags = null, CancellationToken cancellationToken = default);
     Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, string[]? tags = null, CancellationToken cancellationToken = default);

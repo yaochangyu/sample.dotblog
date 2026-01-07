@@ -1,5 +1,5 @@
+using Lab.HttpCache.Api.Providers;
 using Microsoft.AspNetCore.Mvc;
-using Lab.HttpCache.Api.Services;
 using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Lab.HttpCache.Api.Controllers;
@@ -8,12 +8,12 @@ namespace Lab.HttpCache.Api.Controllers;
 [Route("api/[controller]")]
 public class CacheController : ControllerBase
 {
-    private readonly ICacheService _cacheService;
+    private readonly ICacheProvider _cacheProvider;
     private readonly HybridCache _hybridCache;
 
-    public CacheController(ICacheService cacheService, HybridCache hybridCache)
+    public CacheController(ICacheProvider cacheProvider, HybridCache hybridCache)
     {
-        _cacheService = cacheService;
+        _cacheProvider = cacheProvider;
         _hybridCache = hybridCache;
     }
 
@@ -23,7 +23,7 @@ public class CacheController : ControllerBase
     [HttpGet("hybrid")]
     public async Task<IActionResult> GetHybridCache([FromQuery] string key = "hybrid-test")
     {
-        var value = await _cacheService.GetOrCreateAsync(
+        var value = await _cacheProvider.GetOrCreateAsync(
             key,
             async cancellationToken =>
             {
@@ -123,7 +123,7 @@ public class CacheController : ControllerBase
         [FromBody] string value)
     {
         string[]? tags = !string.IsNullOrEmpty(tag) ? [tag] : null;
-        await _cacheService.SetAsync(key, value, TimeSpan.FromMinutes(10), tags);
+        await _cacheProvider.SetAsync(key, value, TimeSpan.FromMinutes(10), tags);
 
         return Ok(new
         {
@@ -207,7 +207,7 @@ public class CacheController : ControllerBase
     [HttpDelete("hybrid/{key}")]
     public async Task<IActionResult> DeleteHybridCache(string key)
     {
-        await _cacheService.RemoveAsync(key);
+        await _cacheProvider.RemoveAsync(key);
 
         return Ok(new
         {
@@ -222,7 +222,7 @@ public class CacheController : ControllerBase
     [HttpDelete("hybrid/tag/{tag}")]
     public async Task<IActionResult> DeleteHybridCacheByTag(string tag)
     {
-        await _cacheService.RemoveByTagAsync(tag);
+        await _cacheProvider.RemoveByTagAsync(tag);
 
         return Ok(new
         {
