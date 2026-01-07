@@ -1,3 +1,5 @@
+using Lab.HttpCache.Api.Providers;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -28,7 +30,7 @@ builder.Services.AddHybridCache(options =>
 });
 
 // 註冊自訂快取服務
-builder.Services.AddScoped<Lab.HttpCache.Api.Services.ICacheService, Lab.HttpCache.Api.Services.HybridCacheService>();
+builder.Services.AddScoped<ICacheProvider, HybridCacheProvider>();
 
 var app = builder.Build();
 
