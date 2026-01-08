@@ -1,0 +1,191 @@
+# HTTP Client-Side Cache 實驗腳本
+# 使用 VS Code REST Client 或其他 HTTP 客戶端工具執行
+
+@baseUrl = http://localhost:5178
+
+###############################################################################
+# 實驗一：max-age - 標準快取行為
+###############################################################################
+
+### 測試 max-age 指令
+GET {{baseUrl}}/api/clientcache/max-age
+
+###############################################################################
+# 實驗二：no-store - 完全禁止快取
+###############################################################################
+
+### 測試 no-store 指令
+GET {{baseUrl}}/api/clientcache/no-store
+
+###############################################################################
+# 實驗三：ETag 強驗證與條件請求
+###############################################################################
+
+### 測試 ETag 強驗證（首次請求）
+GET {{baseUrl}}/api/clientcache/etag-strong
+
+### 測試 ETag 強驗證（條件請求）
+# 注意：請將 ETag 值替換為上一個請求回傳的 ETag
+GET {{baseUrl}}/api/clientcache/etag-strong
+If-None-Match: "v1.0"
+
+###############################################################################
+# 實驗四：no-cache - 必須驗證但可快取
+###############################################################################
+
+### 測試 no-cache 指令
+GET {{baseUrl}}/api/clientcache/no-cache
+
+###############################################################################
+# 實驗五：Vary 標頭 - 內容協商
+###############################################################################
+
+### 測試 Vary 標頭
+GET {{baseUrl}}/api/clientcache/vary
+
+###############################################################################
+# 實驗六：immutable - 永不改變的內容
+###############################################################################
+
+### 測試 immutable 指令
+GET {{baseUrl}}/api/clientcache/immutable
+
+###############################################################################
+# 實驗七：stale-while-revalidate - 優化使用者體驗
+###############################################################################
+
+### 測試 stale-while-revalidate 指令
+GET {{baseUrl}}/api/clientcache/stale-while-revalidate
+
+###############################################################################
+# 實驗八：驗證 requestCounter
+###############################################################################
+
+### 查看伺服器統計資訊
+GET {{baseUrl}}/api/clientcache/stats
+
+###############################################################################
+# 實驗九：客戶端控制快取 - Request Cache-Control 指令
+###############################################################################
+
+### 實驗 9-1：一般請求（會使用快取）
+GET {{baseUrl}}/api/clientcache/client-controlled
+
+### 實驗 9-1：客戶端強制重新驗證
+GET {{baseUrl}}/api/clientcache/client-controlled
+Cache-Control: no-cache
+
+### 實驗 9-2：客戶端只接受 30 秒內的快取
+GET {{baseUrl}}/api/clientcache/client-controlled
+Cache-Control: max-age=30
+
+### 實驗 9-3：只使用快取，不發送網路請求
+GET {{baseUrl}}/api/clientcache/client-controlled
+Cache-Control: only-if-cached
+
+### 實驗 9-4：願意接受任何過期的快取
+GET {{baseUrl}}/api/clientcache/client-controlled
+Cache-Control: max-stale
+
+### 實驗 9-4：只接受過期不超過 300 秒的快取
+GET {{baseUrl}}/api/clientcache/client-controlled
+Cache-Control: max-stale=300
+
+###############################################################################
+# 實驗十：文章端點 - 多層快取架構
+###############################################################################
+
+### 實驗 10-1：首次請求文章（會從資料庫讀取並快取）
+GET {{baseUrl}}/api/clientcache/article/1
+
+### 實驗 10-2：60 秒內再次請求（瀏覽器會使用快取，不會發送請求）
+# 注意：在瀏覽器中測試，或等待 60 秒後執行下一個請求
+GET {{baseUrl}}/api/clientcache/article/1
+
+### 實驗 10-3：60 秒後再次請求（使用 If-None-Match 進行條件請求）
+# 注意：請將 ETag 值替換為實驗 10-1 回傳的 ETag
+GET {{baseUrl}}/api/clientcache/article/1
+If-None-Match: "638734982345678901"
+
+### 實驗 10-4：更新文章內容
+PUT {{baseUrl}}/api/clientcache/article/1
+Content-Type: application/json
+
+{
+  "title": "深入探討 HTTP Client-Side Cache（已更新）",
+  "content": "更新後的內容..."
+}
+
+### 實驗 10-5：使用舊的 ETag 請求已更新的文章
+# 注意：請使用更新前的 ETag
+GET {{baseUrl}}/api/clientcache/article/1
+If-None-Match: "638734982345678901"
+
+###############################################################################
+# ResponseCache vs Response.Headers.CacheControl
+###############################################################################
+
+### 測試 ResponseCache Attribute
+GET {{baseUrl}}/api/clientcache/http-response-cache
+
+### 測試手動設定 Cache-Control
+GET {{baseUrl}}/api/clientcache/http-cache-control
+
+### 測試動態快取（一般使用者）
+GET {{baseUrl}}/api/clientcache/dynamic-cache?isVip=false
+
+### 測試動態快取（VIP 使用者）
+GET {{baseUrl}}/api/clientcache/dynamic-cache?isVip=true
+
+###############################################################################
+# 實務建議範例
+###############################################################################
+
+### 測試使用者個人資料（快取 1 小時）
+GET {{baseUrl}}/api/profile
+
+### 測試產品列表（快取 5 分鐘）
+GET {{baseUrl}}/api/products
+
+### 測試即時股票價格（不快取）
+GET {{baseUrl}}/api/stock-price
+
+### 首次請求文章（結合 ETag）
+GET {{baseUrl}}/api/article/1
+
+### 使用 ETag 進行條件請求
+# 注意：請將 ETag 值替換為上一個請求回傳的 ETag
+GET {{baseUrl}}/api/article/1
+If-None-Match: "638734982345678901"
+
+### 請求繁體中文版本（測試 Vary 標頭）
+GET {{baseUrl}}/api/data
+Accept-Language: zh-TW
+
+### 請求英文版本（測試 Vary 標頭）
+GET {{baseUrl}}/api/data
+Accept-Language: en-US
+
+###############################################################################
+# 其他測試端點
+###############################################################################
+
+### 測試新發布的新聞（快取 1 分鐘）
+GET {{baseUrl}}/api/news/1
+
+### 測試一週內的新聞（快取 30 分鐘）
+GET {{baseUrl}}/api/news/2
+
+### 測試舊新聞（快取 24 小時）
+GET {{baseUrl}}/api/news/3
+
+### 測試多語系端點（正常情況）
+GET {{baseUrl}}/api/localized
+Accept-Language: zh-TW
+
+### 測試多語系端點（資料過時）
+GET {{baseUrl}}/api/localized
+Accept-Language: en-US
+
+### 重置計數器
+POST {{baseUrl}}/api/clientcache/reset
