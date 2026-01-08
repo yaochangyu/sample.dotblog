@@ -22,9 +22,19 @@ public class CsrfTokenService : ICsrfTokenService
 
     public string GenerateToken()
     {
-        // 取得或建立 Session ID
+        // 取得或建立 Session
         var httpContext = _httpContextAccessor.HttpContext;
-        var sessionId = httpContext?.Session?.Id;
+        if (httpContext?.Session == null)
+        {
+            _logger.LogWarning("無法取得 Session");
+            throw new InvalidOperationException("Session 未啟用");
+        }
+
+        // 觸發 Session 的建立（寫入一個標記以確保 Session Cookie 被設定）
+        httpContext.Session.SetString("_csrf_initialized", "true");
+
+        // 取得 Session ID
+        var sessionId = httpContext.Session.Id;
 
         if (string.IsNullOrEmpty(sessionId))
         {
