@@ -1,10 +1,10 @@
-# HTTP Client-Side Cache 實戰指南
+# 從 .NET 9 HybridCache 到瀏覽器端 HTTP Cache
 
 ## 前言
 
-HTTP Client-Side Cache 是經常被忽略的效能優化工具。透過正確的 HTTP 標頭設定,可以讓瀏覽器直接使用本地快取,減少伺服器負載並提升使用者體驗。
+承接上篇 [.NET 9 HybridCache 實戰](https://www.dotblogs.com.tw/yc421206/2025/09/29/dot_net_hybrid_cache)，我們已介紹 Server\-Side 的快取架構（L1 記憶體快取、L2 分散式快取）。本篇將聚焦在 Client\-Side 的快取機制（HTTP Cache）：透過正確設定 HTTP 標頭，讓瀏覽器優先使用本地快取，降低伺服器負載並提升使用者體驗。
 
-本文透過實際程式碼示範各種 Cache-Control 指令的行為與應用場景。
+本文會以實作程式碼示範各種 Cache\-Control 指令的行為差異與適用情境。
 
 ## 核心概念
 
