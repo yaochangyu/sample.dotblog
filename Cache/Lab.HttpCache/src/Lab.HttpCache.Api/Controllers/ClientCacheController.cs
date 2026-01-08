@@ -502,10 +502,10 @@ public class ClientCacheController : ControllerBase
     /// 展示如何結合 Cache-Control + ETag + must-revalidate 來優化 API 效能
     /// </summary>
     [HttpGet("article/{id}")]
-    public IActionResult GetArticle(int id)
+    public async Task<IActionResult> GetArticle(int id, CancellationToken cancellationToken = default)
     {
         var requestId = Interlocked.Increment(ref _requestCounter);
-        var article = _repository.GetArticle(id);
+        var article = await _repository.GetArticleAsync(id, cancellationToken);
 
         if (article == null)
         {
@@ -574,10 +574,10 @@ public class ClientCacheController : ControllerBase
     /// 當文章更新後，UpdatedAt 會改變，導致 ETag 改變，瀏覽器會收到新的內容
     /// </summary>
     [HttpPut("article/{id}")]
-    public IActionResult UpdateArticle(int id, [FromBody] ArticleUpdateRequest request)
+    public async Task<IActionResult> UpdateArticle(int id, [FromBody] ArticleUpdateRequest request, CancellationToken cancellationToken = default)
     {
         var requestId = Interlocked.Increment(ref _requestCounter);
-        var success = _repository.UpdateArticle(id, request.Title, request.Content);
+        var success = await _repository.UpdateArticleAsync(id, request.Title, request.Content, cancellationToken);
 
         if (!success)
         {
@@ -588,7 +588,7 @@ public class ClientCacheController : ControllerBase
             });
         }
 
-        var updatedArticle = _repository.GetArticle(id);
+        var updatedArticle = await _repository.GetArticleAsync(id, cancellationToken);
         var newETag = $"\"{updatedArticle!.UpdatedAt.Ticks}\"";
 
         return Ok(new
@@ -616,10 +616,10 @@ public class ClientCacheController : ControllerBase
     /// 20. 取得所有文章列表 - 展示集合資料的快取策略
     /// </summary>
     [HttpGet("articles")]
-    public IActionResult GetAllArticles()
+    public async Task<IActionResult> GetAllArticles(CancellationToken cancellationToken = default)
     {
         var requestId = Interlocked.Increment(ref _requestCounter);
-        var articles = _repository.GetAllArticles();
+        var articles = await _repository.GetAllArticlesAsync(cancellationToken);
 
         // 使用所有文章中最新的 UpdatedAt 作為 ETag
         var latestUpdate = articles.Max(a => a.UpdatedAt);
