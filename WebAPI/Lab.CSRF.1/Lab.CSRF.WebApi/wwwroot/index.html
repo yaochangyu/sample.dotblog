@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRF 保護測試頁面</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .token-display {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            border: 1px solid #ddd;
+        }
+
+        .token-display.empty {
+            color: #999;
+            font-style: italic;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.danger {
+            background: #dc3545;
+        }
+
+        button.danger:hover {
+            background: #c82333;
+        }
+
+        button.success {
+            background: #28a745;
+        }
+
+        button.success:hover {
+            background: #218838;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .result pre {
+            margin-top: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .status-badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ CSRF 保護測試頁面</h1>
+        <p class="subtitle">測試 ASP.NET Core Web API 的 CSRF 防護機制</p>
+
+        <!-- Token 管理區 -->
+        <div class="section">
+            <h2>1️⃣ Token 管理</h2>
+            <button onclick="getToken()">取得 CSRF Token</button>
+            <div id="tokenStatus">
+                <strong>目前 Token 狀態：</strong>
+                <span class="status-badge inactive">未取得</span>
+            </div>
+            <div id="tokenDisplay" class="token-display empty">
+                尚未取得 Token
+            </div>
+        </div>
+
+        <!-- POST 測試區 -->
+        <div class="section">
+            <h2>2️⃣ 測試 POST 端點（需要 CSRF Token）</h2>
+            <div class="form-group">
+                <label for="postMessage">訊息內容：</label>
+                <textarea id="postMessage" placeholder="輸入要傳送的訊息...">Hello from CSRF protected page!</textarea>
+            </div>
+            <button onclick="testPost()">送出 POST 請求</button>
+            <button onclick="testPostWithoutToken()" class="danger">測試不帶 Token（應該失敗）</button>
+            <div id="postResult" class="result"></div>
+        </div>
+
+        <!-- PUT 測試區 -->
+        <div class="section">
+            <h2>3️⃣ 測試 PUT 端點（需要 CSRF Token）</h2>
+            <div class="form-group">
+                <label for="putId">資料 ID：</label>
+                <input type="number" id="putId" value="123" />
+            </div>
+            <div class="form-group">
+                <label for="putMessage">更新內容：</label>
+                <textarea id="putMessage" placeholder="輸入更新內容...">Updated data content</textarea>
+            </div>
+            <button onclick="testPut()">送出 PUT 請求</button>
+            <div id="putResult" class="result"></div>
+        </div>
+
+        <!-- DELETE 測試區 -->
+        <div class="section">
+            <h2>4️⃣ 測試 DELETE 端點（需要 CSRF Token）</h2>
+            <div class="form-group">
+                <label for="deleteId">要刪除的資料 ID：</label>
+                <input type="number" id="deleteId" value="456" />
+            </div>
+            <button onclick="testDelete()" class="danger">送出 DELETE 請求</button>
+            <div id="deleteResult" class="result"></div>
+        </div>
+
+        <!-- 公開端點測試區 -->
+        <div class="section">
+            <h2>5️⃣ 測試公開端點（不需要 CSRF Token）</h2>
+            <button onclick="testPublic()" class="success">呼叫公開 API</button>
+            <div id="publicResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://localhost:7001/api/csrf';
+        let csrfToken = null;
+
+        function updateTokenDisplay() {
+            const display = document.getElementById('tokenDisplay');
+            const status = document.getElementById('tokenStatus');
+
+            if (csrfToken) {
+                display.textContent = csrfToken;
+                display.classList.remove('empty');
+                status.innerHTML = '<strong>目前 Token 狀態：</strong><span class="status-badge active">已取得</span>';
+            } else {
+                display.textContent = '尚未取得 Token';
+                display.classList.add('empty');
+                status.innerHTML = '<strong>目前 Token 狀態：</strong><span class="status-badge inactive">未取得</span>';
+            }
+        }
+
+        async function getToken() {
+            try {
+                const response = await fetch(`${API_BASE}/token`, {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                csrfToken = data.token;
+                updateTokenDisplay();
+
+                showResult('tokenDisplay', `✅ 成功取得 Token！（有效期限：${data.expiresIn} 秒）`, 'success');
+            } catch (error) {
+                showResult('tokenDisplay', `❌ 取得 Token 失敗：${error.message}`, 'error');
+            }
+        }
+
+        async function testPost() {
+            if (!csrfToken) {
+                alert('請先取得 CSRF Token！');
+                return;
+            }
+
+            const message = document.getElementById('postMessage').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/test`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('postResult', '✅ POST 請求成功！', 'success', data);
+                } else {
+                    showResult('postResult', `❌ POST 請求失敗：${data.error || 'Unknown error'}`, 'error', data);
+                }
+            } catch (error) {
+                showResult('postResult', `❌ 請求錯誤：${error.message}`, 'error');
+            }
+        }
+
+        async function testPostWithoutToken() {
+            const message = document.getElementById('postMessage').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/test`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('postResult', '⚠️ 不應該成功！這是安全漏洞！', 'error', data);
+                } else {
+                    showResult('postResult', `✅ 正確被阻擋：${data.error || 'Forbidden'}`, 'success', data);
+                }
+            } catch (error) {
+                showResult('postResult', `❌ 請求錯誤：${error.message}`, 'error');
+            }
+        }
+
+        async function testPut() {
+            if (!csrfToken) {
+                alert('請先取得 CSRF Token！');
+                return;
+            }
+
+            const id = document.getElementById('putId').value;
+            const message = document.getElementById('putMessage').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/update/${id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('putResult', '✅ PUT 請求成功！', 'success', data);
+                } else {
+                    showResult('putResult', `❌ PUT 請求失敗：${data.error || 'Unknown error'}`, 'error', data);
+                }
+            } catch (error) {
+                showResult('putResult', `❌ 請求錯誤：${error.message}`, 'error');
+            }
+        }
+
+        async function testDelete() {
+            if (!csrfToken) {
+                alert('請先取得 CSRF Token！');
+                return;
+            }
+
+            const id = document.getElementById('deleteId').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/delete/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-Token': csrfToken
+                    },
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('deleteResult', '✅ DELETE 請求成功！', 'success', data);
+                } else {
+                    showResult('deleteResult', `❌ DELETE 請求失敗：${data.error || 'Unknown error'}`, 'error', data);
+                }
+            } catch (error) {
+                showResult('deleteResult', `❌ 請求錯誤：${error.message}`, 'error');
+            }
+        }
+
+        async function testPublic() {
+            try {
+                const response = await fetch(`${API_BASE}/public`, {
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('publicResult', '✅ 公開端點呼叫成功（不需要 Token）', 'success', data);
+                } else {
+                    showResult('publicResult', `❌ 請求失敗`, 'error', data);
+                }
+            } catch (error) {
+                showResult('publicResult', `❌ 請求錯誤：${error.message}`, 'error');
+            }
+        }
+
+        function showResult(elementId, message, type, data = null) {
+            const resultElement = document.getElementById(elementId);
+            resultElement.className = `result ${type}`;
+            resultElement.style.display = 'block';
+
+            let html = `<strong>${message}</strong>`;
+
+            if (data) {
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+
+            resultElement.innerHTML = html;
+        }
+
+        // 初始化
+        updateTokenDisplay();
+    </script>
+</body>
+</html>
