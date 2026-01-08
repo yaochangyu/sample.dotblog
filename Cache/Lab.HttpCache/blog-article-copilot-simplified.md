@@ -218,15 +218,28 @@ Accept-Encoding: br
 
 ETag 更精確（內容雜湊）,Last-Modified 僅精確到秒。
 
-## 最佳實踐
+## 快速決策指南
 
-| 資源類型 | 策略 | 範例 |
-|---------|------|------|
-| 版本化靜態資源 | `max-age=31536000, immutable` | `app.a1b2c3.js` |
-| 不常變動 API | `max-age=300` | 分類、選單 |
-| 經常查詢 API | `max-age=0, must-revalidate` + ETag | 文章、產品 |
-| 即時性 API | `private, no-cache` + ETag | 庫存、價格 |
-| 敏感資料 | `private, no-store` | 個資、交易 |
+選擇合適的 Cache-Control 指令可能會讓人困惑,這裡提供一個決策流程：
+
+```
+是否包含敏感資料？
+├─ 是 → 使用 no-store（完全禁止快取）
+└─ 否 → 內容是否會改變？
+    ├─ 永不改變（如 versioned 靜態檔案）
+    │   └─ 使用 public, max-age=31536000, immutable
+    │
+    ├─ 很少改變（如產品圖片、CSS/JS）
+    │   ├─ 公開內容 → public, max-age=86400（1天）
+    │   └─ 使用者特定 → private, max-age=3600（1小時）
+    │
+    ├─ 中等頻率改變（如產品列表、文章列表）
+    │   └─ public, max-age=300（5分鐘）, must-revalidate
+    │       或 max-age=60, stale-while-revalidate=300
+    │
+    └─ 經常改變但接受輕微延遲
+        └─ max-age=10, stale-while-revalidate=60
+```
 
 ## 常見誤區
 
