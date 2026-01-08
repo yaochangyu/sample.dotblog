@@ -101,13 +101,13 @@ public class ArticleRepository : IArticleRepository
     /// <summary>
     /// 取得文章（使用 HybridCache 快取）
     /// </summary>
-    public Article? GetArticle(int id)
+    public async Task<Article?> GetArticleAsync(int id, CancellationToken cancellationToken = default)
     {
         // 使用 HybridCache 快取文章資料
         // 這展示了伺服器端快取（HybridCache）與客戶端快取（HTTP Cache-Control）的結合
         var cacheKey = $"{ArticleCacheKeyPrefix}{id}";
 
-        var article = _cacheProvider.GetOrCreateAsync(
+        var article = await _cacheProvider.GetOrCreateAsync(
             key: cacheKey,
             factory: async ct =>
             {
@@ -117,7 +117,7 @@ public class ArticleRepository : IArticleRepository
             },
             expiration: TimeSpan.FromMinutes(5), // 伺服器端快取 5 分鐘
             tags: new[] { ArticleTag, $"{ArticleTag}:{id}" }
-        ).GetAwaiter().GetResult();
+        );
 
         return article;
     }
@@ -125,10 +125,10 @@ public class ArticleRepository : IArticleRepository
     /// <summary>
     /// 取得所有文章（使用 HybridCache 快取）
     /// </summary>
-    public IEnumerable<Article> GetAllArticles()
+    public async Task<IEnumerable<Article>> GetAllArticlesAsync(CancellationToken cancellationToken = default)
     {
         // 使用 HybridCache 快取文章列表
-        var articles = _cacheProvider.GetOrCreateAsync(
+        var articles = await _cacheProvider.GetOrCreateAsync(
             key: AllArticlesCacheKey,
             factory: async ct =>
             {
@@ -138,7 +138,7 @@ public class ArticleRepository : IArticleRepository
             },
             expiration: TimeSpan.FromMinutes(3), // 列表快取時間較短
             tags: new[] { ArticleTag }
-        ).GetAwaiter().GetResult();
+        );
 
         return articles ?? Enumerable.Empty<Article>();
     }
@@ -146,7 +146,7 @@ public class ArticleRepository : IArticleRepository
     /// <summary>
     /// 更新文章（會清除相關快取）
     /// </summary>
-    public bool UpdateArticle(int id, string title, string content)
+    public async Task<bool> UpdateArticleAsync(int id, string title, string content, CancellationToken cancellationToken = default)
     {
         if (!_articles.TryGetValue(id, out var article))
         {
@@ -161,13 +161,13 @@ public class ArticleRepository : IArticleRepository
         // 清除相關的快取
         // 1. 清除單一文章快取
         var cacheKey = $"{ArticleCacheKeyPrefix}{id}";
-        _cacheProvider.RemoveAsync(cacheKey).GetAwaiter().GetResult();
+        await _cacheProvider.RemoveAsync(cacheKey);
 
         // 2. 清除文章列表快取（因為列表中的 UpdatedAt 會影響 ETag）
-        _cacheProvider.RemoveAsync(AllArticlesCacheKey).GetAwaiter().GetResult();
+        await _cacheProvider.RemoveAsync(AllArticlesCacheKey);
 
         // 也可以使用 Tag 來清除所有相關快取：
-        // _cacheProvider.RemoveByTagAsync($"{ArticleTag}:{id}").GetAwaiter().GetResult();
+        // await _cacheProvider.RemoveByTagAsync($"{ArticleTag}:{id}");
 
         return true;
     }
