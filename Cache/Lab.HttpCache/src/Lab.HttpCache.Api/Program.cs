@@ -1,5 +1,6 @@
 using Lab.HttpCache.Api;
 using Lab.HttpCache.Api.Providers;
+using Lab.HttpCache.Api.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +33,10 @@ builder.Services.AddHybridCache(options =>
 
 // 註冊自訂快取服務
 builder.Services.AddScoped<ICacheProvider, HybridCacheProvider>();
+
+// 註冊文章資料倉儲（使用 Scoped 因為它依賴 ICacheProvider）
+// HybridCache 會處理快取的一致性
+builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
 
 var app = builder.Build();
 
