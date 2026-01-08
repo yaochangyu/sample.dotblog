@@ -3,7 +3,8 @@
     "allow": [
       "Bash(dotnet:*)",
       "Bash(curl:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(pkill:*)"
     ]
   }
 }
