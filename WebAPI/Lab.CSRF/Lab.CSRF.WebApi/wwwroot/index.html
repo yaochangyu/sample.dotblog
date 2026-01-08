@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRF 防護測試</title>
+    <style>
+        body {
+            font-family: 'Microsoft JhengHei', Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.danger {
+            background-color: #dc3545;
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .token-display {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ CSRF 防護測試頁面</h1>
+        
+        <div class="section">
+            <h2>步驟 1: 取得 CSRF Token</h2>
+            <button onclick="getToken()">取得 Token</button>
+            <div id="tokenResult"></div>
+        </div>
+
+        <div class="section">
+            <h2>步驟 2: 測試受保護的 API</h2>
+            <input type="text" id="dataInput" placeholder="輸入測試資料" value="Hello CSRF!">
+            <div>
+                <button onclick="callProtectedApi(true)">✅ 使用 Token 呼叫 API (正常)</button>
+                <button class="danger" onclick="callProtectedApi(false)">❌ 不使用 Token 呼叫 API (應失敗)</button>
+            </div>
+            <div id="apiResult"></div>
+        </div>
+
+        <div class="section">
+            <h2>說明</h2>
+            <div class="info result">
+                <strong>測試流程：</strong><br>
+                1. 點擊「取得 Token」按鈕，從伺服器取得 CSRF Token<br>
+                2. Token 會同時儲存在 Cookie 和頁面中<br>
+                3. 使用 Token 呼叫受保護的 API → 應該成功<br>
+                4. 不使用 Token 呼叫受保護的 API → 應該失敗 (400 Bad Request)<br>
+                <br>
+                <strong>安全機制：</strong><br>
+                • CSRF Token 透過 Cookie 和 Header 雙重驗證<br>
+                • 跨站請求無法讀取 Token，因此無法通過驗證<br>
+                • 只有來自本站的請求才能成功
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let csrfToken = null;
+
+        async function getToken() {
+            const resultDiv = document.getElementById('tokenResult');
+            resultDiv.innerHTML = '<div class="info result">正在取得 Token...</div>';
+
+            try {
+                const response = await fetch('/api/csrf/token', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    csrfToken = data.token;
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success result">
+                            <strong>✅ Token 取得成功！</strong><br><br>
+                            <strong>Token 值：</strong><br>
+                            <div class="token-display">${csrfToken}</div>
+                            <small>Token 已儲存，可以開始測試受保護的 API</small>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error result">
+                        <strong>❌ Token 取得失敗</strong><br>
+                        錯誤訊息: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function callProtectedApi(useToken) {
+            const resultDiv = document.getElementById('apiResult');
+            const dataInput = document.getElementById('dataInput').value;
+
+            if (useToken && !csrfToken) {
+                resultDiv.innerHTML = `
+                    <div class="error result">
+                        <strong>⚠️ 請先取得 Token</strong><br>
+                        請先點擊「取得 Token」按鈕
+                    </div>
+                `;
+                return;
+            }
+
+            const action = useToken ? '使用 Token' : '不使用 Token';
+            resultDiv.innerHTML = `<div class="info result">正在${action}呼叫受保護的 API...</div>`;
+
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+
+                if (useToken) {
+                    headers['X-CSRF-TOKEN'] = csrfToken;
+                }
+
+                const response = await fetch('/api/csrf/protected', {
+                    method: 'POST',
+                    headers: headers,
+                    credentials: 'include',
+                    body: JSON.stringify({ data: dataInput })
+                });
+
+                const responseData = await response.text();
+                let jsonData = null;
+                try {
+                    jsonData = JSON.parse(responseData);
+                } catch (e) {
+                    // Response is not JSON
+                }
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success result">
+                            <strong>✅ API 呼叫成功！</strong><br><br>
+                            <strong>HTTP 狀態：</strong> ${response.status} ${response.statusText}<br>
+                            <strong>使用 Token：</strong> ${useToken ? '是' : '否'}<br>
+                            <strong>伺服器回應：</strong><br>
+                            <div class="token-display">${JSON.stringify(jsonData, null, 2)}</div>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error result">
+                            <strong>❌ API 呼叫失敗 (符合預期)</strong><br><br>
+                            <strong>HTTP 狀態：</strong> ${response.status} ${response.statusText}<br>
+                            <strong>使用 Token：</strong> ${useToken ? '是' : '否'}<br>
+                            <strong>失敗原因：</strong> ${useToken ? 'Token 無效或已過期' : 'CSRF Token 驗證失敗'}<br>
+                            <strong>伺服器回應：</strong><br>
+                            <div class="token-display">${responseData || '(無回應內容)'}</div>
+                            <br>
+                            <small>💡 這是正常的安全機制，防止跨站請求攻擊</small>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error result">
+                        <strong>❌ 請求發生錯誤</strong><br>
+                        錯誤訊息: ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
