@@ -758,6 +758,247 @@ public IActionResult GetFlexible()
 - CDN 加速的公開 API
 - 希望 CDN 快取時間長，但瀏覽器快取時間短的場景
 
+## ResponseCache vs Response.Headers.CacheControl
+
+在 ASP.NET Core 中，設定 HTTP Cache 有兩種主要方式：宣告式的 `[ResponseCache]` 屬性和命令式的 `Response.Headers.CacheControl`。理解它們的差異對於選擇正確的實作方式至關重要。
+
+### 方式一：`[ResponseCache]` 屬性（宣告式）
+
+`[ResponseCache]` 是一個 Action Filter Attribute，提供宣告式的快取設定方式。
+
+**範例實作：**
+```csharp
+[HttpGet("http-response-cache")]
+[ResponseCache(Duration = 60, Location = ResponseCacheLocation.Any)]
+public IActionResult GetHttpResponseCache()
+{
+    return Ok(new
+    {
+        source = "HTTP Response Cache (60 seconds)",
+        value = $"Data generated at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}",
+        timestamp = DateTime.UtcNow,
+        description = "使用 ResponseCache Attribute 設定客戶端快取"
+    });
+}
+```
+
+**實際產生的 HTTP 標頭：**
+```http
+HTTP/1.1 200 OK
+Cache-Control: public, max-age=60
+Content-Type: application/json
+```
+
+**特點：**
+- ✅ **宣告式語法** - 清楚表達快取意圖，程式碼可讀性高
+- ✅ **型別安全** - 編譯時期檢查參數有效性
+- ✅ **自動處理** - 框架自動將設定轉換為正確的 HTTP 標頭
+- ✅ **支援 CacheProfile** - 可在 `Program.cs` 定義共享設定
+
+**CacheProfile 範例：**
+```csharp
+// Program.cs
+builder.Services.AddControllers(options =>
+{
+    options.CacheProfiles.Add("Default30",
+        new CacheProfile
+        {
+            Duration = 30,
+            Location = ResponseCacheLocation.Any
+        });
+    
+    options.CacheProfiles.Add("NeverCache",
+        new CacheProfile
+        {
+            Location = ResponseCacheLocation.None,
+            NoStore = true
+        });
+});
+
+// Controller
+[ResponseCache(CacheProfileName = "Default30")]
+public IActionResult GetProduct(int id) { ... }
+```
+
+**參數說明：**
+- `Duration` - 快取持續時間（秒），對應 `max-age`
+- `Location` - 快取位置
+  - `Any` → `public`（任何快取都可儲存）
+  - `Client` → `private`（僅瀏覽器快取）
+  - `None` → `no-cache`（必須驗證）
+- `NoStore` - 設為 `true` 時產生 `no-store`
+- `VaryByHeader` - 設定 `Vary` 標頭
+- `VaryByQueryKeys` - 根據查詢參數變化快取
+
+### 方式二：`Response.Headers.CacheControl`（命令式）
+
+直接操作 HTTP 標頭，提供更細粒度的控制。
+
+**範例實作：**
+```csharp
+[HttpGet("http-cache-control")]
+public IActionResult GetHttpCacheControl()
+{
+    Response.Headers.CacheControl = "public, max-age=120";
+    Response.Headers.Expires = DateTime.UtcNow.AddMinutes(2).ToString("R");
+
+    return Ok(new
+    {
+        source = "HTTP Cache-Control (120 seconds)",
+        value = $"Data generated at {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}",
+        timestamp = DateTime.UtcNow,
+        headers = new
+        {
+            CacheControl = "public, max-age=120",
+            Expires = Response.Headers.Expires.ToString()
+        },
+        description = "手動設定 Cache-Control 和 Expires 標頭"
+    });
+}
+```
+
+**實際產生的 HTTP 標頭：**
+```http
+HTTP/1.1 200 OK
+Cache-Control: public, max-age=120
+Expires: Wed, 08 Jan 2026 04:38:00 GMT
+Content-Type: application/json
+```
+
+**特點：**
+- ✅ **動態控制** - 執行時期根據條件決定快取策略
+- ✅ **完整控制** - 可設定任意標頭組合（Expires、Vary、ETag 等）
+- ✅ **彈性高** - 適合複雜的條件邏輯
+- ✅ **精確設定** - 可使用 RFC 9111 的所有指令
+
+**動態快取範例：**
+```csharp
+[HttpGet("dynamic-cache")]
+public IActionResult GetDynamicCache([FromQuery] bool isVip)
+{
+    if (isVip)
+    {
+        // VIP 使用者：快取 5 分鐘
+        Response.Headers.CacheControl = "private, max-age=300";
+    }
+    else
+    {
+        // 一般使用者：快取 1 分鐘
+        Response.Headers.CacheControl = "private, max-age=60";
+    }
+
+    return Ok(GetUserData());
+}
+```
+
+**ETag 條件請求範例：**
+```csharp
+[HttpGet("data/{id}")]
+public IActionResult GetData(int id)
+{
+    var data = _repository.Get(id);
+    var etag = $"\"{data.Version}\"";
+
+    // 設定 ETag 和 Cache-Control
+    Response.Headers.ETag = etag;
+    Response.Headers.CacheControl = "public, max-age=60";
+
+    // 處理條件請求
+    if (Request.Headers.IfNoneMatch == etag)
+    {
+        return StatusCode(304); // Not Modified
+    }
+
+    return Ok(data);
+}
+```
+
+### 比較總結
+
+| 特性 | `[ResponseCache]` | `Response.Headers.CacheControl` |
+|------|------------------|--------------------------------|
+| **設定方式** | 宣告式（Attribute） | 命令式（程式碼） |
+| **可讀性** | ⭐⭐⭐⭐⭐ 清晰易懂 | ⭐⭐⭐ 需要理解 HTTP 標頭 |
+| **動態決策** | ❌ 編譯時期固定 | ✅ 執行時期決定 |
+| **條件邏輯** | ❌ 不支援 | ✅ 完全支援 |
+| **型別安全** | ✅ 編譯時期檢查 | ⚠️ 字串值，執行時期檢查 |
+| **共享設定** | ✅ CacheProfile | ❌ 需手動實作 |
+| **複雜標頭** | ⚠️ 有限支援 | ✅ 完全控制 |
+| **ETag 處理** | ❌ 需額外實作 | ✅ 完整控制 |
+| **適用場景** | 靜態、固定的快取策略 | 動態、條件式的快取邏輯 |
+
+### 選擇指南
+
+**使用 `[ResponseCache]` 當：**
+1. 快取策略是固定的（如靜態資源）
+2. 想要集中管理快取設定（CacheProfile）
+3. 優先考慮程式碼可讀性和維護性
+4. 快取行為不需要根據請求條件改變
+
+```csharp
+// ✅ 適合：產品列表（固定快取 5 分鐘）
+[HttpGet("products")]
+[ResponseCache(Duration = 300, Location = ResponseCacheLocation.Any)]
+public IActionResult GetProducts() { ... }
+```
+
+**使用 `Response.Headers.CacheControl` 當：**
+1. 需要根據條件動態決定快取策略
+2. 需要設定 ETag、Last-Modified 等驗證標頭
+3. 需要組合多個標頭（Vary、Expires）
+4. 實作複雜的快取邏輯（如根據使用者角色、資料狀態）
+
+```csharp
+// ✅ 適合：根據資料新鮮度動態決定
+[HttpGet("news/{id}")]
+public IActionResult GetNews(int id)
+{
+    var news = _repository.Get(id);
+    var age = DateTime.UtcNow - news.PublishedAt;
+
+    if (age.TotalHours < 1)
+    {
+        // 新聞剛發布：快取 1 分鐘
+        Response.Headers.CacheControl = "public, max-age=60";
+    }
+    else if (age.TotalDays < 7)
+    {
+        // 一週內：快取 30 分鐘
+        Response.Headers.CacheControl = "public, max-age=1800";
+    }
+    else
+    {
+        // 舊聞：快取 24 小時
+        Response.Headers.CacheControl = "public, max-age=86400";
+    }
+
+    return Ok(news);
+}
+```
+
+### 混合使用範例
+
+在實務中，也可以混合使用兩種方式：
+
+```csharp
+[ResponseCache(Duration = 60, VaryByHeader = "Accept-Language")]
+public IActionResult GetLocalized()
+{
+    // 基礎設定由 Attribute 處理
+    // 額外的動態邏輯由程式碼處理
+    
+    if (IsDataStale())
+    {
+        // 資料已過時，覆蓋 Attribute 的設定
+        Response.Headers.CacheControl = "no-cache";
+    }
+
+    return Ok(GetLocalizedData());
+}
+```
+
+**注意：** 當同時使用時，`Response.Headers.CacheControl` 的設定會覆蓋 `[ResponseCache]` 的設定。
+
 ## 實務建議
 
 ### 1. 靜態資源的最佳實踐
