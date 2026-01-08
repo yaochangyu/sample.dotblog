@@ -9,8 +9,21 @@ builder.Services.AddOpenApi();
 // 註冊 Controllers
 builder.Services.AddControllers();
 
-// 註冊 Memory Cache
-builder.Services.AddMemoryCache();
+// 註冊 HttpContextAccessor（必要）
+builder.Services.AddHttpContextAccessor();
+
+// 啟用 Session
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;  // 防止 JavaScript 讀取
+    options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;  // 只在 HTTPS 下傳送
+    options.Cookie.SameSite = SameSiteMode.Strict;  // 防止 CSRF
+});
+
+// 使用分散式記憶體快取（支援 Session）
+builder.Services.AddDistributedMemoryCache();
 
 // 註冊 CSRF Token 服務
 builder.Services.AddScoped<ICsrfTokenService, CsrfTokenService>();
@@ -40,6 +53,9 @@ app.UseHttpsRedirection();
 
 // 啟用 CORS
 app.UseCors("AllowFrontend");
+
+// 啟用 Session（必須在 UseCors 之後）
+app.UseSession();
 
 // 啟用靜態檔案服務
 app.UseStaticFiles();

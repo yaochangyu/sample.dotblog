@@ -19,7 +19,7 @@ public class CsrfController : ControllerBase
     public IActionResult GetToken()
     {
         var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
-        return Ok(new { token = tokens.RequestToken });
+        return Ok(new { message = "CSRF Token 已設定在 Cookie 中" });
     }
 
     [HttpPost("protected")]

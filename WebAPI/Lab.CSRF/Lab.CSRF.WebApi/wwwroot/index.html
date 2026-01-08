@@ -117,16 +117,22 @@
                 3. 使用 Token 呼叫受保護的 API → 應該成功<br>
                 4. 不使用 Token 呼叫受保護的 API → 應該失敗 (400 Bad Request)<br>
                 <br>
-                <strong>安全機制：</strong><br>
-                • CSRF Token 透過 Cookie 和 Header 雙重驗證<br>
-                • 跨站請求無法讀取 Token，因此無法通過驗證<br>
-                • 只有來自本站的請求才能成功
+                <strong>安全機制 (Double Submit Cookie)：</strong><br>
+                • Token 儲存在 Cookie 中 (SameSite=Strict)<br>
+                • 前端從 Cookie 讀取 Token 並放入 Header<br>
+                • 跨站請求無法讀取其他網站的 Cookie<br>
+                • 即使爬蟲取得 Token，也無法在跨站情境下使用
             </div>
         </div>
     </div>
 
     <script>
-        let csrfToken = null;
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        }
 
         async function getToken() {
             const resultDiv = document.getElementById('tokenResult');
@@ -140,16 +146,20 @@
 
                 if (response.ok) {
                     const data = await response.json();
-                    csrfToken = data.token;
+                    const csrfToken = getCookie('XSRF-TOKEN');
                     
-                    resultDiv.innerHTML = `
-                        <div class="success result">
-                            <strong>✅ Token 取得成功！</strong><br><br>
-                            <strong>Token 值：</strong><br>
-                            <div class="token-display">${csrfToken}</div>
-                            <small>Token 已儲存，可以開始測試受保護的 API</small>
-                        </div>
-                    `;
+                    if (csrfToken) {
+                        resultDiv.innerHTML = `
+                            <div class="success result">
+                                <strong>✅ Token 取得成功！</strong><br><br>
+                                <strong>Token 值 (從 Cookie 讀取)：</strong><br>
+                                <div class="token-display">${csrfToken}</div>
+                                <small>Token 已儲存在 Cookie 中，可以開始測試受保護的 API</small>
+                            </div>
+                        `;
+                    } else {
+                        throw new Error('無法從 Cookie 取得 Token');
+                    }
                 } else {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
@@ -166,6 +176,7 @@
         async function callProtectedApi(useToken) {
             const resultDiv = document.getElementById('apiResult');
             const dataInput = document.getElementById('dataInput').value;
+            const csrfToken = getCookie('XSRF-TOKEN');
 
             if (useToken && !csrfToken) {
                 resultDiv.innerHTML = `
