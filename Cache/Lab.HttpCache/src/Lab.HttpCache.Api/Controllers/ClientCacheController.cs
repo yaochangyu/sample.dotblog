@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Lab.HttpCache.Api.Repositories;
 
 namespace Lab.HttpCache.Api.Controllers;
 
@@ -12,6 +13,12 @@ public class ClientCacheController : ControllerBase
 {
     private static readonly DateTime StartTime = DateTime.UtcNow;
     private static int _requestCounter = 0;
+    private readonly IArticleRepository _repository;
+
+    public ClientCacheController(IArticleRepository repository)
+    {
+        _repository = repository;
+    }
 
     /// <summary>
     /// 1. max-age - 標準快取，指定秒數內可重複使用
@@ -490,6 +497,166 @@ public class ClientCacheController : ControllerBase
         });
     }
 
+    /// <summary>
+    /// 18. 文章端點 - 結合 ETag 提升效率（根據文章範例實作）
+    /// 展示如何結合 Cache-Control + ETag + must-revalidate 來優化 API 效能
+    /// </summary>
+    [HttpGet("article/{id}")]
+    public IActionResult GetArticle(int id)
+    {
+        var requestId = Interlocked.Increment(ref _requestCounter);
+        var article = _repository.GetArticle(id);
+
+        if (article == null)
+        {
+            return NotFound(new
+            {
+                requestId,
+                message = $"找不到 ID 為 {id} 的文章"
+            });
+        }
+
+        // 使用文章的 UpdatedAt 時間來生成 ETag
+        var etag = $"\"{article.UpdatedAt.Ticks}\"";
+
+        Response.Headers.CacheControl = "public, max-age=60, must-revalidate";
+        Response.Headers.ETag = etag;
+
+        // 檢查條件請求
+        if (Request.Headers.IfNoneMatch == etag)
+        {
+            return StatusCode(304); // Not Modified - 節省流量
+        }
+
+        return Ok(new
+        {
+            requestId,
+            timestamp = DateTime.UtcNow,
+            article = new
+            {
+                article.Id,
+                article.Title,
+                article.Content,
+                article.Author,
+                article.CreatedAt,
+                article.UpdatedAt,
+                article.ViewCount,
+                article.Tags
+            },
+            cacheInfo = new
+            {
+                etag,
+                cacheControl = "public, max-age=60, must-revalidate",
+                explanation = new
+                {
+                    flow = new[]
+                    {
+                        "1. 首次請求：伺服器回傳完整資料 + ETag",
+                        "2. 60 秒內：瀏覽器直接使用快取（0 個請求到伺服器）",
+                        "3. 60 秒後：瀏覽器發送條件請求（帶 If-None-Match）",
+                        "4. 如果內容未改變：伺服器回傳 304（幾百位元組）",
+                        "5. 如果內容改變：伺服器回傳 200 + 新資料 + 新 ETag"
+                    },
+                    benefits = new[]
+                    {
+                        "精確性：使用 UpdatedAt.Ticks 確保位元組級別的精確匹配",
+                        "節省流量：304 回應通常只有幾百位元組",
+                        "減少伺服器負載：伺服器只需比對 ETag，不需重新生成完整回應",
+                        "提升使用者體驗：60 秒內的請求載入速度接近瞬間"
+                    }
+                }
+            }
+        });
+    }
+
+    /// <summary>
+    /// 19. 更新文章 - 用於測試 ETag 變化
+    /// 當文章更新後，UpdatedAt 會改變，導致 ETag 改變，瀏覽器會收到新的內容
+    /// </summary>
+    [HttpPut("article/{id}")]
+    public IActionResult UpdateArticle(int id, [FromBody] ArticleUpdateRequest request)
+    {
+        var requestId = Interlocked.Increment(ref _requestCounter);
+        var success = _repository.UpdateArticle(id, request.Title, request.Content);
+
+        if (!success)
+        {
+            return NotFound(new
+            {
+                requestId,
+                message = $"找不到 ID 為 {id} 的文章"
+            });
+        }
+
+        var updatedArticle = _repository.GetArticle(id);
+        var newETag = $"\"{updatedArticle!.UpdatedAt.Ticks}\"";
+
+        return Ok(new
+        {
+            requestId,
+            message = "文章已更新",
+            newETag,
+            article = new
+            {
+                updatedArticle.Id,
+                updatedArticle.Title,
+                updatedArticle.Content,
+                updatedArticle.UpdatedAt
+            },
+            testInstructions = new
+            {
+                step1 = "再次請求 GET /api/clientcache/article/{id}",
+                step2 = "注意 requestId 會增加，表示快取已失效",
+                step3 = "ETag 已改變，瀏覽器會收到新的完整回應"
+            }
+        });
+    }
+
+    /// <summary>
+    /// 20. 取得所有文章列表 - 展示集合資料的快取策略
+    /// </summary>
+    [HttpGet("articles")]
+    public IActionResult GetAllArticles()
+    {
+        var requestId = Interlocked.Increment(ref _requestCounter);
+        var articles = _repository.GetAllArticles();
+
+        // 使用所有文章中最新的 UpdatedAt 作為 ETag
+        var latestUpdate = articles.Max(a => a.UpdatedAt);
+        var etag = $"\"{latestUpdate.Ticks}\"";
+
+        Response.Headers.CacheControl = "public, max-age=300, must-revalidate";
+        Response.Headers.ETag = etag;
+
+        if (Request.Headers.IfNoneMatch == etag)
+        {
+            return StatusCode(304);
+        }
+
+        return Ok(new
+        {
+            requestId,
+            timestamp = DateTime.UtcNow,
+            totalCount = articles.Count(),
+            articles = articles.Select(a => new
+            {
+                a.Id,
+                a.Title,
+                a.Author,
+                a.CreatedAt,
+                a.UpdatedAt,
+                a.ViewCount,
+                a.Tags
+            }),
+            cacheInfo = new
+            {
+                etag,
+                cacheControl = "public, max-age=300, must-revalidate",
+                description = "文章列表快取 5 分鐘。ETag 使用最新文章的更新時間，任何文章更新都會導致 ETag 改變"
+            }
+        });
+    }
+
     private int? ExtractClientMaxAge(Microsoft.Extensions.Primitives.StringValues cacheControlHeaders)
     {
         foreach (var header in cacheControlHeaders)
@@ -512,3 +679,8 @@ public class ClientCacheController : ControllerBase
         return null;
     }
 }
+
+/// <summary>
+/// 文章更新請求模型
+/// </summary>
+public record ArticleUpdateRequest(string Title, string Content);
