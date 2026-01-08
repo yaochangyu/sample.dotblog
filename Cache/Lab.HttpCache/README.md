@@ -23,14 +23,83 @@ HTTP Client-Side Cache 是經常被忽略的效能優化工具。透過正確的
 
 ## 快速啟動
 
-```bash
-# 1. 啟動 Redis
-docker-compose up -d
+### 1. 啟動 Redis
 
-# 2. 啟動 API
+```bash
+docker-compose up -d
+```
+
+### 2. 設定 Web API
+
+#### 2.1 設定 Redis 連線
+
+編輯 `src\Lab.HttpCache.Api\appsettings.json`，設定 Redis 連線：
+
+```json
+{
+  "Redis": {
+    "Configuration": "localhost:6379"
+  }
+}
+```
+
+#### 2.2 設定 Server-Side Cache
+
+在 `Program.cs` 中已配置以下快取機制：
+
+**Response Caching（HTTP 回應快取）：**
+```csharp
+// 加入 Response Cache 服務
+builder.Services.AddResponseCaching();
+
+// 使用 Response Cache 中介軟體
+app.UseResponseCaching();
+```
+
+**HybridCache（.NET 9 多層快取）：**
+```csharp
+// 註冊 Redis 分散式快取
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = redisConfiguration;
+});
+
+// 註冊 HybridCache
+builder.Services.AddHybridCache(options =>
+{
+    options.DefaultEntryOptions = new HybridCacheEntryOptions
+    {
+        Expiration = TimeSpan.FromMinutes(5),           // L2 (Redis) 快取 5 分鐘
+        LocalCacheExpiration = TimeSpan.FromMinutes(1)  // L1 (Memory) 快取 1 分鐘
+    };
+});
+```
+
+**快取架構：**
+```
+Client (瀏覽器快取 60s)
+    ↓
+Server Response Cache
+    ↓
+HybridCache L1 (Memory 1min)
+    ↓
+HybridCache L2 (Redis 5min)
+    ↓
+Data Source
+```
+
+### 3. 啟動 API
+
+```bash
 cd src\Lab.HttpCache.Api
 dotnet run
 ```
+
+API 會在 `http://localhost:5178` 啟動。
+
+### 4. 開啟 Swagger UI
+
+瀏覽器訪問：http://localhost:5178/swagger
 
 ## 實驗一：max-age
 
