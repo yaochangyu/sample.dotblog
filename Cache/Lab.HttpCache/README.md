@@ -1,455 +1,265 @@
-# Lab.HttpCache - HybridCache 快取實作範例
+# HTTP Client-Side Cache 實戰指南
 
-這是一個使用 .NET 9 **HybridCache** 的完整快取實作範例，展示現代化的快取機制。
+## 前言
 
-## 專案架構
+HTTP Client-Side Cache 是經常被忽略的效能優化工具。透過正確的 HTTP 標頭設定,可以讓瀏覽器直接使用本地快取,減少伺服器負載並提升使用者體驗。
 
-```
-Lab.HttpCache/
-├── src/
-│   └── Lab.HttpCache.Api/
-│       ├── Controllers/
-│       │   └── CacheController.cs          # 快取範例 API
-│       ├── Services/
-│       │   ├── ICacheService.cs            # 快取服務介面
-│       │   └── HybridCacheService.cs       # HybridCache 封裝服務
-│       ├── Program.cs                      # 應用程式進入點
-│       └── appsettings.json                # 配置檔
-├── docker-compose.yml                      # Docker Compose 配置
-└── README.md                               # 說明文件
-```
+本文透過實際程式碼示範各種 Cache-Control 指令的行為與應用場景。
 
-## 快取機制
+## 核心概念
 
-### 1. HybridCache (.NET 9 新功能) ⭐
+### 常用 Cache-Control 指令
 
-**HybridCache** 是 .NET 9 引入的新快取抽象，自動整合 L1 (記憶體) 和 L2 (分散式) 快取。
+- **max-age=N** - 快取 N 秒
+- **no-cache** - 可快取但必須驗證
+- **no-store** - 完全禁止快取
+- **private** - 僅瀏覽器可快取
+- **immutable** - 內容永不改變
 
-#### 主要特性：
+### 驗證機制
 
-- **🚀 自動二級快取**：自動管理 L1 (Memory) 和 L2 (Redis) 快取
-- **🛡️ Stampede Protection**：防止快取穿透 (Cache Stampede)
-- **📦 自動序列化**：自動處理複雜物件的序列化/反序列化
-- **🏷️ 標籤式失效**：支援基於標籤的快取失效
-- **⚡ 更好的效能**：比傳統的 IMemoryCache + IDistributedCache 更高效
+- **ETag / If-None-Match** - 實體標籤比對
+- **Last-Modified / If-Modified-Since** - 時間比對
 
-#### 運作原理：
-
-```
-請求 → L1 (Memory Cache)
-         ├─ 命中 → 立即回傳 ⚡
-         └─ 未命中 → L2 (Redis Cache)
-                      ├─ 命中 → 回寫 L1 → 回傳
-                      └─ 未命中 → 執行 Factory → 寫入 L1 & L2 → 回傳
-```
-
-#### HybridCache vs 傳統方式：
-
-| 功能 | HybridCache | 傳統方式 (IMemoryCache + IDistributedCache) |
-|------|-------------|---------------------------------------------|
-| 二級快取 | ✅ 自動處理 | ❌ 需手動實作 |
-| Stampede Protection | ✅ 內建 | ❌ 需手動實作 |
-| 序列化 | ✅ 自動 | ❌ 需手動序列化 |
-| 程式碼複雜度 | 🟢 簡單 | 🔴 複雜 |
-| 效能 | 🟢 優化過 | 🟡 取決於實作 |
-
-### 2. HTTP Cache (客戶端快取)
-
-使用 HTTP 標頭控制瀏覽器或 CDN 快取：
-- **ResponseCache Attribute**：使用屬性設定快取策略
-- **Cache-Control**：手動設定快取控制標頭
-- **ETag**：使用實體標籤進行條件請求
-
-## 環境需求
-
-- .NET 9.0 SDK
-- Docker (用於執行 Redis)
-
-## 快速開始
-
-### 1. 啟動 Redis 服務
+## 快速啟動
 
 ```bash
+# 1. 啟動 Redis
 docker-compose up -d
-```
 
-### 2. 執行應用程式
-
-```bash
-cd src/Lab.HttpCache.Api
+# 2. 啟動 API
+cd src\Lab.HttpCache.Api
 dotnet run
 ```
 
-應用程式預設會在 `http://localhost:5000` 和 `https://localhost:5001` 啟動。
+## 實驗一：max-age
 
-### 3. 存取 API 文件
-
-開啟瀏覽器存取：
-- OpenAPI 文件: `https://localhost:5001/openapi/v1.json`
-
-## API 端點
-
-### HybridCache 範例
-
-#### 基本使用
-```bash
-# 取得或建立快取資料 (使用封裝服務)
-GET /api/cache/hybrid?key=test1
-
-# 第一次請求：執行 factory，寫入 L1 & L2
-# 第二次請求：從 L1 (Memory) 讀取 ⚡
-# L1 過期後：從 L2 (Redis) 讀取並回寫 L1
-```
-
-#### 直接使用 HybridCache
-```bash
-# 使用不同的 L1 和 L2 過期時間
-GET /api/cache/hybrid-direct?key=test2
-
-# L1 快取 2 分鐘，L2 快取 10 分鐘
-```
-
-#### 複雜物件快取
-```bash
-# 快取複雜物件 (自動序列化)
-GET /api/cache/hybrid-complex?userId=user-123
-```
-
-#### 手動設定快取
-```bash
-# POST 設定快取值
-POST /api/cache/hybrid-set?key=mykey
-Content-Type: application/json
-
-"my custom value"
-```
-
-#### 刪除快取
-```bash
-# 刪除單一快取 (同時清除 L1 和 L2)
-DELETE /api/cache/hybrid/test1
-
-# 透過標籤批量刪除快取
-DELETE /api/cache/hybrid/tag/demo
-# 這會刪除所有帶有 "demo" 標籤的快取項目
-```
-
-#### 快取統計資訊
-```bash
-# 取得 HybridCache 功能說明
-GET /api/cache/stats
-```
-
-### HTTP Cache 範例
-
-#### ResponseCache Attribute
-```bash
-# 使用 ResponseCache 屬性 (60 秒快取)
-GET /api/cache/http-response-cache
-```
-
-#### Cache-Control 標頭
-```bash
-# 手動設定 Cache-Control (120 秒快取)
-GET /api/cache/http-cache-control
-```
-
-#### ETag
-```bash
-# 使用 ETag 進行條件請求
-GET /api/cache/http-etag
-
-# 第二次請求時會回傳 304 Not Modified
-```
-
-## 測試快取機制
-
-### 測試 HybridCache
-
-```bash
-# 第一次請求 - 快取未命中，執行 factory
-curl http://localhost:5000/api/cache/hybrid?key=demo
-# 回應時間: ~100ms (模擬資料庫查詢)
-
-# 第二次請求 - L1 快取命中
-curl http://localhost:5000/api/cache/hybrid?key=demo
-# 回應時間: <1ms ⚡
-
-# 測試複雜物件
-curl http://localhost:5000/api/cache/hybrid-complex?userId=user-456
-
-# 刪除快取
-curl -X DELETE http://localhost:5000/api/cache/hybrid/demo
-```
-
-### 測試 HybridCache 的 Stampede Protection
-
-```bash
-# 同時發送多個相同請求，只會執行一次 factory
-for i in {1..10}; do
-  curl http://localhost:5000/api/cache/hybrid?key=stampede-test &
-done
-wait
-
-# 檢查伺服器日誌，factory 只執行一次
-```
-
-### 測試不同的過期時間
-
-```bash
-# L1: 2 分鐘, L2: 10 分鐘
-curl http://localhost:5000/api/cache/hybrid-direct?key=expiration-test
-
-# 2 分鐘後再次請求 - 從 L2 讀取並回寫 L1
-# 10 分鐘後再次請求 - 重新執行 factory
-```
-
-### 測試 HTTP Cache (使用 curl)
-
-```bash
-# 第一次請求 - 取得 ETag
-curl -i http://localhost:5000/api/cache/http-etag
-
-# 第二次請求 - 使用 ETag 條件請求
-curl -i -H "If-None-Match: \"<ETag值>\"" http://localhost:5000/api/cache/http-etag
-# 應該回傳 304 Not Modified
-```
-
-## 配置說明
-
-### appsettings.json
-
-```json
+```csharp
+[HttpGet("max-age")]
+public IActionResult GetMaxAge([FromQuery] int seconds = 60)
 {
-  "Redis": {
-    "Configuration": "localhost:6379"
-  }
+    Response.Headers.CacheControl = $"public, max-age={seconds}";
+    return Ok(new { requestId = Interlocked.Increment(ref _requestCounter) });
 }
 ```
 
-### Program.cs - HybridCache 配置
+**測試：**
 
-```csharp
-// 註冊 Redis 作為 L2 快取
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = redisConfiguration;
-});
+```http
+@baseUrl = http://localhost:5178
 
-// 註冊 HybridCache
-builder.Services.AddHybridCache(options =>
-{
-    options.DefaultEntryOptions = new HybridCacheEntryOptions
-    {
-        Expiration = TimeSpan.FromMinutes(5),        // L2 (Redis) 過期時間
-        LocalCacheExpiration = TimeSpan.FromMinutes(1) // L1 (Memory) 過期時間 - 應比 L2 短
-    };
-});
+### 首次請求
+GET {{baseUrl}}/api/clientcache/max-age?seconds=60
+Accept: application/json
+
+### 立即再次請求（60秒內）
+GET {{baseUrl}}/api/clientcache/max-age?seconds=60
+Accept: application/json
 ```
 
-> **重要提示：** 根據最佳實踐，L1 快取時間應該比 L2 短，這樣可以確保分散式環境中的資料一致性。
+在瀏覽器 DevTools 中,60 秒內重新整理會看到 `(from cache)`,請求不會到達伺服器。
 
-## HybridCache 使用範例
+**應用：** 靜態資源、不常變動的 API（導覽選單、分類）
 
-### 基本用法
+## 實驗二：no-store
 
 ```csharp
-public class MyService
+[HttpGet("no-store")]
+public IActionResult GetNoStore()
 {
-    private readonly HybridCache _cache;
-
-    public MyService(HybridCache cache)
-    {
-        _cache = cache;
-    }
-
-    public async Task<UserData> GetUserAsync(string userId)
-    {
-        return await _cache.GetOrCreateAsync(
-            $"user:{userId}",
-            async cancellationToken =>
-            {
-                // 從資料庫查詢
-                return await _database.GetUserAsync(userId, cancellationToken);
-            },
-            new HybridCacheEntryOptions
-            {
-                Expiration = TimeSpan.FromMinutes(10),        // L2 快取 10 分鐘
-                LocalCacheExpiration = TimeSpan.FromMinutes(2) // L1 快取 2 分鐘 (應比 L2 短)
-            },
-            tags: ["user-data", $"user:{userId}"]);  // 使用標籤便於批量清除
-    }
+    Response.Headers.CacheControl = "no-store";
+    return Ok(new { requestId = Interlocked.Increment(ref _requestCounter) });
 }
 ```
 
-### 使用 Tags 標籤進行快取管理
+**測試：**
 
-```csharp
-// 建立帶有標籤的快取
-await _cache.GetOrCreateAsync(
-    "product:123",
-    async ct => await GetProductAsync("123", ct),
-    options,
-    tags: ["product", "category:electronics"]);
+```http
+### 首次請求
+GET {{baseUrl}}/api/clientcache/no-store
+Accept: application/json
 
-await _cache.GetOrCreateAsync(
-    "product:456",
-    async ct => await GetProductAsync("456", ct),
-    options,
-    tags: ["product", "category:electronics"]);
+### 第二次請求
+GET {{baseUrl}}/api/clientcache/no-store
+Accept: application/json
 
-// 批量清除所有電子產品相關的快取
-await _cache.RemoveByTagAsync("category:electronics");
-// 這會同時清除 product:123 和 product:456
+### 第三次請求
+GET {{baseUrl}}/api/clientcache/no-store
+Accept: application/json
 ```
 
-### 手動設定快取
+每次請求 `requestId` 都會遞增,表示完全不使用快取。
+
+**應用：** 敏感資料（個人資訊、交易記錄）
+
+## 實驗三：ETag 驗證
 
 ```csharp
-// 設定快取
-await _cache.SetAsync(
-    "mykey",
-    myValue,
-    new HybridCacheEntryOptions
-    {
-        Expiration = TimeSpan.FromHours(1)
-    },
-    tags: ["my-tag"]);
-
-// 移除單一快取
-await _cache.RemoveAsync("mykey");
-
-// 透過標籤批量移除
-await _cache.RemoveByTagAsync("my-tag");
-```
-
-### Tags 標籤使用最佳實踐
-
-1. **為所有快取項目添加標籤**：便於批量管理和清除
-   ```csharp
-   tags: ["user-data", $"user:{userId}"]
-   ```
-
-2. **使用階層式標籤**：支援更細緻的快取控制
-   ```csharp
-   tags: ["product", "category:electronics", "brand:apple"]
-   ```
-
-3. **清除策略**：
-   - 當使用者資料更新時：`RemoveByTagAsync($"user:{userId}")`
-   - 當某個分類的產品更新時：`RemoveByTagAsync("category:electronics")`
-   - 清除所有產品快取：`RemoveByTagAsync("product")`
-
-## 快取過期時間建議
-
-| 快取類型 | L1 (Memory) | L2 (Redis) | 說明 |
-|---------|-------------|------------|------|
-| 熱門資料 | 2-5 分鐘 | 10-30 分鐘 | 經常存取的資料 |
-| 一般資料 | 5-10 分鐘 | 30-60 分鐘 | 中等頻率存取 |
-| 靜態資料 | 10-30 分鐘 | 1-24 小時 | 很少變動的資料 |
-
-## 技術堆疊
-
-- **.NET 9.0**
-- **ASP.NET Core Web API**
-- **HybridCache** (Microsoft.Extensions.Caching.Hybrid)
-- **Redis 7 Alpine** (作為 L2 分散式快取)
-- **ResponseCache Middleware**
-
-## HybridCache 優勢
-
-### 1. 自動二級快取管理
-不需要手動處理 L1/L2 快取邏輯，HybridCache 自動管理。
-
-### 2. Stampede Protection
-當多個請求同時查詢相同的快取鍵時，只會執行一次資料載入，其他請求等待結果。
-
-**傳統方式的問題：**
-```csharp
-// ❌ 10 個請求同時進來，會執行 10 次資料庫查詢
-var value = cache.Get(key);
-if (value == null)
+[HttpGet("article/{id}")]
+public async Task<IActionResult> GetArticle(int id)
 {
-    value = await database.GetAsync(key); // 執行 10 次！
-    cache.Set(key, value);
+    var article = await _articleRepository.GetByIdAsync(id);
+    var etag = $"\"{article.Version}\"";
+    
+    if (Request.Headers.IfNoneMatch == etag)
+        return StatusCode(304); // Not Modified
+    
+    Response.Headers.ETag = etag;
+    return Ok(article);
 }
 ```
 
-**HybridCache 解決方案：**
-```csharp
-// ✅ 10 個請求同時進來，只執行 1 次資料庫查詢
-var value = await cache.GetOrCreateAsync(key, async ct =>
-{
-    return await database.GetAsync(key); // 只執行 1 次！
-});
+**測試：**
+
+```http
+### 首次請求
+GET {{baseUrl}}/api/clientcache/article/1
+Accept: application/json
+
+### 第二次請求（會自動帶 If-None-Match）
+GET {{baseUrl}}/api/clientcache/article/1
+Accept: application/json
 ```
 
-### 3. 自動序列化
-HybridCache 自動處理複雜物件的序列化，不需要手動轉換。
+第二次請求帶上 `If-None-Match: "版本號"`,若未變更會收到 304（無 Body,節省 99% 流量）。
 
-### 4. 更好的效能
-經過最佳化的實作，比手動組合 IMemoryCache + IDistributedCache 更高效。
+**應用：** 經常查詢但不常變更的資料（文章、產品詳情）
 
-## 注意事項
+## 實驗四：no-cache vs no-store
 
-1. **Redis 連線**：確保 Redis 服務正在執行
-2. **序列化**：HybridCache 使用的物件必須可序列化
-3. **快取鍵命名**：建議使用有意義的前綴，如 `user:{id}`、`product:{id}`
-4. **過期時間**：L1 過期時間應該 < L2 過期時間（最佳實踐）
-5. **Tags 標籤**：為所有快取項目添加標籤，便於批量清除和管理
+| 指令 | 是否快取 | 是否驗證 | 應用 |
+|------|---------|---------|------|
+| no-cache | ✅ 快取 | ✅ 必須驗證 | HTML 頁面 |
+| no-store | ❌ 不快取 | ❌ 不驗證 | 敏感資料 |
 
-## 停止服務
+## 實驗五：immutable
 
-```bash
-# 停止應用程式
-Ctrl+C
-
-# 停止 Redis 容器
-docker-compose down
-
-# 停止並移除資料
-docker-compose down -v
-```
-
-## 延伸閱讀
-
-- [HybridCache 官方文件](https://learn.microsoft.com/en-us/aspnet/core/performance/caching/hybrid)
-- [.NET 9 新功能](https://learn.microsoft.com/en-us/dotnet/core/whats-new/dotnet-9)
-- [ASP.NET Core 快取](https://learn.microsoft.com/zh-tw/aspnet/core/performance/caching/overview)
-- [HTTP 快取標頭](https://developer.mozilla.org/zh-TW/docs/Web/HTTP/Caching)
-
-## 從傳統快取遷移到 HybridCache
-
-如果您目前使用 IMemoryCache + IDistributedCache，可以輕鬆遷移到 HybridCache：
-
-**舊的方式：**
 ```csharp
-// 複雜的手動二級快取邏輯
-var value = _memoryCache.Get(key);
-if (value == null)
+[HttpGet("immutable")]
+public IActionResult GetImmutable()
 {
-    var bytes = await _distributedCache.GetAsync(key);
-    if (bytes != null)
-    {
-        value = JsonSerializer.Deserialize<T>(bytes);
-        _memoryCache.Set(key, value);
-    }
-    else
-    {
-        value = await GetFromDatabase(key);
-        var json = JsonSerializer.Serialize(value);
-        await _distributedCache.SetAsync(key, Encoding.UTF8.GetBytes(json));
-        _memoryCache.Set(key, value);
-    }
+    Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+    return Ok(new { requestId = Interlocked.Increment(ref _requestCounter) });
 }
 ```
 
-**新的方式：**
-```csharp
-// 簡潔的 HybridCache 用法
-var value = await _hybridCache.GetOrCreateAsync(
-    key,
-    async ct => await GetFromDatabase(key, ct));
+**測試：**
+
+```http
+### 請求 immutable 資源
+GET {{baseUrl}}/api/clientcache/immutable
+Accept: application/json
 ```
 
-**節省超過 90% 的程式碼！** 🎉
+**特性：** 即使 Ctrl+F5 強制重新整理,瀏覽器也不會發送請求。
+
+**應用：** 版本化靜態資源（`app.a1b2c3.js`、CDN 資源）
+
+## 實驗六：stale-while-revalidate
+
+```csharp
+[HttpGet("stale-while-revalidate")]
+public IActionResult GetStaleWhileRevalidate()
+{
+    Response.Headers.CacheControl = "max-age=10, stale-while-revalidate=60";
+    return Ok(new { requestId = Interlocked.Increment(ref _requestCounter) });
+}
+```
+
+**測試：**
+
+```http
+### 首次請求
+GET {{baseUrl}}/api/clientcache/stale-while-revalidate
+Accept: application/json
+
+### 15 秒後請求（會先回傳舊快取）
+GET {{baseUrl}}/api/clientcache/stale-while-revalidate
+Accept: application/json
+```
+
+**行為：** 過期後立即回傳舊快取,背景重新驗證。使用者永遠獲得即時回應。
+
+**應用：** 新聞列表、產品列表、社交動態
+
+## 實驗七：Vary
+
+```csharp
+[HttpGet("vary")]
+public IActionResult GetVary()
+{
+    Response.Headers.CacheControl = "public, max-age=300";
+    Response.Headers.Vary = "Accept-Encoding";
+    return Ok(new { encoding = Request.Headers.AcceptEncoding.ToString() });
+}
+```
+
+**測試：**
+
+```http
+### 使用 gzip 編碼
+GET {{baseUrl}}/api/clientcache/vary
+Accept-Encoding: gzip
+
+### 使用 br 編碼
+GET {{baseUrl}}/api/clientcache/vary
+Accept-Encoding: br
+```
+
+**作用：** 告訴快取根據指定標頭分別儲存（如 gzip 和 br 是不同的快取項目）。
+
+**應用：** 內容壓縮、多語言、API 版本控制
+
+## 實驗八：組合策略
+
+同時使用 `Cache-Control + ETag + Last-Modified` 可提供最佳相容性。驗證優先順序：
+1. 檢查 `If-None-Match` (ETag)
+2. 檢查 `If-Modified-Since` (時間)
+
+ETag 更精確（內容雜湊）,Last-Modified 僅精確到秒。
+
+## 快速決策指南
+
+選擇合適的 Cache-Control 指令可能會讓人困惑,這裡提供一個決策流程：
+
+```
+是否包含敏感資料？
+├─ 是 → 使用 no-store（完全禁止快取）
+└─ 否 → 內容是否會改變？
+    ├─ 永不改變（如 versioned 靜態檔案）
+    │   └─ 使用 public, max-age=31536000, immutable
+    │
+    ├─ 很少改變（如產品圖片、CSS/JS）
+    │   ├─ 公開內容 → public, max-age=86400（1天）
+    │   └─ 使用者特定 → private, max-age=3600（1小時）
+    │
+    ├─ 中等頻率改變（如產品列表、文章列表）
+    │   └─ public, max-age=300（5分鐘）, must-revalidate
+    │       或 max-age=60, stale-while-revalidate=300
+    │
+    └─ 經常改變但接受輕微延遲
+        └─ max-age=10, stale-while-revalidate=60
+```
+
+## 常見誤區
+
+1. **no-cache ≠ 不快取**：`no-cache` 會快取但必須驗證,`no-store` 才是完全不快取
+2. **只設 ETag 不處理 If-None-Match**：每次仍傳輸完整資料
+3. **immutable 用於會變動的資源**：只適用永不改變的版本化資源
+
+## 總結
+
+HTTP Client-Side Cache 透過正確設定 HTTP 標頭即可獲得瀏覽器原生支援：
+
+- **max-age** - 降低伺服器負載
+- **ETag** - 節省 99% 流量
+- **immutable** - 消除驗證請求
+- **stale-while-revalidate** - 平衡效能與新鮮度
+
+根據資料特性（敏感性、變動頻率）選擇合適策略,正確使用能大幅提升效能。
+
+## 參考資源
+
+- [RFC 9111: HTTP Caching](https://datatracker.ietf.org/doc/html/rfc9111)
+- [RFC 8246: HTTP Immutable Responses](https://datatracker.ietf.org/doc/html/rfc8246)
+- [MDN: Cache-Control](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
