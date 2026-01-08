@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(dotnet:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(cat:*)"
     ]
   }
 }
