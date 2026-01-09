@@ -1,3 +1,4 @@
+using Lab.CSRF.WebApi.Attributes;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,6 +17,8 @@ public class CsrfController : ControllerBase
 
     [HttpGet("token")]
     [IgnoreAntiforgeryToken]
+    [RefererValidation]
+    [UserAgentValidation]
     public IActionResult GetToken()
     {
         var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
@@ -24,6 +27,8 @@ public class CsrfController : ControllerBase
 
     [HttpPost("protected")]
     [ValidateAntiForgeryToken]
+    [RefererValidation]
+    [UserAgentValidation]
     public IActionResult ProtectedAction([FromBody] DataRequest request)
     {
         return Ok(new { 
