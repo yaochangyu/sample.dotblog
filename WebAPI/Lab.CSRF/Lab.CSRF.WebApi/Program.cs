@@ -14,7 +14,7 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.HttpOnly = false;
     options.Cookie.SameSite = SameSiteMode.Strict;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-    options.Cookie.Expiration = TimeSpan.FromMinutes(15);
+    // Cookie.Expiration 已被棄用，Token 過期由 Anti-Forgery 內部管理
 });
 
 // Rate Limiting 設定
@@ -27,9 +27,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("RestrictedCors", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "http://localhost", "https://localhost")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173", 
+                          "http://localhost:5073", "https://localhost:5073")
+              .WithMethods("GET", "POST", "OPTIONS")
+              .WithHeaders("Content-Type", "X-CSRF-TOKEN")
               .AllowCredentials();
     });
 });
@@ -50,28 +51,4 @@ app.UseMiddleware<SecurityLoggingMiddleware>();
 app.UseAntiforgery();
 app.MapControllers();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
-
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
