@@ -1,15 +1,18 @@
 # 🔒 CSRF 防護機制安全性測試計畫
 
 **專案名稱**: Lab.CSRF.WebApi  
-**測試目標**: 確保 Web API 只能被當前頁面呼叫，防止跨站請求偽造 (CSRF) 攻擊  
+**測試目標**: 確保公開的 Web API 端點僅供當前頁面呼叫，防止跨站請求偽造 (CSRF) 攻擊，降低爬蟲濫用風險  
 **測試日期**: 2026-01-09  
 **測試人員**: 資深資安專家  
 **文件版本**: 1.0
 
 ---
 
-## 📋 測試目標
+## 受測條件
+- Web API 不需要驗證，匿名使用
 
+## 📋 測試目標
+ 
 ### 主要目標
 - [ ] 驗證 CSRF Token 機制是否正確運作
 - [ ] 確認跨站請求是否被有效阻擋
@@ -29,9 +32,9 @@
 - [ ] **前端頁面**: `/wwwroot/index.html`
 - [ ] **API 端點**:
   - `GET /api/csrf/token` - Token 產生端點
-  - `POST /api/csrf/protected` - 受保護的 API 端點
+  - `POST /api/csrf/protected` - 受保護的 API 端點(被測目標端點)
 - [ ] **後端配置**: `Program.cs` - Anti-Forgery 與 CORS 設定
-- [ ] **Controller**: `CsrfController.cs` - API 實作
+- [ ] **控制器**: `CsrfController.cs` - API 實作
 
 ### 測試類型
 - [ ] 功能性測試（正常流程）
@@ -48,10 +51,10 @@
 #### ✅ 測試項目 1.1: Token 產生功能
 - [ ] 呼叫 `GET /api/csrf/token` 能成功取得回應
 - [ ] Cookie 中正確設定 `XSRF-TOKEN`
-- [ ] Token 值為非空且符合格式
-- [ ] 每次請求產生的 Token 都不相同
+- [ ] Token 值為非空值且符合格式
+- [ ] 每次請求產生的 Token 皆不相同
 
-**測試方法**: 使用瀏覽器開發者工具檢查 Cookie，使用 curl 驗證
+**測試方法**: 使用瀏覽器開發者工具檢查 Cookie，並使用 curl 驗證
 
 ---
 
@@ -86,10 +89,10 @@
 
 #### ✅ 測試項目 2.2: Cookie 安全性配置
 - [ ] Cookie 設定了 `SameSite=Strict`
-- [ ] Cookie 的 `HttpOnly` 設定符合需求（應為 false 以供 JS 讀取）
-- [ ] HTTPS 環境下 `Secure` flag 正確設定
+- [ ] Cookie 的 `HttpOnly` 設定符合需求（應為 false，以供 JavaScript 讀取）
+- [ ] HTTPS 環境下 `Secure` 旗標正確設定
 
-**測試方法**: 檢查程式碼配置，使用開發者工具驗證 Cookie 屬性
+**測試方法**: 檢查程式碼配置，並使用開發者工具驗證 Cookie 屬性
 
 ---
 
@@ -196,14 +199,14 @@
 - [ ] 評估 AllowAnyHeader 的安全風險
 - [ ] 提供改善建議
 
-**測試方法**: 靜態程式碼審查，安全最佳實踐比對
+**測試方法**: 靜態程式碼審查，並比對安全最佳實踐
 
 ---
 
-#### ✅ 測試項目 5.3: Controller 實作審查
+#### ✅ 測試項目 5.3: 控制器實作審查
 - [ ] IgnoreAntiforgeryToken 使用是否合理
 - [ ] ValidateAntiForgeryToken 是否正確套用
-- [ ] API 端點是否有適當的驗證
+- [ ] API 端點是否具備適當的驗證
 
 **測試方法**: 靜態程式碼審查
 
@@ -326,23 +329,23 @@
 
 ### 安全性考量
 - 測試過程中避免實際破壞資料
-- 測試環境使用開發環境，不影響生產環境
-- 測試腳本執行後要清理測試資料
+- 測試環境使用開發環境，避免影響生產環境
+- 測試腳本執行後須清理測試資料
 
 ### 預期風險
-根據已有的測試報告，預期會發現以下問題：
-1. 爬蟲可以完全繞過 CSRF 防護（嚴重）
-2. 無速率限制機制（嚴重）
+根據既有的測試報告，預期會發現以下問題：
+1. 爬蟲可完全繞過 CSRF 防護（嚴重）
+2. 缺乏速率限制機制（嚴重）
 3. CORS 政策過於寬鬆（高風險）
 4. 缺少 Referer 驗證（高風險）
 5. 缺少 User-Agent 驗證（高風險）
 
 ### 改善建議方向
-1. 實作 Rate Limiting
+1. 實作速率限制（Rate Limiting）
 2. 加入 Referer 驗證
 3. 加入 User-Agent 驗證
-4. 修正 CORS 政策
-5. 加入日誌監控
+4. 收緊 CORS 政策
+5. 加入日誌監控機制
 
 ---
 
@@ -351,3 +354,4 @@
 **審查狀態**: ✅ 已完成
 
 **下一步**: 開始執行測試計畫，產生 `security-test-result.md`
+**下一步**: 根據 `security-test-result.md` 開始執行測試計畫，產生 `security-test-improve.plan.md`
