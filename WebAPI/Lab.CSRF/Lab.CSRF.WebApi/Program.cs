@@ -1,3 +1,6 @@
+using AspNetCoreRateLimit;
+using Lab.CSRF.WebApi.Middleware;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -14,15 +17,23 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.HttpOnly = false;
     options.Cookie.SameSite = SameSiteMode.Strict;
     options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.Cookie.Expiration = TimeSpan.FromMinutes(15);
 });
+
+// Rate Limiting 設定
+builder.Services.AddMemoryCache();
+builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+builder.Services.AddInMemoryRateLimiting();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("RestrictedCors", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "http://localhost", "https://localhost")
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials();
     });
 });
 
@@ -36,7 +47,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
-app.UseCors("AllowAll");
+app.UseIpRateLimiting();
+app.UseCors("RestrictedCors");
+app.UseMiddleware<SecurityLoggingMiddleware>();
 app.UseAntiforgery();
 app.MapControllers();
 
