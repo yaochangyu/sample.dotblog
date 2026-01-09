@@ -17,7 +17,7 @@ public class CsrfController : ControllerBase
 
     [HttpGet("token")]
     [IgnoreAntiforgeryToken]
-    [RefererValidation]
+    [OriginValidation]
     [UserAgentValidation]
     public IActionResult GetToken()
     {
@@ -27,7 +27,7 @@ public class CsrfController : ControllerBase
 
     [HttpPost("protected")]
     [ValidateAntiForgeryToken]
-    [RefererValidation]
+    [OriginValidation]
     [UserAgentValidation]
     public IActionResult ProtectedAction([FromBody] DataRequest request)
     {
