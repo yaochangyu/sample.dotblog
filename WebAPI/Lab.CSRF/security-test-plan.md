@@ -60,17 +60,17 @@
 
 #### ✅ 測試項目 1.2: Token 驗證功能（正常流程）
 - [ ] 攜帶正確 Token 的請求能成功通過驗證
-- [ ] 伺服器正確回應成功訊息（200 OK）
-- [ ] 回應內容包含預期的資料
+- [ ] 伺服器正確回應成功訊息（HTTP 200 OK）
+- [ ] 回應內容包含預期的資料格式與內容
 
 **測試方法**: 使用前端頁面「使用 Token 呼叫 API」按鈕
 
 ---
 
 #### ✅ 測試項目 1.3: Token 驗證功能（異常流程）
-- [ ] 不攜帶 Token 的請求被拒絕（400 Bad Request）
-- [ ] 攜帶錯誤 Token 的請求被拒絕
-- [ ] 使用過期 Token 的請求被拒絕
+- [ ] 不攜帶 Token 的請求被拒絕（HTTP 400 Bad Request）
+- [ ] 攜帶錯誤 Token 的請求被拒絕（HTTP 400 Bad Request）
+- [ ] 使用過期 Token 的請求被拒絕（HTTP 400 Bad Request）
 
 **測試方法**: 使用前端頁面「不使用 Token 呼叫 API」按鈕，使用 curl 測試錯誤 Token
 
@@ -82,15 +82,17 @@
 - [ ] 從外部網站發起的請求無法取得 Token
 - [ ] 從外部網站發起的請求被 SameSite Cookie 阻擋
 - [ ] CORS 政策正確運作
+- [ ] 測試不同瀏覽器對 SameSite Cookie 的行為差異（Chrome、Edge、Firefox、Safari）
+- [ ] 驗證舊版瀏覽器的相容性處理
 
-**測試方法**: 建立外部 HTML 測試頁面，模擬跨站攻擊
+**測試方法**: 建立外部 HTML 測試頁面，模擬跨站攻擊，在多種瀏覽器環境測試
 
 ---
 
 #### ✅ 測試項目 2.2: Cookie 安全性配置
-- [ ] Cookie 設定了 `SameSite=Strict`
-- [ ] Cookie 的 `HttpOnly` 設定符合需求（應為 false，以供 JavaScript 讀取）
-- [ ] HTTPS 環境下 `Secure` 旗標正確設定
+- [ ] Cookie 設定了 `SameSite=Strict` 屬性
+- [ ] Cookie 的 `HttpOnly` 設定符合需求（應為 `false`，以供 JavaScript 讀取）
+- [ ] HTTPS 環境下 `Secure` 旗標正確設定為 `true`
 
 **測試方法**: 檢查程式碼配置，並使用開發者工具驗證 Cookie 屬性
 
@@ -110,27 +112,33 @@
 #### ⚠️ 測試項目 3.1: 命令列工具測試（curl）
 - [ ] curl 能否取得 Token
 - [ ] curl 能否使用 Token 呼叫受保護 API
+- [ ] curl 能否正確管理 Cookie 會話（Session）
+- [ ] 測試多次請求中 Token 的持久性
 - [ ] 評估防護效果
 
-**測試方法**: 使用 curl 模擬完整請求流程
+**測試方法**: 使用 curl 模擬完整請求流程，包含 Cookie 會話管理
 
 ---
 
 #### ⚠️ 測試項目 3.2: Python 爬蟲測試
 - [ ] Python requests 能否取得 Token
 - [ ] Python requests 能否使用 Token 呼叫受保護 API
+- [ ] 測試 requests.Session() 的會話管理能力
+- [ ] 驗證 Cookie 持久化與重用機制
 - [ ] 評估防護效果
 
-**測試方法**: 編寫並執行 Python 測試腳本
+**測試方法**: 編寫並執行 Python 測試腳本，包含會話管理測試
 
 ---
 
 #### ⚠️ 測試項目 3.3: Postman 測試
 - [ ] Postman 能否取得 Token
 - [ ] Postman 能否使用 Token 呼叫受保護 API
+- [ ] Postman 自動會話管理是否有效
+- [ ] 測試手動設定 Cookie 的行為
 - [ ] 評估防護效果
 
-**測試方法**: 使用 Postman 手動測試
+**測試方法**: 使用 Postman 手動測試，包含會話與 Cookie 管理驗證
 
 ---
 
@@ -139,9 +147,12 @@
 #### 🔴 測試項目 4.1: 速率限制（Rate Limiting）
 - [ ] 檢查是否有速率限制機制
 - [ ] 短時間大量請求是否被阻擋
+- [ ] 定義正常使用者的請求頻率基準線（例如：每分鐘 60 次）
+- [ ] 定義惡意使用者的阻擋閾值（例如：每分鐘 100 次）
+- [ ] 測試達到閾值後的回應行為（429 Too Many Requests）
 - [ ] 評估 DDoS 防護能力
 
-**測試方法**: 使用腳本發送大量並發請求
+**測試方法**: 使用腳本發送不同頻率的並發請求，驗證閾值設定
 
 ---
 
@@ -156,10 +167,14 @@
 
 #### 🔴 測試項目 4.3: Referer/Origin 驗證
 - [ ] 檢查是否驗證 Referer Header
+- [ ] 檢查是否驗證 Origin Header
+- [ ] 測試 Origin 與 Referer 的差異性（Origin 更可靠，無法被輕易偽造）
 - [ ] 來自非法來源的請求是否被阻擋
+- [ ] 測試缺少 Referer/Origin Header 的請求處理
+- [ ] 測試偽造 Referer 的防護效果
 - [ ] 評估來源驗證效果
 
-**測試方法**: 使用不同 Referer 發送請求
+**測試方法**: 使用不同 Referer 與 Origin 發送請求，比對驗證結果
 
 ---
 
@@ -181,6 +196,52 @@
 
 ---
 
+#### 🔴 測試項目 4.6: Token 重放攻擊（Replay Attack）
+- [ ] 擷取已使用的 Token
+- [ ] 嘗試重複使用相同 Token 發送多次請求
+- [ ] 驗證系統是否阻擋 Token 重放
+- [ ] 檢查 Token 是否為一次性使用（Single-Use）
+- [ ] 評估重放攻擊的風險等級
+
+**測試方法**: 攔截並儲存已使用的 Token，嘗試重複發送請求
+
+---
+
+#### 🟡 測試項目 4.7: Token 熵值（Entropy）分析
+- [ ] 收集多組 Token 樣本（建議 100+ 組）
+- [ ] 分析 Token 的隨機性與不可預測性
+- [ ] 檢查 Token 是否包含可識別的模式或序列
+- [ ] 評估 Token 生成演算法的強度
+- [ ] 驗證 Token 長度是否符合安全標準（建議 128+ bits）
+
+**測試方法**: 統計分析多組 Token，使用熵值計算工具評估隨機性
+
+---
+
+#### 🟡 測試項目 4.8: HTTPS 降級攻擊測試
+- [ ] 測試在 HTTP 環境下的 Cookie 行為
+- [ ] 驗證 Secure 旗標是否正確阻擋 HTTP 傳輸
+- [ ] 測試中間人攻擊（MITM）情境下的防護
+- [ ] 檢查是否強制 HTTPS 重導向
+- [ ] 評估傳輸層安全性
+
+**測試方法**: 在 HTTP 與 HTTPS 環境分別測試，模擬降級攻擊
+
+---
+
+#### 🟢 測試項目 4.9: 瀏覽器相容性測試
+- [ ] Chrome（最新版）的 SameSite Cookie 行為
+- [ ] Edge（最新版）的 SameSite Cookie 行為
+- [ ] Firefox（最新版）的 SameSite Cookie 行為
+- [ ] Safari（最新版）的 SameSite Cookie 行為
+- [ ] 舊版瀏覽器的相容性（IE11、舊版 Safari）
+- [ ] 行動裝置瀏覽器（iOS Safari、Android Chrome）
+- [ ] 評估跨瀏覽器一致性
+
+**測試方法**: 在不同瀏覽器與版本執行相同測試案例，比對結果
+
+---
+
 ### 類別 5: 配置安全性審查
 
 #### ✅ 測試項目 5.1: Anti-Forgery 配置審查
@@ -194,19 +255,19 @@
 ---
 
 #### ⚠️ 測試項目 5.2: CORS 配置審查
-- [ ] 評估 AllowAnyOrigin 的安全風險
-- [ ] 評估 AllowAnyMethod 的安全風險
-- [ ] 評估 AllowAnyHeader 的安全風險
-- [ ] 提供改善建議
+- [ ] 評估 `AllowAnyOrigin` 的安全風險
+- [ ] 評估 `AllowAnyMethod` 的安全風險
+- [ ] 評估 `AllowAnyHeader` 的安全風險
+- [ ] 提供針對性的改善建議
 
 **測試方法**: 靜態程式碼審查，並比對安全最佳實踐
 
 ---
 
 #### ✅ 測試項目 5.3: 控制器實作審查
-- [ ] IgnoreAntiforgeryToken 使用是否合理
-- [ ] ValidateAntiForgeryToken 是否正確套用
-- [ ] API 端點是否具備適當的驗證
+- [ ] `[IgnoreAntiforgeryToken]` 使用是否合理
+- [ ] `[ValidateAntiForgeryToken]` 是否正確套用
+- [ ] API 端點是否具備適當的安全驗證機制
 
 **測試方法**: 靜態程式碼審查
 
@@ -266,12 +327,16 @@
 - [ ] 測試項目 3.2 - Python 爬蟲測試
 - [ ] 測試項目 3.3 - Postman 測試
 
-### 階段 4: 進階安全測試（60 分鐘）
+### 階段 4: 進階安全測試（90 分鐘）
 - [ ] 測試項目 4.1 - 速率限制
 - [ ] 測試項目 4.2 - User-Agent 驗證
-- [ ] 測試項目 4.3 - Referer 驗證
+- [ ] 測試項目 4.3 - Referer/Origin 驗證
 - [ ] 測試項目 4.4 - Token 時效性
 - [ ] 測試項目 4.5 - 日誌監控
+- [ ] 測試項目 4.6 - Token 重放攻擊
+- [ ] 測試項目 4.7 - Token 熵值分析
+- [ ] 測試項目 4.8 - HTTPS 降級攻擊
+- [ ] 測試項目 4.9 - 瀏覽器相容性
 
 ### 階段 5: 配置審查（30 分鐘）
 - [ ] 測試項目 5.1 - Anti-Forgery 配置
@@ -284,15 +349,15 @@
 - [ ] 提供改善建議
 - [ ] 產生測試報告
 
-**預計總時間**: 3.5 小時
+**預計總時間**: 4.0 小時
 
 ---
 
 ## 📋 測試資料準備
 
 ### 測試 API 端點
-- Token 端點: `http://localhost:5073/api/csrf/token`
-- Protected 端點: `http://localhost:5073/api/csrf/protected`
+- **Token 端點**: `http://localhost:5073/api/csrf/token`
+- **Protected 端點**: `http://localhost:5073/api/csrf/protected`
 
 ### 測試資料
 ```json
@@ -328,24 +393,32 @@
 ## 📝 備註
 
 ### 安全性考量
-- 測試過程中避免實際破壞資料
-- 測試環境使用開發環境，避免影響生產環境
-- 測試腳本執行後須清理測試資料
+- 測試過程中避免實際破壞資料或影響系統穩定性
+- 僅在開發環境執行測試，避免影響生產環境
+- 測試腳本執行後須清理產生的測試資料
 
 ### 預期風險
-根據既有的測試報告，預期會發現以下問題：
-1. 爬蟲可完全繞過 CSRF 防護（嚴重）
-2. 缺乏速率限制機制（嚴重）
-3. CORS 政策過於寬鬆（高風險）
-4. 缺少 Referer 驗證（高風險）
-5. 缺少 User-Agent 驗證（高風險）
+根據初步分析，預期可能發現以下安全問題：
+1. 🔴 爬蟲可完全繞過 CSRF 防護（嚴重）
+2. 🔴 缺乏速率限制機制（嚴重）
+3. 🔴 Token 可能被重放攻擊利用（嚴重）
+4. 🟠 CORS 政策過於寬鬆（高風險）
+5. 🟠 缺少 Referer/Origin 驗證（高風險）
+6. 🟠 缺少 User-Agent 驗證（高風險）
+7. 🟡 Token 熵值可能不足（中風險）
+8. 🟡 HTTPS 降級攻擊風險（中風險）
+9. 🟢 瀏覽器相容性問題（低風險）
 
 ### 改善建議方向
-1. 實作速率限制（Rate Limiting）
-2. 加入 Referer 驗證
-3. 加入 User-Agent 驗證
-4. 收緊 CORS 政策
-5. 加入日誌監控機制
+1. 實作速率限制（Rate Limiting）機制
+2. 加入 Referer/Origin Header 驗證
+3. 加入 User-Agent 驗證與過濾
+4. 收緊 CORS 政策，限制允許的來源
+5. 加入日誌監控與異常偵測機制
+6. 實作 Token 一次性使用（Single-Use）機制
+7. 強化 Token 生成演算法，提升熵值
+8. 強制 HTTPS 連線，防止降級攻擊
+9. 針對不同瀏覽器進行相容性處理
 
 ---
 
@@ -353,5 +426,10 @@
 **計畫制定人**: 資深資安專家  
 **審查狀態**: ✅ 已完成
 
-**下一步**: 開始執行測試計畫，產生 `security-test-result.md`
-**下一步**: 根據 `security-test-result.md` 開始執行測試計畫，產生 `security-test-improve.plan.md`
+---
+
+## 🚀 下一步行動
+
+1. **執行測試**: 按照本計畫逐項執行測試，並記錄結果至 `security-test-result.md`
+2. **分析結果**: 分析測試結果，識別安全漏洞與風險等級
+3. **制定改善方案**: 根據測試結果，產生 `security-test-improve.plan.md` 改善計畫
