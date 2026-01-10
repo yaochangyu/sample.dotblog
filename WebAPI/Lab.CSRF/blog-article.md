@@ -2,11 +2,18 @@
 
 ## 前言
 
-最近在開發一個公開的 Web API 時,遇到一個有趣的需求:「API 不需要驗證,但只能從我們自己的網頁呼叫,避免被爬蟲濫用」。這個需求看似簡單,實際上卻需要多層防護機制才能達到預期效果。本文將分享如何在 ASP.NET Core Web API 中實作完整的 CSRF 防護機制,並透過實際測試驗證防護效果。
+最近在開發一個公開的 Web API 時，遇到一個需求：「API 不需要驗證，但只能從我們自己的網頁呼叫，避免被爬蟲濫用」。這個需求看似簡單，實際上卻需要多層防護機制才能達到預期效果。本文將分享如何在 ASP.NET Core Web API 中實作完整的 CSRF 防護機制，並透過實際測試驗證防護效果。
 
-## 為什麼需要 CSRF 防護?
+## 開發環境
 
-傳統的 CSRF (Cross-Site Request Forgery) 防護主要是防止惡意網站偽造使用者的請求,但在公開 API 的場景下,我們還需要考慮以下問題:
+* Windows 11 Pro
+* Rider 2025.3
+* .NET 10
+* Node.js 20
+
+## 為什麼需要 CSRF 防護？
+
+傳統的 CSRF (Cross-Site Request Forgery) 防護主要是防止惡意網站偽造使用者的請求，但在公開 API 的場景下，我們還需要考慮以下問題：
 
 1. **跨站請求攻擊**:惡意網站嵌入我們的 API 呼叫
 2. **爬蟲濫用**:自動化工具大量抓取資料
@@ -788,11 +795,13 @@ $ curl -X GET "http://localhost:5073/api/csrf/token"
 
 ## 結論
 
-透過結合 CSRF Token、Nonce、Origin/Referer 驗證、User-Agent 驗證、Rate Limiting 等多層防護機制,我們成功實作了一個強固的 API 防護系統。雖然無法 100% 阻擋所有攻擊,但已經能有效防止大部分的濫用情境。
+透過結合 CSRF Token、Nonce、Origin/Referer 驗證、User-Agent 驗證、Rate Limiting 等多層防護機制，我們成功實作了一個強固的 API 防護系統。雖然無法 100% 阻擋所有攻擊，但已經能有效防止大部分的濫用情境。
 
-實際測試結果顯示,傳統 CSRF 攻擊、已知爬蟲工具、Token 重放攻擊都能被有效阻擋,同時對正常使用者的體驗影響極小。這個方案適合用於公開但希望限制存取方式的 API 場景。
+實際測試結果顯示，傳統 CSRF 攻擊、已知爬蟲工具、Token 重放攻擊都能被有效阻擋，同時對正常使用者的體驗影響極小。這個方案適合用於公開但希望限制存取方式的 API 場景。
 
-完整的程式碼和測試計畫可以在 GitHub 上找到,歡迎參考使用。
+## 範例位置
+
+[sample.dotblog/WebAPI/Lab.CSRF at master · yaochangyu/sample.dotblog](https://github.com/yaochangyu/sample.dotblog/tree/master/WebAPI/Lab.CSRF)
 
 ## 參考資料
 

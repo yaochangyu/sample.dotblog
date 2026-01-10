@@ -2,8 +2,15 @@
 
 ## 前言
 
-最近在開發一個公開的 Web API 時，遇到一個有趣的需求：「API 不需要驗證，但只能從我們自己的網頁呼叫，避免被爬蟲濫用」。本文將分享如何在 ASP.NET Core Web API 中實作完整的 CSRF 防護機制，並透過實際測試驗證防護效果。
+最近在開發一個公開的 Web API 時，遇到一個需求：「API 不需要驗證，但只能從我們自己的網頁呼叫，避免被爬蟲濫用」。本文將分享如何在 ASP.NET Core Web API 中實作完整的 CSRF 防護機制，並透過實際測試驗證防護效果。
 
+## 開發環境
+
+* Windows 11 Pro
+* Rider 2025.3
+* .NET 10
+* Node.js 20
+  
 ## 為什麼需要 CSRF 防護？
 
 在公開 API 的場景下，我們需要考慮以下問題：
@@ -399,7 +406,11 @@ $ curl -X GET "http://localhost:5073/api/csrf/token"
 
 實際測試結果顯示，傳統 CSRF 攻擊、已知爬蟲工具、Token 重放攻擊都能被有效阻擋，同時對正常使用者的體驗影響極小。這個方案適合用於公開但希望限制存取方式的 API 場景。
 
-完整的程式碼和測試計畫可以在 [GitHub](https://github.com/yaochangyu/sample.dotblog/tree/master/WebAPI/Lab.CSRF) 上找到，歡迎參考使用。
+## 範例位置
+
+[sample.dotblog/WebAPI/Lab.CSRF at master · yaochangyu/sample.dotblog](https://github.com/yaochangyu/sample.dotblog/tree/master/WebAPI/Lab.CSRF)
+
+若有謬誤，煩請告知，新手發帖請多包涵
 
 ## 參考資料
 
