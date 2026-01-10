@@ -29,12 +29,12 @@
 sequenceDiagram
     participant Client as Client Browser
     participant Server as Web API Server
-    participant Cache as Memory Cache
+    participant Cache as Distributed Cache
     
     Note over Client,Server: 步驟 1: 取得 CSRF Token 和 Nonce
     Client->>Server: GET /api/csrf/token
     Server->>Server: 產生 CSRF Token
-    Server->>Server: 產生 Nonce
+    Server->>Server: 產生 Nonce (非同步)
     Server->>Cache: 儲存 Nonce (30分鐘過期)
     Server->>Client: Set-Cookie: XSRF-TOKEN (SameSite=Strict)
     Server->>Client: Response Body: { nonce }
@@ -50,9 +50,9 @@ sequenceDiagram
     Server->>Server: ✓ Origin/Referer 是否合法?
     Server->>Server: ✓ User-Agent 是否為瀏覽器?
     Server->>Server: ✓ Header Token 與 Cookie Token 一致?
-    Server->>Cache: ✓ Nonce 是否有效且未使用?
+    Server->>Cache: ✓ Nonce 是否有效且未使用? (非同步)
     Cache-->>Server: 驗證結果
-    Server->>Cache: 移除已使用的 Nonce (防重放)
+    Server->>Cache: 移除已使用的 Nonce (防重放，非同步)
     Server->>Server: ✓ 是否超過 Rate Limit?
     
     alt 所有驗證通過
@@ -153,42 +153,64 @@ builder.Services.AddCors(options =>
 然後在 `Program.cs` 中註冊服務:
 
 ```csharp
-builder.Services.AddMemoryCache();
+// Rate Limiting 設定 (使用 IDistributedCache)
+builder.Services.AddDistributedMemoryCache(); // IDistributedCache 實作
 builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
-builder.Services.AddInMemoryRateLimiting();
+builder.Services.AddSingleton<IIpPolicyStore, DistributedCacheIpPolicyStore>();
+builder.Services.AddSingleton<IClientPolicyStore, DistributedCacheClientPolicyStore>();
+builder.Services.AddSingleton<IRateLimitCounterStore, DistributedCacheRateLimitCounterStore>();
+builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 ```
+
+**重點說明**:
+- 使用 `AddDistributedMemoryCache()` 註冊 `IDistributedCache` 的記憶體實作
+- 使用 `DistributedCache*` 系列類別取代預設的 `MemoryCache*` 實作
+- 支援未來輕鬆切換到 Redis 或 SQL Server 等分散式快取方案
+- 與 TokenNonceProvider 共用同一個 `IDistributedCache` 實例
 
 ### 4. Nonce Provider - 防止重放攻擊
 
 ```csharp
+using Microsoft.Extensions.Caching.Distributed;
+
 public interface ITokenNonceProvider
 {
-    string GenerateNonce();
-    bool ValidateAndConsumeNonce(string nonce);
+    Task<string> GenerateNonceAsync();
+    Task<bool> ValidateAndConsumeNonceAsync(string nonce);
 }
 
 public class TokenNonceProvider : ITokenNonceProvider
 {
-    private readonly IMemoryCache _cache;
+    private readonly IDistributedCache _cache;
     private readonly TimeSpan _expirationTime = TimeSpan.FromMinutes(30);
 
-    public string GenerateNonce()
+    public TokenNonceProvider(IDistributedCache cache)
+    {
+        _cache = cache;
+    }
+
+    public async Task<string> GenerateNonceAsync()
     {
         var nonce = Guid.NewGuid().ToString("N");
-        _cache.Set($"nonce:{nonce}", true, _expirationTime);
+        var options = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = _expirationTime
+        };
+        await _cache.SetStringAsync($"nonce:{nonce}", "true", options);
         return nonce;
     }
 
-    public bool ValidateAndConsumeNonce(string nonce)
+    public async Task<bool> ValidateAndConsumeNonceAsync(string nonce)
     {
         if (string.IsNullOrEmpty(nonce))
             return false;
 
         var key = $"nonce:{nonce}";
-        if (_cache.TryGetValue(key, out _))
+        var value = await _cache.GetStringAsync(key);
+        if (value != null)
         {
-            _cache.Remove(key);  // 使用後立即移除,實現一次性使用
+            await _cache.RemoveAsync(key);  // 使用後立即移除,實現一次性使用
             return true;
         }
         return false;
@@ -197,9 +219,12 @@ public class TokenNonceProvider : ITokenNonceProvider
 ```
 
 **重點說明**:
+- 使用 `IDistributedCache` 取代 `IMemoryCache`，支援分散式部署
+- 所有方法改為非同步操作（`async/await`）
 - Nonce 是一次性使用的隨機值
 - 驗證成功後立即從 Cache 移除,防止 Token 被重複使用
 - 設定 30 分鐘過期時間,平衡安全性與使用者體驗
+- 使用 `DistributedCacheEntryOptions` 設定過期策略
 
 ### 5. Origin/Referer 驗證
 
@@ -331,10 +356,10 @@ public class CsrfController : ControllerBase
     [IgnoreAntiforgeryToken]
     [OriginValidation]
     [UserAgentValidation]
-    public IActionResult GetToken()
+    public async Task<IActionResult> GetToken()
     {
         var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
-        var nonce = _nonceProvider.GenerateNonce();
+        var nonce = await _nonceProvider.GenerateNonceAsync();
         
         return Ok(new { 
             message = "CSRF Token 已設定在 Cookie 中",
@@ -346,11 +371,11 @@ public class CsrfController : ControllerBase
     [ValidateAntiForgeryToken]
     [OriginValidation]
     [UserAgentValidation]
-    public IActionResult ProtectedAction([FromBody] DataRequest request)
+    public async Task<IActionResult> ProtectedAction([FromBody] DataRequest request)
     {
         var nonce = Request.Headers["X-Nonce"].ToString();
         
-        if (!_nonceProvider.ValidateAndConsumeNonce(nonce))
+        if (!await _nonceProvider.ValidateAndConsumeNonceAsync(nonce))
         {
             return BadRequest(new { 
                 success = false, 

@@ -1,39 +1,44 @@
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Lab.CSRF.WebApi.Providers;
 
 public interface ITokenNonceProvider
 {
-    string GenerateNonce();
-    bool ValidateAndConsumeNonce(string nonce);
+    Task<string> GenerateNonceAsync();
+    Task<bool> ValidateAndConsumeNonceAsync(string nonce);
 }
 
 public class TokenNonceProvider : ITokenNonceProvider
 {
-    private readonly IMemoryCache _cache;
+    private readonly IDistributedCache _cache;
     private readonly TimeSpan _expirationTime = TimeSpan.FromMinutes(30);
 
-    public TokenNonceProvider(IMemoryCache cache)
+    public TokenNonceProvider(IDistributedCache cache)
     {
         _cache = cache;
     }
 
-    public string GenerateNonce()
+    public async Task<string> GenerateNonceAsync()
     {
         var nonce = Guid.NewGuid().ToString("N");
-        _cache.Set($"nonce:{nonce}", true, _expirationTime);
+        var options = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = _expirationTime
+        };
+        await _cache.SetStringAsync($"nonce:{nonce}", "true", options);
         return nonce;
     }
 
-    public bool ValidateAndConsumeNonce(string nonce)
+    public async Task<bool> ValidateAndConsumeNonceAsync(string nonce)
     {
         if (string.IsNullOrEmpty(nonce))
             return false;
 
         var key = $"nonce:{nonce}";
-        if (_cache.TryGetValue(key, out _))
+        var value = await _cache.GetStringAsync(key);
+        if (value != null)
         {
-            _cache.Remove(key);
+            await _cache.RemoveAsync(key);
             return true;
         }
         return false;
