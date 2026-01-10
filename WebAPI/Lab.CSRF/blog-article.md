@@ -85,6 +85,27 @@ builder.Services.AddAntiforgery(options =>
 - `SameSite = Strict`:這是關鍵設定,瀏覽器會自動阻擋跨站請求攜帶此 Cookie
 - `HeaderName`:前端需要從 Cookie 讀取 Token 後,放入此 Header 中
 
+#### IAntiforgery 介面
+
+`IAntiforgery` 是 ASP.NET Core 提供的核心介面,用於產生和驗證 Anti-Forgery Token。主要方法包括:
+
+- **GetAndStoreTokens(HttpContext)**: 產生新的 CSRF Token 並儲存到 Cookie 中,返回 Token 資訊供前端使用
+- **ValidateRequestAsync(HttpContext)**: 驗證請求中的 Token 是否有效,比對 Header 中的 Token 與 Cookie 中的 Token
+
+#### ValidateAntiForgeryToken 屬性
+
+`[ValidateAntiForgeryToken]` 是一個 Action Filter 屬性,用於標記需要 CSRF 防護的 Controller 或 Action。當請求進入時,會自動驗證:
+
+1. Cookie 中的 `XSRF-TOKEN` 是否存在
+2. Header 中的 `X-CSRF-TOKEN` 是否存在
+3. 兩者的值是否一致且有效
+
+如果驗證失敗,會自動回傳 HTTP 400 Bad Request。
+
+相關屬性:
+- `[IgnoreAntiforgeryToken]`: 標記不需要驗證 Token 的 Action (如 GetToken API)
+- `[AutoValidateAntiforgeryToken]`: Controller 層級的自動驗證,僅對 POST/PUT/DELETE 等方法生效
+
 ### 2. CORS 配置
 
 ```csharp
