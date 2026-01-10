@@ -25,37 +25,41 @@
 
 ### 流程圖
 
-```
-[Client Browser]
-    |
-    | 1. GET /api/csrf/token
-    |    (取得 CSRF Token 和 Nonce)
-    v
-[Web API Server]
-    |
-    | 2. 產生 Token 並儲存在 Cookie (SameSite=Strict)
-    |    產生 Nonce 並儲存在 Memory Cache
-    v
-[Client Browser]
-    |
-    | 3. 從 Cookie 讀取 Token
-    |    從回應讀取 Nonce
-    |
-    | 4. POST /api/csrf/protected
-    |    Header: X-CSRF-TOKEN = {token}
-    |    Header: X-Nonce = {nonce}
-    |    Cookie: XSRF-TOKEN = {token}
-    v
-[Web API Server]
-    |
-    | 5. 驗證流程:
-    |    ✓ Origin/Referer 是否合法?
-    |    ✓ User-Agent 是否為瀏覽器?
-    |    ✓ Header 的 Token 與 Cookie 的 Token 是否一致?
-    |    ✓ Nonce 是否有效且未被使用?
-    |    ✓ 是否超過 Rate Limit?
-    v
-[Success or Fail]
+```mermaid
+sequenceDiagram
+    participant Client as Client Browser
+    participant Server as Web API Server
+    participant Cache as Memory Cache
+    
+    Note over Client,Server: 步驟 1: 取得 CSRF Token 和 Nonce
+    Client->>Server: GET /api/csrf/token
+    Server->>Server: 產生 CSRF Token
+    Server->>Server: 產生 Nonce
+    Server->>Cache: 儲存 Nonce (30分鐘過期)
+    Server->>Client: Set-Cookie: XSRF-TOKEN (SameSite=Strict)
+    Server->>Client: Response Body: { nonce }
+    
+    Note over Client: 步驟 2: 準備請求資料
+    Client->>Client: 從 Cookie 讀取 XSRF-TOKEN
+    Client->>Client: 從回應讀取 Nonce
+    
+    Note over Client,Server: 步驟 3: 呼叫受保護的 API
+    Client->>Server: POST /api/csrf/protected<br/>Header: X-CSRF-TOKEN<br/>Header: X-Nonce<br/>Cookie: XSRF-TOKEN
+    
+    Note over Server: 步驟 4: 多層驗證
+    Server->>Server: ✓ Origin/Referer 是否合法?
+    Server->>Server: ✓ User-Agent 是否為瀏覽器?
+    Server->>Server: ✓ Header Token 與 Cookie Token 一致?
+    Server->>Cache: ✓ Nonce 是否有效且未使用?
+    Cache-->>Server: 驗證結果
+    Server->>Cache: 移除已使用的 Nonce (防重放)
+    Server->>Server: ✓ 是否超過 Rate Limit?
+    
+    alt 所有驗證通過
+        Server->>Client: HTTP 200 OK<br/>{ success: true, message: "驗證成功" }
+    else 任一驗證失敗
+        Server->>Client: HTTP 400/403<br/>{ success: false, message: "錯誤訊息" }
+    end
 ```
 
 ## Server Side 配置
