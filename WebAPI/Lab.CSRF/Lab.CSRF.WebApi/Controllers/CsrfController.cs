@@ -22,10 +22,10 @@ public class CsrfController : ControllerBase
     [IgnoreAntiforgeryToken]
     [OriginValidation]
     [UserAgentValidation]
-    public IActionResult GetToken()
+    public async Task<IActionResult> GetToken()
     {
         var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
-        var nonce = _nonceProvider.GenerateNonce();
+        var nonce = await _nonceProvider.GenerateNonceAsync();
         
         return Ok(new { 
             message = "CSRF Token 已設定在 Cookie 中",
@@ -37,12 +37,12 @@ public class CsrfController : ControllerBase
     [ValidateAntiForgeryToken]
     [OriginValidation]
     [UserAgentValidation]
-    public IActionResult ProtectedAction(
+    public async Task<IActionResult> ProtectedAction(
         [FromBody] DataRequest request)
     {
         var nonce = Request.Headers["X-Nonce"].ToString();
         
-        if (!_nonceProvider.ValidateAndConsumeNonce(nonce))
+        if (!await _nonceProvider.ValidateAndConsumeNonceAsync(nonce))
         {
             return BadRequest(new { 
                 success = false, 

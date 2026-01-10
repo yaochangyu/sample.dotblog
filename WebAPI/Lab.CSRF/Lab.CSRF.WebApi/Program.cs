@@ -20,10 +20,13 @@ builder.Services.AddAntiforgery(options =>
     // Cookie.Expiration 已被棄用，Token 過期由 Anti-Forgery 內部管理
 });
 
-// Rate Limiting 設定
-builder.Services.AddMemoryCache();
+// Rate Limiting 設定 (使用 IDistributedCache)
+builder.Services.AddDistributedMemoryCache(); // IDistributedCache 實作
 builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
-builder.Services.AddInMemoryRateLimiting();
+builder.Services.AddSingleton<IIpPolicyStore, DistributedCacheIpPolicyStore>();
+builder.Services.AddSingleton<IClientPolicyStore, DistributedCacheClientPolicyStore>();
+builder.Services.AddSingleton<IRateLimitCounterStore, DistributedCacheRateLimitCounterStore>();
+builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
 // Token Nonce Provider (防止重放攻擊)
