@@ -1,19 +1,19 @@
 using Microsoft.Extensions.Caching.Memory;
 
-namespace Lab.CSRF.WebApi.Services;
+namespace Lab.CSRF.WebApi.Providers;
 
-public interface ITokenNonceService
+public interface ITokenNonceProvider
 {
     string GenerateNonce();
     bool ValidateAndConsumeNonce(string nonce);
 }
 
-public class TokenNonceService : ITokenNonceService
+public class TokenNonceProvider : ITokenNonceProvider
 {
     private readonly IMemoryCache _cache;
     private readonly TimeSpan _expirationTime = TimeSpan.FromMinutes(30);
 
-    public TokenNonceService(IMemoryCache cache)
+    public TokenNonceProvider(IMemoryCache cache)
     {
         _cache = cache;
     }

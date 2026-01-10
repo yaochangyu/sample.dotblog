@@ -1,5 +1,5 @@
 using Lab.CSRF.WebApi.Attributes;
-using Lab.CSRF.WebApi.Services;
+using Lab.CSRF.WebApi.Providers;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,12 +10,12 @@ namespace Lab.CSRF.WebApi.Controllers;
 public class CsrfController : ControllerBase
 {
     private readonly IAntiforgery _antiforgery;
-    private readonly ITokenNonceService _nonceService;
+    private readonly ITokenNonceProvider _nonceProvider;
 
-    public CsrfController(IAntiforgery antiforgery, ITokenNonceService nonceService)
+    public CsrfController(IAntiforgery antiforgery, ITokenNonceProvider nonceProvider)
     {
         _antiforgery = antiforgery;
-        _nonceService = nonceService;
+        _nonceProvider = nonceProvider;
     }
 
     [HttpGet("token")]
@@ -25,7 +25,7 @@ public class CsrfController : ControllerBase
     public IActionResult GetToken()
     {
         var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
-        var nonce = _nonceService.GenerateNonce();
+        var nonce = _nonceProvider.GenerateNonce();
         
         return Ok(new { 
             message = "CSRF Token 已設定在 Cookie 中",
@@ -42,7 +42,7 @@ public class CsrfController : ControllerBase
     {
         var nonce = Request.Headers["X-Nonce"].ToString();
         
-        if (!_nonceService.ValidateAndConsumeNonce(nonce))
+        if (!_nonceProvider.ValidateAndConsumeNonce(nonce))
         {
             return BadRequest(new { 
                 success = false, 
