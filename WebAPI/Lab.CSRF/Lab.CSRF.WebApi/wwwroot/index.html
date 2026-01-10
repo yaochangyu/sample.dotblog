@@ -127,6 +127,8 @@
     </div>
 
     <script>
+        let currentNonce = null;
+
         function getCookie(name) {
             const value = `; ${document.cookie}`;
             const parts = value.split(`; ${name}=`);
@@ -147,6 +149,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     const csrfToken = getCookie('XSRF-TOKEN');
+                    currentNonce = data.nonce;
                     
                     if (csrfToken) {
                         resultDiv.innerHTML = `
@@ -154,7 +157,9 @@
                                 <strong>✅ Token 取得成功！</strong><br><br>
                                 <strong>Token 值 (從 Cookie 讀取)：</strong><br>
                                 <div class="token-display">${csrfToken}</div>
-                                <small>Token 已儲存在 Cookie 中，可以開始測試受保護的 API</small>
+                                <strong>Nonce 值 (防重放攻擊)：</strong><br>
+                                <div class="token-display">${currentNonce}</div>
+                                <small>Token 和 Nonce 已準備就緒，可以開始測試受保護的 API</small>
                             </div>
                         `;
                     } else {
@@ -178,7 +183,7 @@
             const dataInput = document.getElementById('dataInput').value;
             const csrfToken = getCookie('XSRF-TOKEN');
 
-            if (useToken && !csrfToken) {
+            if (useToken && (!csrfToken || !currentNonce)) {
                 resultDiv.innerHTML = `
                     <div class="error result">
                         <strong>⚠️ 請先取得 Token</strong><br>
@@ -198,6 +203,7 @@
 
                 if (useToken) {
                     headers['X-CSRF-TOKEN'] = csrfToken;
+                    headers['X-Nonce'] = currentNonce;
                 }
 
                 const response = await fetch('/api/csrf/protected', {

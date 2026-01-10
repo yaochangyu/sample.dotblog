@@ -1,5 +1,6 @@
 using AspNetCoreRateLimit;
 using Lab.CSRF.WebApi.Middleware;
+using Lab.CSRF.WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
+
+// Anti-Forgery 配置 (用於 CSRF 防護)
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-TOKEN";
@@ -23,6 +26,9 @@ builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection(
 builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
+// Token Nonce Service (防止重放攻擊)
+builder.Services.AddSingleton<ITokenNonceService, TokenNonceService>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("RestrictedCors", policy =>
@@ -30,7 +36,7 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://localhost:5173", "https://localhost:5173", 
                           "http://localhost:5073", "https://localhost:5073")
               .WithMethods("GET", "POST", "OPTIONS")
-              .WithHeaders("Content-Type", "X-CSRF-TOKEN")
+              .WithHeaders("Content-Type", "X-CSRF-TOKEN", "X-Nonce")
               .AllowCredentials();
     });
 });
