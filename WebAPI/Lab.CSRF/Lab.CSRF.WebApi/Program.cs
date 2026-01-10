@@ -1,6 +1,6 @@
 using AspNetCoreRateLimit;
 using Lab.CSRF.WebApi.Middleware;
-using Lab.CSRF.WebApi.Services;
+using Lab.CSRF.WebApi.Providers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,8 +26,8 @@ builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection(
 builder.Services.AddInMemoryRateLimiting();
 builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
 
-// Token Nonce Service (防止重放攻擊)
-builder.Services.AddSingleton<ITokenNonceService, TokenNonceService>();
+// Token Nonce Provider (防止重放攻擊)
+builder.Services.AddSingleton<ITokenNonceProvider, TokenNonceProvider>();
 
 builder.Services.AddCors(options =>
 {
