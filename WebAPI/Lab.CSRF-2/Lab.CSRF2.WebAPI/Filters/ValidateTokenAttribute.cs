@@ -10,13 +10,20 @@ public class ValidateTokenAttribute : ActionFilterAttribute
     {
         var tokenService = context.HttpContext.RequestServices.GetRequiredService<ITokenService>();
         
-        if (!context.HttpContext.Request.Headers.TryGetValue("X-CSRF-Token", out var token))
+        if (!context.HttpContext.Request.Headers.TryGetValue("X-CSRF-Token", out var tokenValues))
         {
             context.Result = new UnauthorizedObjectResult(new { error = "Missing X-CSRF-Token header" });
             return;
         }
 
-        if (!tokenService.ValidateToken(token.ToString()))
+        var token = tokenValues.FirstOrDefault();
+        if (string.IsNullOrEmpty(token))
+        {
+            context.Result = new UnauthorizedObjectResult(new { error = "Empty X-CSRF-Token header" });
+            return;
+        }
+
+        if (!tokenService.ValidateToken(token))
         {
             context.Result = new UnauthorizedObjectResult(new { error = "Invalid or expired token" });
             return;
