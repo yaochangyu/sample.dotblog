@@ -150,7 +150,8 @@ Lab.CSRF-2/
 2026-01-12
 
 ## 最新更新
-- ✅ 新增前端 CSRF 防護測試頁面 (csrf-test.html)
-- ✅ 新增 CSRF 自動化測試腳本 (Run-CSRF-Tests.ps1)
-- ✅ 完成 6 項 CSRF 防護測試,全部通過
-- ✅ 產生完整測試報告 (CSRF-Test-Final-Report.md)
+- ✅ 新增 API Protected 安全測試計畫 (api-protected-security-test-plan.md)
+- ✅ 新增 API Protected 安全測試腳本 (api-protected-security-test.ps1)
+- ✅ 新增 API Protected 測試頁面 (api-protected-test.html)
+- ✅ 完成 10 項核心安全測試 (通過率 60%)
+- ✅ 識別需強化項目：User-Agent 驗證、爬蟲黑名單機制
