@@ -680,25 +680,40 @@ fetch('http://localhost:5073/api/csrf/token', {
    - `SameSite=Strict` Cookie 有效防止跨站請求
    - Double Submit Cookie Pattern 驗證正確
 
-2. **已知爬蟲工具**: 100% 阻擋
-   - curl: 被 User-Agent 黑名單阻擋
-   - Python requests: 被 User-Agent 黑名單阻擋
-   - Postman: 被 User-Agent 黑名單阻擋
+2. **基礎爬蟲工具**: 有效阻擋
+   - curl、Python requests、Postman 等工具被 User-Agent 黑名單初步過濾
+   - **但此機制容易被繞過，真正的防護依賴 Rate Limiting**
 
 3. **Token 重放攻擊**: 100% 阻擋
    - Nonce 一次性使用機制有效運作
 
-4. **DDoS 攻擊**: 有效減緩
-   - Rate Limiting 成功限制請求頻率
+4. **DDoS 與爬蟲濫用**: 透過 Rate Limiting 有效控制
+   - **關鍵防護機制**：IP 限流設定如下
+     - GET /api/csrf/token：每分鐘 5 次
+     - POST /api/csrf/protected：每分鐘 10 次
+     - 其他端點：每分鐘 30 次
+   - 即使爬蟲偽造 User-Agent 和其他 Headers，仍受限於 IP 頻率限制
+   - 超過限制回傳 HTTP 429 (Too Many Requests)
+   - **避免誤阻擋正常使用者**：限流閾值設定需根據實際使用情境調整
+     - 一般使用者不太可能在 1 分鐘內呼叫 GET token 超過 5 次
+     - 如有特殊需求（如多頁面應用），可調整 `Period` 和 `Limit` 參數
 
 ### ⚠️ 潛在風險
 
 1. **進階爬蟲**: 中等風險
-   - 偽造瀏覽器 User-Agent 可能繞過驗證
-   - 建議:加入更複雜的瀏覽器指紋驗證 (Browser Fingerprinting)
+   - **User-Agent 驗證局限性**：偽造瀏覽器 User-Agent 可輕易繞過黑名單
+   - **真正的防護依賴**：Rate Limiting 限制請求頻率
+   - 建議額外措施：
+     - 加入更複雜的瀏覽器指紋驗證 (Browser Fingerprinting)
+     - 監控異常 IP 行為模式
+     - CAPTCHA 挑戰機制
 
-2. **HTTPS 降級攻擊**: 低風險
-   - 建議:強制 HTTPS 重導向
+2. **分散式爬蟲**: 中高風險
+   - 使用多個 IP 位址可繞過單 IP 限流
+   - 建議：結合其他防護機制（如 CAPTCHA、行為分析）
+
+3. **HTTPS 降級攻擊**: 低風險
+   - 建議：強制 HTTPS 重導向
 
 ## 實際運行結果
 
@@ -778,20 +793,27 @@ $ curl -X GET "http://localhost:5073/api/csrf/token"
 
 ### 需要注意的地方
 
-1. **HttpOnly = false**: 雖然允許 JavaScript 讀取 Cookie 會增加 XSS 風險,但這是 Double Submit Cookie Pattern 的必要條件。建議搭配 CSP (Content Security Policy) 降低 XSS 風險。
+1. **HttpOnly = false**: 雖然允許 JavaScript 讀取 Cookie 會增加 XSS 風險，但這是 Double Submit Cookie Pattern 的必要條件。建議搭配 CSP (Content Security Policy) 降低 XSS 風險。
 
-2. **User-Agent 驗證**: 黑名單機制無法防止進階爬蟲偽造 User-Agent,建議搭配其他機制 (如 Browser Fingerprinting、CAPTCHA)。
+2. **User-Agent 驗證的局限性**: 
+   - 黑名單機制**容易被繞過**，不應作為主要防護手段
+   - 僅用於初步過濾基礎工具，**真正的防護依賴 Rate Limiting**
+   - 進階建議：搭配 Browser Fingerprinting、CAPTCHA 等機制
 
-3. **Rate Limiting**: 需要根據實際流量調整閾值,避免誤傷正常使用者。
+3. **Rate Limiting 閾值調整**: 
+   - 需要根據實際使用情境調整，避免誤傷正常使用者
+   - 監控 HTTP 429 回應比例，適時調整 `Period` 和 `Limit`
+   - 考慮不同端點的使用頻率差異
 
-4. **Nonce 儲存**: 目前使用 Memory Cache,若需要 Scale Out,建議改用 Redis 等分散式快取。
+4. **分散式快取**: 目前使用 `IDistributedCache` 的記憶體實作，若需要 Scale Out，可輕鬆切換到 Redis 或 SQL Server。
 
 ### 進階改善方向
 
-1. **加入 CAPTCHA**: 對可疑請求要求驗證碼
-2. **Browser Fingerprinting**: 更精確識別瀏覽器
-3. **行為分析**: 分析請求模式,識別異常行為
-4. **IP 白名單**: 針對特定 IP 範圍放寬限制
+1. **加入 CAPTCHA**: 對可疑請求或超過限流次數的 IP 要求驗證碼
+2. **Browser Fingerprinting**: 更精確識別真實瀏覽器特徵
+3. **行為分析**: 分析請求模式（時間間隔、順序），識別異常行為
+4. **IP 信譽系統**: 針對可信 IP 放寬限制，對可疑 IP 加嚴
+5. **動態調整限流**: 根據流量狀況自動調整閾值
 
 ## 結論
 
