@@ -1,0 +1,6 @@
+@Lab.CSRF2.WebAPI_HostAddress = http://localhost:5073
+
+GET {{Lab.CSRF2.WebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
