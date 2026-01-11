@@ -110,13 +110,198 @@
 ### 類別 3: 自動化工具（爬蟲）防護測試
 
 #### ⚠️ 測試項目 3.1: 命令列工具測試（curl）
-- [ ] curl 能否取得 Token
-- [ ] curl 能否使用 Token 呼叫受保護 API
-- [ ] curl 能否正確管理 Cookie 會話（Session）
-- [ ] 測試多次請求中 Token 的持久性
-- [ ] 評估防護效果
 
-**測試方法**: 使用 curl 模擬完整請求流程，包含 Cookie 會話管理
+**核心測試問題**: 使用 curl 呼叫 Web API 是否能繞過 CSRF 防護？
+
+**測試背景說明**:
+- curl 不是瀏覽器,不受 CORS 政策限制
+- curl 可任意設定 Origin、User-Agent 等 Header
+- SameSite Cookie 是瀏覽器行為,curl 不遵守
+- 需驗證伺服器端防護機制是否對 curl 有效
+
+**預期結果分析**:
+- 可能性 A: **被阻擋** ✅ (理想狀態) - Origin/User-Agent 驗證有效
+- 可能性 B: **可繞過** ⚠️ (安全漏洞) - curl 可模擬所有必要的 Header 和 Cookie
+
+---
+
+##### 子測試 3.1.1: curl 基本 CSRF Token 流程測試
+
+**步驟 3.1.1.1: 取得 CSRF Token (不使用 Cookie 管理)**
+```bash
+curl -X GET http://localhost:5073/api/csrf/token -v
+```
+- [ ] 檢查 HTTP 狀態碼 (預期 400 或 403 - 缺少 Origin 或 User-Agent 驗證失敗)
+- [ ] 檢查錯誤訊息內容
+- [ ] 確認是否有 Set-Cookie Header
+
+**步驟 3.1.1.2: 取得 CSRF Token (使用 Cookie Jar)**
+```bash
+curl -X GET http://localhost:5073/api/csrf/token -c cookies.txt -v
+```
+- [ ] 檢查是否產生 cookies.txt 檔案
+- [ ] 檢查 cookies.txt 內容是否包含 XSRF-TOKEN
+- [ ] 確認 HTTP 回應狀態
+
+**步驟 3.1.1.3: 模擬瀏覽器 User-Agent 取得 Token**
+```bash
+curl -X GET http://localhost:5073/api/csrf/token \
+  -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+  -c cookies.txt -v
+```
+- [ ] User-Agent 偽造是否有效
+- [ ] Origin 驗證是否生效
+- [ ] 記錄實際行為
+
+**步驟 3.1.1.4: 同時偽造 User-Agent 和 Origin**
+```bash
+curl -X GET http://localhost:5073/api/csrf/token \
+  -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+  -H "Origin: http://localhost:5073" \
+  -c cookies.txt -v
+```
+- [ ] 是否成功取得 Token
+- [ ] cookies.txt 是否包含有效的 XSRF-TOKEN
+- [ ] JSON 回應是否包含 Nonce
+- [ ] **關鍵測試點** - 決定防護是否有效
+
+---
+
+##### 子測試 3.1.2: curl 呼叫受保護的 API
+
+**前提**: 假設步驟 3.1.1.4 成功取得 Token 和 Nonce
+
+**步驟 3.1.2.1: 使用取得的 Token 和 Nonce 呼叫 API**
+```bash
+# 從 cookies.txt 讀取 Token
+TOKEN=$(grep XSRF-TOKEN cookies.txt | awk '{print $7}')
+NONCE="<從步驟 3.1.1.4 取得的 nonce 值>"
+
+curl -X POST http://localhost:5073/api/csrf/protected \
+  -H "Content-Type: application/json" \
+  -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+  -H "Origin: http://localhost:5073" \
+  -H "X-CSRF-TOKEN: $TOKEN" \
+  -H "X-Nonce: $NONCE" \
+  -b cookies.txt \
+  -d '{"data":"curl test"}' \
+  -v
+```
+- [ ] 檢查 HTTP 狀態碼
+- [ ] 檢查 CORS 錯誤訊息
+- [ ] 確認 API 是否實際執行
+- [ ] **關鍵風險評估點**
+
+**步驟 3.1.2.2: 不攜帶 Cookie 但有 Header Token (測試 Double Submit)**
+```bash
+curl -X POST http://localhost:5073/api/csrf/protected \
+  -H "Content-Type: application/json" \
+  -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+  -H "Origin: http://localhost:5073" \
+  -H "X-CSRF-TOKEN: $TOKEN" \
+  -H "X-Nonce: $NONCE" \
+  -d '{"data":"curl test"}' \
+  -v
+```
+- [ ] 驗證 Double Submit Cookie 機制是否有效 (預期失敗)
+- [ ] 確認必須同時有 Cookie 和 Header
+
+**步驟 3.1.2.3: 攜帶 Cookie 但不帶 Header Token**
+```bash
+curl -X POST http://localhost:5073/api/csrf/protected \
+  -H "Content-Type: application/json" \
+  -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+  -H "Origin: http://localhost:5073" \
+  -H "X-Nonce: $NONCE" \
+  -b cookies.txt \
+  -d '{"data":"curl test"}' \
+  -v
+```
+- [ ] HTTP 400 Bad Request (預期失敗)
+- [ ] 錯誤訊息明確指出缺少 CSRF Token
+
+**步驟 3.1.2.4: Token 重放攻擊測試**
+```bash
+# 使用已消費的 Nonce 再次呼叫
+curl -X POST http://localhost:5073/api/csrf/protected \
+  -H "Content-Type: application/json" \
+  -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+  -H "Origin: http://localhost:5073" \
+  -H "X-CSRF-TOKEN: $TOKEN" \
+  -H "X-Nonce: $NONCE" \
+  -b cookies.txt \
+  -d '{"data":"replay attack"}' \
+  -v
+```
+- [ ] HTTP 400 Bad Request (預期失敗)
+- [ ] 錯誤訊息: "Nonce 無效或已使用（防止重放攻擊）"
+- [ ] 驗證 Nonce 一次性使用機制
+
+---
+
+##### 子測試 3.1.3: 偽造與繞過測試
+
+**步驟 3.1.3.1: 完全偽造請求 (無任何安全 Header)**
+```bash
+curl -X POST http://localhost:5073/api/csrf/protected \
+  -H "Content-Type: application/json" \
+  -d '{"data":"attack"}' \
+  -v
+```
+- [ ] 哪一層防護最先阻擋 (Origin、User-Agent、CSRF Token)
+
+**步驟 3.1.3.2: 偽造錯誤的 Token**
+```bash
+curl -X POST http://localhost:5073/api/csrf/protected \
+  -H "Content-Type: application/json" \
+  -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+  -H "Origin: http://localhost:5073" \
+  -H "X-CSRF-TOKEN: fake-token-12345" \
+  -H "X-Nonce: fake-nonce-67890" \
+  -b cookies.txt \
+  -d '{"data":"fake token"}' \
+  -v
+```
+- [ ] CSRF Token 驗證機制是否有效 (預期失敗)
+- [ ] 錯誤訊息是否明確
+
+**步驟 3.1.3.3: 測試跨域請求 (偽造外部來源)**
+```bash
+curl -X POST http://localhost:5073/api/csrf/protected \
+  -H "Content-Type: application/json" \
+  -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+  -H "Origin: http://evil.com" \
+  -H "X-CSRF-TOKEN: $TOKEN" \
+  -H "X-Nonce: $NONCE" \
+  -b cookies.txt \
+  -d '{"data":"cross origin"}' \
+  -v
+```
+- [ ] Origin 驗證是否有效 (預期失敗)
+- [ ] CORS 政策是否正確執行
+
+---
+
+##### 子測試 3.1.4: curl 速率限制測試
+
+**步驟 3.1.4.1: 短時間大量請求**
+```bash
+# 執行 10 次連續請求
+for i in {1..10}; do
+  curl -X GET http://localhost:5073/api/csrf/token \
+    -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
+    -H "Origin: http://localhost:5073" \
+    -v 2>&1 | grep "HTTP"
+  sleep 0.1
+done
+```
+- [ ] 記錄第幾次請求開始被限制 (預期觸發 429 Too Many Requests)
+- [ ] 確認 Rate Limiting 配置是否有效
+- [ ] 檢查限制解除時間
+
+---
+
+**測試方法**: 使用 curl 模擬完整請求流程,包含 Cookie 會話管理與多種攻擊場景
 
 ---
 
