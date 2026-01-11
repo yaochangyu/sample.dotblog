@@ -276,8 +276,10 @@
 # 執行所有測試案例並產生報告
 ```
 
-### 手動測試驗證
-針對瀏覽器互動場景，建立 HTML 測試頁面進行手動驗證。
+### 前端自動化測試
+針對瀏覽器互動場景，使用 Playwright 進行自動化測試。
+
+**詳見**: [Frontend Playwright 自動化測試計畫](./frontend-playwright-test-plan.md)
 
 ---
 
@@ -358,6 +360,10 @@
 
 ## 參考文件
 
+### 相關測試計畫
+- [Frontend Playwright 自動化測試計畫](./frontend-playwright-test-plan.md) - 瀏覽器環境整合測試
+
+### 安全標準
 - [OWASP CSRF Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
 - [OWASP API Security Top 10](https://owasp.org/www-project-api-security/)
 - [MDN - CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
