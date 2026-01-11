@@ -244,6 +244,7 @@ export default defineConfig({
   ],
   use: {
     baseURL: 'https://localhost:5001',
+    headless: true, // 無頭模式執行
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     ignoreHTTPSErrors: true, // 本機測試用
