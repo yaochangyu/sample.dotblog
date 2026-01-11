@@ -11,6 +11,10 @@ Lab.CSRF-2/
 ├── curl-security-test-plan.md                       # cURL 安全測試計畫
 ├── curl-security-test.ps1                           # cURL 安全測試腳本 (PowerShell)
 ├── curl-security-test.sh                            # cURL 安全測試腳本 (Bash)
+├── frontend-csrf-test-plan.md                       # 前端 CSRF 測試計畫
+├── frontend-csrf-test-execution.md                  # 前端測試執行指南
+├── Run-CSRF-Tests.ps1                               # CSRF 自動化測試腳本
+├── CSRF-Test-Final-Report.md                        # CSRF 測試最終報告
 │
 └── Lab.CSRF2.WebAPI/                                # Web API 專案
     ├── Lab.CSRF2.WebAPI.csproj                      # 專案檔
@@ -30,7 +34,8 @@ Lab.CSRF-2/
     │   └── ValidateTokenAttribute.cs                # Token 驗證 ActionFilter
     │
     ├── wwwroot/                                      # 靜態檔案
-    │   └── test.html                                # HTML 測試頁面
+    │   ├── test.html                                # HTML 測試頁面
+    │   └── csrf-test.html                           # CSRF 防護測試頁面
     │
     ├── Properties/                                   # 專案屬性
     │   └── launchSettings.json                      # 啟動設定
@@ -57,7 +62,9 @@ Lab.CSRF-2/
 
 ### 測試資源
 - **test.html** - 瀏覽器測試頁面，提供互動式測試介面
+- **csrf-test.html** - CSRF 防護專用測試頁面，包含 8 項完整測試
 - **test-api.ps1** - PowerShell 自動化測試腳本 (Invoke-WebRequest)
+- **Run-CSRF-Tests.ps1** - CSRF 防護自動化驗證腳本
 - **curl-security-test.ps1** - cURL 安全測試腳本 (PowerShell 版本)
 - **curl-security-test.sh** - cURL 安全測試腳本 (Bash 版本)
 
@@ -66,6 +73,9 @@ Lab.CSRF-2/
 - **web-api-protect-plan.md** - 詳細實作計畫與步驟
 - **spec.md** - 技術規格文件
 - **curl-security-test-plan.md** - cURL 安全測試計畫與測試項目說明
+- **frontend-csrf-test-plan.md** - 前端 CSRF 測試計畫
+- **frontend-csrf-test-execution.md** - 前端測試執行指南
+- **CSRF-Test-Final-Report.md** - CSRF 測試最終報告 (所有測試通過)
 
 ## 技術架構
 
@@ -137,4 +147,10 @@ Lab.CSRF-2/
 9. Client ← 200 OK 或 401 Unauthorized
 
 ## 更新日期
-2026-01-11
+2026-01-12
+
+## 最新更新
+- ✅ 新增前端 CSRF 防護測試頁面 (csrf-test.html)
+- ✅ 新增 CSRF 自動化測試腳本 (Run-CSRF-Tests.ps1)
+- ✅ 完成 6 項 CSRF 防護測試,全部通過
+- ✅ 產生完整測試報告 (CSRF-Test-Final-Report.md)
