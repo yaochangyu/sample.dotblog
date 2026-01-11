@@ -24,7 +24,25 @@ public class CsrfController : ControllerBase
     [UserAgentValidation]
     public async Task<IActionResult> GetToken()
     {
+        // 使用 GetAndStoreTokens() 產生 Token 對
+        // 這會自動產生 CookieToken (.AspNetCore.Antiforgery.XXX，HttpOnly=true)
+        // 並設定 Cache-Control: no-cache, Pragma: no-cache, X-Frame-Options: SAMEORIGIN
         var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+        
+        // 手動加入 RequestToken Cookie (HttpOnly=false)，供前端 JavaScript 讀取
+        // 參考: https://blog.darkthread.net/blog/spa-minapi-xsrf/
+        Response.Cookies.Append(
+            tokens.HeaderName!,  // 使用 HeaderName 作為 Cookie 名稱 (X-XSRF-TOKEN)
+            tokens.RequestToken!, 
+            new CookieOptions 
+            { 
+                HttpOnly = false,  // 允許 JavaScript 讀取
+                SameSite = SameSiteMode.Strict,  // 防止跨站請求
+                Secure = HttpContext.Request.IsHttps,  // HTTPS 時才設為 Secure
+                Path = "/"
+            });
+        
+        // 產生 Nonce（防止重放攻擊）
         var nonce = await _nonceProvider.GenerateNonceAsync();
         
         return Ok(new { 
