@@ -8,7 +8,9 @@ Lab.CSRF-2/
 ├── web-api-protect-plan.md                          # 實作計畫文件
 ├── spec.md                                           # 規格文件
 ├── test-api.ps1                                      # PowerShell 測試腳本
-├── WebAPI防濫用機制.實作計畫.Progress.md            # 進度追蹤 (完成後刪除)
+├── curl-security-test-plan.md                       # cURL 安全測試計畫
+├── curl-security-test.ps1                           # cURL 安全測試腳本 (PowerShell)
+├── curl-security-test.sh                            # cURL 安全測試腳本 (Bash)
 │
 └── Lab.CSRF2.WebAPI/                                # Web API 專案
     ├── Lab.CSRF2.WebAPI.csproj                      # 專案檔
@@ -55,12 +57,15 @@ Lab.CSRF-2/
 
 ### 測試資源
 - **test.html** - 瀏覽器測試頁面，提供互動式測試介面
-- **test-api.ps1** - PowerShell 自動化測試腳本
+- **test-api.ps1** - PowerShell 自動化測試腳本 (Invoke-WebRequest)
+- **curl-security-test.ps1** - cURL 安全測試腳本 (PowerShell 版本)
+- **curl-security-test.sh** - cURL 安全測試腳本 (Bash 版本)
 
 ### 文件
 - **README.md** - 完整專案說明與使用指南
 - **web-api-protect-plan.md** - 詳細實作計畫與步驟
 - **spec.md** - 技術規格文件
+- **curl-security-test-plan.md** - cURL 安全測試計畫與測試項目說明
 
 ## 技術架構
 
