@@ -132,7 +132,57 @@ builder.Services.AddCors(options =>
 
 **重點**：`AllowCredentials()` 允許攜帶 Cookie，這是 Double Submit Cookie Pattern 的必要條件。
 
-### 3. Nonce Provider - 防止重放攻擊
+### 3. Rate Limiting 設定
+
+在 `appsettings.json` 中設定速率限制：
+
+```json
+{
+  "IpRateLimiting": {
+    "EnableEndpointRateLimiting": true,
+    "GeneralRules": [
+      {
+        "Endpoint": "GET:/api/csrf/token",
+        "Period": "1m",
+        "Limit": 5
+      },
+      {
+        "Endpoint": "POST:/api/csrf/protected",
+        "Period": "1m",
+        "Limit": 10
+      },
+      {
+        "Endpoint": "*",
+        "Period": "1m",
+        "Limit": 30
+      }
+    ]
+  }
+}
+```
+
+然後在 `Program.cs` 中註冊服務：
+
+```csharp
+// Rate Limiting 設定 (使用 IDistributedCache)
+builder.Services.AddDistributedMemoryCache();
+builder.Services.Configure<IpRateLimitOptions>(builder.Configuration.GetSection("IpRateLimiting"));
+builder.Services.AddSingleton<IIpPolicyStore, DistributedCacheIpPolicyStore>();
+builder.Services.AddSingleton<IClientPolicyStore, DistributedCacheClientPolicyStore>();
+builder.Services.AddSingleton<IRateLimitCounterStore, DistributedCacheRateLimitCounterStore>();
+builder.Services.AddSingleton<IProcessingStrategy, AsyncKeyLockProcessingStrategy>();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+```
+
+**重點說明**：
+- GET /api/csrf/token：每分鐘限制 5 次
+- POST /api/csrf/protected：每分鐘限制 10 次
+- 其他端點：每分鐘限制 30 次
+- 使用 `IDistributedCache` 支援分散式部署
+
+完整程式碼：[Program.cs](https://github.com/yaochangyu/sample.dotblog/blob/master/WebAPI/Lab.CSRF/Lab.CSRF.WebApi/Program.cs) 和 [appsettings.json](https://github.com/yaochangyu/sample.dotblog/blob/master/WebAPI/Lab.CSRF/Lab.CSRF.WebApi/appsettings.json)
+
+### 4. Nonce Provider - 防止重放攻擊
 
 ```csharp
 using Microsoft.Extensions.Caching.Distributed;
@@ -185,7 +235,7 @@ public class TokenNonceProvider : ITokenNonceProvider
 
 完整程式碼：[TokenNonceProvider.cs](https://github.com/yaochangyu/sample.dotblog/blob/master/WebAPI/Lab.CSRF/Lab.CSRF.WebApi/Providers/TokenNonceProvider.cs)
 
-### 4. Controller 實作
+### 5. Controller 實作
 
 ```csharp
 [ApiController]
@@ -319,14 +369,32 @@ async function callProtectedApi(useToken) {
    - `SameSite=Strict` Cookie 有效防止跨站請求
    - Double Submit Cookie Pattern 驗證正確
 
-2. **已知爬蟲工具**：100% 阻擋
-   - curl、Python requests、Postman 被 User-Agent 黑名單阻擋
+2. **基礎爬蟲工具**：有效阻擋
+   - curl、Python requests、Postman 被 User-Agent 黑名單初步過濾
+   - **但此機制容易被繞過，真正的防護依賴 Rate Limiting**
 
 3. **Token 重放攻擊**：100% 阻擋
    - Nonce 一次性使用機制有效運作
 
-4. **DDoS 攻擊**：有效減緩
-   - Rate Limiting 成功限制請求頻率
+4. **DDoS 與爬蟲濫用**：透過 Rate Limiting 有效控制
+   - **關鍵防護機制**：IP 限流設定
+     - GET /api/csrf/token：每分鐘 5 次
+     - POST /api/csrf/protected：每分鐘 10 次
+     - 其他端點：每分鐘 30 次
+   - 即使爬蟲偽造 User-Agent 和其他 Headers，仍受限於 IP 頻率限制
+   - 超過限制回傳 HTTP 429 (Too Many Requests)
+   - **避免誤阻擋**：限流閾值可根據實際使用情境調整
+
+### ⚠️ 潛在風險
+
+1. **進階爬蟲**：中等風險
+   - User-Agent 黑名單容易被偽造繞過
+   - **真正防護依賴 Rate Limiting**
+   - 建議：搭配 Browser Fingerprinting、CAPTCHA
+
+2. **分散式爬蟲**：中高風險
+   - 使用多個 IP 可繞過單 IP 限流
+   - 建議：行為分析、CAPTCHA 挑戰
 
 ### 實際運行結果
 
@@ -389,16 +457,24 @@ $ curl -X GET "http://localhost:5073/api/csrf/token"
 
 1. **HttpOnly = false**：雖然允許 JavaScript 讀取 Cookie 會增加 XSS 風險，但這是 Double Submit Cookie Pattern 的必要條件。建議搭配 CSP (Content Security Policy) 降低 XSS 風險。
 
-2. **User-Agent 驗證**：黑名單機制無法防止進階爬蟲偽造 User-Agent，建議搭配其他機制 (如 Browser Fingerprinting、CAPTCHA)。
+2. **User-Agent 驗證的局限性**：
+   - 黑名單機制**容易被繞過**，不應作為主要防護手段
+   - 僅用於初步過濾，**真正的防護依賴 Rate Limiting**
+   - 進階建議：搭配 Browser Fingerprinting、CAPTCHA
 
-3. **Nonce 儲存**：目前使用 Memory Cache，若需要 Scale Out，建議改用 Redis 等分散式快取。
+3. **Rate Limiting 閾值調整**：
+   - 需要根據實際使用情境調整，避免誤傷正常使用者
+   - 監控 HTTP 429 回應比例，適時調整參數
+
+4. **分散式快取**：目前使用 `IDistributedCache` 的記憶體實作，可輕鬆切換到 Redis 或 SQL Server。
 
 ### 進階改善方向
 
-1. **加入 CAPTCHA**：對可疑請求要求驗證碼
-2. **Browser Fingerprinting**：更精確識別瀏覽器
-3. **行為分析**：分析請求模式，識別異常行為
-4. **IP 白名單**：針對特定 IP 範圍放寬限制
+1. **加入 CAPTCHA**：對超過限流次數的 IP 或可疑請求要求驗證碼
+2. **Browser Fingerprinting**：更精確識別真實瀏覽器特徵
+3. **行為分析**：分析請求模式（時間間隔、順序），識別異常行為
+4. **IP 信譽系統**：針對可信 IP 放寬限制，對可疑 IP 加嚴
+5. **動態調整限流**：根據流量狀況自動調整閾值
 
 ## 結論
 
