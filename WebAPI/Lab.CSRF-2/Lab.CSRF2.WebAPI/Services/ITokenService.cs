@@ -2,6 +2,6 @@ namespace Lab.CSRF2.WebAPI.Services;
 
 public interface ITokenService
 {
-    string GenerateToken(int maxUsageCount = 1, int expirationMinutes = 5);
-    bool ValidateToken(string token);
+    string GenerateToken(int maxUsageCount, int expirationMinutes, string userAgent, string ipAddress);
+    bool ValidateToken(string token, string userAgent, string ipAddress);
 }
