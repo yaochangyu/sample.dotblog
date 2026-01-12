@@ -18,7 +18,8 @@ try {
     }
     $tokenUrl = $API_BASE + '/api/token?maxUsage=1&expirationMinutes=5'
     $response = Invoke-WebRequest -Uri $tokenUrl -Method Get -Headers $headers -UseBasicParsing
-    $token = $response.Headers["X-CSRF-Token"]
+    $tokenHeader = $response.Headers["X-CSRF-Token"]
+    $token = if ($tokenHeader -is [Array]) { $tokenHeader[0] } else { $tokenHeader }
     
     if (-not $token) {
         Write-Host "❌ 失敗: 無法取得 Token" -ForegroundColor Red
