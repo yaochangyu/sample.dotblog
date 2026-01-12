@@ -32,18 +32,37 @@
 ## 🏗️ 專案架構
 
 ```
-Lab.CSRF2.WebAPI/
-├── Controllers/
-│   ├── TokenController.cs        # Token 產生端點
-│   └── ProtectedController.cs    # 受保護的 API 端點
-├── Services/
-│   ├── ITokenService.cs          # Token 服務介面
-│   └── TokenService.cs           # Token 服務實作
-├── Filters/
-│   └── ValidateTokenAttribute.cs # Token 驗證 ActionFilter
-├── wwwroot/
-│   └── test.html                 # HTML 測試頁面
-└── Program.cs                    # 應用程式進入點
+Lab.CSRF-2/
+├── tests/                             # 測試資料夾 ⭐ NEW
+│   └── security/                      # 安全測試
+│       ├── scripts/                   # 測試腳本
+│       │   ├── api-protected-security-test.ps1
+│       │   ├── curl-security-test.ps1
+│       │   ├── curl-security-test.sh
+│       │   └── frontend-security-test.ps1
+│       ├── playwright/                # Playwright 測試
+│       └── fixtures/                  # 測試頁面
+│           ├── test.html
+│           └── api-protected-test.html
+├── docs/                              # 詳細文件 ⭐ NEW
+│   ├── api-protected-security-test-plan.md
+│   ├── curl-security-test-plan.md
+│   ├── frontend-playwright-test-plan.md
+│   └── frontend-security-test-plan.md
+├── Lab.CSRF2.WebAPI/                  # WebAPI 專案
+│   ├── Controllers/
+│   │   ├── TokenController.cs
+│   │   └── ProtectedController.cs
+│   ├── Services/
+│   │   ├── ITokenService.cs
+│   │   └── TokenService.cs
+│   ├── Filters/
+│   │   └── ValidateTokenAttribute.cs
+│   ├── wwwroot/
+│   │   └── test.html
+│   └── Program.cs
+├── security-test-plan.md              # 完整安全測試計畫 ⭐ NEW
+└── README.md                          # 本文件
 ```
 
 ## 🚀 快速開始
@@ -62,18 +81,53 @@ dotnet run
 
 ### 2. 測試方式
 
-#### 方式一：使用 PowerShell 腳本
+#### 方式一：完整安全測試 (推薦) ⭐ NEW
+
 ```powershell
-.\test-api.ps1
+# API 安全測試 (10 項測試)
+cd tests/security/scripts
+.\api-protected-security-test.ps1
+
+# cURL 測試 (7 項測試)
+.\curl-security-test.ps1
+
+# 前端安全測試 (6 項測試)
+.\frontend-security-test.ps1
 ```
 
-#### 方式二：使用瀏覽器測試頁面
+**Bash 版本 (Linux/macOS)**:
+```bash
+cd tests/security/scripts
+chmod +x curl-security-test.sh
+./curl-security-test.sh
+```
+
+#### 方式二：Playwright 前端自動化測試 ⭐ NEW
+
+```bash
+# 首次執行需安裝
+npm install
+npx playwright install
+
+# 執行所有測試
+npx playwright test
+
+# 檢視報告
+npx playwright show-report
+```
+
+#### 方式三：使用瀏覽器測試頁面
 開啟瀏覽器訪問：
 ```
 https://localhost:7001/test.html
 ```
 
-#### 方式三：手動使用 cURL 或 PowerShell
+或使用測試頁面：
+```
+開啟 tests/security/fixtures/test.html
+```
+
+#### 方式四：手動使用 cURL 或 PowerShell
 
 **取得 Token:**
 ```powershell
@@ -94,6 +148,41 @@ Invoke-WebRequest -Uri "https://localhost:7001/api/protected" -Method Post -Head
 
 ## 🧪 安全性測試案例
 
+### 完整測試涵蓋範圍 (35 項測試) ⭐ NEW
+
+#### CSRF 防護測試 (7 項)
+- 無 Token 請求驗證
+- 偽造 Token 驗證
+- 過期 Token 驗證
+- Token 使用次數限制
+- CORS 跨域請求驗證
+- Referer/Origin Header 驗證
+
+#### Token 洩漏防護測試 (4 項)
+- cURL 使用洩漏 Token
+- Token 批次請求攻擊
+- 不同 IP 使用 Token
+- 不同 User-Agent 使用 Token
+
+#### 爬蟲防護測試 (6 項)
+- 無 User-Agent 請求
+- 可疑 User-Agent 黑名單
+- 高頻率請求 (速率限制)
+- Token 生成頻率限制
+- JavaScript 挑戰機制
+- Honeypot 陷阱欄位
+
+#### 前端整合測試 - Playwright (18 項)
+- Token 機制測試 (3 項)
+- CSRF 防護測試 (3 項)
+- Header 驗證測試 (3 項)
+- 多瀏覽器相容性 (3 項)
+- JavaScript 環境驗證 (2 項)
+- Cookie 安全測試 (2 項)
+- 使用者流程測試 (2 項)
+
+### 基本測試 (舊版相容)
+
 執行 `test-api.ps1` 會自動測試以下情境：
 
 1. ✅ **取得 Token** - 驗證 Token 產生機制
@@ -102,6 +191,14 @@ Invoke-WebRequest -Uri "https://localhost:7001/api/protected" -Method Post -Head
 4. ❌ **Token 使用次數超過限制** - 應回傳 401 Unauthorized
 5. ❌ **使用無效 Token** - 應回傳 401 Unauthorized
 6. ❌ **缺少 Token Header** - 應回傳 401 Unauthorized
+
+### 詳細測試文件
+
+- **[完整安全測試計畫](./security-test-plan.md)** - 整合所有測試的完整文件
+- **[API 安全測試計畫](./docs/api-protected-security-test-plan.md)**
+- **[cURL 測試計畫](./docs/curl-security-test-plan.md)**
+- **[Playwright 測試計畫](./docs/frontend-playwright-test-plan.md)**
+- **[前端安全測試計畫](./docs/frontend-security-test-plan.md)**
 
 ## 🔧 技術選型
 
