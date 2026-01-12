@@ -1,13 +1,13 @@
 using Microsoft.Extensions.Caching.Memory;
 
-namespace Lab.CSRF2.WebAPI.Services;
+namespace Lab.CSRF2.WebAPI.Providers;
 
-public class TokenService : ITokenService
+public class TokenProvider : ITokenProvider
 {
     private readonly IMemoryCache _cache;
-    private readonly ILogger<TokenService> _logger;
+    private readonly ILogger<TokenProvider> _logger;
 
-    public TokenService(IMemoryCache cache, ILogger<TokenService> logger)
+    public TokenProvider(IMemoryCache cache, ILogger<TokenProvider> logger)
     {
         _cache = cache;
         _logger = logger;
