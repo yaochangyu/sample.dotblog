@@ -57,17 +57,20 @@
 
 ---
 
-#### 測試案例 1.3: Token 使用次數限制
-**目的**: 驗證 Token 使用次數超過限制後失效
+#### 測試案例 1.3: Token 使用次數限制與重放攻擊防護
+**目的**: 驗證 Token 使用次數超過限制後失效，防止 Token 被重複使用（重放攻擊）
 
 **測試步驟**:
 1. 取得 Token (設定最大使用次數 = 1)
 2. 第一次呼叫 Protected API (應成功)
-3. 第二次呼叫 Protected API (應失敗)
+3. 第二次呼叫 Protected API，使用相同 Token (應失敗，模擬重放攻擊)
 
-**預期結果**: 
+**預期結果**:
 - 第一次: HTTP 200 OK
 - 第二次: HTTP 403 Forbidden
+- 錯誤訊息: "Invalid or expired token" 或 "Token usage limit exceeded"
+
+**安全意義**: 防止攻擊者攔截 Token 後重複使用
 
 **測試腳本**:
 - `scripts/test-03-usage-limit.sh`
@@ -144,6 +147,59 @@
 
 ---
 
+#### 測試案例 2.5: 特殊字符注入測試
+**目的**: 驗證系統對惡意輸入的防護能力
+
+**測試步驟**:
+1. 使用包含特殊字符的 Token（如 `'; DROP TABLE--`、`<script>alert('XSS')</script>`）
+2. 呼叫 Protected API
+
+**預期結果**:
+- HTTP 403 Forbidden
+- 系統不應受到 SQL Injection 或 XSS 攻擊影響
+- 錯誤訊息: "Invalid or expired token"
+
+**測試腳本**:
+- `scripts/test-08-injection-attack.sh`
+- `scripts/test-08-injection-attack.ps1`
+
+---
+
+#### 測試案例 2.6: HTTP Method 限制測試
+**目的**: 驗證 Protected API 僅接受指定的 HTTP Method
+
+**測試步驟**:
+1. 取得有效 Token
+2. 使用 GET 方法呼叫 `GET /api/protected`（應該是 POST）
+
+**預期結果**:
+- HTTP 405 Method Not Allowed 或 404 Not Found
+- 只接受 POST 方法
+
+**測試腳本**:
+- `scripts/test-09-method-validation.sh`
+- `scripts/test-09-method-validation.ps1`
+
+---
+
+#### 測試案例 2.7: Content-Type 驗證
+**目的**: 驗證 API 正確處理錯誤的 Content-Type
+
+**測試步驟**:
+1. 取得有效 Token
+2. 使用錯誤的 Content-Type（如 `text/plain`）呼叫 Protected API
+3. 驗證 API 是否拒絕或容忍該請求
+
+**預期結果**:
+- HTTP 415 Unsupported Media Type（嚴格模式）或 HTTP 200 OK（寬鬆模式）
+- 確認 API 的 Content-Type 處理策略
+
+**測試腳本**:
+- `scripts/test-10-content-type.sh`
+- `scripts/test-10-content-type.ps1`
+
+---
+
 ### 場景 3: 瀏覽器整合測試
 
 #### 測試案例 3.1: 瀏覽器正常流程
@@ -160,7 +216,7 @@
 - API 呼叫成功並顯示回應資料
 
 **測試腳本**:
-- `scripts/test-08-browser-normal.spec.js` (Playwright)
+- `scripts/test-11-browser-normal.spec.js` (Playwright)
 
 ---
 
@@ -178,24 +234,25 @@
 - 第 3 次失敗 (403 Forbidden)
 
 **測試腳本**:
-- `scripts/test-09-browser-usage-limit.spec.js` (Playwright)
+- `scripts/test-12-browser-usage-limit.spec.js` (Playwright)
 
 ---
 
-#### 測試案例 3.3: 跨頁面 Token 使用
-**目的**: 驗證 Token 無法在不同頁面間共用（User-Agent 相同的情況下應該可用，但測試從外部注入 Token 的情況）
+#### 測試案例 3.3: 跨頁面 Token 使用（相同瀏覽器）
+**目的**: 驗證 Token 在相同瀏覽器的不同頁面間可正常使用（因為 User-Agent 相同）
 
 **測試步驟**:
 1. 頁面 A 取得 Token
-2. 將 Token 複製到頁面 B
-3. 頁面 B 嘗試使用該 Token
+2. 將 Token 複製到頁面 B（相同瀏覽器實例）
+3. 頁面 B 使用該 Token 呼叫 Protected API
 
-**預期結果**: 
-- 在相同瀏覽器環境下應該成功（User-Agent 相同）
-- 此測試主要驗證 Token 傳遞機制
+**預期結果**:
+- HTTP 200 OK（因為 User-Agent 相同）
+- 此測試驗證 User-Agent 綁定機制的正確性
+- Token 應該可以在相同 User-Agent 的環境下使用
 
 **測試腳本**:
-- `scripts/test-10-cross-page.spec.js` (Playwright)
+- `scripts/test-13-cross-page.spec.js` (Playwright)
 
 ---
 
@@ -212,26 +269,97 @@
 - HTTP 403 Forbidden
 
 **測試腳本**:
-- `scripts/test-11-direct-attack.sh`
-- `scripts/test-11-direct-attack.ps1`
+- `scripts/test-14-direct-attack.sh`
+- `scripts/test-14-direct-attack.ps1`
 
 ---
 
-#### 測試案例 4.2: Token 重放攻擊
-**目的**: 驗證已使用的 Token 無法重複使用
+#### 測試案例 4.2: 並發請求攻擊
+**目的**: 驗證多個請求同時使用相同 Token 時的處理機制
 
 **測試步驟**:
-1. 取得 Token (maxUsage=1)
-2. 使用 Token 呼叫 API (成功)
-3. 再次使用相同 Token 呼叫 API (應失敗)
+1. 取得 Token (maxUsage=3)
+2. 同時發送 5 個並發請求使用相同 Token
+3. 驗證只有 3 個請求成功
 
-**預期結果**: 
-- 第一次: HTTP 200 OK
-- 第二次: HTTP 403 Forbidden
+**預期結果**:
+- 前 3 個請求: HTTP 200 OK
+- 後 2 個請求: HTTP 403 Forbidden
+- 確保使用次數計數的執行緒安全性
 
 **測試腳本**:
-- `scripts/test-12-replay-attack.sh`
-- `scripts/test-12-replay-attack.ps1`
+- `scripts/test-15-concurrent-attack.sh`
+- `scripts/test-15-concurrent-attack.ps1`
+
+---
+
+### 場景 5: 邊界條件測試
+
+#### 測試案例 5.1: 空字串 Token
+**目的**: 驗證系統正確處理空 Token
+
+**測試步驟**:
+1. 呼叫 Protected API，傳送空字串作為 Token (`X-CSRF-Token: ""`)
+2. 驗證系統回應
+
+**預期結果**:
+- HTTP 403 Forbidden
+- 錯誤訊息: "Token is required" 或 "Invalid or expired token"
+
+**測試腳本**:
+- `scripts/test-16-empty-token.sh`
+- `scripts/test-16-empty-token.ps1`
+
+---
+
+#### 測試案例 5.2: 超長 Token
+**目的**: 驗證系統對超長 Token 的處理
+
+**測試步驟**:
+1. 使用超長字串（如 10000 字符）作為 Token
+2. 呼叫 Protected API
+
+**預期結果**:
+- HTTP 403 Forbidden 或 HTTP 400 Bad Request
+- 系統不應崩潰或產生例外
+
+**測試腳本**:
+- `scripts/test-17-long-token.sh`
+- `scripts/test-17-long-token.ps1`
+
+---
+
+#### 測試案例 5.3: Token 格式錯誤
+**目的**: 驗證系統對非 GUID 格式 Token 的處理
+
+**測試步驟**:
+1. 使用非 GUID 格式的 Token（如 `abc123`、`not-a-guid`）
+2. 呼叫 Protected API
+
+**預期結果**:
+- HTTP 403 Forbidden
+- 錯誤訊息: "Invalid or expired token"
+
+**測試腳本**:
+- `scripts/test-18-malformed-token.sh`
+- `scripts/test-18-malformed-token.ps1`
+
+---
+
+#### 測試案例 5.4: 缺少 User-Agent Header
+**目的**: 驗證系統對缺少 User-Agent 的請求處理
+
+**測試步驟**:
+1. 取得 Token 時不傳送 User-Agent Header
+2. 或使用 Token 時不傳送 User-Agent Header
+
+**預期結果**:
+- Token 取得可能成功或失敗（取決於實作）
+- 使用 Token 時應失敗: HTTP 403 Forbidden
+
+**測試腳本**:
+- `scripts/test-19-missing-ua.sh`
+- `scripts/test-19-missing-ua.ps1`
 
 ---
 
@@ -273,16 +401,23 @@ npx playwright test scripts/test-08-browser-normal.spec.js
 |---------|------|------|
 | 1.1 正常流程 | ⏳ 待測試 | |
 | 1.2 Token 過期 | ⏳ 待測試 | |
-| 1.3 使用次數限制 | ⏳ 待測試 | |
+| 1.3 使用次數限制與重放攻擊防護 | ⏳ 待測試 | |
 | 2.1 無 Token | ⏳ 待測試 | |
 | 2.2 無效 Token | ⏳ 待測試 | |
 | 2.3 User-Agent 不一致 | ⏳ 待測試 | |
 | 2.4 速率限制 | ⏳ 待測試 | |
+| 2.5 特殊字符注入測試 | ⏳ 待測試 | |
+| 2.6 HTTP Method 限制測試 | ⏳ 待測試 | |
+| 2.7 Content-Type 驗證 | ⏳ 待測試 | |
 | 3.1 瀏覽器正常流程 | ⏳ 待測試 | |
 | 3.2 瀏覽器使用限制 | ⏳ 待測試 | |
-| 3.3 跨頁面使用 | ⏳ 待測試 | |
+| 3.3 跨頁面使用（相同瀏覽器） | ⏳ 待測試 | |
 | 4.1 直接攻擊 | ⏳ 待測試 | |
-| 4.2 重放攻擊 | ⏳ 待測試 | |
+| 4.2 並發請求攻擊 | ⏳ 待測試 | |
+| 5.1 空字串 Token | ⏳ 待測試 | |
+| 5.2 超長 Token | ⏳ 待測試 | |
+| 5.3 Token 格式錯誤 | ⏳ 待測試 | |
+| 5.4 缺少 User-Agent Header | ⏳ 待測試 | |
 
 ---
 
