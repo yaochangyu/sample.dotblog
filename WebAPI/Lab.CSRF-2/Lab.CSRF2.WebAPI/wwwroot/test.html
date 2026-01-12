@@ -118,7 +118,7 @@
 
     <script>
         const API_BASE = window.location.origin;
-        let currentToken = '';
+        window.currentToken = window.currentToken || '';
 
         async function getToken() {
             const maxUsage = document.getElementById('maxUsage').value;
@@ -128,9 +128,9 @@
                 const response = await fetch(`${API_BASE}/api/token?maxUsage=${maxUsage}&expirationMinutes=${expiration}`);
                 const data = await response.json();
                 
-                currentToken = response.headers.get('X-CSRF-Token') || data.token;
+                window.currentToken = response.headers.get('X-CSRF-Token') || data.token;
                 
-                document.getElementById('currentToken').textContent = currentToken;
+                document.getElementById('currentToken').textContent = window.currentToken;
                 document.getElementById('tokenDisplay').style.display = 'block';
                 document.getElementById('callApiBtn').disabled = false;
                 
@@ -148,7 +148,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-Token': currentToken
+                        'X-CSRF-Token': window.currentToken
                     },
                     body: JSON.stringify({ data: requestData })
                 });
@@ -203,7 +203,12 @@
         }
 
         async function testMultipleUsage() {
-            showResult('testResult', '開始測試多次使用同一 Token...', 'info');
+            const element = document.getElementById('testResult');
+            element.textContent = '開始測試多次使用同一 Token...';
+            element.className = 'result info';
+            element.style.display = 'block';
+            
+            let results = '開始測試多次使用同一 Token...';
             
             for (let i = 1; i <= 3; i++) {
                 try {
@@ -211,21 +216,22 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-Token': currentToken
+                            'X-CSRF-Token': window.currentToken
                         },
                         body: JSON.stringify({ data: `第 ${i} 次呼叫` })
                     });
                     
                     const data = await response.json();
-                    const resultText = document.getElementById('testResult').textContent;
-                    showResult('testResult', 
-                        `${resultText}\n\n第 ${i} 次: 狀態 ${response.status}\n${JSON.stringify(data, null, 2)}`, 
-                        'info'
-                    );
+                    results += `\n\n第 ${i} 次: 狀態 ${response.status}\n${JSON.stringify(data, null, 2)}`;
+                    
+                    element.textContent = results;
+                    element.className = 'result info';
                     
                     await new Promise(resolve => setTimeout(resolve, 500));
                 } catch (error) {
-                    showResult('testResult', `第 ${i} 次錯誤: ${error.message}`, 'error');
+                    results += `\n\n第 ${i} 次錯誤: ${error.message}`;
+                    element.textContent = results;
+                    element.className = 'result error';
                 }
             }
         }
