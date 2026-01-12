@@ -5,13 +5,18 @@ Write-Host "測試案例 1.1: 正常 Token 取得與使用" -ForegroundColor Cya
 Write-Host "======================================" -ForegroundColor Cyan
 
 $API_BASE = if ($env:API_BASE) { $env:API_BASE } else { "http://localhost:5073" }
+$USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 Write-Host ""
 Write-Host "步驟 1: 取得 Token" -ForegroundColor Yellow
 Write-Host "--------------------------------------"
 
 try {
-    $response = Invoke-WebRequest -Uri "$API_BASE/api/token?maxUsage=1&expirationMinutes=5" -Method Get
+    $headers = @{
+        "User-Agent" = $USER_AGENT
+        "Referer" = "$API_BASE/"
+    }
+    $response = Invoke-WebRequest -Uri "$API_BASE/api/token?maxUsage=1&expirationMinutes=5" -Method Get -Headers $headers
     $token = $response.Headers["X-CSRF-Token"]
     
     if (-not $token) {
@@ -28,6 +33,8 @@ try {
     $body = @{ data = "測試資料" } | ConvertTo-Json
     $headers = @{
         "Content-Type" = "application/json"
+        "User-Agent" = $USER_AGENT
+        "Referer" = "$API_BASE/"
         "X-CSRF-Token" = $token
     }
     
