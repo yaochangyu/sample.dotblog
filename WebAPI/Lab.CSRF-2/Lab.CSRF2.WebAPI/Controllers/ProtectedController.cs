@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Lab.CSRF2.WebAPI.Filters;
 
 namespace Lab.CSRF2.WebAPI.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[EnableRateLimiting("api")]
 public class ProtectedController : ControllerBase
 {
     [HttpPost]
