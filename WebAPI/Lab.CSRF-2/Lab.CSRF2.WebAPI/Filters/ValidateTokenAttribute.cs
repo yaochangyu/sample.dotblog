@@ -80,6 +80,9 @@ public class ValidateTokenAttribute : ActionFilterAttribute
 
         if (!tokenService.ValidateToken(token, userAgent, ipAddress))
         {
+            logger.LogWarning("Token validation failed. Token: {Token}, UA: {UserAgent}, IP: {IP}, Time: {Time}",
+                token?.Substring(0, Math.Min(8, token.Length)) + "...", userAgent, ipAddress, DateTime.UtcNow);
+            
             context.Result = new UnauthorizedObjectResult(new { error = "Invalid or expired token" });
             return;
         }
