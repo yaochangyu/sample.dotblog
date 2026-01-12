@@ -309,4 +309,5 @@ npx playwright test scripts/test-08-browser-normal.spec.js
 5. **自動化測試**: 建議整合至 CI/CD 流程
 
 ## 測試報告輸出位置
-- security-test-report.md
+- 資料夾 .\output\
+- 總結 .\output\security-test-report.md
