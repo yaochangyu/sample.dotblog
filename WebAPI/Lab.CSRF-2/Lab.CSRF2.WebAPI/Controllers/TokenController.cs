@@ -20,6 +20,13 @@ public class TokenController : ControllerBase
     public IActionResult GetToken([FromQuery] int maxUsage = 1, [FromQuery] int expirationMinutes = 5)
     {
         var userAgent = Request.Headers["User-Agent"].ToString();
+        
+        // 檢查 User-Agent 是否存在
+        if (string.IsNullOrWhiteSpace(userAgent))
+        {
+            return BadRequest(new { error = "User-Agent header is required" });
+        }
+        
         var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         
         var token = _tokenProvider.GenerateToken(maxUsage, expirationMinutes, userAgent, ipAddress);
