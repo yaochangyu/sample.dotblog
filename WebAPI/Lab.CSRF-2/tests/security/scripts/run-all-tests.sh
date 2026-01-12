@@ -50,7 +50,11 @@ for test_info in "${tests[@]}"; do
     fi
     
     # 測試之間暫停，避免速率限制影響
-    if [ "$script_name" != "test-12-replay-attack.sh" ]; then
+    if [ "$script_name" = "test-07-rate-limiting.sh" ]; then
+        # 速率限制測試後等待 65 秒讓速率限制重置
+        echo "⏳ 等待 65 秒讓速率限制重置..."
+        sleep 65
+    elif [ "$script_name" != "test-12-replay-attack.sh" ]; then
         sleep 2
     fi
 done
