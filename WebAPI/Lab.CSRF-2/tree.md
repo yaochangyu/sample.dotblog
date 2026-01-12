@@ -32,6 +32,7 @@ Lab.CSRF-2/
 │           ├── test-06-ua-mismatch.ps1              # User-Agent 不一致測試 (PowerShell)
 │           ├── test-07-rate-limiting.sh             # 速率限制測試 (Bash)
 │           ├── test-07-rate-limiting.ps1            # 速率限制測試 (PowerShell)
+│           ├── test-05-4-missing-user-agent.ps1     # 無 User-Agent 測試 (PowerShell) ⭐NEW
 │           ├── test-11-direct-attack.sh             # 直接攻擊測試 (Bash)
 │           ├── test-11-direct-attack.ps1            # 直接攻擊測試 (PowerShell)
 │           ├── test-12-replay-attack.sh             # 重放攻擊測試 (Bash)
@@ -47,9 +48,9 @@ Lab.CSRF-2/
     │   ├── TokenController.cs                       # Token 產生端點
     │   └── ProtectedController.cs                   # 受保護的 API 端點
     │
-    ├── Services/                                     # 服務層
-    │   ├── ITokenService.cs                         # Token 服務介面
-    │   └── TokenService.cs                          # Token 服務實作
+    ├── Providers/                                    # 提供者層 ⭐UPDATED
+    │   ├── ITokenProvider.cs                        # Token 提供者介面
+    │   └── TokenProvider.cs                         # Token 提供者實作
     │
     ├── Filters/                                      # 自訂 Filter
     │   └── ValidateTokenAttribute.cs                # Token 驗證 ActionFilter
@@ -70,16 +71,16 @@ Lab.CSRF-2/
 ### 應用程式進入點
 - **Program.cs** - 設定服務、CORS、Middleware 與路由
 
-### Controllers (API 端點)
-- **TokenController.cs** - 提供 GET /api/token 端點產生 Token
+### Controllers (API 端點) ⭐UPDATED
+- **TokenController.cs** - 提供 GET /api/token 端點產生 Token（加入 User-Agent 必填驗證）
 - **ProtectedController.cs** - 提供 POST /api/protected 端點示範受保護的 API
 
-### Services (業務邏輯)
-- **ITokenService.cs** - Token 服務介面定義
-- **TokenService.cs** - Token 產生、驗證與儲存邏輯實作
+### Providers (業務邏輯) ⭐UPDATED
+- **ITokenProvider.cs** - Token 提供者介面定義
+- **TokenProvider.cs** - Token 產生、驗證與儲存邏輯實作（加強日誌記錄）
 
-### Filters (驗證機制)
-- **ValidateTokenAttribute.cs** - ActionFilter 用於驗證 Request Header 中的 Token
+### Filters (驗證機制) ⭐UPDATED
+- **ValidateTokenAttribute.cs** - ActionFilter 用於驗證 Request Header 中的 Token（加強日誌記錄）
 
 ### 測試資源
 - **wwwroot/test.html** - 瀏覽器測試頁面，提供互動式測試介面
@@ -87,6 +88,7 @@ Lab.CSRF-2/
 - **tests/security/scripts/** - 完整測試腳本集 (Bash + PowerShell)
   - run-all-tests.sh/ps1 - 執行所有測試
   - test-01~07, 11~12 - 個別測試案例
+  - test-05-4-missing-user-agent.ps1 - 無 User-Agent 測試 ⭐NEW
 
 ### 文件
 - **README.md** - 完整專案說明與使用指南
@@ -147,31 +149,38 @@ Lab.CSRF-2/
 
 ## 資料流程
 
-### Token 產生流程
+### Token 產生流程 ⭐UPDATED
 1. Client → GET /api/token
-2. TokenController → TokenService.GenerateToken()
-3. TokenService → 產生 GUID → 儲存至 IMemoryCache
-4. TokenService → 回傳 Token
-5. TokenController → 在 Response Header 加入 X-CSRF-Token
-6. Client ← 收到 Token
+2. TokenController → 檢查 User-Agent 是否存在（新增）
+3. TokenController → TokenProvider.GenerateToken()
+4. TokenProvider → 產生 GUID → 儲存至 IMemoryCache
+5. TokenProvider → 回傳 Token
+6. TokenController → 在 Response Header 加入 X-CSRF-Token
+7. Client ← 收到 Token
 
-### Token 驗證流程
+### Token 驗證流程 ⭐UPDATED
 1. Client → POST /api/protected (帶 X-CSRF-Token Header)
 2. ValidateTokenAttribute → 攔截請求
-3. ValidateTokenAttribute → TokenService.ValidateToken()
-4. TokenService → 從 IMemoryCache 取得 TokenData
-5. TokenService → 驗證過期時間、使用次數
-6. TokenService → 更新使用次數或刪除 Token
-7. ValidateTokenAttribute → 驗證通過/失敗
-8. ProtectedController → 處理請求 (驗證通過時)
-9. Client ← 200 OK 或 401 Unauthorized
+3. ValidateTokenAttribute → TokenProvider.ValidateToken()
+4. TokenProvider → 從 IMemoryCache 取得 TokenData
+5. TokenProvider → 驗證過期時間、使用次數
+6. TokenProvider → 記錄驗證失敗日誌（新增）
+7. TokenProvider → 更新使用次數或刪除 Token
+8. ValidateTokenAttribute → 驗證通過/失敗
+9. ProtectedController → 處理請求 (驗證通過時)
+10. Client ← 200 OK 或 401 Unauthorized
 
 ## 更新日期
 2026-01-12
 
-## 最新更新
+## 最新更新（安全性修復）
+- ⭐ **User-Agent 必填驗證** - Token 生成時強制要求 User-Agent Header
+- ⭐ **加強日誌記錄** - 記錄 Token 驗證失敗的詳細資訊
+- ⭐ **新增測試案例 5.4** - 測試缺少 User-Agent 的情況
+- ✅ 修正測試腳本 Header 陣列取值問題
+- ✅ 安全測試覆蓋率達 100%
 - ✅ 完整安全測試套件 (tests/security/)
-- ✅ 12 個測試案例，涵蓋所有安全機制
+- ✅ 13 個測試案例（新增測試 5.4），涵蓋所有安全機制
 - ✅ Bash + PowerShell 雙版本測試腳本
 - ✅ 完整文件導覽系統 (INDEX.md)
 - ✅ 多層防護機制 (8 層驗證)
