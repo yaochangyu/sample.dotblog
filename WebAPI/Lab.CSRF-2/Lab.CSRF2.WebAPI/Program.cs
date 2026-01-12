@@ -1,5 +1,5 @@
-using Lab.CSRF2.WebAPI.Services;
 using System.Threading.RateLimiting;
+using Lab.CSRF2.WebAPI.Providers;
 using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
-builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<ITokenProvider, TokenProvider>();
 builder.Services.AddOpenApi();
 
 // 新增速率限制
