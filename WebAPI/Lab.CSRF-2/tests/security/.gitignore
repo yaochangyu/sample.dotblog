@@ -1,0 +1,9 @@
+# Playwright
+test-results/
+playwright-report/
+node_modules/
+package-lock.json
+
+# Test output
+*.log
+.DS_Store
