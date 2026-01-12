@@ -5,7 +5,7 @@ Write-Host "測試案例 1.1: 正常 Token 取得與使用" -ForegroundColor Cya
 Write-Host "======================================" -ForegroundColor Cyan
 
 $API_BASE = if ($env:API_BASE) { $env:API_BASE } else { "http://localhost:5073" }
-$USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+$USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 Write-Host ""
 Write-Host "步驟 1: 取得 Token" -ForegroundColor Yellow
@@ -16,7 +16,8 @@ try {
         "User-Agent" = $USER_AGENT
         "Referer" = "$API_BASE/"
     }
-    $response = Invoke-WebRequest -Uri "$API_BASE/api/token?maxUsage=1&expirationMinutes=5" -Method Get -Headers $headers
+    $tokenUrl = $API_BASE + '/api/token?maxUsage=1&expirationMinutes=5'
+    $response = Invoke-WebRequest -Uri $tokenUrl -Method Get -Headers $headers -UseBasicParsing
     $token = $response.Headers["X-CSRF-Token"]
     
     if (-not $token) {
@@ -38,7 +39,7 @@ try {
         "X-CSRF-Token" = $token
     }
     
-    $apiResponse = Invoke-WebRequest -Uri "$API_BASE/api/protected" -Method Post -Headers $headers -Body $body
+    $apiResponse = Invoke-WebRequest -Uri "$API_BASE/api/protected" -Method Post -Headers $headers -Body $body -UseBasicParsing
     
     Write-Host "HTTP 狀態碼: $($apiResponse.StatusCode)" -ForegroundColor Cyan
     Write-Host "回應內容: $($apiResponse.Content)" -ForegroundColor Cyan
@@ -54,6 +55,7 @@ try {
     }
 }
 catch {
-    Write-Host "❌ 錯誤: $($_.Exception.Message)" -ForegroundColor Red
+    $errorMsg = $_.Exception.Message
+    Write-Host ('錯誤: ' + $errorMsg) -ForegroundColor Red
     exit 1
 }
