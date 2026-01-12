@@ -1,6 +1,6 @@
+using Lab.CSRF2.WebAPI.Providers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
-using Lab.CSRF2.WebAPI.Services;
 
 namespace Lab.CSRF2.WebAPI.Filters;
 
@@ -63,7 +63,7 @@ public class ValidateTokenAttribute : ActionFilterAttribute
 
         // 4. 驗證 Token
         var tokenService = context.HttpContext.RequestServices
-            .GetRequiredService<ITokenService>();
+            .GetRequiredService<ITokenProvider>();
         
         if (!request.Headers.TryGetValue("X-CSRF-Token", out var tokenValues))
         {

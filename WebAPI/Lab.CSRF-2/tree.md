@@ -2,19 +2,40 @@
 
 ```
 Lab.CSRF-2/
-├── Lab.CSRF2.sln                                    # .NET Solution 方案檔
 ├── Lab.CSRF2.slnx                                   # Solution 擴充檔
 ├── README.md                                         # 專案說明文件
 ├── web-api-protect-plan.md                          # 實作計畫文件
 ├── spec.md                                           # 規格文件
-├── test-api.ps1                                      # PowerShell 測試腳本
-├── curl-security-test-plan.md                       # cURL 安全測試計畫
-├── curl-security-test.ps1                           # cURL 安全測試腳本 (PowerShell)
-├── curl-security-test.sh                            # cURL 安全測試腳本 (Bash)
-├── frontend-csrf-test-plan.md                       # 前端 CSRF 測試計畫
-├── frontend-csrf-test-execution.md                  # 前端測試執行指南
-├── Run-CSRF-Tests.ps1                               # CSRF 自動化測試腳本
-├── CSRF-Test-Final-Report.md                        # CSRF 測試最終報告
+├── tree.md                                           # 專案結構說明 (本檔案)
+│
+├── tests/                                            # 測試資料夾
+│   └── security/                                    # 安全測試
+│       ├── INDEX.md                                 # 測試索引與導覽
+│       ├── SECURITY-MECHANISMS.md                   # 安全機制說明
+│       ├── security-test-plan.md                    # 測試計畫
+│       ├── package.json                             # Playwright 套件設定
+│       ├── playwright.config.js                     # Playwright 設定
+│       └── scripts/                                 # 測試腳本
+│           ├── run-all-tests.sh                     # 執行所有測試 (Bash)
+│           ├── run-all-tests.ps1                    # 執行所有測試 (PowerShell)
+│           ├── test-01-normal-flow.sh               # 正常流程測試 (Bash)
+│           ├── test-01-normal-flow.ps1              # 正常流程測試 (PowerShell)
+│           ├── test-02-token-expiration.sh          # Token 過期測試 (Bash)
+│           ├── test-02-token-expiration.ps1         # Token 過期測試 (PowerShell)
+│           ├── test-03-usage-limit.sh               # 使用次數限制測試 (Bash)
+│           ├── test-03-usage-limit.ps1              # 使用次數限制測試 (PowerShell)
+│           ├── test-04-missing-token.sh             # 無 Token 測試 (Bash)
+│           ├── test-04-missing-token.ps1            # 無 Token 測試 (PowerShell)
+│           ├── test-05-invalid-token.sh             # 無效 Token 測試 (Bash)
+│           ├── test-05-invalid-token.ps1            # 無效 Token 測試 (PowerShell)
+│           ├── test-06-ua-mismatch.sh               # User-Agent 不一致測試 (Bash)
+│           ├── test-06-ua-mismatch.ps1              # User-Agent 不一致測試 (PowerShell)
+│           ├── test-07-rate-limiting.sh             # 速率限制測試 (Bash)
+│           ├── test-07-rate-limiting.ps1            # 速率限制測試 (PowerShell)
+│           ├── test-11-direct-attack.sh             # 直接攻擊測試 (Bash)
+│           ├── test-11-direct-attack.ps1            # 直接攻擊測試 (PowerShell)
+│           ├── test-12-replay-attack.sh             # 重放攻擊測試 (Bash)
+│           └── test-12-replay-attack.ps1            # 重放攻擊測試 (PowerShell)
 │
 └── Lab.CSRF2.WebAPI/                                # Web API 專案
     ├── Lab.CSRF2.WebAPI.csproj                      # 專案檔
@@ -35,7 +56,7 @@ Lab.CSRF-2/
     │
     ├── wwwroot/                                      # 靜態檔案
     │   ├── test.html                                # HTML 測試頁面
-    │   └── csrf-test.html                           # CSRF 防護測試頁面
+    │   └── api-protected-test.html                  # API 受保護端點測試頁面
     │
     ├── Properties/                                   # 專案屬性
     │   └── launchSettings.json                      # 啟動設定
@@ -61,21 +82,20 @@ Lab.CSRF-2/
 - **ValidateTokenAttribute.cs** - ActionFilter 用於驗證 Request Header 中的 Token
 
 ### 測試資源
-- **test.html** - 瀏覽器測試頁面，提供互動式測試介面
-- **csrf-test.html** - CSRF 防護專用測試頁面，包含 8 項完整測試
-- **test-api.ps1** - PowerShell 自動化測試腳本 (Invoke-WebRequest)
-- **Run-CSRF-Tests.ps1** - CSRF 防護自動化驗證腳本
-- **curl-security-test.ps1** - cURL 安全測試腳本 (PowerShell 版本)
-- **curl-security-test.sh** - cURL 安全測試腳本 (Bash 版本)
+- **wwwroot/test.html** - 瀏覽器測試頁面，提供互動式測試介面
+- **wwwroot/api-protected-test.html** - API 受保護端點測試頁面
+- **tests/security/scripts/** - 完整測試腳本集 (Bash + PowerShell)
+  - run-all-tests.sh/ps1 - 執行所有測試
+  - test-01~07, 11~12 - 個別測試案例
 
 ### 文件
 - **README.md** - 完整專案說明與使用指南
 - **web-api-protect-plan.md** - 詳細實作計畫與步驟
 - **spec.md** - 技術規格文件
-- **curl-security-test-plan.md** - cURL 安全測試計畫與測試項目說明
-- **frontend-csrf-test-plan.md** - 前端 CSRF 測試計畫
-- **frontend-csrf-test-execution.md** - 前端測試執行指南
-- **CSRF-Test-Final-Report.md** - CSRF 測試最終報告 (所有測試通過)
+- **tree.md** - 專案結構說明 (本檔案)
+- **tests/security/INDEX.md** - 測試索引與導覽
+- **tests/security/SECURITY-MECHANISMS.md** - 安全機制完整說明
+- **tests/security/security-test-plan.md** - 完整測試計畫 (12 個測試案例)
 
 ## 技術架構
 
@@ -150,8 +170,9 @@ Lab.CSRF-2/
 2026-01-12
 
 ## 最新更新
-- ✅ 新增 API Protected 安全測試計畫 (api-protected-security-test-plan.md)
-- ✅ 新增 API Protected 安全測試腳本 (api-protected-security-test.ps1)
-- ✅ 新增 API Protected 測試頁面 (api-protected-test.html)
-- ✅ 完成 10 項核心安全測試 (通過率 60%)
-- ✅ 識別需強化項目：User-Agent 驗證、爬蟲黑名單機制
+- ✅ 完整安全測試套件 (tests/security/)
+- ✅ 12 個測試案例，涵蓋所有安全機制
+- ✅ Bash + PowerShell 雙版本測試腳本
+- ✅ 完整文件導覽系統 (INDEX.md)
+- ✅ 多層防護機制 (8 層驗證)
+- ✅ User-Agent 黑名單、速率限制、Token 綁定
