@@ -9,7 +9,7 @@ module.exports = defineConfig({
   workers: 1,
   reporter: [
     ['list'],
-    ['html', { outputFolder: 'test-results/html' }]
+    ['html', { outputFolder: 'playwright-report' }]
   ],
   
   use: {

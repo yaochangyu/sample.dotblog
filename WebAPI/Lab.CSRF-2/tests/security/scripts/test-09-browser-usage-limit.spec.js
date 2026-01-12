@@ -53,14 +53,15 @@ test.describe('瀏覽器使用次數限制測試', () => {
     // 使用測試按鈕進行多次使用測試
     await page.click('button:has-text("測試多次使用")');
     
-    // 等待測試結果
-    await page.waitForSelector('#testResult', { state: 'visible', timeout: 10000 });
+    // 等待所有三次測試完成 (3次 * 500ms delay + API時間)
+    await page.waitForTimeout(3000);
     
     const testResult = await page.locator('#testResult').textContent();
     
     // 驗證結果包含成功和失敗的訊息
     expect(testResult).toContain('第 1 次');
     expect(testResult).toContain('第 2 次');
+    expect(testResult).toContain('第 3 次');
     
     console.log('✅ 多次使用測試完成');
     console.log(`測試結果:\n${testResult}`);
