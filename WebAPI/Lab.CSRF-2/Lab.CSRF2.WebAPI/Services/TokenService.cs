@@ -13,7 +13,7 @@ public class TokenService : ITokenService
         _logger = logger;
     }
 
-    public string GenerateToken(int maxUsageCount = 1, int expirationMinutes = 5)
+    public string GenerateToken(int maxUsageCount, int expirationMinutes, string userAgent, string ipAddress)
     {
         var token = Guid.NewGuid().ToString();
         var tokenData = new TokenData
@@ -21,7 +21,9 @@ public class TokenService : ITokenService
             CreatedAt = DateTime.UtcNow,
             ExpiresAt = DateTime.UtcNow.AddMinutes(expirationMinutes),
             MaxUsageCount = maxUsageCount,
-            UsageCount = 0
+            UsageCount = 0,
+            UserAgent = userAgent,
+            IpAddress = ipAddress
         };
 
         var cacheOptions = new MemoryCacheEntryOptions
@@ -30,13 +32,13 @@ public class TokenService : ITokenService
         };
 
         _cache.Set(token, tokenData, cacheOptions);
-        _logger.LogInformation("Token generated: {Token}, Expires: {ExpiresAt}, MaxUsage: {MaxUsage}", 
-            token, tokenData.ExpiresAt, maxUsageCount);
+        _logger.LogInformation("Token generated: {Token}, Expires: {ExpiresAt}, MaxUsage: {MaxUsage}, UA: {UA}, IP: {IP}", 
+            token, tokenData.ExpiresAt, maxUsageCount, userAgent, ipAddress);
 
         return token;
     }
 
-    public bool ValidateToken(string token)
+    public bool ValidateToken(string token, string userAgent, string ipAddress)
     {
         if (string.IsNullOrEmpty(token))
         {
@@ -64,6 +66,23 @@ public class TokenService : ITokenService
             return false;
         }
 
+        // User-Agent 一致性檢查
+        if (!string.IsNullOrEmpty(tokenData.UserAgent) && 
+            !tokenData.UserAgent.Equals(userAgent, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Token validation failed: User-Agent mismatch. Expected: {Expected}, Got: {Actual}", 
+                tokenData.UserAgent, userAgent);
+            return false;
+        }
+
+        // IP 地址檢查 (可選 - 目前註解，避免開發環境問題)
+        // if (!string.IsNullOrEmpty(tokenData.IpAddress) && tokenData.IpAddress != ipAddress)
+        // {
+        //     _logger.LogWarning("Token validation failed: IP mismatch. Expected: {Expected}, Got: {Actual}",
+        //         tokenData.IpAddress, ipAddress);
+        //     return false;
+        // }
+
         tokenData.UsageCount++;
         _cache.Set(token, tokenData, new MemoryCacheEntryOptions
         {
@@ -89,4 +108,6 @@ public class TokenData
     public DateTime ExpiresAt { get; set; }
     public int MaxUsageCount { get; set; }
     public int UsageCount { get; set; }
+    public string UserAgent { get; set; } = string.Empty;
+    public string IpAddress { get; set; } = string.Empty;
 }
