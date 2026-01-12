@@ -7,12 +7,16 @@ echo "測試案例 1.1: 正常 Token 取得與使用"
 echo "======================================"
 
 API_BASE="${API_BASE:-http://localhost:5073}"
+USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 echo ""
 echo "步驟 1: 取得 Token"
 echo "--------------------------------------"
 
-RESPONSE=$(curl -s -i "${API_BASE}/api/token?maxUsage=1&expirationMinutes=5")
+RESPONSE=$(curl -s -i \
+    -H "User-Agent: ${USER_AGENT}" \
+    -H "Referer: ${API_BASE}/" \
+    "${API_BASE}/api/token?maxUsage=1&expirationMinutes=5")
 
 # 提取 Token
 TOKEN=$(echo "$RESPONSE" | grep -i "X-CSRF-Token:" | cut -d' ' -f2 | tr -d '\r')
@@ -32,6 +36,8 @@ echo "--------------------------------------"
 API_RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
     -X POST "${API_BASE}/api/protected" \
     -H "Content-Type: application/json" \
+    -H "User-Agent: ${USER_AGENT}" \
+    -H "Referer: ${API_BASE}/" \
     -H "X-CSRF-Token: $TOKEN" \
     -d '{"data":"測試資料"}')
 
