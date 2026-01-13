@@ -61,7 +61,9 @@ WIP
 git log --author="開發者" --pretty=format:"%s"
 
 # 統計符合 Conventional Commits 的比例
-git log --author="開發者" --grep="^(feat|fix|docs):" | wc -l
+git log --author="開發者" --pretty=format:"%s" | \
+  grep -E "^(feat|fix|docs|refactor|test|chore|style|perf)(\(.+\))?:" | \
+  wc -l
 ```
 
 **評分標準：**
@@ -142,8 +144,10 @@ Dockerfile               → 容器化
 **檢查方法：**
 ```bash
 # 統計檔案類型分佈
-git log --author="開發者" --name-only --pretty=format: | 
-  grep -o '\.[^.]*$' | sort | uniq -c | sort -rn
+git log --author="開發者" --name-only --pretty=format: | \
+  grep -v '^$' | \
+  sed 's/.*\(\.[^.]*\)$/\1/' | \
+  sort | uniq -c | sort -rn
 ```
 
 **評分標準：**
@@ -186,7 +190,211 @@ git log --all --grep="conflict\|merge" --oneline
 
 ---
 
-## 5️⃣ 工作模式與效率 (10% 權重)
+## 5️⃣ Code Review 品質 (10% 權重) ⭐ **新增維度**
+
+### 為什麼 Code Review 很重要？
+
+Code Review 是評估開發者技術水平的關鍵指標：
+- ✅ **技術深度**：能否發現架構問題、效能問題、安全漏洞
+- ✅ **協作態度**：是否認真 Review 還是直接 Approve
+- ✅ **學習能力**：是否從別人的程式碼中學習
+- ✅ **影響力**：資深開發者應積極參與 Review，提升團隊水平
+
+⚠️ **重要提醒**：Code Review 資料無法從純 Git 命令取得，需要整合 GitHub/GitLab API。
+
+---
+
+### A. Review 參與度 (30%)
+
+**評估指標**：
+```bash
+# 需使用 GitHub/GitLab API
+# 統計開發者作為 Reviewer 的 PR/MR 數量
+# 統計 Review Comments 總數
+```
+
+**GitHub GraphQL 查詢範例**：
+```graphql
+query GetDeveloperReviews($username: String!, $from: DateTime!) {
+  user(login: $username) {
+    contributionsCollection(from: $from) {
+      pullRequestReviewContributions(first: 100) {
+        totalCount
+        nodes {
+          pullRequestReview {
+            state
+            comments { totalCount }
+            createdAt
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**GitLab API 範例**：
+```bash
+# 取得開發者的 MR Review 活動
+curl --header "PRIVATE-TOKEN: <your_token>" \
+  "https://gitlab.com/api/v4/projects/:id/merge_requests?reviewer_id=:user_id&created_after=2024-01-01"
+```
+
+**評分標準**：
+- 🏆 Review 數量 > 團隊平均 1.5 倍：優秀 (9-10分)
+- ⭐ Review 數量 = 團隊平均：良好 (7-8分)
+- 📚 Review 數量 = 團隊平均 50-100%：中等 (5-6分)
+- 🌱 Review 數量 < 團隊平均 50%：需改進 (1-4分)
+
+---
+
+### B. Review 深度 (40%) ⭐ **最重要**
+
+#### 1. 有建議的 Review 比例
+
+**優質 Review Comment 範例**：
+```markdown
+這裡的 SQL 查詢可能有 N+1 問題，建議改用 JOIN：
+
+// 目前寫法（會產生 100 次查詢）
+const users = await User.findAll();
+for (const user of users) {
+  user.posts = await Post.findAll({ where: { userId: user.id } });
+}
+
+// 建議修改（只需 1 次查詢）
+const users = await User.findAll({
+  include: [{ model: Post }]
+});
+
+這樣可以將查詢次數從 100 次減少到 1 次，大幅提升效能。
+```
+
+**劣質 Review Comment 範例**：
+```markdown
+LGTM
+看起來不錯
+👍
+沒問題
+```
+
+**評分標準**：
+- ✅ 80%+ 的 Review 包含具體建議：優秀 (9-10分)
+- ⚠️ 50-80% 有建議：中等 (5-8分)
+- ❌ <50% 只是 LGTM/Approve：需改進 (1-4分)
+
+---
+
+#### 2. 發現問題的嚴重等級
+
+**問題分類**：
+```
+Critical Issues（關鍵問題）：
+- 安全漏洞（SQL Injection, XSS）
+- 資料遺失風險
+- 系統穩定性問題
+→ 每發現一個 +5 分
+
+Major Issues（重要問題）：
+- 效能問題（N+1 查詢、記憶體洩漏）
+- 邏輯錯誤
+- 架構設計問題
+→ 每發現一個 +3 分
+
+Minor Issues（小問題）：
+- 程式碼風格不一致
+- 命名不清楚
+- 缺少註解
+→ 每發現一個 +1 分
+```
+
+**評分邏輯**：
+```
+Review 深度分數 = min(10, 問題總分 / Review 次數)
+```
+
+---
+
+### C. Review 時效性 (20%)
+
+**評估指標**：
+```
+平均 Review 回應時間 = Σ(首次 Review 時間 - PR 建立時間) / PR 總數
+```
+
+**為什麼時效性重要**：
+- ⏱️ Review 太慢會阻塞開發流程
+- ⏱️ 提交者需要等待 Review 才能 merge
+- ⏱️ PR 開太久容易產生 conflict
+
+**評分標準**：
+- ⚡ < 4 小時：優秀 (9-10分)
+- ⭐ 4-24 小時：良好 (7-8分)
+- 📚 24-72 小時：普通 (5-6分)
+- 🐌 > 72 小時：阻礙開發流程 (1-4分)
+
+---
+
+### D. 被 Review 的接受度 (10%)
+
+**評估指標**：
+```bash
+# 統計被 Request Changes 的比例
+被 Request Changes 率 = Request Changes 次數 / 提交的 PR 總數
+
+# 統計需要二次 Review 的比例
+二次 Review 率 = 需要 Re-review 的 PR / 總 PR 數
+```
+
+**評分標準**：
+- ✅ Request Changes 率 < 15%：程式碼品質高 (9-10分)
+- ⚠️ Request Changes 率 15-30%：正常範圍 (7-8分)
+- ❌ Request Changes 率 > 30%：品質需改進 (1-6分)
+
+**⚠️ 注意**：低 Request Changes 率不一定是好事，也可能表示：
+- Reviewer 不夠認真
+- 團隊 Review 文化不佳
+- 開發者只挑簡單的 PR Review
+
+---
+
+### 📊 Code Review 實戰案例
+
+#### 案例 1：表面參與型 Reviewer
+
+**數據**：
+- Review 次數：80 次/半年 ✅（看似很高）
+- 平均每個 Review 的 Comments：0.8 個 ❌
+- LGTM-only 比例：75% ❌
+
+**問題診斷**：
+- 只是點 Approve，沒有實質審查
+- 無法發揮 Code Review 的價值
+
+**改進建議**：
+- 每個 Review 至少留 2-3 條有價值的建議
+- 關注程式碼邏輯、效能、安全性
+- 學習如何給出建設性回饋
+
+---
+
+#### 案例 2：高品質 Reviewer
+
+**數據**：
+- Review 次數：45 次/半年
+- 平均每個 Review 的 Comments：4.2 個 ✅
+- 發現 Critical Issues：8 個 ✅
+- 發現 Major Issues：23 個 ✅
+- 平均回應時間：2.3 小時 ✅
+
+**評價**：
+- Review 數量適中但品質極高
+- 能發現真正的問題而非雞毛蒜皮
+- 回應及時不阻塞開發流程
+
+---
+
+## 6️⃣ 工作模式與效率 (10% 權重)
 
 ### 時間分佈分析
 
@@ -214,7 +422,7 @@ git log --author="開發者" --date=format:"%H" --pretty=format:"%ad" |
 
 ---
 
-## 6️⃣ 進步趨勢 (15% 權重)
+## 7️⃣ 進步趨勢 (15% 權重)
 
 ### 時間切片對比
 
@@ -241,37 +449,44 @@ python3 progress_analyzer.py "開發者" "2024-01-01" "2024-06-30" "2024-07-01" 
 
 ## 🎯 綜合評分公式
 
-### 權重分配
+### 權重分配（已更新）
 
-| 維度 | 權重 | 關鍵指標 |
-|------|------|----------|
-| 程式碼貢獻量 | 15% | 提交次數、活躍度 |
-| **Commit 品質** | **25%** | Message 規範、變更粒度、修復率 |
-| 技術廣度 | 20% | 語言種類、技術棧覆蓋 |
-| 協作能力 | 15% | Review 參與、衝突處理、Revert 率 |
-| 工作模式 | 10% | 時間分佈、穩定性 |
-| 進步趨勢 | 15% | 成長曲線、技能提升 |
+| 維度 | 權重 | 關鍵指標 | 變更說明 |
+|------|------|----------|---------|
+| 程式碼貢獻量 | 12% | 提交次數、活躍度 | ↓ -3% |
+| **Commit 品質** | **23%** | Message 規範、變更粒度、修復率 | ↓ -2% |
+| 技術廣度 | 18% | 語言種類、技術棧覆蓋 | ↓ -2% |
+| 協作能力 | 12% | Merge Commits、衝突處理、Revert 率 | ↓ -3% |
+| **Code Review 品質** | **10%** | **Review 參與度、深度、時效性** | **🆕 新增** |
+| 工作模式 | 10% | 時間分佈、穩定性 | 不變 |
+| 進步趨勢 | 15% | 成長曲線、技能提升 | 不變 |
 
 ### 總分計算
 
 ```
-總分 = (貢獻量得分 × 0.15) + 
-       (品質得分 × 0.25) + 
-       (技術廣度得分 × 0.20) + 
-       (協作得分 × 0.15) + 
-       (工作模式得分 × 0.10) + 
+總分 = (貢獻量得分 × 0.12) +
+       (品質得分 × 0.23) +
+       (技術廣度得分 × 0.18) +
+       (協作得分 × 0.12) +
+       (Code Review 得分 × 0.10) +
+       (工作模式得分 × 0.10) +
        (進步趨勢得分 × 0.15)
 ```
 
+**⚠️ 權重調整說明**：
+- 新增 Code Review 品質維度（10%），從其他維度調整而來
+- 降低單純的「數量」權重（貢獻量 -3%），提升「品質」權重
+- 協作能力與 Code Review 分開評估，更精確
+
 ---
 
-## 📊 分級標準
+## 📊 分級標準（已更新）
 
 | 等級 | 分數 | 特徵描述 |
 |------|------|----------|
-| 🏆 **高級工程師** | 8-10 | • Message 規範率 90%+<br>• 小型變更佔比 80%+<br>• 涉及 3+ 技術棧<br>• 修復率 <15%<br>• 有架構級別變更 |
-| ⭐ **中級工程師** | 5-7 | • Message 規範率 60-90%<br>• 變更粒度合理<br>• 2-3 種技術棧<br>• 修復率 15-30%<br>• 功能開發為主 |
-| 🌱 **初級工程師** | 1-4 | • Message 不規範<br>• 大量修復性提交<br>• 單一技術棧<br>• 變更集中於小範圍 |
+| 🏆 **高級工程師** | 8-10 | • Message 規範率 90%+<br>• 小型變更佔比 80%+<br>• 涉及 3+ 技術棧<br>• 修復率 <15%<br>• 有架構級別變更<br>• **Review 參與度高，能發現 Critical Issues** ⭐ |
+| ⭐ **中級工程師** | 5-7 | • Message 規範率 60-90%<br>• 變更粒度合理<br>• 2-3 種技術棧<br>• 修復率 15-30%<br>• 功能開發為主<br>• **有 Code Review 參與但深度一般** |
+| 🌱 **初級工程師** | 1-4 | • Message 不規範<br>• 大量修復性提交<br>• 單一技術棧<br>• 變更集中於小範圍<br>• **Code Review 參與少或僅 LGTM** |
 
 ---
 
@@ -470,6 +685,7 @@ python3 progress_analyzer.py "開發者" "2024-01-01" "2024-06-30" "2024-07-01" 
 
 ---
 
-**文件版本：** v1.0  
-**最後更新：** 2026-01-13  
+**文件版本：** v2.0
+**最後更新：** 2026-01-13
 **作者：** Lab.PersonInfo Team
+**主要變更：** 新增「Code Review 品質」評估維度（10% 權重），調整評分權重配置，補充 GitHub/GitLab API 整合範例
