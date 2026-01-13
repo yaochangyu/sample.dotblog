@@ -1,0 +1,94 @@
+# GitLab 開發者分析系統 .gitignore
+
+# 敏感配置檔案
+.env
+.env.local
+.env.*.local
+scripts/config/gitlab_token.txt
+scripts/config/*_credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 虛擬環境
+venv/
+ENV/
+env/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 輸出檔案（保留目錄結構）
+scripts/output/raw/*.csv
+scripts/output/raw/*.json
+scripts/output/processed/*.csv
+scripts/output/processed/*.json
+scripts/output/reports/*.md
+scripts/output/reports/*.png
+scripts/output/reports/*.html
+scripts/output/reports/*.pdf
+
+# 但保留範例檔案
+!scripts/output/**/.gitkeep
+!scripts/output/**/example_*.csv
+
+# 日誌檔案
+*.log
+logs/
+
+# 測試覆蓋率報告
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# 暫存檔案
+*.tmp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+
+# 資料庫檔案（如果使用本地 SQLite）
+*.db
+*.sqlite
+*.sqlite3

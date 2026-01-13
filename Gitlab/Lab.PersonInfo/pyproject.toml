@@ -1,0 +1,84 @@
+[project]
+name = "gitlab-developer-analyzer"
+version = "1.0.0"
+description = "GitLab 開發者技術水平分析系統"
+authors = [
+    {name = "Lab.PersonInfo Team"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    # GitLab API 客戶端
+    "python-gitlab>=4.0.0",
+
+    # HTTP 請求
+    "requests>=2.31.0",
+
+    # 數據處理
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+
+    # 圖表繪製
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+
+    # 互動式圖表
+    "plotly>=5.14.0",
+
+    # 環境變數管理
+    "python-dotenv>=1.0.0",
+
+    # 命令列介面
+    "click>=8.1.0",
+
+    # 進度條顯示
+    "tqdm>=4.65.0",
+
+    # YAML 配置檔解析
+    "pyyaml>=6.0",
+
+    # 日期時間處理
+    "python-dateutil>=2.8.0",
+
+    # 正規表達式增強
+    "regex>=2023.0.0",
+
+    # 資料驗證
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+gitlab-analyzer = "scripts.main:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["scripts"]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["scripts/tests"]
+python_files = ["test_*.py", "*_test.py"]
