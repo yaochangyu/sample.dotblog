@@ -2,7 +2,6 @@
 GitLab 特定開發者資料收集器 - 收集指定開發者的詳細程式碼資料
 """
 
-import gitlab
 import pandas as pd
 from datetime import datetime
 from typing import List, Dict, Any
@@ -10,6 +9,7 @@ import os
 from tqdm import tqdm
 import config
 import warnings
+from gitlab_client import GitLabClient
 
 warnings.filterwarnings('ignore', category=Warning)
 
@@ -22,7 +22,7 @@ class GitLabDeveloperCollector:
             developer_email: 開發者的 email (例如: user@example.com)
             developer_username: 開發者的 GitLab username (例如: johndoe)
         """
-        self.gl = gitlab.Gitlab(config.GITLAB_URL, private_token=config.GITLAB_TOKEN, ssl_verify=False)
+        self.client = GitLabClient(config.GITLAB_URL, config.GITLAB_TOKEN, ssl_verify=False)
         self.start_date = datetime.strptime(config.START_DATE, "%Y-%m-%d")
         self.end_date = datetime.strptime(config.END_DATE, "%Y-%m-%d")
         self.developer_email = developer_email
@@ -37,16 +37,10 @@ class GitLabDeveloperCollector:
     def get_all_projects(self) -> List[Any]:
         """取得所有專案"""
         print("正在取得專案列表...")
-        projects = []
-        
-        if config.TARGET_GROUP_ID:
-            group = self.gl.groups.get(config.TARGET_GROUP_ID)
-            projects = group.projects.list(all=True)
-        elif config.TARGET_PROJECT_IDS:
-            projects = [self.gl.projects.get(pid) for pid in config.TARGET_PROJECT_IDS]
-        else:
-            projects = self.gl.projects.list(all=True)
-        
+        projects = self.client.get_projects(
+            group_id=config.TARGET_GROUP_ID,
+            project_ids=config.TARGET_PROJECT_IDS
+        )
         print(f"找到 {len(projects)} 個專案")
         return projects
     
@@ -65,9 +59,8 @@ class GitLabDeveloperCollector:
         
         for project in tqdm(projects, desc="處理專案"):
             try:
-                project_obj = self.gl.projects.get(project.id)
-                commits = project_obj.commits.list(
-                    all=True,
+                commits = self.client.get_project_commits(
+                    project.id,
                     since=self.start_date.isoformat(),
                     until=self.end_date.isoformat()
                 )
@@ -78,7 +71,7 @@ class GitLabDeveloperCollector:
                         continue
                     
                     try:
-                        commit_detail = project_obj.commits.get(commit.id)
+                        commit_detail = self.client.get_commit_detail(project.id, commit.id)
                         
                         commits_data.append({
                             'project_id': project.id,
@@ -123,9 +116,8 @@ class GitLabDeveloperCollector:
         
         for project in tqdm(projects, desc="處理專案"):
             try:
-                project_obj = self.gl.projects.get(project.id)
-                commits = project_obj.commits.list(
-                    all=True,
+                commits = self.client.get_project_commits(
+                    project.id,
                     since=self.start_date.isoformat(),
                     until=self.end_date.isoformat()
                 )
@@ -136,8 +128,7 @@ class GitLabDeveloperCollector:
                         continue
                     
                     try:
-                        commit_detail = project_obj.commits.get(commit.id)
-                        diffs = commit_detail.diff()
+                        diffs = self.client.get_commit_diff(project.id, commit.id)
                         
                         for diff in diffs:
                             # 取得檔案類型
@@ -188,16 +179,15 @@ class GitLabDeveloperCollector:
         
         for project in tqdm(projects, desc="處理專案"):
             try:
-                project_obj = self.gl.projects.get(project.id)
-                mrs = project_obj.mergerequests.list(
-                    all=True,
+                mrs = self.client.get_project_merge_requests(
+                    project.id,
                     updated_after=self.start_date.isoformat(),
                     updated_before=self.end_date.isoformat()
                 )
                 
                 for mr in mrs:
                     try:
-                        mr_detail = project_obj.mergerequests.get(mr.iid)
+                        mr_detail = self.client.get_merge_request_detail(project.id, mr.iid)
                         
                         # 判斷是否為目標開發者創建的 MR
                         is_author = False
@@ -207,7 +197,7 @@ class GitLabDeveloperCollector:
                             is_author = mr.author.get('username', '').lower() == self.developer_username.lower()
                         
                         # 取得討論/評論
-                        discussions = mr_detail.discussions.list(all=True)
+                        discussions = self.client.get_merge_request_discussions(project.id, mr.iid)
                         comment_count = sum(len(d.attributes.get('notes', [])) for d in discussions)
                         
                         # 收集所有評論
@@ -228,7 +218,7 @@ class GitLabDeveloperCollector:
                             approved_by = [a['user']['name'] for a in approvals.approved_by]
                         
                         # 取得變更的檔案
-                        changes = mr_detail.changes()
+                        changes = self.client.get_merge_request_changes(project.id, mr.iid)
                         changed_files = []
                         if 'changes' in changes:
                             changed_files = [
