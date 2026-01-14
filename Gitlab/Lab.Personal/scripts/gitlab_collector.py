@@ -3,37 +3,29 @@ GitLab 資料收集器 - 收集所有開發者的程式碼品質資料
 """
 
 import pandas as pd
-from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Any, Optional
 import os
 from tqdm import tqdm
-import config
-from gitlab_client import GitLabClient
+from base_gitlab_collector import BaseGitLabCollector
 
-class GitLabCollector:
-    def __init__(self, start_date: str = None, end_date: str = None):
-        """初始化 GitLab 連線
+class GitLabCollector(BaseGitLabCollector):
+    def __init__(
+        self, 
+        start_date: Optional[str] = None, 
+        end_date: Optional[str] = None,
+        project_ids: Optional[List[int]] = None,
+        group_id: Optional[int] = None
+    ):
+        """
+        初始化 GitLab 連線
         
         Args:
             start_date: 起始日期 (格式: YYYY-MM-DD)，預設使用 config.START_DATE
             end_date: 結束日期 (格式: YYYY-MM-DD)，預設使用 config.END_DATE
+            project_ids: 指定專案 ID 列表，預設使用 config.TARGET_PROJECT_IDS
+            group_id: 指定群組 ID，預設使用 config.TARGET_GROUP_ID
         """
-        self.client = GitLabClient(config.GITLAB_URL, config.GITLAB_TOKEN, ssl_verify=False)
-        self.start_date = datetime.strptime(start_date or config.START_DATE, "%Y-%m-%d")
-        self.end_date = datetime.strptime(end_date or config.END_DATE, "%Y-%m-%d")
-        
-        # 確保輸出目錄存在
-        os.makedirs(config.OUTPUT_DIR, exist_ok=True)
-        
-    def get_all_projects(self) -> List[Any]:
-        """取得所有專案"""
-        print("正在取得專案列表...")
-        projects = self.client.get_projects(
-            group_id=config.TARGET_GROUP_ID,
-            project_ids=config.TARGET_PROJECT_IDS
-        )
-        print(f"找到 {len(projects)} 個專案")
-        return projects
+        super().__init__(start_date, end_date, project_ids, group_id)
     
     def get_commits_data(self, projects: List[Any]) -> pd.DataFrame:
         """收集所有開發者的 commit 資料"""
@@ -71,8 +63,7 @@ class GitLabCollector:
                 continue
         
         df = pd.DataFrame(commits_data)
-        output_file = os.path.join(config.OUTPUT_DIR, "all-user.commits.csv")
-        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        output_file = self.save_dataframe(df, "all-user.commits.csv")
         print(f"✓ Commit 資料已儲存至: {output_file}")
         return df
     
@@ -116,8 +107,7 @@ class GitLabCollector:
                 continue
         
         df = pd.DataFrame(changes_data)
-        output_file = os.path.join(config.OUTPUT_DIR, "all-user.code-changes.csv")
-        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        output_file = self.save_dataframe(df, "all-user.code-changes.csv")
         print(f"✓ 程式碼異動資料已儲存至: {output_file}")
         return df
     
@@ -179,8 +169,7 @@ class GitLabCollector:
                 continue
         
         df = pd.DataFrame(mr_data)
-        output_file = os.path.join(config.OUTPUT_DIR, "all-user.merge-requests.csv")
-        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        output_file = self.save_dataframe(df, "all-user.merge-requests.csv")
         print(f"✓ Code Review 資料已儲存至: {output_file}")
         return df
     
@@ -222,8 +211,7 @@ class GitLabCollector:
         stats_df = commit_stats.reset_index()
         stats_df['avg_changes_per_commit'] = stats_df['total_code_changes'] / stats_df['total_commits']
         
-        output_file = os.path.join(config.OUTPUT_DIR, "all-user.statistics.csv")
-        stats_df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        output_file = self.save_dataframe(stats_df, "all-user.statistics.csv")
         print(f"✓ 統計資料已儲存至: {output_file}")
         return stats_df
     
