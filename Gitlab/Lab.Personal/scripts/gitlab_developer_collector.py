@@ -3,46 +3,42 @@ GitLab 特定開發者資料收集器 - 收集指定開發者的詳細程式碼�
 """
 
 import pandas as pd
-from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Any, Optional
 import os
 from tqdm import tqdm
 import config
 import warnings
-from gitlab_client import GitLabClient
+from base_gitlab_collector import BaseGitLabCollector
 
 warnings.filterwarnings('ignore', category=Warning)
 
-class GitLabDeveloperCollector:
-    def __init__(self, developer_email: str = None, developer_username: str = None):
+class GitLabDeveloperCollector(BaseGitLabCollector):
+    def __init__(
+        self, 
+        developer_email: Optional[str] = None, 
+        developer_username: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        project_ids: Optional[List[int]] = None,
+        group_id: Optional[int] = None
+    ):
         """
         初始化 GitLab 連線
         
         Args:
             developer_email: 開發者的 email (例如: user@example.com)
             developer_username: 開發者的 GitLab username (例如: johndoe)
+            start_date: 起始日期 (格式: YYYY-MM-DD)，預設使用 config.START_DATE
+            end_date: 結束日期 (格式: YYYY-MM-DD)，預設使用 config.END_DATE
+            project_ids: 指定專案 ID 列表，預設使用 config.TARGET_PROJECT_IDS
+            group_id: 指定群組 ID，預設使用 config.TARGET_GROUP_ID
         """
-        self.client = GitLabClient(config.GITLAB_URL, config.GITLAB_TOKEN, ssl_verify=False)
-        self.start_date = datetime.strptime(config.START_DATE, "%Y-%m-%d")
-        self.end_date = datetime.strptime(config.END_DATE, "%Y-%m-%d")
+        super().__init__(start_date, end_date, project_ids, group_id)
         self.developer_email = developer_email
         self.developer_username = developer_username
         
         if not developer_email and not developer_username:
             raise ValueError("請至少提供 developer_email 或 developer_username")
-        
-        # 確保輸出目錄存在
-        os.makedirs(config.OUTPUT_DIR, exist_ok=True)
-        
-    def get_all_projects(self) -> List[Any]:
-        """取得所有專案"""
-        print("正在取得專案列表...")
-        projects = self.client.get_projects(
-            group_id=config.TARGET_GROUP_ID,
-            project_ids=config.TARGET_PROJECT_IDS
-        )
-        print(f"找到 {len(projects)} 個專案")
-        return projects
     
     def _is_target_developer(self, commit) -> bool:
         """判斷是否為目標開發者的 commit"""
@@ -103,8 +99,7 @@ class GitLabDeveloperCollector:
         df = pd.DataFrame(commits_data)
         identifier = self.developer_email or self.developer_username
         safe_identifier = identifier.replace('@', '_at_').replace('.', '_')
-        output_file = os.path.join(config.OUTPUT_DIR, f"{safe_identifier}.commits.csv")
-        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        output_file = self.save_dataframe(df, f"{safe_identifier}.commits.csv")
         print(f"✓ Commit 資料已儲存至: {output_file}")
         print(f"  共收集 {len(df)} 筆 commits")
         return df
@@ -165,8 +160,7 @@ class GitLabDeveloperCollector:
         df = pd.DataFrame(changes_data)
         identifier = self.developer_email or self.developer_username
         safe_identifier = identifier.replace('@', '_at_').replace('.', '_')
-        output_file = os.path.join(config.OUTPUT_DIR, f"{safe_identifier}.code-changes.csv")
-        df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        output_file = self.save_dataframe(df, f"{safe_identifier}.code-changes.csv")
         print(f"✓ 程式碼異動資料已儲存至: {output_file}")
         print(f"  共收集 {len(df)} 筆程式碼異動")
         return df
@@ -308,15 +302,13 @@ class GitLabDeveloperCollector:
         
         # 儲存創建的 MR
         df_mr = pd.DataFrame(mr_data)
-        output_file_mr = os.path.join(config.OUTPUT_DIR, f"{safe_identifier}.merge-requests.csv")
-        df_mr.to_csv(output_file_mr, index=False, encoding='utf-8-sig')
+        output_file_mr = self.save_dataframe(df_mr, f"{safe_identifier}.merge-requests.csv")
         print(f"✓ Merge Request 資料已儲存至: {output_file_mr}")
         print(f"  共收集 {len(df_mr)} 筆 MR (作為作者)")
         
         # 儲存參與 Review 的 MR
         df_review = pd.DataFrame(mr_review_data)
-        output_file_review = os.path.join(config.OUTPUT_DIR, f"{safe_identifier}.code-reviews.csv")
-        df_review.to_csv(output_file_review, index=False, encoding='utf-8-sig')
+        output_file_review = self.save_dataframe(df_review, f"{safe_identifier}.code-reviews.csv")
         print(f"✓ Code Review 參與資料已儲存至: {output_file_review}")
         print(f"  共收集 {len(df_review)} 筆 MR (參與 Review)")
         
@@ -372,8 +364,7 @@ class GitLabDeveloperCollector:
         
         identifier = self.developer_email or self.developer_username
         safe_identifier = identifier.replace('@', '_at_').replace('.', '_')
-        output_file = os.path.join(config.OUTPUT_DIR, f"{safe_identifier}.statistics.csv")
-        df_stats.to_csv(output_file, index=False, encoding='utf-8-sig')
+        output_file = self.save_dataframe(df_stats, f"{safe_identifier}.statistics.csv")
         print(f"✓ 統計資料已儲存至: {output_file}")
         
         return df_stats

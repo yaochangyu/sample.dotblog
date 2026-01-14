@@ -1,6 +1,6 @@
 # GitLab 開發者程式碼品質分析工具
 
-> ⚠️ **重要更新**: 程式碼已重構！新版本使用 `gitlab_analyzer.py`，遵循 SOLID 原則，減少 70% 重複程式碼。
+> ⚠️ **重要更新**: 程式碼已重構！現提供統一的 CLI 介面 `gitlab_cli.py`，支援多種查詢模式。
 
 ## 🎯 目的
 
@@ -8,77 +8,75 @@
 
 ## ✨ 特色
 
-- ✅ **統一介面** - 一個檔案支援所有分析模式
-- ✅ **遵循 SOLID** - 使用策略模式，容易擴展
-- ✅ **程式化 API** - 可整合到其他工具
+- ✅ **統一 CLI** - 單一入口支援所有查詢模式
+- ✅ **彈性查詢** - 支援全體/特定開發者、全部/特定專案
+- ✅ **模組化架構** - 基於繼承的設計，減少重複程式碼
 - ✅ **詳細資料** - 收集 commits、code changes、MRs、統計資訊
-- ✅ **彈性過濾** - 支援全體開發者或特定開發者分析
+- ✅ **參數化配置** - 命令列參數完整支援
 
 ## 📋 功能說明
 
-### 模式 1: 全體開發者分析
+### 命令 1: user-info (查詢使用者資訊)
 
-收集所有開發者的資料，用於團隊整體分析和比較。
+收集開發者的 commits、程式碼異動、merge requests 和統計資料。
 
+#### 查詢所有開發者（指定時間範圍）
 ```bash
-# 分析所有開發者
-uv run gitlab_analyzer.py
+python gitlab_cli.py user-info --start-date 2024-01-01 --end-date 2024-12-31
 ```
 
 **輸出檔案：**
-- `all-user.commits.csv` - 所有 commit 記錄（包含程式碼變更量、異動檔案）
-- `all-user.code-changes.csv` - 程式碼異動詳情（檔案路徑、新增/刪除/重新命名）
-- `all-user.merge-requests.csv` - Merge Request 資料（狀態、審查者、評論）
-- `all-user.statistics.csv` - 開發者統計摘要（總 commits、程式碼量、參與專案數）
+- `all-user.commits.csv` - 所有 commit 記錄
+- `all-user.merge-requests.csv` - Merge Request 資料
+- `all-user.statistics.csv` - 開發者統計摘要
 
-### 模式 2: 特定開發者深度分析
-
-針對單一開發者進行詳細分析，提供更多細節資訊。
-
+#### 查詢特定開發者（使用 Email）
 ```bash
-# 使用 Email 分析
-uv run gitlab_analyzer.py user@example.com
-
-# 使用 Username 分析
-uv run gitlab_analyzer.py johndoe
+python gitlab_cli.py user-info --developer-email user@example.com
 ```
 
 **輸出檔案：**
 - `{developer}.commits.csv` - 該開發者的所有 commit
-- `{developer}.code-changes.csv` - 程式碼異動詳情（包含 diff 內容）
-- `{developer}.merge-requests.csv` - 創建的 MR 完整資訊
-- `{developer}.code-reviews.csv` - 參與審查的 MR 列表
-- `{developer}.statistics.csv` - 統計摘要（檔案類型分析、MR 合併率）
+- `{developer}.code-changes.csv` - 程式碼異動詳情
+- `{developer}.merge-requests.csv` - 創建的 MR
+- `{developer}.code-reviews.csv` - 參與審查的 MR
+- `{developer}.statistics.csv` - 統計摘要
+- `{developer}.report.txt` - 摘要報告
 
-### 模式 3: 程式化查詢 API
+#### 查詢特定開發者（使用 Username）
+```bash
+python gitlab_cli.py user-info --developer-username johndoe
+```
 
-整合到其他 Python 程式，進行客製化分析。
+#### 查詢特定專案的使用者資訊
+```bash
+python gitlab_cli.py user-info --project-id 123,456
+```
 
-```python
-from gitlab_analyzer import GitLabCollector
-from filters import SpecificDeveloperFilter
+#### 組合查詢
+```bash
+# 特定開發者在特定專案的資料
+python gitlab_cli.py user-info --developer-email user@example.com --project-id 123,456 --start-date 2024-01-01
 
-# 分析特定開發者
-filter_strategy = SpecificDeveloperFilter(email="user@example.com")
-collector = GitLabCollector(filter_strategy=filter_strategy)
+# 特定群組的使用者資訊
+python gitlab_cli.py user-info --group-id 789
+```
 
-# 取得所有專案
-projects = collector.get_projects_list()
+### 命令 2: project-info (查詢專案資訊)
 
-# 取得所有使用者
-users = collector.get_all_users()
+收集專案的基本資訊和統計資料。
 
-# 查詢特定使用者在特定專案的資料
-commits = collector.get_user_commits_in_project(
-    project_id=123,
-    user_email="user@example.com"
-)
+#### 查詢所有專案
+```bash
+python gitlab_cli.py project-info
+```
 
-statistics = collector.get_user_statistics_in_project(
-    project_id=123,
-    user_email="user@example.com",
-    user_username="johndoe"
-)
+**輸出檔案：**
+- `all-user.projects.csv` - 所有專案資訊
+
+#### 查詢特定專案
+```bash
+python gitlab_cli.py project-info --project-id 123,456
 ```
 
 ## 🚀 安裝步驟
@@ -127,60 +125,65 @@ TARGET_PROJECT_IDS = []  # 例如: [456, 789]
 
 ## 📖 使用方式
 
-### A. 全體開發者分析
+### 完整命令列參數說明
 
+#### user-info 命令
 ```bash
-cd scripts
-uv run gitlab_analyzer.py
+python gitlab_cli.py user-info [選項]
+
+選項：
+  --start-date TEXT           開始時間 (格式: YYYY-MM-DD)
+  --end-date TEXT             結束時間 (格式: YYYY-MM-DD)
+  --developer-email TEXT      特定開發者 email
+  --developer-username TEXT   特定開發者 username
+  --project-id TEXT           特定專案 ID (多個用逗號分隔)
+  --group-id INTEGER          指定群組 ID
+  -h, --help                  顯示說明訊息
 ```
 
-### B. 特定開發者分析
-
+#### project-info 命令
 ```bash
-# 使用 Email
-uv run gitlab_analyzer.py user@example.com
+python gitlab_cli.py project-info [選項]
 
-# 使用 Username
-uv run gitlab_analyzer.py johndoe
+選項：
+  --project-id TEXT           特定專案 ID (多個用逗號分隔)
+  --group-id INTEGER          指定群組 ID
+  -h, --help                  顯示說明訊息
 ```
 
-### C. 背景執行（推薦用於大量資料）
+### 使用範例
 
+#### 範例 1: 分析團隊 2024 年的程式碼活動
 ```bash
-nohup uv run gitlab_analyzer.py > analyzer.log 2>&1 &
+python gitlab_cli.py user-info --start-date 2024-01-01 --end-date 2024-12-31
+```
+
+#### 範例 2: 檢視特定開發者的詳細報告
+```bash
+python gitlab_cli.py user-info --developer-email john.doe@example.com
+```
+
+#### 範例 3: 分析特定專案的貢獻者
+```bash
+python gitlab_cli.py user-info --project-id 123
+```
+
+#### 範例 4: 查看某開發者在特定專案的貢獻
+```bash
+python gitlab_cli.py user-info --developer-email user@example.com --project-id 123,456
+```
+
+#### 範例 5: 取得所有專案資訊
+```bash
+python gitlab_cli.py project-info
+```
+
+#### 範例 6: 背景執行（推薦用於大量資料）
+```bash
+nohup python gitlab_cli.py user-info > analyzer.log 2>&1 &
 
 # 監控進度
 tail -f analyzer.log
-```
-
-### D. 程式化查詢
-
-創建自己的分析腳本：
-
-```python
-# my_analysis.py
-from gitlab_analyzer import GitLabCollector
-from filters import AllDevelopersFilter, SpecificDeveloperFilter
-
-# 範例 1: 分析所有開發者
-collector = GitLabCollector()
-projects = collector.get_all_projects()
-commits_df = collector.collect_commits(projects[:5])  # 只分析前 5 個專案
-
-# 範例 2: 分析特定開發者
-filter_strategy = SpecificDeveloperFilter(email="user@example.com")
-collector = GitLabCollector(filter_strategy=filter_strategy)
-projects = collector.get_all_projects()
-commits_df = collector.collect_commits(projects)
-
-# 範例 3: 跨專案統計
-users = collector.get_all_users()
-for user in users[:10]:  # 只分析前 10 位使用者
-    stats = collector.get_user_statistics_in_project(
-        project_id=123,
-        user_email=user['email']
-    )
-    print(f"{user['name']}: {stats['commits']['total_commits']} commits")
 ```
 
 ## 📊 收集的資料
@@ -241,52 +244,49 @@ for user in users[:10]:  # 只分析前 10 位使用者
 
 ## 🏗️ 架構說明
 
-重構後的架構遵循 SOLID 原則：
+重構後的架構基於繼承，減少重複程式碼：
 
 ```
 scripts/
-├── gitlab_analyzer.py   # 主要收集器（統一入口）
-├── filters.py           # 過濾策略（AllDevelopersFilter, SpecificDeveloperFilter）
-├── models.py            # 資料模型（Project, User, Commit, MR 等）
-├── config.py            # 配置檔
-└── example_api_usage.py # API 使用範例
+├── gitlab_cli.py                    # 統一 CLI 入口（推薦使用）
+├── base_gitlab_collector.py         # 基礎類別（共用邏輯）
+├── gitlab_collector.py              # 全體開發者收集器（繼承基礎類別）
+├── gitlab_developer_collector.py    # 特定開發者收集器（繼承基礎類別）
+├── gitlab_client.py                 # GitLab API 客戶端
+├── models.py                        # 資料模型
+├── config.py                        # 配置檔
+└── filters.py                       # 過濾策略（相容 gitlab_analyzer.py）
 
-# 舊版檔案（保留向後相容）
-├── gitlab_collector.py          # 舊版：全體開發者分析
-└── gitlab_developer_collector.py # 舊版：特定開發者分析
+# 其他檔案
+├── gitlab_analyzer.py               # 舊版統一介面（保留相容）
+└── example_api_usage.py             # API 使用範例
 ```
 
-**設計原則**：
-- **Single Responsibility**: 各模組職責單一（收集、過濾、模型分離）
-- **Open/Closed**: 透過策略模式擴展（新增過濾器不需修改主程式）
-- **Liskov Substitution**: FilterStrategy 可替換
-- **Interface Segregation**: 清晰的方法介面
-- **Dependency Inversion**: 依賴抽象的 FilterStrategy
+**架構優點**：
+- **繼承設計**: `BaseGitLabCollector` 提供共用功能
+- **減少重複**: 共用的初始化、專案查詢、檔案儲存邏輯
+- **彈性參數**: 支援自訂時間、專案、群組
+- **向後相容**: 舊版檔案仍可使用
 
 ## 💡 使用範例
 
-### 範例 1: 分析整個團隊
-
+### 範例 1: 分析整個團隊特定時間範圍
 ```bash
-cd scripts
-uv run gitlab_analyzer.py
+python gitlab_cli.py user-info --start-date 2024-01-01 --end-date 2024-03-31
 ```
 
-### 範例 2: 分析特定開發者
-
+### 範例 2: 深入分析特定開發者
 ```bash
-# 使用 Email
-uv run gitlab_analyzer.py john.doe@example.com
-
-# 使用 Username
-uv run gitlab_analyzer.py johndoe
+python gitlab_cli.py user-info --developer-email john.doe@example.com
 ```
 
-### 範例 3: 批次分析多位開發者
-
+### 範例 3: 檢視特定專案的所有貢獻者
 ```bash
-cd scripts
+python gitlab_cli.py user-info --project-id 123
+```
 
+### 範例 4: 批次分析多位開發者
+```bash
 # 創建開發者列表
 cat > developers.txt << EOF
 user1@example.com
@@ -297,40 +297,39 @@ EOF
 # 批次執行
 while read email; do
   echo "分析 $email ..."
-  uv run gitlab_analyzer.py "$email"
+  python gitlab_cli.py user-info --developer-email "$email"
 done < developers.txt
 ```
 
-### 範例 4: 客製化分析腳本
-
+### 範例 5: 程式化使用（進階）
 ```python
 # custom_analysis.py
-from gitlab_analyzer import GitLabCollector
-from filters import SpecificDeveloperFilter
-import json
+from gitlab_collector import GitLabCollector
+from gitlab_developer_collector import GitLabDeveloperCollector
 
-# 分析特定開發者在所有專案的貢獻
-collector = GitLabCollector()
-projects = collector.get_projects_list()
+# 查詢特定專案的所有開發者資料
+collector = GitLabCollector(
+    start_date="2024-01-01",
+    end_date="2024-12-31",
+    project_ids=[123, 456]  # 只查詢這兩個專案
+)
 
-developer_email = "user@example.com"
-all_commits = []
+projects = collector.get_all_projects()
+commits_df = collector.get_commits_data(projects)
 
-for project in projects:
-    commits = collector.get_user_commits_in_project(
-        project['id'],
-        user_email=developer_email
-    )
-    all_commits.extend(commits)
+print(f"收集了 {len(commits_df)} 筆 commits")
 
-# 輸出為 JSON
-with open('developer_report.json', 'w') as f:
-    json.dump({
-        'email': developer_email,
-        'total_commits': len(all_commits),
-        'projects_contributed': len(projects),
-        'commits': all_commits
-    }, f, indent=2)
+# 查詢特定開發者在特定專案的資料
+dev_collector = GitLabDeveloperCollector(
+    developer_email="user@example.com",
+    start_date="2024-01-01",
+    end_date="2024-12-31",
+    project_ids=[123]  # 只查詢專案 123
+)
+
+projects = dev_collector.get_all_projects()
+commits_df = dev_collector.get_commits_data(projects)
+changes_df = dev_collector.get_code_changes_data(projects)
 ```
 
 ## ⚠️ 注意事項
@@ -370,40 +369,48 @@ uv sync
 
 ## ❓ 常見問題
 
-### Q1: 舊版 `gitlab_collector.py` 和 `gitlab_developer_collector.py` 還能用嗎？
-可以，舊版檔案保留向後相容。但建議使用新版 `gitlab_analyzer.py`，功能更完整且效能更好。
+### Q1: 舊版檔案還能用嗎？
+可以，`gitlab_collector.py`、`gitlab_developer_collector.py` 和 `gitlab_analyzer.py` 都保留向後相容。但建議使用新版 `gitlab_cli.py`，介面更統一且參數更彈性。
 
-### Q2: 如何選擇分析模式？
-- **全體開發者分析**: 團隊管理、績效評估、尋找需要協助的成員
-- **特定開發者分析**: 深入了解個人表現、一對一回饋、個人成長追蹤
-- **程式化 API**: 整合到自動化工具、客製化分析、定期報表產出
+### Q2: 如何選擇使用方式？
+- **gitlab_cli.py** (推薦): 統一 CLI 介面，支援所有查詢模式
+- **gitlab_analyzer.py**: 舊版統一介面，遵循 SOLID 原則
+- **直接 import 模組**: 需要客製化或整合到其他程式
 
-### Q3: 可以分析多個開發者嗎？
-可以，使用批次腳本（參考範例 3）或使用 Python API 寫迴圈處理。
+### Q3: user-info 和 project-info 有什麼差別？
+- **user-info**: 收集開發者活動資料（commits、MRs、統計）
+- **project-info**: 只收集專案基本資訊（名稱、描述、成員）
 
-### Q4: 輸出檔案太大怎麼辦？
-- 縮小時間範圍（修改 `config.py` 的 START_DATE 和 END_DATE）
-- 只分析特定專案（設定 TARGET_GROUP_ID 或 TARGET_PROJECT_IDS）
-- 使用特定開發者分析模式
+### Q4: 可以同時指定多個專案嗎？
+可以，使用逗號分隔：`--project-id 123,456,789`
 
-### Q5: 如何定期自動執行分析？
+### Q5: 輸出檔案太大怎麼辦？
+- 縮小時間範圍：`--start-date 2024-01-01 --end-date 2024-01-31`
+- 只分析特定專案：`--project-id 123`
+- 只分析特定開發者：`--developer-email user@example.com`
+
+### Q6: 如何定期自動執行分析？
 使用 cron (Linux/macOS) 或 Task Scheduler (Windows)：
 ```bash
 # 每週一早上 8 點執行
-0 8 * * 1 cd /path/to/scripts && uv run gitlab_analyzer.py
+0 8 * * 1 cd /path/to/scripts && python gitlab_cli.py user-info
 ```
 
-### Q6: 新版相比舊版有什麼改進？
-- ✅ 減少 70% 重複程式碼
-- ✅ 遵循 SOLID 原則，容易擴展
-- ✅ 統一介面，一個檔案支援所有模式
-- ✅ 更好的錯誤處理
-- ✅ 更詳細的資料收集
+### Q7: 新版相比舊版有什麼改進？
+- ✅ 統一 CLI 入口，不需記憶多個檔案
+- ✅ 完整的命令列參數支援
+- ✅ 基於繼承的架構，減少重複程式碼
+- ✅ 彈性的專案/群組/時間範圍設定
+- ✅ 更清晰的輸出訊息
 
 ## 📚 相關檔案
 
-- `ANALYSIS.md` - 程式碼分析報告（重構前後比較）
-- `example_api_usage.py` - API 使用範例（8 個實用範例）
+- `gitlab_cli.py` - 統一 CLI 入口（推薦使用）
+- `base_gitlab_collector.py` - 基礎類別
+- `gitlab_collector.py` - 全體開發者收集器
+- `gitlab_developer_collector.py` - 特定開發者收集器
+- `gitlab_analyzer.py` - 舊版統一介面（保留相容）
+- `example_api_usage.py` - API 使用範例
 - `config.py` - 配置檔範本
 
 ## 📄 授權
