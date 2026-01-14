@@ -2,7 +2,7 @@
 
 ## 功能說明
 
-這個工具提供兩種分析模式：
+這個工具提供三種使用模式：
 
 ### 模式 1: 全體開發者分析 (`gitlab_collector.py`)
 
@@ -64,6 +64,81 @@
 6. **分析報告** (`{developer}.report.txt`)
    - 易讀的文字報告
    - 關鍵指標摘要
+
+### 模式 3: 程式化查詢 API (Python 模組)
+
+`GitLabCollector` 類別提供了可供其他 Python 程式呼叫的查詢方法，適合整合到自己的自動化工具或分析腳本中。
+
+**可用的查詢方法：**
+
+#### 1. 取得專案和使用者列表
+```python
+from gitlab_collector import GitLabCollector
+
+collector = GitLabCollector()
+
+# 取得所有專案
+projects = collector.get_projects_list()
+# 返回: List[Dict] - 包含 id, name, description, web_url, created_at 等
+
+# 取得所有使用者/帳號
+users = collector.get_all_users()
+# 返回: List[Dict] - 包含 id, username, name, email, state, created_at 等
+```
+
+#### 2. 查詢特定使用者在特定專案的資料
+```python
+# 取得 commit 記錄
+commits = collector.get_user_commits_in_project(
+    project_id=123,
+    user_email="user@example.com"  # 或使用 user_name="John Doe"
+)
+# 返回: List[Dict] - 詳細的 commit 資訊，包含變更檔案列表
+
+# 取得程式碼異動詳情
+code_changes = collector.get_user_code_changes_in_project(
+    project_id=123,
+    user_email="user@example.com"
+)
+# 返回: List[Dict] - 每個檔案的變更內容、新增/刪除行數、diff 內容
+
+# 取得 Code Review (MR) 資訊
+merge_requests = collector.get_user_merge_requests_in_project(
+    project_id=123,
+    user_username="johndoe"  # 或使用 user_name="John Doe"
+)
+# 返回: List[Dict] - MR 詳情，包含討論、審查者、變更檔案等
+
+# 取得統計資訊
+statistics = collector.get_user_statistics_in_project(
+    project_id=123,
+    user_email="user@example.com",
+    user_username="johndoe"
+)
+# 返回: Dict - 完整統計資料，包含 commits、files、merge_requests、productivity 等指標
+```
+
+#### 3. 自訂時間範圍
+```python
+# 初始化時指定時間範圍
+collector = GitLabCollector(
+    start_date="2024-01-01",
+    end_date="2024-12-31"
+)
+```
+
+**返回的詳細資料包含：**
+
+- **專案資訊**: id, name, path, web_url, default_branch, star_count, forks_count 等
+- **使用者資訊**: id, username, name, email, state, created_at, last_activity_on 等
+- **Commit 資訊**: commit_id, author, committed_date, additions, deletions, total_changes, changed_files 等
+- **程式碼異動**: file_path, new_file, deleted_file, renamed_file, added_lines, removed_lines, diff_content 等
+- **MR 資訊**: title, state, merged, assignees, reviewers, comments, changed_files, commits, time_stats 等
+- **統計資料**: 
+  - Commits: 總數、新增/刪除行數、平均變更量
+  - Files: 異動檔案數、檔案類型分布、最常修改的檔案
+  - MR: 創建/合併數、合併率、評論數
+  - Productivity: 每日 commit 數、每日變更量、活躍天數
 
 ## 安裝步驟
 
@@ -161,6 +236,108 @@ uv run gitlab_developer_collector.py
 ```bash
 cd scripts
 nohup uv run gitlab_developer_collector.py user@example.com > developer.log 2>&1 &
+```
+
+### C. 程式化查詢（Python API）
+
+#### 範例 1: 取得所有專案和使用者
+```python
+from gitlab_collector import GitLabCollector
+
+# 初始化
+collector = GitLabCollector(
+    start_date="2024-01-01",
+    end_date="2024-12-31"
+)
+
+# 取得所有專案
+projects = collector.get_projects_list()
+for project in projects:
+    print(f"{project['name']}: {project['web_url']}")
+
+# 取得所有使用者
+users = collector.get_all_users()
+for user in users:
+    print(f"{user['name']} ({user['username']}): {user['email']}")
+```
+
+#### 範例 2: 查詢特定使用者在特定專案的資料
+```python
+from gitlab_collector import GitLabCollector
+import json
+
+collector = GitLabCollector()
+
+project_id = 123
+user_email = "user@example.com"
+user_username = "johndoe"
+
+# 取得 commits
+commits = collector.get_user_commits_in_project(project_id, user_email=user_email)
+print(f"找到 {len(commits)} 筆 commits")
+
+# 取得程式碼異動
+code_changes = collector.get_user_code_changes_in_project(project_id, user_email=user_email)
+print(f"找到 {len(code_changes)} 筆程式碼異動")
+
+# 取得 MR
+mrs = collector.get_user_merge_requests_in_project(project_id, user_username=user_username)
+print(f"找到 {len(mrs)} 筆 Merge Requests")
+
+# 取得統計資訊
+stats = collector.get_user_statistics_in_project(
+    project_id, 
+    user_email=user_email,
+    user_username=user_username
+)
+print(json.dumps(stats, indent=2, ensure_ascii=False))
+```
+
+#### 範例 3: 批次查詢多個專案
+```python
+from gitlab_collector import GitLabCollector
+
+collector = GitLabCollector()
+
+# 取得專案列表
+projects = collector.get_projects_list()
+user_email = "user@example.com"
+
+# 遍歷所有專案，收集該使用者的資料
+all_commits = []
+for project in projects:
+    commits = collector.get_user_commits_in_project(
+        project['id'], 
+        user_email=user_email
+    )
+    all_commits.extend(commits)
+
+print(f"使用者在所有專案的總 commit 數: {len(all_commits)}")
+```
+
+#### 範例 4: 分析團隊成員在特定專案的貢獻
+```python
+from gitlab_collector import GitLabCollector
+
+collector = GitLabCollector()
+project_id = 123
+
+# 取得所有使用者
+users = collector.get_all_users()
+
+# 分析每位使用者的貢獻
+for user in users:
+    stats = collector.get_user_statistics_in_project(
+        project_id,
+        user_email=user['email'],
+        user_username=user['username']
+    )
+    
+    commits = stats['commits']['total_commits']
+    if commits > 0:
+        print(f"{user['name']}: {commits} commits, "
+              f"{stats['commits']['total_additions']} additions, "
+              f"{stats['merge_requests']['total_mrs_created']} MRs")
 ```
 
 ## 輸出檔案
@@ -299,9 +476,10 @@ uv sync --upgrade
 
 ## 常見問題 FAQ
 
-### Q1: 兩種模式該如何選擇？
+### Q1: 三種模式該如何選擇？
 - **全體開發者分析**: 適合團隊管理、績效評估、尋找需要協助的成員
 - **特定開發者分析**: 適合深入了解個人表現、一對一回饋、個人成長追蹤
+- **程式化查詢 API**: 適合整合到自動化工具、客製化分析、定期報表產出
 
 ### Q2: 特定開發者分析找不到資料？
 確認：
@@ -310,7 +488,7 @@ uv sync --upgrade
 3. 有權限存取開發者參與的專案
 
 ### Q3: 可以同時分析多個開發者嗎？
-可以，使用批次腳本（參考範例 3）或寫個簡單的 shell 迴圈。
+可以，使用批次腳本（參考範例 3）或使用 Python API 寫迴圈處理。
 
 ### Q4: 輸出檔案太大怎麼辦？
 - 縮小時間範圍（修改 config.py 的 START_DATE 和 END_DATE）
@@ -322,4 +500,38 @@ uv sync --upgrade
 ```bash
 # 每週一早上 8 點執行
 0 8 * * 1 cd /path/to/scripts && uv run gitlab_collector.py
+```
+
+### Q6: Python API 如何處理大量資料？
+```python
+# 使用生成器或分批處理
+from gitlab_collector import GitLabCollector
+
+collector = GitLabCollector()
+projects = collector.get_projects_list()
+
+# 分批處理，避免一次載入過多資料
+batch_size = 5
+for i in range(0, len(projects), batch_size):
+    batch_projects = projects[i:i+batch_size]
+    for project in batch_projects:
+        # 處理每個專案
+        commits = collector.get_user_commits_in_project(
+            project['id'], 
+            user_email="user@example.com"
+        )
+        # 處理 commits...
+```
+
+### Q7: 如何匯出 JSON 格式而非 CSV？
+```python
+import json
+from gitlab_collector import GitLabCollector
+
+collector = GitLabCollector()
+data = collector.get_user_statistics_in_project(123, user_email="user@example.com")
+
+# 儲存為 JSON
+with open('output.json', 'w', encoding='utf-8') as f:
+    json.dump(data, f, indent=2, ensure_ascii=False)
 ```
