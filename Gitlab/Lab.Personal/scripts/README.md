@@ -254,19 +254,15 @@ scripts/
 ├── gitlab_developer_collector.py    # 特定開發者收集器（繼承基礎類別）
 ├── gitlab_client.py                 # GitLab API 客戶端
 ├── models.py                        # 資料模型
-├── config.py                        # 配置檔
-└── filters.py                       # 過濾策略（相容 gitlab_analyzer.py）
-
-# 其他檔案
-├── gitlab_analyzer.py               # 舊版統一介面（保留相容）
-└── example_api_usage.py             # API 使用範例
+├── filters.py                       # 過濾策略
+└── config.py                        # 配置檔
 ```
 
 **架構優點**：
 - **繼承設計**: `BaseGitLabCollector` 提供共用功能
 - **減少重複**: 共用的初始化、專案查詢、檔案儲存邏輯
 - **彈性參數**: 支援自訂時間、專案、群組
-- **向後相容**: 舊版檔案仍可使用
+- **統一介面**: `gitlab_cli.py` 提供一致的命令列體驗
 
 ## 💡 使用範例
 
@@ -370,11 +366,10 @@ uv sync
 ## ❓ 常見問題
 
 ### Q1: 舊版檔案還能用嗎？
-可以，`gitlab_collector.py`、`gitlab_developer_collector.py` 和 `gitlab_analyzer.py` 都保留向後相容。但建議使用新版 `gitlab_cli.py`，介面更統一且參數更彈性。
+`gitlab_collector.py` 和 `gitlab_developer_collector.py` 可以直接在 Python 程式中 import 使用。建議使用 `gitlab_cli.py` 作為命令列入口。
 
 ### Q2: 如何選擇使用方式？
 - **gitlab_cli.py** (推薦): 統一 CLI 介面，支援所有查詢模式
-- **gitlab_analyzer.py**: 舊版統一介面，遵循 SOLID 原則
 - **直接 import 模組**: 需要客製化或整合到其他程式
 
 ### Q3: user-info 和 project-info 有什麼差別？
@@ -402,6 +397,7 @@ uv sync
 - ✅ 基於繼承的架構，減少重複程式碼
 - ✅ 彈性的專案/群組/時間範圍設定
 - ✅ 更清晰的輸出訊息
+- ✅ 移除冗餘檔案，避免混淆
 
 ## 📚 相關檔案
 
@@ -409,8 +405,7 @@ uv sync
 - `base_gitlab_collector.py` - 基礎類別
 - `gitlab_collector.py` - 全體開發者收集器
 - `gitlab_developer_collector.py` - 特定開發者收集器
-- `gitlab_analyzer.py` - 舊版統一介面（保留相容）
-- `example_api_usage.py` - API 使用範例
+- `gitlab_client.py` - GitLab API 客戶端
 - `config.py` - 配置檔範本
 
 ## 📄 授權
