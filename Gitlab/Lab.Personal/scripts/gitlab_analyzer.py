@@ -14,7 +14,6 @@ GitLab 資料收集器 (重構版)
 - Dependency Inversion: 依賴抽象的 FilterStrategy
 """
 
-import gitlab
 import pandas as pd
 from datetime import datetime
 from typing import List, Dict, Any, Optional
@@ -22,6 +21,7 @@ import os
 from tqdm import tqdm
 import config
 from filters import FilterStrategy, AllDevelopersFilter, SpecificDeveloperFilter
+from gitlab_client import GitLabClient
 
 
 class GitLabCollector:
@@ -41,9 +41,9 @@ class GitLabCollector:
             start_date: 起始日期 (格式: YYYY-MM-DD)
             end_date: 結束日期 (格式: YYYY-MM-DD)
         """
-        self.gl = gitlab.Gitlab(
+        self.client = GitLabClient(
             config.GITLAB_URL, 
-            private_token=config.GITLAB_TOKEN, 
+            config.GITLAB_TOKEN, 
             ssl_verify=False
         )
         self.start_date = datetime.strptime(start_date or config.START_DATE, "%Y-%m-%d")
@@ -58,16 +58,10 @@ class GitLabCollector:
     def get_all_projects(self) -> List[Any]:
         """取得所有專案（內部使用）"""
         print("正在取得專案列表...")
-        projects = []
-        
-        if config.TARGET_GROUP_ID:
-            group = self.gl.groups.get(config.TARGET_GROUP_ID)
-            projects = group.projects.list(all=True)
-        elif config.TARGET_PROJECT_IDS:
-            projects = [self.gl.projects.get(pid) for pid in config.TARGET_PROJECT_IDS]
-        else:
-            projects = self.gl.projects.list(all=True)
-        
+        projects = self.client.get_projects(
+            group_id=config.TARGET_GROUP_ID,
+            project_ids=config.TARGET_PROJECT_IDS
+        )
         print(f"找到 {len(projects)} 個專案")
         return projects
     
@@ -99,7 +93,7 @@ class GitLabCollector:
     def get_all_users(self) -> List[Dict[str, Any]]:
         """取得所有使用者列表"""
         print("正在取得使用者列表...")
-        users = self.gl.users.list(all=True)
+        users = self.client.get_all_users()
         
         users_info = []
         for user in users:
@@ -144,9 +138,8 @@ class GitLabCollector:
         
         for project in tqdm(projects, desc="處理專案"):
             try:
-                project_obj = self.gl.projects.get(project.id)
-                commits = project_obj.commits.list(
-                    all=True,
+                commits = self.client.get_project_commits(
+                    project.id,
                     since=self.start_date.isoformat(),
                     until=self.end_date.isoformat()
                 )
@@ -157,10 +150,10 @@ class GitLabCollector:
                         continue
                     
                     try:
-                        commit_detail = project_obj.commits.get(commit.id)
+                        commit_detail = self.client.get_commit_detail(project.id, commit.id)
                         
                         # 取得變更的檔案列表
-                        diffs = commit_detail.diff()
+                        diffs = self.client.get_commit_diff(project.id, commit.id)
                         changed_files = [
                             diff.get('new_path', diff.get('old_path', '')) 
                             for diff in diffs
@@ -223,9 +216,8 @@ class GitLabCollector:
         
         for project in tqdm(projects, desc="處理專案"):
             try:
-                project_obj = self.gl.projects.get(project.id)
-                commits = project_obj.commits.list(
-                    all=True,
+                commits = self.client.get_project_commits(
+                    project.id,
                     since=self.start_date.isoformat(),
                     until=self.end_date.isoformat()
                 )
@@ -236,8 +228,7 @@ class GitLabCollector:
                         continue
                     
                     try:
-                        commit_detail = project_obj.commits.get(commit.id)
-                        diffs = commit_detail.diff()
+                        diffs = self.client.get_commit_diff(project.id, commit.id)
                         
                         for diff in diffs:
                             file_path = diff.get('new_path', diff.get('old_path', ''))
@@ -307,22 +298,21 @@ class GitLabCollector:
         
         for project in tqdm(projects, desc="處理專案"):
             try:
-                project_obj = self.gl.projects.get(project.id)
-                mrs = project_obj.mergerequests.list(
-                    all=True,
+                mrs = self.client.get_project_merge_requests(
+                    project.id,
                     updated_after=self.start_date.isoformat(),
                     updated_before=self.end_date.isoformat()
                 )
                 
                 for mr in mrs:
                     try:
-                        mr_detail = project_obj.mergerequests.get(mr.iid)
+                        mr_detail = self.client.get_merge_request_detail(project.id, mr.iid)
                         
                         # 判斷是否為目標作者
                         is_author = self.filter_strategy.should_include_merge_request(mr)
                         
                         # 取得討論/評論
-                        discussions = mr_detail.discussions.list(all=True)
+                        discussions = self.client.get_merge_request_discussions(project.id, mr.iid)
                         all_notes = []
                         participated_in_review = False
                         
@@ -353,7 +343,7 @@ class GitLabCollector:
                         
                         # 取得變更的檔案
                         try:
-                            changes = mr_detail.changes()
+                            changes = self.client.get_merge_request_changes(project.id, mr.iid)
                             changed_files = [
                                 change['new_path'] 
                                 for change in changes.get('changes', [])
@@ -516,8 +506,8 @@ class GitLabCollector:
     # ==================== 程式化查詢 API ====================
     
     def get_user_commits_in_project(
-        self, 
-        project_id: int, 
+        self,
+        project_id: int,
         user_email: str = None,
         user_name: str = None
     ) -> List[Dict[str, Any]]:
@@ -530,7 +520,7 @@ class GitLabCollector:
         self.filter_strategy = temp_filter
         
         try:
-            project = self.gl.projects.get(project_id)
+            project = self.client.get_project(project_id)
             df = self.collect_commits([project], save_to_file=False)
             return df.to_dict('records')
         finally:
@@ -550,7 +540,7 @@ class GitLabCollector:
         self.filter_strategy = temp_filter
         
         try:
-            project = self.gl.projects.get(project_id)
+            project = self.client.get_project(project_id)
             df = self.collect_code_changes([project], save_to_file=False)
             return df.to_dict('records')
         finally:
@@ -570,7 +560,7 @@ class GitLabCollector:
         self.filter_strategy = temp_filter
         
         try:
-            project = self.gl.projects.get(project_id)
+            project = self.client.get_project(project_id)
             mr_df, _ = self.collect_merge_requests([project], save_to_file=False)
             return mr_df.to_dict('records')
         finally:
