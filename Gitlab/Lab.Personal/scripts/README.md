@@ -87,21 +87,30 @@ uv run python gl-cli.py project-stats
 ---
 
 ### 3️⃣ 使用者統計查詢 (`user-stats`)
-深度分析開發者活動：commits、MR、code review、統計
+深度分析開發者活動：commits、MR、code review、授權、統計
 
 ```bash
-# 分析 2024 年所有開發者
+# 分析 2024 年所有開發者（包含授權資訊）
 uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-12-31
 
-# 分析特定開發者
-uv run python gl-cli.py user-stats --username alice
+# 分析特定開發者（包含授權資訊）
+uv run python gl-cli.py user-stats --username alice --start-date 2024-01-01
 ```
 
-**輸出:** 
+**輸出檔案:** 
 - `commits.{csv,md}` - Commit 記錄
 - `merge_requests.{csv,md}` - MR 資料
 - `code_reviews.{csv,md}` - Code Review
-- `statistics.{csv,md}` - **統計摘要** ⭐
+- `permissions.{csv,md}` - **授權資訊** 🆕
+- `statistics.{csv,md}` - **統計摘要**（包含授權統計）⭐
+
+**授權統計欄位（新增）：**
+- `total_projects_with_access` - 有授權的專案總數
+- `owner_projects` - Owner 權限專案數
+- `maintainer_projects` - Maintainer 權限專案數
+- `developer_projects` - Developer 權限專案數
+- `reporter_projects` - Reporter 權限專案數
+- `guest_projects` - Guest 權限專案數
 
 ---
 
