@@ -124,7 +124,20 @@ uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-12-31
 
 # 分析特定開發者（包含授權資訊）
 uv run python gl-cli.py user-stats --username alice --start-date 2024-01-01
+
+# 分析特定專案內的所有開發者 🆕
+uv run python gl-cli.py user-stats --project-name "web-api" --start-date 2024-01-01
+
+# 分析特定開發者在特定專案的活動 🆕
+uv run python gl-cli.py user-stats --username alice --project-name "web-api" --start-date 2024-01-01
 ```
+
+**查詢參數：**
+- `--username` - 使用者名稱（可選，不填則分析所有開發者）
+- `--project-name` - 專案名稱（可選，不填則分析所有專案）🆕
+- `--start-date` - 開始日期
+- `--end-date` - 結束日期
+- `--group-id` - 群組 ID（可選）
 
 **輸出檔案:** 
 - `commits.{csv,md}` - Commit 記錄
@@ -354,7 +367,43 @@ web-app,李四,user2,Maintainer
 
 ---
 
-### 範例 6: 評估開發者績效（年度報告）
+### 範例 6: 分析特定專案的開發者活動 🆕
+```bash
+# 方法 1: 使用 --project-name 參數（推薦）
+uv run python gl-cli.py user-stats \
+    --project-name "web-api" \
+    --start-date 2024-01-01
+
+# 產生檔案：
+# - web-api-users-commits.csv - 該專案的所有 commits
+# - web-api-users-statistics.csv - 該專案的開發者統計
+
+# 方法 2: 分析特定開發者在特定專案的活動
+uv run python gl-cli.py user-stats \
+    --username alice \
+    --project-name "web-api" \
+    --start-date 2024-01-01
+
+# 產生檔案：
+# - alice-web-api-user-commits.csv
+# - alice-web-api-user-statistics.csv
+```
+
+**實際用途：**
+- 📊 **專案績效評估**：了解特定專案的開發活躍度
+- 👥 **團隊貢獻分析**：看誰在特定專案貢獻最多
+- 🔍 **專案健康檢查**：找出缺乏維護的專案
+- 📈 **資源分配**：評估是否需要調整人力
+
+**優點：**
+- ✅ 直接指定專案，無需先查專案 ID
+- ✅ 支援模糊搜尋（專案名稱包含關鍵字即可）
+- ✅ 可與 --username 組合使用
+- ✅ 可與 --group-id 組合使用
+
+---
+
+### 範例 7: 評估開發者績效（年度報告）
 ```bash
 # 分析特定開發者 2024 年的表現
 uv run python gl-cli.py user-stats --username alice --start-date 2024-01-01 --end-date 2024-12-31
@@ -385,7 +434,7 @@ projects_contributed     : 貢獻專案數（技術廣度）
 
 ---
 
-### 範例 7: 團隊月度報告
+### 範例 8: 團隊月度報告
 ```bash
 # 分析團隊 2024 年 1 月的活動
 uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-01-31
@@ -401,7 +450,7 @@ uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-01-31
 
 ---
 
-### 範例 8: 批次分析多位開發者
+### 範例 9: 批次分析多位開發者
 ```bash
 # Linux/macOS
 cat > users.txt << EOF
@@ -434,7 +483,7 @@ Get-Content users.txt | ForEach-Object {
 
 ---
 
-### 範例 9: 專案群組分析
+### 範例 10: 專案群組分析
 ```bash
 # 只分析特定群組的專案（例如 group_id = 123）
 uv run python gl-cli.py project-stats --group-id 123
@@ -443,7 +492,7 @@ uv run python gl-cli.py user-stats --group-id 123 --start-date 2024-01-01
 
 ---
 
-### 範例 10: 隱藏 SSL 警告（Self-hosted GitLab）
+### 範例 11: 隱藏 SSL 警告（Self-hosted GitLab）
 ```bash
 # 方法 1: 環境變數
 export PYTHONWARNINGS="ignore:Unverified HTTPS request"
