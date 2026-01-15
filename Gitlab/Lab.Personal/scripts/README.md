@@ -175,11 +175,57 @@ uv run python gl-cli.py user-stats --username alice --project-name "web-api" --s
 ## ✨ 核心特色
 
 - ✅ **SOLID 原則** - 單一職責、開放封閉、里氏替換、介面隔離、依賴反轉
+- ✅ **進度提示** - 即時進度條、彩色輸出、執行狀態清晰可見 🆕
 - ✅ **雙格式輸出** - CSV (Excel) + Markdown (報告)
 - ✅ **深度分析** - Commits、Code Changes、MR、Code Review、統計
 - ✅ **彈性查詢** - 全部/特定專案、全部/特定使用者、時間範圍
 - ✅ **跨平台** - Linux/macOS/Windows 都支援
 - ✅ **便捷腳本** - Shell + PowerShell
+
+---
+
+## 🎨 進度提示功能 🆕
+
+### 執行效果
+```
+🔄 正在獲取群組列表...
+✓ 找到 1 個群組
+
+🔄 正在分析 1 個群組...
+  [██████████████████████████████] 1/1 (100.0%) - yao-testlab
+✓ CSV exported: output/all-groups-stats.csv
+```
+
+### 特點
+- **即時進度條** - 清楚顯示執行進度 (0-100%)
+- **彩色 Emoji** - 🔄 開始、✓ 完成、⚠️ 警告
+- **項目名稱** - 顯示當前處理的專案/群組名稱
+- **SOLID 設計** - 可擴展不同的進度報告器（Console、File、JSON、GUI）
+
+### 適用命令
+所有命令都已支援進度提示：
+- `group-stats` - 顯示群組分析進度
+- `project-stats` - 顯示專案查詢進度
+- `user-stats` - 顯示使用者分析進度
+- `project-permission` - 顯示授權查詢進度
+
+### 進度提示架構
+```python
+# 抽象介面 (遵循依賴反轉原則)
+IProgressReporter
+  ├─ ConsoleProgressReporter  # 終端機彩色輸出
+  └─ SilentProgressReporter   # 靜默模式（測試用）
+
+# 透過依賴注入到所有 Fetcher
+ProjectDataFetcher(client, progress_reporter)
+UserDataFetcher(client, progress_reporter)
+GroupDataFetcher(client, progress_reporter)
+```
+
+詳細說明請參考：
+- 📖 [PROGRESS_INDICATOR.md](./PROGRESS_INDICATOR.md) - 完整功能說明
+- 📊 [PROGRESS_UPDATE_SUMMARY.md](./PROGRESS_UPDATE_SUMMARY.md) - 更新總結
+- 🚀 [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) - 快速參考
 
 ---
 
@@ -567,6 +613,59 @@ A: 已在實際環境測試：
 
 ---
 
+## 📝 更新日誌
+
+### v1.1.0 (2026-01-15) 🆕
+
+#### ✨ 新增進度提示功能
+- ✅ **即時進度條** - 顯示執行進度 (0-100%)
+- ✅ **彩色輸出** - 🔄 開始、✓ 完成、⚠️ 警告
+- ✅ **SOLID 設計** - 遵循依賴反轉原則，易於擴展
+
+#### 🔧 技術實作
+- 新增 `IProgressReporter` 抽象介面
+- 實作 `ConsoleProgressReporter` (終端機輸出)
+- 實作 `SilentProgressReporter` (靜默模式)
+- 更新所有 4 個 Fetcher 類別支援進度注入：
+  - `ProjectDataFetcher`
+  - `ProjectPermissionFetcher`
+  - `UserDataFetcher`
+  - `GroupDataFetcher`
+
+#### 📊 效果展示
+```
+🔄 正在獲取專案列表...
+✓ 找到 1 個專案
+
+🔄 正在獲取授權資訊...
+  [██████████████████████████████] 1/1 (100.0%) - test-project
+✓ CSV exported: output/all-project-stats.csv
+```
+
+#### 📚 新增文檔
+- `PROGRESS_INDICATOR.md` - 進度提示完整說明
+- `PROGRESS_UPDATE_SUMMARY.md` - 更新總結
+- `QUICK_REFERENCE.md` - 快速參考
+- `test_progress_demo.py` - 進度演示腳本
+
+#### 🎯 解決問題
+- ✅ 解決「無窮等待」困擾 - 使用者可清楚看到執行狀態
+- ✅ 提升使用者體驗 - 可預估完成時間
+- ✅ 易於除錯 - 清楚顯示警告和錯誤訊息
+
+### v1.0.0 (2026-01-15)
+
+#### 🎉 初始版本
+- ✅ 專案資訊查詢 (`project-stats`)
+- ✅ 群組資訊查詢 (`group-stats`)
+- ✅ 專案授權查詢 (`project-permission`)
+- ✅ 使用者統計查詢 (`user-stats`)
+- ✅ SOLID 原則設計
+- ✅ 雙格式輸出 (CSV + Markdown)
+- ✅ 跨平台支援 (Linux/macOS/Windows)
+
+---
+
 ## 🎉 立即開始
 
 ```bash
@@ -606,6 +705,7 @@ GitLab 專案資訊查詢
 
 ---
 
-**版本:** 1.0.0  
+**版本:** 1.1.0 🆕  
 **最後更新:** 2026-01-15  
+**新增功能:** 進度提示、即時進度條、彩色輸出  
 **授權:** 僅供學習與內部使用
