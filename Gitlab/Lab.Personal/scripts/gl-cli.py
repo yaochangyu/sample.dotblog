@@ -55,29 +55,91 @@ class IDataExporter(ABC):
 # ==================== 資料獲取器 (單一職責原則) ====================
 
 class ProjectDataFetcher(IDataFetcher):
-    """專案資料獲取器"""
+    """專案資料獲取器（包含授權資訊）"""
     
     def __init__(self, client: GitLabClient):
         self.client = client
     
     def fetch(self, project_name: Optional[str] = None, 
-              group_id: Optional[int] = None) -> List[Any]:
+              group_id: Optional[int] = None,
+              include_permissions: bool = True) -> Dict[str, Any]:
         """
-        獲取專案資料
+        獲取專案資料（包含授權資訊）
         
         Args:
             project_name: 專案名稱 (可選)
             group_id: 群組 ID (可選)
+            include_permissions: 是否包含授權資訊 (預設: True)
         
         Returns:
-            專案列表
+            包含專案列表和授權資訊的字典
         """
         projects = self.client.get_projects(group_id=group_id)
         
         if project_name:
             projects = [p for p in projects if project_name.lower() in p.name.lower()]
         
-        return projects
+        result = {
+            'projects': projects,
+            'permissions': []
+        }
+        
+        # 如果需要包含授權資訊
+        if include_permissions:
+            print("正在獲取授權資訊...")
+            for idx, project in enumerate(projects, 1):
+                try:
+                    print(f"  處理 {idx}/{len(projects)}: {project.name}")
+                    project_detail = self.client.get_project(project.id)
+                    
+                    # 獲取專案成員
+                    members = project_detail.members.list(all=True)
+                    
+                    for member in members:
+                        result['permissions'].append({
+                            'project_id': project.id,
+                            'project_name': project.name,
+                            'member_type': 'User',
+                            'member_id': member.id,
+                            'member_name': member.name,
+                            'member_username': member.username,
+                            'access_level': member.access_level,
+                            'access_level_name': self._get_access_level_name(member.access_level)
+                        })
+                    
+                    # 獲取群組成員（如果有共享給群組）
+                    try:
+                        shared_groups = project_detail.shared_with_groups
+                        for group in shared_groups:
+                            result['permissions'].append({
+                                'project_id': project.id,
+                                'project_name': project.name,
+                                'member_type': 'Group',
+                                'member_id': group['group_id'],
+                                'member_name': group['group_name'],
+                                'member_username': '',
+                                'access_level': group['group_access_level'],
+                                'access_level_name': self._get_access_level_name(group['group_access_level'])
+                            })
+                    except:
+                        pass
+                        
+                except Exception as e:
+                    print(f"  警告: 無法獲取 {project.name} 的授權資訊: {e}")
+                    continue
+        
+        return result
+    
+    def _get_access_level_name(self, level: int) -> str:
+        """轉換存取等級為名稱"""
+        levels = {
+            10: 'Guest',
+            20: 'Reporter',
+            30: 'Developer',
+            40: 'Maintainer',
+            50: 'Owner'
+        }
+        return levels.get(level, 'Unknown')
 
 
 class ProjectPermissionFetcher(IDataFetcher):
@@ -296,14 +358,39 @@ class UserDataFetcher(IDataFetcher):
 # ==================== 資料處理器 (單一職責原則) ====================
 
 class ProjectDataProcessor(IDataProcessor):
-    """專案資料處理器"""
+    """專案資料處理器（包含授權統計）"""
     
-    def process(self, projects: List[Any]) -> pd.DataFrame:
-        """處理專案資料"""
-        data = []
+    def process(self, data: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
+        """
+        處理專案資料和授權資訊
         
+        Args:
+            data: 包含 'projects' 和 'permissions' 的字典
+        
+        Returns:
+            包含 'projects' 和 'permissions' DataFrame 的字典
+        """
+        projects = data.get('projects', [])
+        permissions = data.get('permissions', [])
+        
+        result = {}
+        
+        # 處理專案基本資料
+        projects_data = []
         for project in projects:
-            data.append({
+            # 計算該專案的授權統計
+            project_perms = [p for p in permissions if p['project_id'] == project.id]
+            user_count = len([p for p in project_perms if p['member_type'] == 'User'])
+            group_count = len([p for p in project_perms if p['member_type'] == 'Group'])
+            
+            # 統計各權限等級的人數
+            owner_count = len([p for p in project_perms if p['access_level'] == 50])
+            maintainer_count = len([p for p in project_perms if p['access_level'] == 40])
+            developer_count = len([p for p in project_perms if p['access_level'] == 30])
+            reporter_count = len([p for p in project_perms if p['access_level'] == 20])
+            guest_count = len([p for p in project_perms if p['access_level'] == 10])
+            
+            projects_data.append({
                 'project_id': project.id,
                 'project_name': project.name,
                 'description': getattr(project, 'description', ''),
@@ -317,9 +404,26 @@ class ProjectDataProcessor(IDataProcessor):
                 'star_count': getattr(project, 'star_count', 0),
                 'forks_count': getattr(project, 'forks_count', 0),
                 'open_issues_count': getattr(project, 'open_issues_count', 0),
+                # 新增授權統計欄位
+                'total_members': user_count + group_count,
+                'user_members': user_count,
+                'group_members': group_count,
+                'owners': owner_count,
+                'maintainers': maintainer_count,
+                'developers': developer_count,
+                'reporters': reporter_count,
+                'guests': guest_count,
             })
         
-        return pd.DataFrame(data)
+        result['projects'] = pd.DataFrame(projects_data)
+        
+        # 處理授權詳細資料
+        if permissions:
+            result['permissions'] = pd.DataFrame(permissions)
+        else:
+            result['permissions'] = pd.DataFrame()
+        
+        return result
 
 
 class ProjectPermissionProcessor(IDataProcessor):
@@ -460,43 +564,57 @@ class BaseService(ABC):
 
 
 class ProjectStatsService(BaseService):
-    """專案統計服務"""
+    """專案統計服務（包含授權資訊）"""
     
     def execute(self, project_name: Optional[str] = None, group_id: Optional[int] = None) -> None:
         """執行專案統計"""
         print("=" * 70)
-        print("GitLab 專案資訊查詢")
+        print("GitLab 專案資訊查詢（包含授權統計）")
         print("=" * 70)
         
-        # 獲取資料
-        projects = self.fetcher.fetch(project_name=project_name, group_id=group_id)
+        # 獲取資料（包含授權資訊）
+        data = self.fetcher.fetch(project_name=project_name, group_id=group_id)
         
-        if not projects:
+        if not data['projects']:
             print("No projects found.")
             return
         
         # 處理資料
-        df = self.processor.process(projects)
+        processed_data = self.processor.process(data)
         
-        # 匯出資料
+        # 匯出專案資料（包含授權統計）
         if project_name:
-            filename = f"{project_name}-project-stats"
+            base_filename = f"{project_name}-project-stats"
         else:
-            filename = "all-project-stats"
+            base_filename = "all-project-stats"
         
-        self.exporter.export(df, filename)
+        self.exporter.export(processed_data['projects'], base_filename)
         
-        print(f"\n✓ Total projects: {len(df)}")
+        # 匯出授權詳細資料
+        if not processed_data['permissions'].empty:
+            permission_filename = f"{base_filename}-permissions"
+            self.exporter.export(processed_data['permissions'], permission_filename)
+            print(f"\n✓ Total permission records: {len(processed_data['permissions'])}")
+        
+        print(f"✓ Total projects: {len(processed_data['projects'])}")
         print("=" * 70)
 
 
 class ProjectPermissionService(BaseService):
-    """專案授權服務"""
+    """專案授權服務（已棄用，建議使用 project-stats）"""
     
     def execute(self, project_name: Optional[str] = None, group_id: Optional[int] = None) -> None:
         """執行專案授權查詢"""
         print("=" * 70)
-        print("GitLab 專案授權資訊查詢")
+        print("⚠️  警告：project-permission 命令已棄用")
+        print("=" * 70)
+        print("建議使用: project-stats")
+        print("理由:")
+        print("  • project-stats 已包含完整的授權資訊")
+        print("  • 一次查詢可獲得專案資料 + 授權統計 + 授權詳細資料")
+        print("  • 輸出檔案: all-project-stats-permissions.csv")
+        print()
+        print("繼續執行 project-permission...")
         print("=" * 70)
         
         # 獲取資料
@@ -518,6 +636,8 @@ class ProjectPermissionService(BaseService):
         self.exporter.export(df, filename)
         
         print(f"\n✓ Total permission records: {len(df)}")
+        print("\n" + "=" * 70)
+        print("💡 提示：下次請使用 'project-stats' 獲得更完整的資訊")
         print("=" * 70)
 
 
@@ -623,23 +743,21 @@ class GitLabCLI:
             epilog="""
 使用範例:
 
-  # 1. 取得所有專案資訊
+  # 1. 取得所有專案資訊（包含授權統計）
   python gl-cli.py project-stats
   
-  # 2. 取得特定專案資訊
+  # 2. 取得特定專案資訊（包含授權統計）
   python gl-cli.py project-stats --project-name "my-project"
   
-  # 3. 取得所有專案授權資訊
-  python gl-cli.py project-permission
-  
-  # 4. 取得特定專案授權資訊
-  python gl-cli.py project-permission --project-name "my-project"
-  
-  # 5. 取得所有使用者資訊
+  # 3. 取得所有使用者資訊
   python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-12-31
   
-  # 6. 取得特定使用者資訊
+  # 4. 取得特定使用者資訊
   python gl-cli.py user-stats --username johndoe --start-date 2024-01-01
+
+注意：
+  • project-permission 命令已棄用，請使用 project-stats
+  • project-stats 已包含完整的授權資訊（統計 + 詳細資料）
             """
         )
         
@@ -663,10 +781,10 @@ class GitLabCLI:
         )
         project_stats_parser.set_defaults(func=self._cmd_project_stats)
         
-        # 2. project-permission 命令
+        # 2. project-permission 命令（已棄用）
         project_perm_parser = subparsers.add_parser(
             'project-permission',
-            help='取得專案授權資訊'
+            help='⚠️  已棄用 - 請使用 project-stats（取得專案授權資訊）'
         )
         project_perm_parser.add_argument(
             '--project-name',
