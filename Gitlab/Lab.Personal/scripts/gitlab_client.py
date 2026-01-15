@@ -215,3 +215,59 @@ class GitLabClient:
             群組物件
         """
         return self.gl.groups.get(group_id)
+    
+    def get_groups(self, group_name: Optional[str] = None) -> List[Any]:
+        """
+        取得群組列表
+        
+        Args:
+            group_name: 群組名稱 (可選，若指定則搜尋符合的群組)
+        
+        Returns:
+            群組物件列表
+        """
+        if group_name:
+            # 搜尋特定群組
+            return self.gl.groups.list(search=group_name, all=True)
+        else:
+            # 取得所有群組
+            return self.gl.groups.list(all=True)
+    
+    def get_group_subgroups(self, group_id: int) -> List[Any]:
+        """
+        取得群組的子群組
+        
+        Args:
+            group_id: 群組 ID
+        
+        Returns:
+            子群組列表
+        """
+        group = self.gl.groups.get(group_id)
+        return group.subgroups.list(all=True)
+    
+    def get_group_projects(self, group_id: int) -> List[Any]:
+        """
+        取得群組的專案
+        
+        Args:
+            group_id: 群組 ID
+        
+        Returns:
+            專案列表
+        """
+        group = self.gl.groups.get(group_id)
+        return group.projects.list(all=True)
+    
+    def get_group_members(self, group_id: int) -> List[Any]:
+        """
+        取得群組成員
+        
+        Args:
+            group_id: 群組 ID
+        
+        Returns:
+            成員列表
+        """
+        group = self.gl.groups.get(group_id)
+        return group.members.list(all=True)
