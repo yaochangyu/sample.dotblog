@@ -239,7 +239,8 @@ class UserDataFetcher(IDataFetcher):
     def fetch(self, username: Optional[str] = None,
               start_date: Optional[str] = None,
               end_date: Optional[str] = None,
-              group_id: Optional[int] = None) -> Dict[str, Any]:
+              group_id: Optional[int] = None,
+              user_info: Optional[Any] = None) -> Dict[str, Any]:
         """
         獲取使用者資料
         
@@ -248,6 +249,7 @@ class UserDataFetcher(IDataFetcher):
             start_date: 開始日期
             end_date: 結束日期
             group_id: 群組 ID (可選)
+            user_info: 使用者資訊物件 (可選，用於精確匹配)
         
         Returns:
             使用者資料字典
@@ -262,6 +264,16 @@ class UserDataFetcher(IDataFetcher):
             'permissions': []
         }
         
+        # 準備匹配條件（使用 email 和 name 進行精確匹配）
+        target_email = None
+        target_name = None
+        target_username = username
+        
+        if user_info:
+            target_email = getattr(user_info, 'email', None)
+            target_name = getattr(user_info, 'name', None)
+            target_username = getattr(user_info, 'username', username)
+        
         for project in projects:
             # 獲取 commits
             commits = self.client.get_project_commits(
@@ -271,8 +283,18 @@ class UserDataFetcher(IDataFetcher):
             )
             
             for commit in commits:
-                if username and commit.author_name != username:
-                    continue
+                # 改善匹配邏輯：使用 email 優先，其次 name，最後 username
+                if username:
+                    match = False
+                    if target_email and commit.author_email == target_email:
+                        match = True
+                    elif target_name and commit.author_name == target_name:
+                        match = True
+                    elif commit.author_name == username:
+                        match = True
+                    
+                    if not match:
+                        continue
                 
                 # 獲取 commit 詳細資訊
                 try:
@@ -323,8 +345,16 @@ class UserDataFetcher(IDataFetcher):
             )
             
             for mr in mrs:
-                if username and mr.author['username'] != username:
-                    continue
+                # 改善匹配邏輯：使用 username 匹配
+                if username:
+                    match = False
+                    if target_username and mr.author['username'] == target_username:
+                        match = True
+                    elif mr.author['username'] == username:
+                        match = True
+                    
+                    if not match:
+                        continue
                 
                 try:
                     mr_detail = self.client.get_merge_request_detail(project.id, mr.iid)
@@ -373,9 +403,16 @@ class UserDataFetcher(IDataFetcher):
                 members = project_detail.members.list(all=True)
                 
                 for member in members:
-                    # 如果指定了 username，只獲取該使用者的授權資訊
-                    if username and member.username != username:
-                        continue
+                    # 改善匹配邏輯：使用 username 匹配
+                    if username:
+                        match = False
+                        if target_username and member.username == target_username:
+                            match = True
+                        elif member.username == username:
+                            match = True
+                        
+                        if not match:
+                            continue
                     
                     user_data['permissions'].append({
                         'project_id': project.id,
@@ -923,12 +960,35 @@ class UserStatsService(BaseService):
         print("GitLab 使用者資訊查詢")
         print("=" * 70)
         
+        # 驗證使用者是否存在
+        user_info = None
+        if username:
+            try:
+                users = self.fetcher.client.gl.users.list(username=username)
+                if not users:
+                    print(f"\n❌ 錯誤：找不到使用者 '{username}'")
+                    print("\n建議：")
+                    print(f"  • 檢查使用者名稱是否正確")
+                    print(f"  • 使用 GitLab username（不是顯示名稱）")
+                    print(f"  • 執行不帶 --username 參數查看所有使用者")
+                    print("\n" + "=" * 70)
+                    return
+                else:
+                    user_info = users[0]
+                    print(f"\n✓ 找到使用者：{user_info.name} (@{user_info.username})")
+                    if hasattr(user_info, 'email'):
+                        print(f"  Email: {user_info.email}")
+            except Exception as e:
+                print(f"\n⚠️  警告：無法驗證使用者 ({e})")
+                print("  繼續執行查詢...")
+        
         # 獲取資料
         user_data = self.fetcher.fetch(
             username=username,
             start_date=start_date,
             end_date=end_date,
-            group_id=group_id
+            group_id=group_id,
+            user_info=user_info  # 傳遞使用者資訊以便精確匹配
         )
         
         # 處理資料
@@ -940,11 +1000,13 @@ class UserStatsService(BaseService):
         else:
             base_filename = "all-users"
         
-        # 匯出各類資料
+        # 匯出各類資料並計數
+        exported_count = 0
         for data_type, df in processed_data.items():
             if not df.empty:
                 filename = f"{base_filename}-{data_type}"
                 self.exporter.export(df, filename)
+                exported_count += 1
         
         # 顯示統計摘要
         if not processed_data['statistics'].empty:
@@ -954,7 +1016,24 @@ class UserStatsService(BaseService):
             print(processed_data['statistics'].to_string(index=False))
         
         print("\n" + "=" * 70)
-        print("✓ 查詢完成！")
+        
+        # 檢查是否有輸出資料
+        if exported_count == 0:
+            if username:
+                print(f"⚠️  警告：沒有找到使用者 '{username}' 的任何資料")
+                print("\n可能原因：")
+                print(f"  • 使用者在指定時間範圍內沒有任何活動")
+                print(f"  • 使用者的 Git 設定名稱與 GitLab username 不同")
+                print(f"  • 使用者沒有權限存取的專案")
+                print(f"\n建議：")
+                print(f"  • 嘗試調整時間範圍（--start-date / --end-date）")
+                print(f"  • 執行不帶 --username 參數查看所有開發者名稱")
+            else:
+                print("⚠️  警告：沒有找到任何使用者資料")
+        else:
+            print("✓ 查詢完成！")
+            print(f"✓ 共匯出 {exported_count} 個資料檔案")
+        
         print("=" * 70)
 
 
