@@ -18,9 +18,41 @@ from typing import Optional, List, Dict, Any
 from pathlib import Path
 import pandas as pd
 from datetime import datetime
+import urllib3
+
+# 抑制 SSL 不安全連線警告（self-signed certificates）
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from gitlab_client import GitLabClient
 import config
+
+
+# ==================== 工具類別 ====================
+
+class AccessLevelUtil:
+    """GitLab 授權等級工具類別"""
+    
+    # 授權等級對照表
+    LEVELS = {
+        10: 'Guest',
+        20: 'Reporter',
+        30: 'Developer',
+        40: 'Maintainer',
+        50: 'Owner'
+    }
+    
+    @staticmethod
+    def get_level_name(level: int) -> str:
+        """
+        轉換存取等級為名稱
+        
+        Args:
+            level: 存取等級代碼 (10/20/30/40/50)
+        
+        Returns:
+            存取等級名稱
+        """
+        return AccessLevelUtil.LEVELS.get(level, 'Unknown')
 
 
 # ==================== 抽象介面 (介面隔離原則) ====================
@@ -103,8 +135,9 @@ class ProjectDataFetcher(IDataFetcher):
                             'member_id': member.id,
                             'member_name': member.name,
                             'member_username': member.username,
+                            'member_email': getattr(member, 'email', ''),
                             'access_level': member.access_level,
-                            'access_level_name': self._get_access_level_name(member.access_level)
+                            'access_level_name': AccessLevelUtil.get_level_name(member.access_level)
                         })
                     
                     # 獲取群組成員（如果有共享給群組）
@@ -118,8 +151,9 @@ class ProjectDataFetcher(IDataFetcher):
                                 'member_id': group['group_id'],
                                 'member_name': group['group_name'],
                                 'member_username': '',
+                                'member_email': '',
                                 'access_level': group['group_access_level'],
-                                'access_level_name': self._get_access_level_name(group['group_access_level'])
+                                'access_level_name': AccessLevelUtil.get_level_name(group['group_access_level'])
                             })
                     except:
                         pass
@@ -129,17 +163,6 @@ class ProjectDataFetcher(IDataFetcher):
                     continue
         
         return result
-    
-    def _get_access_level_name(self, level: int) -> str:
-        """轉換存取等級為名稱"""
-        levels = {
-            10: 'Guest',
-            20: 'Reporter',
-            30: 'Developer',
-            40: 'Maintainer',
-            50: 'Owner'
-        }
-        return levels.get(level, 'Unknown')
 
 
 class ProjectPermissionFetcher(IDataFetcher):
@@ -181,8 +204,9 @@ class ProjectPermissionFetcher(IDataFetcher):
                     'member_id': member.id,
                     'member_name': member.name,
                     'member_username': member.username,
+                    'member_email': getattr(member, 'email', ''),
                     'access_level': member.access_level,
-                    'access_level_name': self._get_access_level_name(member.access_level)
+                    'access_level_name': AccessLevelUtil.get_level_name(member.access_level)
                 })
             
             # 獲取群組成員（如果有共享給群組）
@@ -196,24 +220,14 @@ class ProjectPermissionFetcher(IDataFetcher):
                         'member_id': group['group_id'],
                         'member_name': group['group_name'],
                         'member_username': '',
+                        'member_email': '',
                         'access_level': group['group_access_level'],
-                        'access_level_name': self._get_access_level_name(group['group_access_level'])
+                        'access_level_name': AccessLevelUtil.get_level_name(group['group_access_level'])
                     })
             except:
                 pass
         
         return permissions_data
-    
-    def _get_access_level_name(self, level: int) -> str:
-        """轉換存取等級為名稱"""
-        levels = {
-            10: 'Guest',
-            20: 'Reporter',
-            30: 'Developer',
-            40: 'Maintainer',
-            50: 'Owner'
-        }
-        return levels.get(level, 'Unknown')
 
 
 class UserDataFetcher(IDataFetcher):
@@ -370,25 +384,15 @@ class UserDataFetcher(IDataFetcher):
                         'member_id': member.id,
                         'member_name': member.name,
                         'member_username': member.username,
+                        'member_email': getattr(member, 'email', ''),
                         'access_level': member.access_level,
-                        'access_level_name': self._get_access_level_name(member.access_level),
+                        'access_level_name': AccessLevelUtil.get_level_name(member.access_level),
                         'expires_at': getattr(member, 'expires_at', None)
                     })
             except Exception as e:
                 print(f"Warning: Failed to get permissions for project {project.name}: {e}")
         
         return user_data
-    
-    def _get_access_level_name(self, level: int) -> str:
-        """轉換存取等級為名稱"""
-        levels = {
-            10: 'Guest',
-            20: 'Reporter',
-            30: 'Developer',
-            40: 'Maintainer',
-            50: 'Owner'
-        }
-        return levels.get(level, 'Unknown')
 
 
 # ==================== 資料處理器 (單一職責原則) ====================
@@ -545,10 +549,11 @@ class UserDataProcessor(IDataProcessor):
                 author_email = author_commits.iloc[0]['author_email']
                 author_perms = permissions_df
                 if not permissions_df.empty:
-                    # 根據名稱或 email 匹配
+                    # 優先使用 email 匹配，其次使用 username 和 name
                     author_perms = permissions_df[
-                        (permissions_df['member_name'] == author) | 
-                        (permissions_df['member_username'] == author)
+                        (permissions_df['member_email'] == author_email) |  # Email 優先
+                        (permissions_df['member_username'] == author) |
+                        (permissions_df['member_name'] == author)
                     ]
                 
                 # 統計授權資訊
