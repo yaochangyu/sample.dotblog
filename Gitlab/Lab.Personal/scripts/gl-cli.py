@@ -244,7 +244,8 @@ class UserDataFetcher(IDataFetcher):
             'commits': [],
             'code_changes': [],
             'merge_requests': [],
-            'code_reviews': []
+            'code_reviews': [],
+            'permissions': []
         }
         
         for project in projects:
@@ -351,8 +352,43 @@ class UserDataFetcher(IDataFetcher):
                 except Exception as e:
                     print(f"Warning: Failed to get MR detail for {mr.iid}: {e}")
                     continue
+            
+            # 獲取專案授權資訊
+            try:
+                project_detail = self.client.get_project(project.id)
+                members = project_detail.members.list(all=True)
+                
+                for member in members:
+                    # 如果指定了 username，只獲取該使用者的授權資訊
+                    if username and member.username != username:
+                        continue
+                    
+                    user_data['permissions'].append({
+                        'project_id': project.id,
+                        'project_name': project.name,
+                        'member_type': 'User',
+                        'member_id': member.id,
+                        'member_name': member.name,
+                        'member_username': member.username,
+                        'access_level': member.access_level,
+                        'access_level_name': self._get_access_level_name(member.access_level),
+                        'expires_at': getattr(member, 'expires_at', None)
+                    })
+            except Exception as e:
+                print(f"Warning: Failed to get permissions for project {project.name}: {e}")
         
         return user_data
+    
+    def _get_access_level_name(self, level: int) -> str:
+        """轉換存取等級為名稱"""
+        levels = {
+            10: 'Guest',
+            20: 'Reporter',
+            30: 'Developer',
+            40: 'Maintainer',
+            50: 'Owner'
+        }
+        return levels.get(level, 'Unknown')
 
 
 # ==================== 資料處理器 (單一職責原則) ====================
@@ -478,19 +514,26 @@ class UserDataProcessor(IDataProcessor):
         else:
             result['code_reviews'] = pd.DataFrame()
         
-        # 產生統計資料
+        # 處理授權資訊
+        if user_data.get('permissions'):
+            result['permissions'] = pd.DataFrame(user_data['permissions'])
+        else:
+            result['permissions'] = pd.DataFrame()
+        
+        # 產生統計資料（包含授權統計）
         result['statistics'] = self._generate_statistics(result)
         
         return result
     
     def _generate_statistics(self, data: Dict[str, pd.DataFrame]) -> pd.DataFrame:
-        """產生統計資料"""
+        """產生統計資料（包含授權統計）"""
         stats = []
         
         commits_df = data.get('commits', pd.DataFrame())
         mrs_df = data.get('merge_requests', pd.DataFrame())
         reviews_df = data.get('code_reviews', pd.DataFrame())
         changes_df = data.get('code_changes', pd.DataFrame())
+        permissions_df = data.get('permissions', pd.DataFrame())
         
         if not commits_df.empty:
             # 按作者統計
@@ -498,9 +541,27 @@ class UserDataProcessor(IDataProcessor):
                 author_commits = commits_df[commits_df['author_name'] == author]
                 author_mrs = mrs_df[mrs_df['author'] == author] if not mrs_df.empty else pd.DataFrame()
                 
+                # 獲取該作者的授權統計
+                author_email = author_commits.iloc[0]['author_email']
+                author_perms = permissions_df
+                if not permissions_df.empty:
+                    # 根據名稱或 email 匹配
+                    author_perms = permissions_df[
+                        (permissions_df['member_name'] == author) | 
+                        (permissions_df['member_username'] == author)
+                    ]
+                
+                # 統計授權資訊
+                total_projects_with_access = len(author_perms) if not author_perms.empty else 0
+                owner_projects = len(author_perms[author_perms['access_level'] == 50]) if not author_perms.empty else 0
+                maintainer_projects = len(author_perms[author_perms['access_level'] == 40]) if not author_perms.empty else 0
+                developer_projects = len(author_perms[author_perms['access_level'] == 30]) if not author_perms.empty else 0
+                reporter_projects = len(author_perms[author_perms['access_level'] == 20]) if not author_perms.empty else 0
+                guest_projects = len(author_perms[author_perms['access_level'] == 10]) if not author_perms.empty else 0
+                
                 stats.append({
                     'author_name': author,
-                    'author_email': author_commits.iloc[0]['author_email'],
+                    'author_email': author_email,
                     'total_commits': len(author_commits),
                     'total_additions': author_commits['additions'].sum(),
                     'total_deletions': author_commits['deletions'].sum(),
@@ -511,6 +572,13 @@ class UserDataProcessor(IDataProcessor):
                     'projects_contributed': author_commits['project_name'].nunique(),
                     'total_code_reviews': len(reviews_df[reviews_df['author'] == author]) if not reviews_df.empty else 0,
                     'total_files_changed': len(changes_df[changes_df['author_name'] == author]) if not changes_df.empty else 0,
+                    # 新增授權統計
+                    'total_projects_with_access': total_projects_with_access,
+                    'owner_projects': owner_projects,
+                    'maintainer_projects': maintainer_projects,
+                    'developer_projects': developer_projects,
+                    'reporter_projects': reporter_projects,
+                    'guest_projects': guest_projects,
                 })
         
         return pd.DataFrame(stats)
