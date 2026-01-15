@@ -674,20 +674,12 @@ class ProjectStatsService(BaseService):
 
 
 class ProjectPermissionService(BaseService):
-    """專案授權服務（已棄用，建議使用 project-stats）"""
+    """專案授權服務"""
     
     def execute(self, project_name: Optional[str] = None, group_id: Optional[int] = None) -> None:
         """執行專案授權查詢"""
         print("=" * 70)
-        print("⚠️  警告：project-permission 命令已棄用")
-        print("=" * 70)
-        print("建議使用: project-stats")
-        print("理由:")
-        print("  • project-stats 已包含完整的授權資訊")
-        print("  • 一次查詢可獲得專案資料 + 授權統計 + 授權詳細資料")
-        print("  • 輸出檔案: all-project-stats-permissions.csv")
-        print()
-        print("繼續執行 project-permission...")
+        print("GitLab 專案授權資訊查詢")
         print("=" * 70)
         
         # 獲取資料
@@ -709,8 +701,6 @@ class ProjectPermissionService(BaseService):
         self.exporter.export(df, filename)
         
         print(f"\n✓ Total permission records: {len(df)}")
-        print("\n" + "=" * 70)
-        print("💡 提示：下次請使用 'project-stats' 獲得更完整的資訊")
         print("=" * 70)
 
 
@@ -822,15 +812,17 @@ class GitLabCLI:
   # 2. 取得特定專案資訊（包含授權統計）
   python gl-cli.py project-stats --project-name "my-project"
   
-  # 3. 取得所有使用者資訊
+  # 3. 取得所有專案授權資訊
+  python gl-cli.py project-permission
+  
+  # 4. 取得特定專案授權資訊
+  python gl-cli.py project-permission --project-name "my-project"
+  
+  # 5. 取得所有使用者資訊
   python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-12-31
   
-  # 4. 取得特定使用者資訊
+  # 6. 取得特定使用者資訊
   python gl-cli.py user-stats --username johndoe --start-date 2024-01-01
-
-注意：
-  • project-permission 命令已棄用，請使用 project-stats
-  • project-stats 已包含完整的授權資訊（統計 + 詳細資料）
             """
         )
         
@@ -854,10 +846,10 @@ class GitLabCLI:
         )
         project_stats_parser.set_defaults(func=self._cmd_project_stats)
         
-        # 2. project-permission 命令（已棄用）
+        # 2. project-permission 命令
         project_perm_parser = subparsers.add_parser(
             'project-permission',
-            help='⚠️  已棄用 - 請使用 project-stats（取得專案授權資訊）'
+            help='取得專案授權資訊'
         )
         project_perm_parser.add_argument(
             '--project-name',
