@@ -57,6 +57,30 @@ class AccessLevelUtil:
 
 # ==================== 抽象介面 (介面隔離原則) ====================
 
+class IProgressReporter(ABC):
+    """進度報告介面"""
+    
+    @abstractmethod
+    def report_start(self, message: str) -> None:
+        """報告開始訊息"""
+        pass
+    
+    @abstractmethod
+    def report_progress(self, current: int, total: int, message: str = "") -> None:
+        """報告進度"""
+        pass
+    
+    @abstractmethod
+    def report_complete(self, message: str) -> None:
+        """報告完成訊息"""
+        pass
+    
+    @abstractmethod
+    def report_warning(self, message: str) -> None:
+        """報告警告訊息"""
+        pass
+
+
 class IDataFetcher(ABC):
     """資料獲取介面"""
     
@@ -84,13 +108,64 @@ class IDataExporter(ABC):
         pass
 
 
+# ==================== 進度報告類別 (單一職責原則) ====================
+
+class ConsoleProgressReporter(IProgressReporter):
+    """終端機進度報告器"""
+    
+    def report_start(self, message: str) -> None:
+        """報告開始訊息"""
+        print(f"\n🔄 {message}")
+    
+    def report_progress(self, current: int, total: int, message: str = "") -> None:
+        """報告進度"""
+        percentage = (current / total * 100) if total > 0 else 0
+        bar_length = 30
+        filled_length = int(bar_length * current // total) if total > 0 else 0
+        bar = '█' * filled_length + '░' * (bar_length - filled_length)
+        
+        progress_msg = f"  [{bar}] {current}/{total} ({percentage:.1f}%)"
+        if message:
+            progress_msg += f" - {message}"
+        
+        print(f"\r{progress_msg}", end='', flush=True)
+        
+        if current >= total:
+            print()  # 完成時換行
+    
+    def report_complete(self, message: str) -> None:
+        """報告完成訊息"""
+        print(f"✓ {message}")
+    
+    def report_warning(self, message: str) -> None:
+        """報告警告訊息"""
+        print(f"⚠️  {message}")
+
+
+class SilentProgressReporter(IProgressReporter):
+    """靜默進度報告器（不輸出任何訊息）"""
+    
+    def report_start(self, message: str) -> None:
+        pass
+    
+    def report_progress(self, current: int, total: int, message: str = "") -> None:
+        pass
+    
+    def report_complete(self, message: str) -> None:
+        pass
+    
+    def report_warning(self, message: str) -> None:
+        pass
+
+
 # ==================== 資料獲取器 (單一職責原則) ====================
 
 class ProjectDataFetcher(IDataFetcher):
     """專案資料獲取器（包含授權資訊）"""
     
-    def __init__(self, client: GitLabClient):
+    def __init__(self, client: GitLabClient, progress_reporter: Optional[IProgressReporter] = None):
         self.client = client
+        self.progress = progress_reporter or SilentProgressReporter()
     
     def fetch(self, project_name: Optional[str] = None, 
               group_id: Optional[int] = None,
@@ -106,10 +181,13 @@ class ProjectDataFetcher(IDataFetcher):
         Returns:
             包含專案列表和授權資訊的字典
         """
+        self.progress.report_start("正在獲取專案列表...")
         projects = self.client.get_projects(group_id=group_id)
+        self.progress.report_complete(f"找到 {len(projects)} 個專案")
         
         if project_name:
             projects = [p for p in projects if project_name.lower() in p.name.lower()]
+            self.progress.report_complete(f"篩選後剩餘 {len(projects)} 個專案")
         
         result = {
             'projects': projects,
@@ -117,11 +195,11 @@ class ProjectDataFetcher(IDataFetcher):
         }
         
         # 如果需要包含授權資訊
-        if include_permissions:
-            print("正在獲取授權資訊...")
+        if include_permissions and projects:
+            self.progress.report_start("正在獲取授權資訊...")
             for idx, project in enumerate(projects, 1):
                 try:
-                    print(f"  處理 {idx}/{len(projects)}: {project.name}")
+                    self.progress.report_progress(idx, len(projects), project.name)
                     project_detail = self.client.get_project(project.id)
                     
                     # 獲取專案成員
@@ -159,7 +237,7 @@ class ProjectDataFetcher(IDataFetcher):
                         pass
                         
                 except Exception as e:
-                    print(f"  警告: 無法獲取 {project.name} 的授權資訊: {e}")
+                    self.progress.report_warning(f"無法獲取 {project.name} 的授權資訊: {e}")
                     continue
         
         return result
@@ -168,8 +246,9 @@ class ProjectDataFetcher(IDataFetcher):
 class ProjectPermissionFetcher(IDataFetcher):
     """專案授權資料獲取器"""
     
-    def __init__(self, client: GitLabClient):
+    def __init__(self, client: GitLabClient, progress_reporter: Optional[IProgressReporter] = None):
         self.client = client
+        self.progress = progress_reporter or SilentProgressReporter()
     
     def fetch(self, project_name: Optional[str] = None,
               group_id: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -183,49 +262,55 @@ class ProjectPermissionFetcher(IDataFetcher):
         Returns:
             授權資料列表
         """
+        self.progress.report_start("正在獲取專案列表...")
         projects = self.client.get_projects(group_id=group_id)
+        self.progress.report_complete(f"找到 {len(projects)} 個專案")
         
         if project_name:
             projects = [p for p in projects if project_name.lower() in p.name.lower()]
+            self.progress.report_complete(f"篩選後剩餘 {len(projects)} 個專案")
         
         permissions_data = []
         
-        for project in projects:
-            project_detail = self.client.get_project(project.id)
-            
-            # 獲取專案成員
-            members = project_detail.members.list(all=True)
-            
-            for member in members:
-                permissions_data.append({
-                    'project_id': project.id,
-                    'project_name': project.name,
-                    'member_type': 'User',
-                    'member_id': member.id,
-                    'member_name': member.name,
-                    'member_username': member.username,
-                    'member_email': getattr(member, 'email', ''),
-                    'access_level': member.access_level,
-                    'access_level_name': AccessLevelUtil.get_level_name(member.access_level)
-                })
-            
-            # 獲取群組成員（如果有共享給群組）
-            try:
-                shared_groups = project_detail.shared_with_groups
-                for group in shared_groups:
+        if projects:
+            self.progress.report_start("正在獲取專案授權資訊...")
+            for idx, project in enumerate(projects, 1):
+                self.progress.report_progress(idx, len(projects), project.name)
+                project_detail = self.client.get_project(project.id)
+                
+                # 獲取專案成員
+                members = project_detail.members.list(all=True)
+                
+                for member in members:
                     permissions_data.append({
                         'project_id': project.id,
                         'project_name': project.name,
-                        'member_type': 'Group',
-                        'member_id': group['group_id'],
-                        'member_name': group['group_name'],
-                        'member_username': '',
-                        'member_email': '',
-                        'access_level': group['group_access_level'],
-                        'access_level_name': AccessLevelUtil.get_level_name(group['group_access_level'])
+                        'member_type': 'User',
+                        'member_id': member.id,
+                        'member_name': member.name,
+                        'member_username': member.username,
+                        'member_email': getattr(member, 'email', ''),
+                        'access_level': member.access_level,
+                        'access_level_name': AccessLevelUtil.get_level_name(member.access_level)
                     })
-            except:
-                pass
+                
+                # 獲取群組成員（如果有共享給群組）
+                try:
+                    shared_groups = project_detail.shared_with_groups
+                    for group in shared_groups:
+                        permissions_data.append({
+                            'project_id': project.id,
+                            'project_name': project.name,
+                            'member_type': 'Group',
+                            'member_id': group['group_id'],
+                            'member_name': group['group_name'],
+                            'member_username': '',
+                            'member_email': '',
+                            'access_level': group['group_access_level'],
+                            'access_level_name': AccessLevelUtil.get_level_name(group['group_access_level'])
+                        })
+                except:
+                    pass
         
         return permissions_data
 
@@ -233,8 +318,9 @@ class ProjectPermissionFetcher(IDataFetcher):
 class UserDataFetcher(IDataFetcher):
     """使用者資料獲取器"""
     
-    def __init__(self, client: GitLabClient):
+    def __init__(self, client: GitLabClient, progress_reporter: Optional[IProgressReporter] = None):
         self.client = client
+        self.progress = progress_reporter or SilentProgressReporter()
     
     def fetch(self, username: Optional[str] = None,
               project_name: Optional[str] = None,
@@ -256,13 +342,17 @@ class UserDataFetcher(IDataFetcher):
         Returns:
             使用者資料字典
         """
+        self.progress.report_start("正在獲取專案列表...")
         projects = self.client.get_projects(group_id=group_id)
+        self.progress.report_complete(f"找到 {len(projects)} 個專案")
         
         # 如果指定了專案名稱，篩選專案
         if project_name:
             projects = [p for p in projects if project_name.lower() in p.name.lower()]
             if not projects:
-                print(f"\n⚠️  警告：找不到名稱包含 '{project_name}' 的專案")
+                self.progress.report_warning(f"找不到名稱包含 '{project_name}' 的專案")
+            else:
+                self.progress.report_complete(f"篩選後剩餘 {len(projects)} 個專案")
         
         user_data = {
             'commits': [],
@@ -282,7 +372,12 @@ class UserDataFetcher(IDataFetcher):
             target_name = getattr(user_info, 'name', None)
             target_username = getattr(user_info, 'username', username)
         
-        for project in projects:
+        if projects:
+            self.progress.report_start(f"正在分析 {len(projects)} 個專案的使用者活動...")
+        
+        for idx, project in enumerate(projects, 1):
+            self.progress.report_progress(idx, len(projects), project.name)
+            
             # 獲取 commits
             commits = self.client.get_project_commits(
                 project.id,
@@ -435,7 +530,7 @@ class UserDataFetcher(IDataFetcher):
                         'expires_at': getattr(member, 'expires_at', None)
                     })
             except Exception as e:
-                print(f"Warning: Failed to get permissions for project {project.name}: {e}")
+                self.progress.report_warning(f"Failed to get permissions for project {project.name}: {e}")
         
         return user_data
 
@@ -443,8 +538,9 @@ class UserDataFetcher(IDataFetcher):
 class GroupDataFetcher(IDataFetcher):
     """群組資料獲取器（包含子群組、專案、授權資訊）"""
     
-    def __init__(self, client: GitLabClient):
+    def __init__(self, client: GitLabClient, progress_reporter: Optional[IProgressReporter] = None):
         self.client = client
+        self.progress = progress_reporter or SilentProgressReporter()
     
     def fetch(self, group_name: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -456,15 +552,22 @@ class GroupDataFetcher(IDataFetcher):
         Returns:
             群組資料字典，包含群組資訊、子群組、專案、授權
         """
+        self.progress.report_start("正在獲取群組列表...")
         groups = self.client.get_groups(group_name=group_name)
+        self.progress.report_complete(f"找到 {len(groups)} 個群組")
         
         groups_data = []
         subgroups_data = []
         projects_data = []
         permissions_data = []
         
-        for group in groups:
+        if groups:
+            self.progress.report_start(f"正在分析 {len(groups)} 個群組...")
+        
+        for idx, group in enumerate(groups, 1):
             try:
+                self.progress.report_progress(idx, len(groups), group.name)
+                
                 # 取得完整群組資訊
                 group_detail = self.client.get_group(group.id)
                 
@@ -584,14 +687,14 @@ class GroupDataFetcher(IDataFetcher):
                                     'expires_at': shared_group.get('expires_at', None)
                                 })
                         except Exception as e:
-                            print(f"Warning: Failed to get permissions for project {project.name}: {e}")
+                            self.progress.report_warning(f"Failed to get permissions for project {project.name}: {e}")
                 except:
                     group_info['projects_count'] = 0
                 
                 groups_data.append(group_info)
                 
             except Exception as e:
-                print(f"Warning: Failed to fetch group {group.name}: {e}")
+                self.progress.report_warning(f"Failed to fetch group {group.name}: {e}")
         
         return {
             'groups': groups_data,
@@ -1118,28 +1221,29 @@ class GitLabCLI:
             ssl_verify=False
         )
         self.exporter = DataExporter(output_dir=config.OUTPUT_DIR)
+        self.progress = ConsoleProgressReporter()
     
     def create_project_stats_service(self) -> ProjectStatsService:
         """創建專案統計服務"""
-        fetcher = ProjectDataFetcher(self.client)
+        fetcher = ProjectDataFetcher(self.client, self.progress)
         processor = ProjectDataProcessor()
         return ProjectStatsService(fetcher, processor, self.exporter)
     
     def create_project_permission_service(self) -> ProjectPermissionService:
         """創建專案授權服務"""
-        fetcher = ProjectPermissionFetcher(self.client)
+        fetcher = ProjectPermissionFetcher(self.client, self.progress)
         processor = ProjectPermissionProcessor()
         return ProjectPermissionService(fetcher, processor, self.exporter)
     
     def create_user_stats_service(self) -> UserStatsService:
         """創建使用者統計服務"""
-        fetcher = UserDataFetcher(self.client)
+        fetcher = UserDataFetcher(self.client, self.progress)
         processor = UserDataProcessor()
         return UserStatsService(fetcher, processor, self.exporter)
     
     def create_group_stats_service(self) -> GroupStatsService:
         """創建群組統計服務"""
-        fetcher = GroupDataFetcher(self.client)
+        fetcher = GroupDataFetcher(self.client, self.progress)
         processor = GroupDataProcessor()
         return GroupStatsService(fetcher, processor, self.exporter)
     
