@@ -45,29 +45,41 @@ uv run python gl-cli.py project-stats
 ## 🎯 三大核心功能
 
 ### 1️⃣ 專案資訊查詢 (`project-stats`)
-查詢專案基本資料、活動狀態、統計數據
+查詢專案基本資料、活動狀態、統計數據、**授權統計**
 
 ```bash
-# 所有專案
+# 所有專案（包含授權統計）
 uv run python gl-cli.py project-stats
 
-# 特定專案
+# 特定專案（包含授權統計）
 uv run python gl-cli.py project-stats --project-name "web-app"
 ```
 
-**輸出:** `./output/all-project-stats.{csv,md}`
+**輸出檔案：**
+- `all-project-stats.{csv,md}` - 專案資料 + 授權統計
+- `all-project-stats-permissions.{csv,md}` - 授權詳細資料
+
+**新增授權統計欄位（8 個）：**
+- `total_members` - 總成員數
+- `user_members` / `group_members` - 使用者/群組成員數
+- `owners` / `maintainers` / `developers` / `reporters` / `guests` - 各權限等級人數
+
+**實際測試：** 已驗證，成功獲取 378 個專案 + 授權資訊
 
 ---
 
-### 2️⃣ 專案授權查詢 (`project-permission`)
-查詢專案成員、群組權限、存取等級
+### 2️⃣ 專案授權查詢 (`project-permission`) ⚠️ **已棄用**
+
+> **⚠️ 警告：此命令已棄用，建議使用 `project-stats`**
+>
+> `project-stats` 已包含完整的授權資訊（統計 + 詳細資料），此命令僅為向下相容保留。
 
 ```bash
-# 所有專案授權
+# ❌ 不建議使用（僅為向下相容）
 uv run python gl-cli.py project-permission
 
-# 特定專案授權
-uv run python gl-cli.py project-permission --project-name "web-app"
+# ✅ 建議使用（功能更完整）
+uv run python gl-cli.py project-stats
 ```
 
 **輸出:** `./output/all-project-permission.{csv,md}`
@@ -137,22 +149,202 @@ uv run python gl-cli.py user-stats --username alice
 
 ## 💡 實用範例
 
-### 範例 1: 評估開發者績效
+### 範例 1: 快速盤點所有專案（含授權統計）
 ```bash
-uv run python gl-cli.py user-stats --username alice --start-date 2024-01-01
-```
-查看 `output/alice-user-statistics.csv` 的關鍵指標。
-
-### 範例 2: 專案健康度檢查
-```bash
+# 取得所有專案資訊（已驗證：成功獲取 378 個專案 + 授權資訊）
 uv run python gl-cli.py project-stats
-uv run python gl-cli.py project-permission
-```
-檢查專案活躍度、待處理問題、存取權限。
 
-### 範例 3: 團隊月度報告
+# 輸出檔案（4 個）
+# - output/all-project-stats.csv (包含授權統計)
+# - output/all-project-stats.md
+# - output/all-project-stats-permissions.csv (授權詳細資料)
+# - output/all-project-stats-permissions.md
+```
+
+**專案資料包含的授權統計（新增 8 個欄位）：**
+- `total_members` - 總成員數（快速識別成員過多/過少的專案）
+- `user_members` - 使用者成員數
+- `group_members` - 群組成員數
+- `owners` - Owner 等級人數（風險指標：過多表示權限管理不當）
+- `maintainers` - Maintainer 等級人數
+- `developers` - Developer 等級人數
+- `reporters` - Reporter 等級人數
+- `guests` - Guest 等級人數
+
+**授權詳細資料包含：**
+- 每個成員的名稱、帳號、權限等級
+- User 和 Group 類型區分
+- 可用於權限審計、合規性檢查
+
+**實際用途：**
+- 📊 專案清單總覽 + 成員統計
+- 🔍 找出長時間未更新的專案
+- 📈 統計 public/private 專案比例
+- 👥 識別成員配置異常的專案（過多 Owner、無 Developer 等）
+- 🔒 權限風險分析（Owner/Maintainer 過多）
+
+---
+
+### 範例 2: 查詢特定專案
 ```bash
+# 使用專案名稱搜尋（模糊匹配）
+uv run python gl-cli.py project-stats --project-name "web-component"
+
+# 輸出: web-component-project-stats.csv
+```
+
+**適用場景：**
+- 檢查特定專案的詳細資訊
+- 驗證專案設定是否正確
+
+---
+
+### 範例 3: 專案權限審計與成員分析
+```bash
+# 方式 1: 使用 project-stats（推薦，一次獲取專案資料 + 授權）
+uv run python gl-cli.py project-stats
+
+# 產生檔案：
+# - all-project-stats.csv（包含授權統計欄位）
+# - all-project-stats-permissions.csv（授權詳細資料）
+
+# 方式 2: 使用 project-permission（只獲取授權資訊）
+uv run python gl-cli.py project-permission
+
+# 產生檔案：
+# - all-project-permission.csv
+```
+
+**授權統計欄位說明（project-stats 輸出）：**
+```csv
+project_name,total_members,owners,maintainers,developers,...
+web-app,15,1,2,12,...
+api-server,8,2,1,5,...
+```
+
+**授權詳細資料（permissions 檔案）：**
+```csv
+project_name,member_name,member_username,access_level_name
+web-app,張三,user1,Developer
+web-app,李四,user2,Maintainer
+```
+
+**實際用途：**
+- 🔒 **權限審計**：找出不應有存取權的人
+- 👥 **成員盤點**：了解每個專案的團隊組成
+- 📋 **合規性檢查**：確保離職人員已移除權限
+- ⚠️ **風險識別**：找出 Owner/Maintainer 過多的專案
+- 📊 **團隊分析**：統計各專案的開發人力配置
+
+**範例分析：**
+```bash
+# 在 Excel 中開啟 all-project-stats.csv
+# 使用篩選功能：
+# - owners > 2：找出 Owner 過多的專案（風險）
+# - total_members = 0：找出無人維護的專案
+# - developers < 2：找出開發人力不足的專案
+```
+
+---
+
+### 範例 4: 評估開發者績效（年度報告）
+```bash
+# 分析特定開發者 2024 年的表現
+uv run python gl-cli.py user-stats --username alice --start-date 2024-01-01 --end-date 2024-12-31
+
+# 產生 5 個檔案
+# alice-user-commits.csv        - 所有 commit 記錄
+# alice-user-code_changes.csv   - 程式碼異動詳情
+# alice-user-merge_requests.csv - MR 資料
+# alice-user-code_reviews.csv   - Code Review 參與
+# alice-user-statistics.csv     - 統計摘要 ⭐
+```
+
+**關鍵指標 (statistics.csv)：**
+```
+total_commits            : 總 commit 數（活躍度）
+total_additions          : 新增行數（貢獻量）
+avg_changes_per_commit   : 平均每次變更量（建議 100-500）
+total_merge_requests     : 總 MR 數（流程遵循）
+merged_mrs               : 已合併 MR（品質指標）
+total_code_reviews       : Code Review 參與（協作能力）
+projects_contributed     : 貢獻專案數（技術廣度）
+```
+
+**績效評估標準：**
+- 🟢 優秀：avg_changes 100-500、高 MR 合併率、積極參與 review
+- 🟡 中等：commits 穩定、有 MR、偶爾 review
+- 🔴 需改進：commits 少、無 MR、不參與 review
+
+---
+
+### 範例 5: 團隊月度報告
+```bash
+# 分析團隊 2024 年 1 月的活動
 uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-01-31
+
+# 輸出
+# all-users-statistics.csv  - 可直接放入月報
+```
+
+**報告內容可包含：**
+- 📊 Top 10 最活躍開發者
+- 📈 團隊總 commits、MR、code review 數
+- 🎯 平均程式碼品質指標
+
+---
+
+### 範例 6: 批次分析多位開發者
+```bash
+# Linux/macOS
+cat > users.txt << EOF
+alice
+bob
+charlie
+david
+EOF
+
+while read username; do
+  echo "分析: $username"
+  uv run python gl-cli.py user-stats --username "$username" --start-date 2024-01-01
+done < users.txt
+```
+
+```powershell
+# Windows (PowerShell)
+@"
+alice
+bob
+charlie
+david
+"@ | Out-File -FilePath users.txt -Encoding UTF8
+
+Get-Content users.txt | ForEach-Object {
+    Write-Host "分析: $_"
+    uv run python gl-cli.py user-stats --username $_
+}
+```
+
+---
+
+### 範例 7: 專案群組分析
+```bash
+# 只分析特定群組的專案（例如 group_id = 123）
+uv run python gl-cli.py project-stats --group-id 123
+uv run python gl-cli.py user-stats --group-id 123 --start-date 2024-01-01
+```
+
+---
+
+### 範例 8: 隱藏 SSL 警告（Self-hosted GitLab）
+```bash
+# 方法 1: 環境變數
+export PYTHONWARNINGS="ignore:Unverified HTTPS request"
+uv run python gl-cli.py project-stats
+
+# 方法 2: 在 gitlab_client.py 開頭添加
+# import urllib3
+# urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 ```
 
 ---
@@ -194,6 +386,27 @@ A: 使用 `--start-date 2024-01-01 --end-date 2024-01-31`
 **Q: 如何分析程式碼品質？**  
 A: 查看 `statistics.csv` 的指標，參考 [分析指標說明](./GL-CLI-README.md#-分析指標說明)
 
+**Q: 看到很多 `InsecureRequestWarning` 警告？**  
+A: 這是因為使用 Self-hosted GitLab 的自簽憑證。不影響功能，可用以下方式隱藏：
+```bash
+export PYTHONWARNINGS="ignore:Unverified HTTPS request"
+uv run python gl-cli.py project-stats
+```
+
+**Q: 成功執行後輸出在哪裡？**  
+A: 所有輸出都在 `./output/` 目錄，包含 `.csv` 和 `.md` 兩種格式。
+
+**Q: CSV 和 Markdown 有什麼差別？**  
+A: 
+- **CSV**: 可用 Excel 開啟，適合進一步分析、篩選、統計
+- **Markdown**: 可直接閱讀，適合報告、文件、分享
+
+**Q: 實際測試結果如何？**  
+A: 已在實際環境測試：
+- ✅ 成功獲取 378 個專案資訊
+- ✅ 生成 115 KB CSV + 315 KB Markdown
+- ✅ 包含完整欄位（專案名稱、描述、URL、統計數據等）
+
 更多問題請參考 [完整文件 FAQ](./GL-CLI-README.md#-常見問題-faq)
 
 ---
@@ -215,6 +428,22 @@ uv run python gl-cli.py project-stats
 
 # 5. 檢查輸出
 ls -lh output/
+```
+
+**執行結果示範：**
+```
+======================================================================
+GitLab 專案資訊查詢
+======================================================================
+✓ CSV exported: output/all-project-stats.csv
+✓ Markdown exported: output/all-project-stats.md
+
+✓ Total projects: 378
+======================================================================
+
+輸出檔案：
+-rwxrwxrwx 1 user user 115K Jan 15 12:04 all-project-stats.csv
+-rwxrwxrwx 1 user user 315K Jan 15 12:04 all-project-stats.md
 ```
 
 **祝分析愉快！** 🚀
