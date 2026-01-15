@@ -42,7 +42,7 @@ uv run python gl-cli.py project-stats
 
 ---
 
-## 🎯 三大核心功能
+## 🎯 四大核心功能
 
 ### 1️⃣ 專案資訊查詢 (`project-stats`)
 查詢專案基本資料、活動狀態、統計數據、**授權統計**
@@ -68,7 +68,36 @@ uv run python gl-cli.py project-stats --project-name "web-app"
 
 ---
 
-### 2️⃣ 專案授權查詢 (`project-permission`) ⚠️ **已棄用**
+### 2️⃣ 群組資訊查詢 (`group-stats`) 🆕
+查詢群組完整資訊、子群組、專案、**授權統計**
+
+```bash
+# 所有群組
+uv run python gl-cli.py group-stats
+
+# 特定群組
+uv run python gl-cli.py group-stats --group-name "my-group"
+```
+
+**輸出檔案：**
+- `all-groups-stats.{csv,md}` - 群組資料 + 成員統計
+- `all-groups-stats-subgroups.{csv,md}` - 子群組資料
+- `all-groups-stats-projects.{csv,md}` - 群組專案資料
+- `all-groups-stats-permissions.{csv,md}` - 授權詳細資料
+
+**群組統計欄位：**
+- 群組基本資訊：`group_name`, `description`, `visibility`, `created_at`, `web_url`
+- 成員統計：`total_members`, `owners`, `maintainers`, `developers`, `reporters`, `guests`
+- 資源統計：`subgroups_count`, `projects_count`
+
+**授權詳細資料包含：**
+- 群組成員授權
+- 群組內所有專案的成員授權
+- 支援使用者和群組類型的授權
+
+---
+
+### 3️⃣ 專案授權查詢 (`project-permission`) ⚠️ **已棄用**
 
 > **⚠️ 警告：此命令已棄用，建議使用 `project-stats`**
 >
@@ -86,7 +115,7 @@ uv run python gl-cli.py project-stats
 
 ---
 
-### 3️⃣ 使用者統計查詢 (`user-stats`)
+### 4️⃣ 使用者統計查詢 (`user-stats`)
 深度分析開發者活動：commits、MR、code review、授權、統計
 
 ```bash
@@ -194,7 +223,76 @@ uv run python gl-cli.py project-stats
 
 ---
 
-### 範例 2: 查詢特定專案
+### 範例 2: 群組資訊查詢與授權審計
+```bash
+# 取得所有群組資訊（包含子群組、專案、授權）
+uv run python gl-cli.py group-stats
+
+# 產生檔案（4 個）：
+# - output/all-groups-stats.csv (群組基本資訊 + 成員統計)
+# - output/all-groups-stats.md
+# - output/all-groups-stats-subgroups.csv (子群組資料)
+# - output/all-groups-stats-subgroups.md
+# - output/all-groups-stats-projects.csv (群組內專案資料)
+# - output/all-groups-stats-projects.md
+# - output/all-groups-stats-permissions.csv (授權詳細資料)
+# - output/all-groups-stats-permissions.md
+```
+
+**群組資料包含：**
+- `group_name`, `group_path`, `group_full_path` - 群組識別資訊
+- `description`, `visibility`, `created_at` - 群組基本資訊
+- `total_members` - 總成員數
+- `owners`, `maintainers`, `developers`, `reporters`, `guests` - 各權限等級人數
+- `subgroups_count`, `projects_count` - 資源統計
+
+**子群組資料包含：**
+- 父群組與子群組的關聯
+- 子群組的完整路徑、描述、可見性
+
+**專案資料包含：**
+- 所屬群組資訊
+- 專案基本資訊、活動時間、URL
+
+**授權詳細資料包含：**
+- 群組成員授權（resource_type: Group）
+- 專案成員授權（resource_type: Project）
+- 成員名稱、帳號、權限等級、過期時間
+
+**實際用途：**
+- 📊 群組架構總覽（包含子群組層級）
+- 👥 群組成員配置分析
+- 🔍 找出無人維護的群組
+- 🔒 群組權限審計（跨群組和專案）
+- 📈 統計群組資源配置（專案數、成員數）
+
+**範例分析：**
+```bash
+# 在 Excel 中開啟 all-groups-stats.csv
+# 使用篩選功能：
+# - owners > 3：找出 Owner 過多的群組（風險）
+# - projects_count = 0：找出無專案的空群組
+# - total_members < 2：找出成員不足的群組
+```
+
+---
+
+### 範例 3: 查詢特定群組
+```bash
+# 使用群組名稱搜尋（模糊匹配）
+uv run python gl-cli.py group-stats --group-name "backend"
+
+# 輸出: backend-group-stats.csv, backend-group-stats-permissions.csv 等
+```
+
+**適用場景：**
+- 檢查特定群組的詳細資訊
+- 驗證群組設定是否正確
+- 單一群組的權限審計
+
+---
+
+### 範例 4: 查詢特定專案
 ```bash
 # 使用專案名稱搜尋（模糊匹配）
 uv run python gl-cli.py project-stats --project-name "web-component"
@@ -208,7 +306,7 @@ uv run python gl-cli.py project-stats --project-name "web-component"
 
 ---
 
-### 範例 3: 專案權限審計與成員分析
+### 範例 5: 專案權限審計與成員分析
 ```bash
 # 方式 1: 使用 project-stats（推薦，一次獲取專案資料 + 授權）
 uv run python gl-cli.py project-stats
@@ -256,7 +354,7 @@ web-app,李四,user2,Maintainer
 
 ---
 
-### 範例 4: 評估開發者績效（年度報告）
+### 範例 6: 評估開發者績效（年度報告）
 ```bash
 # 分析特定開發者 2024 年的表現
 uv run python gl-cli.py user-stats --username alice --start-date 2024-01-01 --end-date 2024-12-31
@@ -287,7 +385,7 @@ projects_contributed     : 貢獻專案數（技術廣度）
 
 ---
 
-### 範例 5: 團隊月度報告
+### 範例 7: 團隊月度報告
 ```bash
 # 分析團隊 2024 年 1 月的活動
 uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-01-31
@@ -303,7 +401,7 @@ uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-01-31
 
 ---
 
-### 範例 6: 批次分析多位開發者
+### 範例 8: 批次分析多位開發者
 ```bash
 # Linux/macOS
 cat > users.txt << EOF
@@ -336,7 +434,7 @@ Get-Content users.txt | ForEach-Object {
 
 ---
 
-### 範例 7: 專案群組分析
+### 範例 9: 專案群組分析
 ```bash
 # 只分析特定群組的專案（例如 group_id = 123）
 uv run python gl-cli.py project-stats --group-id 123
@@ -345,7 +443,7 @@ uv run python gl-cli.py user-stats --group-id 123 --start-date 2024-01-01
 
 ---
 
-### 範例 8: 隱藏 SSL 警告（Self-hosted GitLab）
+### 範例 10: 隱藏 SSL 警告（Self-hosted GitLab）
 ```bash
 # 方法 1: 環境變數
 export PYTHONWARNINGS="ignore:Unverified HTTPS request"

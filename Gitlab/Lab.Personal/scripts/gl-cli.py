@@ -395,6 +395,167 @@ class UserDataFetcher(IDataFetcher):
         return user_data
 
 
+class GroupDataFetcher(IDataFetcher):
+    """群組資料獲取器（包含子群組、專案、授權資訊）"""
+    
+    def __init__(self, client: GitLabClient):
+        self.client = client
+    
+    def fetch(self, group_name: Optional[str] = None) -> Dict[str, Any]:
+        """
+        獲取群組資料
+        
+        Args:
+            group_name: 群組名稱 (可選，不填則取得全部)
+        
+        Returns:
+            群組資料字典，包含群組資訊、子群組、專案、授權
+        """
+        groups = self.client.get_groups(group_name=group_name)
+        
+        groups_data = []
+        subgroups_data = []
+        projects_data = []
+        permissions_data = []
+        
+        for group in groups:
+            try:
+                # 取得完整群組資訊
+                group_detail = self.client.get_group(group.id)
+                
+                # 群組基本資訊
+                group_info = {
+                    'group_id': group_detail.id,
+                    'group_name': group_detail.name,
+                    'group_path': group_detail.path,
+                    'group_full_path': group_detail.full_path,
+                    'description': getattr(group_detail, 'description', ''),
+                    'visibility': getattr(group_detail, 'visibility', ''),
+                    'created_at': getattr(group_detail, 'created_at', ''),
+                    'web_url': getattr(group_detail, 'web_url', ''),
+                    'parent_id': getattr(group_detail, 'parent_id', None),
+                }
+                
+                # 取得群組成員
+                members = self.client.get_group_members(group_detail.id)
+                group_info['total_members'] = len(members)
+                group_info['owners'] = len([m for m in members if m.access_level == 50])
+                group_info['maintainers'] = len([m for m in members if m.access_level == 40])
+                group_info['developers'] = len([m for m in members if m.access_level == 30])
+                group_info['reporters'] = len([m for m in members if m.access_level == 20])
+                group_info['guests'] = len([m for m in members if m.access_level == 10])
+                
+                # 群組成員授權資訊
+                for member in members:
+                    permissions_data.append({
+                        'group_id': group_detail.id,
+                        'group_name': group_detail.name,
+                        'resource_type': 'Group',
+                        'member_id': member.id,
+                        'member_name': getattr(member, 'name', ''),
+                        'member_username': member.username,
+                        'member_email': getattr(member, 'email', ''),
+                        'access_level': member.access_level,
+                        'access_level_name': AccessLevelUtil.get_level_name(member.access_level),
+                        'expires_at': getattr(member, 'expires_at', None)
+                    })
+                
+                # 取得子群組
+                try:
+                    subgroups = self.client.get_group_subgroups(group_detail.id)
+                    group_info['subgroups_count'] = len(subgroups)
+                    
+                    for subgroup in subgroups:
+                        subgroups_data.append({
+                            'parent_group_id': group_detail.id,
+                            'parent_group_name': group_detail.name,
+                            'subgroup_id': subgroup.id,
+                            'subgroup_name': subgroup.name,
+                            'subgroup_path': subgroup.path,
+                            'subgroup_full_path': subgroup.full_path,
+                            'description': getattr(subgroup, 'description', ''),
+                            'visibility': getattr(subgroup, 'visibility', ''),
+                            'web_url': getattr(subgroup, 'web_url', ''),
+                        })
+                except:
+                    group_info['subgroups_count'] = 0
+                
+                # 取得群組專案
+                try:
+                    projects = self.client.get_group_projects(group_detail.id)
+                    group_info['projects_count'] = len(projects)
+                    
+                    for project in projects:
+                        project_info = {
+                            'group_id': group_detail.id,
+                            'group_name': group_detail.name,
+                            'project_id': project.id,
+                            'project_name': project.name,
+                            'project_path': project.path,
+                            'description': getattr(project, 'description', ''),
+                            'visibility': getattr(project, 'visibility', ''),
+                            'created_at': getattr(project, 'created_at', ''),
+                            'last_activity_at': getattr(project, 'last_activity_at', ''),
+                            'web_url': getattr(project, 'web_url', ''),
+                        }
+                        projects_data.append(project_info)
+                        
+                        # 取得專案成員授權
+                        try:
+                            project_detail = self.client.get_project(project.id)
+                            project_members = project_detail.members.list(all=True)
+                            
+                            for member in project_members:
+                                permissions_data.append({
+                                    'group_id': group_detail.id,
+                                    'group_name': group_detail.name,
+                                    'resource_type': 'Project',
+                                    'resource_id': project.id,
+                                    'resource_name': project.name,
+                                    'member_id': member.id,
+                                    'member_name': getattr(member, 'name', ''),
+                                    'member_username': member.username,
+                                    'member_email': getattr(member, 'email', ''),
+                                    'access_level': member.access_level,
+                                    'access_level_name': AccessLevelUtil.get_level_name(member.access_level),
+                                    'expires_at': getattr(member, 'expires_at', None)
+                                })
+                            
+                            # 取得共享給群組的授權
+                            shared_groups = getattr(project_detail, 'shared_with_groups', [])
+                            for shared_group in shared_groups:
+                                permissions_data.append({
+                                    'group_id': group_detail.id,
+                                    'group_name': group_detail.name,
+                                    'resource_type': 'Project',
+                                    'resource_id': project.id,
+                                    'resource_name': project.name,
+                                    'member_id': shared_group.get('group_id'),
+                                    'member_name': shared_group.get('group_name'),
+                                    'member_username': '',
+                                    'member_email': '',
+                                    'access_level': shared_group.get('group_access_level'),
+                                    'access_level_name': AccessLevelUtil.get_level_name(shared_group.get('group_access_level')),
+                                    'expires_at': shared_group.get('expires_at', None)
+                                })
+                        except Exception as e:
+                            print(f"Warning: Failed to get permissions for project {project.name}: {e}")
+                except:
+                    group_info['projects_count'] = 0
+                
+                groups_data.append(group_info)
+                
+            except Exception as e:
+                print(f"Warning: Failed to fetch group {group.name}: {e}")
+        
+        return {
+            'groups': groups_data,
+            'subgroups': subgroups_data,
+            'projects': projects_data,
+            'permissions': permissions_data
+        }
+
+
 # ==================== 資料處理器 (單一職責原則) ====================
 
 class ProjectDataProcessor(IDataProcessor):
@@ -589,6 +750,52 @@ class UserDataProcessor(IDataProcessor):
         return pd.DataFrame(stats)
 
 
+class GroupDataProcessor(IDataProcessor):
+    """群組資料處理器"""
+    
+    def process(self, data: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
+        """
+        處理群組資料
+        
+        Args:
+            data: 包含 'groups', 'subgroups', 'projects', 'permissions' 的字典
+        
+        Returns:
+            包含多個 DataFrame 的字典
+        """
+        result = {}
+        
+        # 處理群組資料
+        groups_data = data.get('groups', [])
+        if groups_data:
+            result['groups'] = pd.DataFrame(groups_data)
+        else:
+            result['groups'] = pd.DataFrame()
+        
+        # 處理子群組資料
+        subgroups_data = data.get('subgroups', [])
+        if subgroups_data:
+            result['subgroups'] = pd.DataFrame(subgroups_data)
+        else:
+            result['subgroups'] = pd.DataFrame()
+        
+        # 處理專案資料
+        projects_data = data.get('projects', [])
+        if projects_data:
+            result['projects'] = pd.DataFrame(projects_data)
+        else:
+            result['projects'] = pd.DataFrame()
+        
+        # 處理授權資料
+        permissions_data = data.get('permissions', [])
+        if permissions_data:
+            result['permissions'] = pd.DataFrame(permissions_data)
+        else:
+            result['permissions'] = pd.DataFrame()
+        
+        return result
+
+
 # ==================== 資料匯出器 (單一職責原則) ====================
 
 class DataExporter(IDataExporter):
@@ -751,6 +958,57 @@ class UserStatsService(BaseService):
         print("=" * 70)
 
 
+class GroupStatsService(BaseService):
+    """群組統計服務"""
+    
+    def execute(self, group_name: Optional[str] = None) -> None:
+        """執行群組統計"""
+        print("=" * 70)
+        print("GitLab 群組資訊查詢")
+        print("=" * 70)
+        
+        # 獲取資料
+        group_data = self.fetcher.fetch(group_name=group_name)
+        
+        if not group_data['groups']:
+            print("No groups found.")
+            return
+        
+        # 處理資料
+        processed_data = self.processor.process(group_data)
+        
+        # 決定檔名
+        if group_name:
+            base_filename = f"{group_name}-group-stats"
+        else:
+            base_filename = "all-groups-stats"
+        
+        # 匯出群組資料
+        if not processed_data['groups'].empty:
+            self.exporter.export(processed_data['groups'], base_filename)
+            print(f"\n✓ Total groups: {len(processed_data['groups'])}")
+        
+        # 匯出子群組資料
+        if not processed_data['subgroups'].empty:
+            subgroups_filename = f"{base_filename}-subgroups"
+            self.exporter.export(processed_data['subgroups'], subgroups_filename)
+            print(f"✓ Total subgroups: {len(processed_data['subgroups'])}")
+        
+        # 匯出專案資料
+        if not processed_data['projects'].empty:
+            projects_filename = f"{base_filename}-projects"
+            self.exporter.export(processed_data['projects'], projects_filename)
+            print(f"✓ Total projects: {len(processed_data['projects'])}")
+        
+        # 匯出授權資料
+        if not processed_data['permissions'].empty:
+            permissions_filename = f"{base_filename}-permissions"
+            self.exporter.export(processed_data['permissions'], permissions_filename)
+            print(f"✓ Total permission records: {len(processed_data['permissions'])}")
+        
+        print("=" * 70)
+
+
 # ==================== CLI 介面 ====================
 
 class GitLabCLI:
@@ -781,6 +1039,12 @@ class GitLabCLI:
         fetcher = UserDataFetcher(self.client)
         processor = UserDataProcessor()
         return UserStatsService(fetcher, processor, self.exporter)
+    
+    def create_group_stats_service(self) -> GroupStatsService:
+        """創建群組統計服務"""
+        fetcher = GroupDataFetcher(self.client)
+        processor = GroupDataProcessor()
+        return GroupStatsService(fetcher, processor, self.exporter)
     
     def run(self):
         """執行 CLI"""
@@ -823,6 +1087,12 @@ class GitLabCLI:
   
   # 6. 取得特定使用者資訊
   python gl-cli.py user-stats --username johndoe --start-date 2024-01-01
+  
+  # 7. 取得所有群組資訊
+  python gl-cli.py group-stats
+  
+  # 8. 取得特定群組資訊
+  python gl-cli.py group-stats --group-name "my-group"
             """
         )
         
@@ -890,6 +1160,18 @@ class GitLabCLI:
         )
         user_stats_parser.set_defaults(func=self._cmd_user_stats)
         
+        # 4. group-stats 命令
+        group_stats_parser = subparsers.add_parser(
+            'group-stats',
+            help='取得群組所有資訊'
+        )
+        group_stats_parser.add_argument(
+            '--group-name',
+            type=str,
+            help='群組名稱 (可選，不填則取得全部)'
+        )
+        group_stats_parser.set_defaults(func=self._cmd_group_stats)
+        
         return parser
     
     def _cmd_project_stats(self, args):
@@ -917,6 +1199,11 @@ class GitLabCLI:
             end_date=args.end_date or config.END_DATE,
             group_id=args.group_id or config.TARGET_GROUP_ID
         )
+    
+    def _cmd_group_stats(self, args):
+        """執行群組統計命令"""
+        service = self.create_group_stats_service()
+        service.execute(group_name=args.group_name)
 
 
 def main():
