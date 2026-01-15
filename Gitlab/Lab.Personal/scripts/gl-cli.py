@@ -237,6 +237,7 @@ class UserDataFetcher(IDataFetcher):
         self.client = client
     
     def fetch(self, username: Optional[str] = None,
+              project_name: Optional[str] = None,
               start_date: Optional[str] = None,
               end_date: Optional[str] = None,
               group_id: Optional[int] = None,
@@ -246,6 +247,7 @@ class UserDataFetcher(IDataFetcher):
         
         Args:
             username: 使用者名稱 (可選)
+            project_name: 專案名稱 (可選，篩選特定專案)
             start_date: 開始日期
             end_date: 結束日期
             group_id: 群組 ID (可選)
@@ -255,6 +257,12 @@ class UserDataFetcher(IDataFetcher):
             使用者資料字典
         """
         projects = self.client.get_projects(group_id=group_id)
+        
+        # 如果指定了專案名稱，篩選專案
+        if project_name:
+            projects = [p for p in projects if project_name.lower() in p.name.lower()]
+            if not projects:
+                print(f"\n⚠️  警告：找不到名稱包含 '{project_name}' 的專案")
         
         user_data = {
             'commits': [],
@@ -951,7 +959,8 @@ class ProjectPermissionService(BaseService):
 class UserStatsService(BaseService):
     """使用者統計服務"""
     
-    def execute(self, username: Optional[str] = None, 
+    def execute(self, username: Optional[str] = None,
+                project_name: Optional[str] = None,
                 start_date: Optional[str] = None,
                 end_date: Optional[str] = None,
                 group_id: Optional[int] = None) -> None:
@@ -982,9 +991,14 @@ class UserStatsService(BaseService):
                 print(f"\n⚠️  警告：無法驗證使用者 ({e})")
                 print("  繼續執行查詢...")
         
+        # 顯示查詢範圍
+        if project_name:
+            print(f"\n📂 查詢範圍：專案 '{project_name}'")
+        
         # 獲取資料
         user_data = self.fetcher.fetch(
             username=username,
+            project_name=project_name,
             start_date=start_date,
             end_date=end_date,
             group_id=group_id,
@@ -995,8 +1009,12 @@ class UserStatsService(BaseService):
         processed_data = self.processor.process(user_data)
         
         # 匯出資料
-        if username:
+        if username and project_name:
+            base_filename = f"{username}-{project_name}-user"
+        elif username:
             base_filename = f"{username}-user"
+        elif project_name:
+            base_filename = f"{project_name}-users"
         else:
             base_filename = "all-users"
         
@@ -1167,10 +1185,13 @@ class GitLabCLI:
   # 6. 取得特定使用者資訊
   python gl-cli.py user-stats --username johndoe --start-date 2024-01-01
   
-  # 7. 取得所有群組資訊
+  # 7. 取得特定專案的開發者活動
+  python gl-cli.py user-stats --project-name "web-api" --start-date 2024-01-01
+  
+  # 8. 取得所有群組資訊
   python gl-cli.py group-stats
   
-  # 8. 取得特定群組資訊
+  # 9. 取得特定群組資訊
   python gl-cli.py group-stats --group-name "my-group"
             """
         )
@@ -1221,6 +1242,11 @@ class GitLabCLI:
             '--username',
             type=str,
             help='使用者名稱 (可選，不填則取得全部)'
+        )
+        user_stats_parser.add_argument(
+            '--project-name',
+            type=str,
+            help='專案名稱 (可選，不填則取得全部)'
         )
         user_stats_parser.add_argument(
             '--start-date',
@@ -1274,6 +1300,7 @@ class GitLabCLI:
         service = self.create_user_stats_service()
         service.execute(
             username=args.username,
+            project_name=args.project_name,
             start_date=args.start_date or config.START_DATE,
             end_date=args.end_date or config.END_DATE,
             group_id=args.group_id or config.TARGET_GROUP_ID
