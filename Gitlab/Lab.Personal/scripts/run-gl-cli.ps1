@@ -68,7 +68,7 @@ function Show-Help {
     Write-Host "     .\run-gl-cli.ps1 project-permission [-project-name NAME] [-group-id ID]"
     Write-Host ""
     Write-Host "  3. 使用者統計查詢:"
-    Write-Host "     .\run-gl-cli.ps1 user-stats [-username NAME] [-start-date YYYY-MM-DD] [-end-date YYYY-MM-DD] [-group-id ID]"
+    Write-Host "     .\run-gl-cli.ps1 user-details [-username NAME] [-start-date YYYY-MM-DD] [-end-date YYYY-MM-DD] [-group-id ID]"
     Write-Host ""
     Write-Host "快速範例："
     Write-Host ""
@@ -79,10 +79,10 @@ function Show-Help {
     Write-Host '  .\run-gl-cli.ps1 project-permission --project-name "my-project"'
     Write-Host ""
     Write-Host "  # 分析 2024 年的使用者活動"
-    Write-Host "  .\run-gl-cli.ps1 user-stats --start-date 2024-01-01 --end-date 2024-12-31"
+    Write-Host "  .\run-gl-cli.ps1 user-details --start-date 2024-01-01 --end-date 2024-12-31"
     Write-Host ""
     Write-Host "  # 分析特定使用者"
-    Write-Host "  .\run-gl-cli.ps1 user-stats --username johndoe"
+    Write-Host "  .\run-gl-cli.ps1 user-details --username johndoe"
     Write-Host ""
     Write-Host "其他命令："
     Write-Host ""
@@ -211,7 +211,7 @@ function Main {
         "clean" {
             Clean-Output
         }
-        { $_ -in "project-stats", "project-permission", "user-stats" } {
+        { $_ -in "project-stats", "project-permission", "user-details" } {
             $allArgs = @($Command) + $Arguments
             Invoke-Cli -Args $allArgs
         }
