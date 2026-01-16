@@ -119,7 +119,7 @@ class GitLabClient:
             diff 列表
         """
         commit_detail = self.get_commit_detail(project_id, commit_id)
-        return commit_detail.diff()
+        return commit_detail.diff(get_all=True)
     
     # ==================== Merge Requests 操作 ====================
     
