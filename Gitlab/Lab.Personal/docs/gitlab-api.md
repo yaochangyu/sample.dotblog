@@ -495,3 +495,42 @@ developer_report = {
 - [python-gitlab 官方文件](https://python-gitlab.readthedocs.io/)
 - [GitLab API 文件](https://docs.gitlab.com/ee/api/)
 - [GitLab Permissions 說明](https://docs.gitlab.com/ee/user/permissions.html)
+
+---
+
+## 📊 實際應用：開發者品質分析
+
+本 API 文件的「開發者活動與貢獻資料」章節已整合至 `gl-cli.py` 工具的 `user-details` 命令。
+
+### 產生的 CSV 檔案
+
+執行 `user-details` 命令後，會自動產生以下 CSV 檔案供分析使用：
+
+| CSV 檔案 | 對應 API 章節 | 說明 |
+|---------|--------------|------|
+| `*-user_profile.csv` | [使用者基本資訊](#使用者基本資訊-user-profile) | 包含使用者的個人資料、帳號狀態、權限設定等完整資訊 |
+| `*-user_events.csv` | [使用者事件](#3️⃣-使用者事件-user-events) | 包含 push、create、merge、comment 等所有活動事件 |
+| `*-contributors.csv` | [貢獻者統計](#2️⃣-貢獻者統計最佳方式) | 來自 `repository_contributors()` API 的統計資料 |
+| `*-commits.csv` | [Commits 相關資料](#1️⃣-commits-相關資料) | 包含 commit SHA、作者、日期、統計數據 |
+| `*-code_changes.csv` | [Commits 相關資料](#1️⃣-commits-相關資料) | 詳細的檔案變更記錄（new/modified/deleted） |
+| `*-merge_requests.csv` | [Merge Requests 資料](#4️⃣-merge-requests-資料) | MR 的標題、狀態、作者、合併時間等資訊 |
+| `*-code_reviews.csv` | [Code Review 參與度](#5️⃣-code-review-參與度) | MR 討論、評論、解決狀態 |
+| `*-permissions.csv` | [群組成員資格](#2️⃣-群組成員資格) | 專案授權資訊、access level |
+| `*-statistics.csv` | [開發者程式碼品質分析指標](#開發者程式碼品質分析指標) | 整合所有指標的統計摘要 |
+
+### 快速開始
+
+```bash
+# 取得特定開發者的完整分析資料
+python gl-cli.py user-details --username alice --start-date 2024-01-01 --end-date 2024-12-31
+
+# 取得特定專案的所有開發者資料
+python gl-cli.py user-details --project-name "web-api" --start-date 2024-01-01
+
+# 取得所有使用者的資料
+python gl-cli.py user-details --start-date 2024-01-01
+```
+
+詳細使用說明請參考：[開發者程式碼品質與技術水平分析文件](./developer-analysis.md)
+
+---
