@@ -542,17 +542,30 @@ class UserProjectsFetcher(IDataFetcher):
         self.client = client
         self.progress = progress_reporter or SilentProgressReporter()
     
-    def fetch(self, username: Optional[str] = None, group_id: Optional[int] = None) -> Dict[str, Any]:
+    def fetch(self, username: Optional[str] = None, group_name: Optional[str] = None) -> Dict[str, Any]:
         """
         獲取使用者參與的專案列表
         
         Args:
             username: 使用者名稱 (可選)
-            group_id: 群組 ID (可選)
+            group_name: 群組名稱 (可選)
         
         Returns:
             使用者專案資料
         """
+        # 如果有提供群組名稱，先轉換為群組 ID
+        group_id = None
+        if group_name:
+            try:
+                groups = self.client.get_groups(group_name=group_name)
+                if groups:
+                    group_id = groups[0].id
+                    self.progress.report_complete(f"找到群組：{groups[0].name} (ID: {group_id})")
+                else:
+                    self.progress.report_warning(f"找不到群組 '{group_name}'，將查詢所有專案")
+            except Exception as e:
+                self.progress.report_warning(f"無法查詢群組: {e}")
+        
         self.progress.report_start("正在獲取專案列表...")
         projects = self.client.get_projects(group_id=group_id)
         self.progress.report_complete(f"找到 {len(projects)} 個專案")
@@ -1280,7 +1293,7 @@ class UserStatsService(BaseService):
 class UserProjectsService(BaseService):
     """使用者專案服務"""
     
-    def execute(self, username: Optional[str] = None, group_id: Optional[int] = None) -> None:
+    def execute(self, username: Optional[str] = None, group_name: Optional[str] = None) -> None:
         """執行使用者專案查詢"""
         print("=" * 70)
         print("GitLab 使用者專案列表查詢")
@@ -1308,7 +1321,7 @@ class UserProjectsService(BaseService):
                 print("  繼續執行查詢...")
         
         # 獲取資料
-        user_data = self.fetcher.fetch(username=username, group_id=group_id)
+        user_data = self.fetcher.fetch(username=username, group_name=group_name)
         
         # 處理資料
         processed_data = self.processor.process(user_data)
@@ -1516,15 +1529,24 @@ class GitLabCLI:
   # 15. 取得多位使用者的專案列表 🆕
   python gl-cli.py user-projects --username alice bob charlie
   
-  # 16. 取得所有群組資訊
+  # 16. 取得特定群組的使用者專案列表
+  python gl-cli.py user-projects --group-name "my-group"
+  
+  # 17. 取得多個群組的使用者專案列表 🆕
+  python gl-cli.py user-projects --group-name "group1" "group2"
+  
+  # 18. 組合查詢：特定使用者在多個群組的專案 🆕
+  python gl-cli.py user-projects --username alice --group-name "group1" "group2"
+  
+  # 19. 取得所有群組資訊
   python gl-cli.py group-stats
   
-  # 17. 取得特定群組資訊
+  # 20. 取得特定群組資訊
   python gl-cli.py group-stats --group-name "my-group"
   
-  # 18. 取得多個群組的資訊 🆕
+  # 21. 取得多個群組的資訊 🆕
   python gl-cli.py group-stats --group-name "group1" "group2" "group3"
-            """
+  """
         )
         
         subparsers = parser.add_subparsers(dest='command', help='可用的命令')
@@ -1612,9 +1634,10 @@ class GitLabCLI:
             help='使用者名稱 (可選，不填則取得全部；可指定多個，例如: --username alice bob)'
         )
         user_projects_parser.add_argument(
-            '--group-id',
-            type=int,
-            help=f'群組 ID (預設: {config.TARGET_GROUP_ID})'
+            '--group-name',
+            type=str,
+            nargs='*',
+            help='群組名稱 (可選，不填則取得全部；可指定多個，例如: --group-name group1 group2)'
         )
         user_projects_parser.set_defaults(func=self._cmd_user_projects)
         
@@ -1735,7 +1758,7 @@ class GitLabCLI:
                 )
     
     def _cmd_user_projects(self, args):
-        """執行使用者專案命令（支援多筆使用者）"""
+        """執行使用者專案命令（支援多筆使用者和群組）"""
         service = self.create_user_projects_service()
         
         # 處理多筆使用者名稱
@@ -1745,24 +1768,37 @@ class GitLabCLI:
         if not usernames:
             usernames = [None]
         
-        total_queries = len(usernames)
+        # 處理多筆群組名稱
+        group_names = args.group_name if args.group_name else [None]
+        
+        # 如果是空列表，設為 [None] 表示查詢全部
+        if not group_names:
+            group_names = [None]
+        
+        # 組合所有查詢（笛卡爾積）
+        total_queries = len(usernames) * len(group_names)
         current = 0
         
         for username in usernames:
-            current += 1
-            if total_queries > 1:
-                print(f"\n{'='*70}")
-                print(f"查詢 {current}/{total_queries}: ", end="")
-                if username:
-                    print(f"使用者={username}")
-                else:
-                    print("所有使用者")
-                print(f"{'='*70}")
-            
-            service.execute(
-                username=username,
-                group_id=args.group_id or config.TARGET_GROUP_ID
-            )
+            for group_name in group_names:
+                current += 1
+                if total_queries > 1:
+                    print(f"\n{'='*70}")
+                    print(f"查詢 {current}/{total_queries}: ", end="")
+                    if username:
+                        print(f"使用者={username}", end="")
+                    if group_name:
+                        if username:
+                            print(f" ", end="")
+                        print(f"群組={group_name}", end="")
+                    if not username and not group_name:
+                        print("所有使用者和群組", end="")
+                    print(f"\n{'='*70}")
+                
+                service.execute(
+                    username=username,
+                    group_name=group_name
+                )
     
     def _cmd_group_stats(self, args):
         """執行群組統計命令（支援多筆群組）"""
