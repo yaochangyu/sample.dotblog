@@ -546,6 +546,8 @@ class UserDataFetcher(IDataFetcher):
             )
             self.progress.report_complete(f"找到 {len(mrs)} 個 Merge Requests")
             
+            # 過濾符合條件的 MRs
+            filtered_mrs = []
             for mr in mrs:
                 # 改善匹配邏輯：使用 username 匹配
                 if username:
@@ -558,6 +560,14 @@ class UserDataFetcher(IDataFetcher):
                     if not match:
                         continue
                 
+                filtered_mrs.append(mr)
+            
+            # 處理過濾後的 MRs（使用並行處理）
+            if filtered_mrs:
+                self.progress.report_start(f"正在處理 {len(filtered_mrs)} 個 Merge Requests...")
+            
+            # 定義處理單個 MR 的函數
+            def process_mr(mr):
                 try:
                     mr_detail = self.client.get_merge_request_detail(project.id, mr.iid)
                     discussions = self.client.get_merge_request_discussions(project.id, mr.iid)
@@ -579,12 +589,11 @@ class UserDataFetcher(IDataFetcher):
                         'discussion_count': len(discussions)
                     }
                     
-                    user_data['merge_requests'].append(mr_info)
-                    
                     # 分析 Code Review
+                    code_reviews = []
                     for discussion in discussions:
                         for note in discussion.attributes.get('notes', []):
-                            user_data['code_reviews'].append({
+                            code_reviews.append({
                                 'project_id': project.id,
                                 'project_name': project.name,
                                 'mr_iid': mr.iid,
@@ -595,9 +604,38 @@ class UserDataFetcher(IDataFetcher):
                                 'resolvable': note.get('resolvable', False),
                                 'resolved': note.get('resolved', False)
                             })
+                    
+                    return (mr_info, code_reviews, None)
                 except Exception as e:
-                    print(f"Warning: Failed to get MR detail for {mr.iid}: {e}")
-                    continue
+                    return (None, None, f"Failed to get MR detail for {mr.iid}: {e}")
+            
+            # 使用並行處理提升效能
+            max_workers = 10  # 可調整並行數量
+            mr_completed = 0
+            
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # 提交所有任務
+                futures = {executor.submit(process_mr, mr): mr for mr in filtered_mrs}
+                
+                # 處理完成的任務
+                for future in as_completed(futures):
+                    mr_completed += 1
+                    
+                    # 每處理 10 個 MR 顯示一次進度
+                    if mr_completed % 10 == 0 or mr_completed == len(filtered_mrs):
+                        self.progress.report_progress(mr_completed, len(filtered_mrs), f"處理 MR {mr_completed}/{len(filtered_mrs)}")
+                    
+                    mr_info, code_reviews, error = future.result()
+                    
+                    if error:
+                        print(f"Warning: {error}")
+                        continue
+                    
+                    if mr_info:
+                        user_data['merge_requests'].append(mr_info)
+                    
+                    if code_reviews:
+                        user_data['code_reviews'].extend(code_reviews)
             
             # 獲取專案授權資訊和貢獻者統計
             self.progress.report_start("正在獲取專案授權資訊...")
