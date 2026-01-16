@@ -19,6 +19,7 @@ from pathlib import Path
 import pandas as pd
 from datetime import datetime
 import urllib3
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 抑制 SSL 不安全連線警告（self-signed certificates）
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -464,12 +465,8 @@ class UserDataFetcher(IDataFetcher):
             if filtered_commits:
                 self.progress.report_start(f"正在處理 {len(filtered_commits)} 個 commits...")
             
-            for commit_idx, commit in enumerate(filtered_commits, 1):
-                # 每處理 10 個 commit 顯示一次進度
-                if commit_idx % 10 == 0 or commit_idx == len(filtered_commits):
-                    self.progress.report_progress(commit_idx, len(filtered_commits), f"處理 commit {commit_idx}/{len(filtered_commits)}")
-                
-                # 獲取 commit 詳細資訊
+            # 定義處理單個 commit 的函數
+            def process_commit(commit):
                 try:
                     commit_detail = self.client.get_commit_detail(project.id, commit.id)
                     diff = self.client.get_commit_diff(project.id, commit.id)
@@ -488,11 +485,10 @@ class UserDataFetcher(IDataFetcher):
                         'diff': diff
                     }
                     
-                    user_data['commits'].append(commit_info)
-                    
-                    # 分析程式碼異動
+                    # 收集程式碼異動
+                    code_changes = []
                     for file_diff in diff:
-                        user_data['code_changes'].append({
+                        code_changes.append({
                             'project_id': project.id,
                             'project_name': project.name,
                             'commit_id': commit.id,
@@ -506,9 +502,38 @@ class UserDataFetcher(IDataFetcher):
                             'deleted_file': file_diff.get('deleted_file'),
                             'diff': file_diff.get('diff', '')
                         })
+                    
+                    return (commit_info, code_changes, None)
                 except Exception as e:
-                    print(f"Warning: Failed to get commit detail for {commit.id}: {e}")
-                    continue
+                    return (None, None, f"Failed to get commit detail for {commit.id}: {e}")
+            
+            # 使用並行處理提升效能
+            max_workers = 10  # 可調整並行數量
+            completed = 0
+            
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                # 提交所有任務
+                futures = {executor.submit(process_commit, commit): commit for commit in filtered_commits}
+                
+                # 處理完成的任務
+                for future in as_completed(futures):
+                    completed += 1
+                    
+                    # 每處理 10 個 commit 顯示一次進度
+                    if completed % 10 == 0 or completed == len(filtered_commits):
+                        self.progress.report_progress(completed, len(filtered_commits), f"處理 commit {completed}/{len(filtered_commits)}")
+                    
+                    commit_info, code_changes, error = future.result()
+                    
+                    if error:
+                        print(f"Warning: {error}")
+                        continue
+                    
+                    if commit_info:
+                        user_data['commits'].append(commit_info)
+                    
+                    if code_changes:
+                        user_data['code_changes'].extend(code_changes)
             
             # 獲取 Merge Requests
             mrs = self.client.get_project_merge_requests(
