@@ -1515,6 +1515,9 @@ class GitLabCLI:
   
   # 15. 取得特定群組資訊
   python gl-cli.py group-stats --group-name "my-group"
+  
+  # 16. 取得多個群組的資訊 🆕
+  python gl-cli.py group-stats --group-name "group1" "group2" "group3"
             """
         )
         
@@ -1615,7 +1618,8 @@ class GitLabCLI:
         group_stats_parser.add_argument(
             '--group-name',
             type=str,
-            help='群組名稱 (可選，不填則取得全部)'
+            nargs='*',
+            help='群組名稱 (可選，不填則取得全部；可指定多個，例如: --group-name group1 group2)'
         )
         group_stats_parser.set_defaults(func=self._cmd_group_stats)
         
@@ -1709,9 +1713,31 @@ class GitLabCLI:
             )
     
     def _cmd_group_stats(self, args):
-        """執行群組統計命令"""
+        """執行群組統計命令（支援多筆群組）"""
         service = self.create_group_stats_service()
-        service.execute(group_name=args.group_name)
+        
+        # 處理多筆群組名稱
+        group_names = args.group_name if args.group_name else [None]
+        
+        # 如果是空列表，設為 [None] 表示查詢全部
+        if not group_names:
+            group_names = [None]
+        
+        total_queries = len(group_names)
+        current = 0
+        
+        for group_name in group_names:
+            current += 1
+            if total_queries > 1:
+                print(f"\n{'='*70}")
+                print(f"查詢 {current}/{total_queries}: ", end="")
+                if group_name:
+                    print(f"群組={group_name}")
+                else:
+                    print("所有群組")
+                print(f"{'='*70}")
+            
+            service.execute(group_name=group_name)
 
 
 def main():
