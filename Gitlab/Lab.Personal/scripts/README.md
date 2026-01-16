@@ -89,8 +89,6 @@ GITLAB_TOKEN = "your_token_here"
 uv run python gl-cli.py project-stats
 ```
 
-詳細步驟請參考 [QUICKSTART.md](./QUICKSTART.md)
-
 ---
 
 ## 🎯 五大核心功能
@@ -391,11 +389,6 @@ ProjectDataFetcher(client, progress_reporter)
 UserDataFetcher(client, progress_reporter)
 GroupDataFetcher(client, progress_reporter)
 ```
-
-詳細說明請參考：
-- 📖 [PROGRESS_INDICATOR.md](./PROGRESS_INDICATOR.md) - 完整功能說明
-- 📊 [PROGRESS_UPDATE_SUMMARY.md](./PROGRESS_UPDATE_SUMMARY.md) - 更新總結
-- 🚀 [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) - 快速參考
 
 ---
 
@@ -871,8 +864,6 @@ uv run python gl-cli.py project-stats
 | `No projects found` | 檢查專案名稱、權限、群組 ID |
 | 輸出檔案太大 | 縮小時間範圍或限制專案/使用者 |
 
-詳細疑難排解請參考 [GL-CLI-README.md](./GL-CLI-README.md#-疑難排解)
-
 ---
 
 ## 📁 檔案說明
@@ -882,22 +873,20 @@ uv run python gl-cli.py project-stats
 | `gl-cli.py` ⭐ | 主程式（推薦使用） |
 | `run-gl-cli.sh` | Linux/macOS 便捷腳本 |
 | `run-gl-cli.ps1` | Windows 便捷腳本 |
-| `config.example.py` | 配置範本 |
-| **QUICKSTART.md** | 5 分鐘快速開始 |
-| **GL-CLI-README.md** | 完整詳細文件 |
+| `config.py` | 配置檔案（需自行建立並設定 Token） |
 
 ---
 
 ## ❓ 常見問題
 
 **Q: 如何開始？**  
-A: 閱讀 [QUICKSTART.md](./QUICKSTART.md)，5 分鐘即可開始。
+A: 安裝 UV 後執行 `uv sync` 安裝依賴，設定 `config.py` 的 Token，即可開始使用。
 
 **Q: 如何只查詢特定時間？**  
 A: 使用 `--start-date 2024-01-01 --end-date 2024-01-31`
 
 **Q: 如何分析程式碼品質？**  
-A: 查看 `statistics.csv` 的指標，參考 [分析指標說明](./GL-CLI-README.md#-分析指標說明)
+A: 查看輸出的 `statistics.csv` 檔案，包含各項開發者活動指標。
 
 **Q: 看到很多 `InsecureRequestWarning` 警告？**  
 A: 這是因為使用 Self-hosted GitLab 的自簽憑證。不影響功能，可用以下方式隱藏：
@@ -919,8 +908,6 @@ A: 已在實際環境測試：
 - ✅ 成功獲取 378 個專案資訊
 - ✅ 生成 115 KB CSV + 315 KB Markdown
 - ✅ 包含完整欄位（專案名稱、描述、URL、統計數據等）
-
-更多問題請參考 [完整文件 FAQ](./GL-CLI-README.md#-常見問題-faq)
 
 ---
 
