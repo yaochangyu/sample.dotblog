@@ -131,7 +131,10 @@ class ConsoleProgressReporter(IProgressReporter):
         if message:
             progress_msg += f" - {message}"
         
-        print(f"\r{progress_msg}", end='', flush=True)
+        # 清空整行後再輸出，避免文字殘留
+        terminal_width = 120  # 假設終端寬度，可根據需要調整
+        padded_msg = progress_msg.ljust(terminal_width)
+        print(f"\r{padded_msg}", end='', flush=True)
         
         if current >= total:
             print()  # 完成時換行
@@ -538,13 +541,11 @@ class UserDataFetcher(IDataFetcher):
                         user_data['code_changes'].extend(code_changes)
             
             # 獲取 Merge Requests
-            self.progress.report_start("正在獲取 Merge Requests...")
             mrs = self.client.get_project_merge_requests(
                 project.id,
                 updated_after=start_date,
                 updated_before=end_date
             )
-            self.progress.report_complete(f"找到 {len(mrs)} 個 Merge Requests")
             
             # 過濾符合條件的 MRs
             filtered_mrs = []
@@ -638,7 +639,6 @@ class UserDataFetcher(IDataFetcher):
                         user_data['code_reviews'].extend(code_reviews)
             
             # 獲取專案授權資訊和貢獻者統計
-            self.progress.report_start("正在獲取專案授權資訊...")
             try:
                 project_detail = self.client.get_project(project.id)
                 
