@@ -21,6 +21,7 @@ from datetime import datetime
 import urllib3
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
 import signal
+import time
 
 # 抑制 SSL 不安全連線警告（self-signed certificates）
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -1276,14 +1277,14 @@ class GroupDataProcessor(IDataProcessor):
 # ==================== 資料匯出器 (單一職責原則) ====================
 
 class DataExporter(IDataExporter):
-    """資料匯出器 - 支援 CSV 和 Markdown"""
+    """資料匯出器 - 支援 CSV"""
     
     def __init__(self, output_dir: str = "./output"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
     
     def export(self, df: pd.DataFrame, filename: str) -> None:
-        """匯出資料到 CSV 和 Markdown"""
+        """匯出資料到 CSV"""
         if df.empty:
             print(f"Warning: No data to export for {filename}")
             return
@@ -1292,16 +1293,6 @@ class DataExporter(IDataExporter):
         csv_path = self.output_dir / f"{filename}.csv"
         df.to_csv(csv_path, index=False, encoding='utf-8-sig')
         print(f"✓ CSV exported: {csv_path}")
-        
-        # 匯出 Markdown
-        md_path = self.output_dir / f"{filename}.md"
-        with open(md_path, 'w', encoding='utf-8') as f:
-            f.write(f"# {filename}\n\n")
-            f.write(f"Generated at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-            f.write(f"Total records: {len(df)}\n\n")
-            f.write("## Data\n\n")
-            f.write(df.to_markdown(index=False))
-        print(f"✓ Markdown exported: {md_path}")
 
 
 # ==================== 服務層 (開放封閉原則) ====================
@@ -1325,6 +1316,8 @@ class ProjectStatsService(BaseService):
     
     def execute(self, project_name: Optional[str] = None, group_id: Optional[int] = None) -> None:
         """執行專案統計"""
+        start_time = time.time()
+        
         print("=" * 70)
         print("GitLab 專案資訊查詢（包含授權統計）")
         print("=" * 70)
@@ -1354,6 +1347,9 @@ class ProjectStatsService(BaseService):
             print(f"\n✓ Total permission records: {len(processed_data['permissions'])}")
         
         print(f"✓ Total projects: {len(processed_data['projects'])}")
+        
+        elapsed_time = time.time() - start_time
+        print(f"✓ 執行時間: {elapsed_time:.2f} 秒")
         print("=" * 70)
 
 
@@ -1362,6 +1358,8 @@ class ProjectPermissionService(BaseService):
     
     def execute(self, project_name: Optional[str] = None, group_id: Optional[int] = None) -> None:
         """執行專案授權查詢"""
+        start_time = time.time()
+        
         print("=" * 70)
         print("GitLab 專案授權資訊查詢")
         print("=" * 70)
@@ -1385,6 +1383,9 @@ class ProjectPermissionService(BaseService):
         self.exporter.export(df, filename)
         
         print(f"\n✓ Total permission records: {len(df)}")
+        
+        elapsed_time = time.time() - start_time
+        print(f"✓ 執行時間: {elapsed_time:.2f} 秒")
         print("=" * 70)
 
 
@@ -1397,6 +1398,8 @@ class UserStatsService(BaseService):
                 end_date: Optional[str] = None,
                 group_id: Optional[int] = None) -> None:
         """執行使用者統計"""
+        start_time = time.time()
+        
         print("=" * 70)
         print("GitLab 使用者資訊查詢")
         print("=" * 70)
@@ -1484,6 +1487,8 @@ class UserStatsService(BaseService):
             print("✓ 查詢完成！")
             print(f"✓ 共匯出 {exported_count} 個資料檔案")
         
+        elapsed_time = time.time() - start_time
+        print(f"✓ 執行時間: {elapsed_time:.2f} 秒")
         print("=" * 70)
 
 
@@ -1492,6 +1497,8 @@ class UserProjectsService(BaseService):
     
     def execute(self, username: Optional[str] = None, group_name: Optional[str] = None) -> None:
         """執行使用者專案查詢"""
+        start_time = time.time()
+        
         print("=" * 70)
         print("GitLab 使用者專案列表查詢")
         print("=" * 70)
@@ -1559,6 +1566,8 @@ class UserProjectsService(BaseService):
             print("✓ 查詢完成！")
             print(f"✓ 共匯出 {exported_count} 個資料檔案")
         
+        elapsed_time = time.time() - start_time
+        print(f"✓ 執行時間: {elapsed_time:.2f} 秒")
         print("=" * 70)
 
 
@@ -1567,6 +1576,8 @@ class GroupStatsService(BaseService):
     
     def execute(self, group_name: Optional[str] = None) -> None:
         """執行群組統計"""
+        start_time = time.time()
+        
         print("=" * 70)
         print("GitLab 群組資訊查詢")
         print("=" * 70)
@@ -1610,6 +1621,8 @@ class GroupStatsService(BaseService):
             self.exporter.export(processed_data['permissions'], permissions_filename)
             print(f"✓ Total permission records: {len(processed_data['permissions'])}")
         
+        elapsed_time = time.time() - start_time
+        print(f"✓ 執行時間: {elapsed_time:.2f} 秒")
         print("=" * 70)
 
 
