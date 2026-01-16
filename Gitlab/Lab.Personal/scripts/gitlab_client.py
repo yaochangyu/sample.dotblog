@@ -33,7 +33,9 @@ class GitLabClient:
     def get_projects(
         self, 
         group_id: Optional[int] = None, 
-        project_ids: Optional[List[int]] = None
+        project_ids: Optional[List[int]] = None,
+        search: Optional[str] = None,
+        searches: Optional[List[str]] = None
     ) -> List[Any]:
         """
         取得專案列表
@@ -41,17 +43,47 @@ class GitLabClient:
         Args:
             group_id: 群組 ID (若指定則取得該群組的專案)
             project_ids: 專案 ID 列表 (若指定則取得這些專案)
+            search: 專案名稱搜尋關鍵字 (若指定則在伺服器端搜尋單一關鍵字)
+            searches: 專案名稱搜尋關鍵字列表 (若指定則在客戶端過濾多個關鍵字)
         
         Returns:
             專案物件列表
         """
+        if project_ids:
+            return [self.gl.projects.get(pid) for pid in project_ids]
+        
+        # 處理多個搜尋關鍵字的情況
+        if searches and len(searches) > 1:
+            # 先取得所有專案
+            if group_id:
+                group = self.gl.groups.get(group_id)
+                all_projects = group.projects.list(all=True)
+            else:
+                all_projects = self.gl.projects.list(all=True)
+            
+            # 客戶端過濾：專案名稱包含任一關鍵字
+            filtered_projects = []
+            for project in all_projects:
+                for search_term in searches:
+                    if search_term.lower() in project.name.lower():
+                        filtered_projects.append(project)
+                        break  # 找到一個符合就加入，不重複
+            return filtered_projects
+        
+        # 處理單一搜尋關鍵字或沒有搜尋的情況
+        search_term = searches[0] if searches and len(searches) == 1 else search
+        
         if group_id:
             group = self.gl.groups.get(group_id)
-            return group.projects.list(all=True)
-        elif project_ids:
-            return [self.gl.projects.get(pid) for pid in project_ids]
+            params = {'all': True}
+            if search_term:
+                params['search'] = search_term
+            return group.projects.list(**params)
         else:
-            return self.gl.projects.list(all=True)
+            params = {'all': True}
+            if search_term:
+                params['search'] = search_term
+            return self.gl.projects.list(**params)
     
     def get_project(self, project_id: int) -> Any:
         """
@@ -216,19 +248,37 @@ class GitLabClient:
         """
         return self.gl.groups.get(group_id)
     
-    def get_groups(self, group_name: Optional[str] = None) -> List[Any]:
+    def get_groups(self, group_name: Optional[str] = None, group_names: Optional[List[str]] = None) -> List[Any]:
         """
         取得群組列表
         
         Args:
             group_name: 群組名稱 (可選，若指定則搜尋符合的群組)
+            group_names: 群組名稱列表 (可選，若指定則過濾多個群組)
         
         Returns:
             群組物件列表
         """
-        if group_name:
+        # 處理多個搜尋關鍵字的情況
+        if group_names and len(group_names) > 1:
+            # 先取得所有群組
+            all_groups = self.gl.groups.list(all=True)
+            
+            # 客戶端過濾：群組名稱包含任一關鍵字
+            filtered_groups = []
+            for group in all_groups:
+                for search_term in group_names:
+                    if search_term.lower() in group.name.lower():
+                        filtered_groups.append(group)
+                        break  # 找到一個符合就加入，不重複
+            return filtered_groups
+        
+        # 處理單一搜尋關鍵字或沒有搜尋的情況
+        search_term = group_names[0] if group_names and len(group_names) == 1 else group_name
+        
+        if search_term:
             # 搜尋特定群組
-            return self.gl.groups.list(search=group_name, all=True)
+            return self.gl.groups.list(search=search_term, all=True)
         else:
             # 取得所有群組
             return self.gl.groups.list(all=True)
