@@ -1455,11 +1455,17 @@ class UserStatsService(BaseService):
         
         # 匯出各類資料並計數
         exported_count = 0
+        exported_files = []  # 記錄已匯出的檔案
         for data_type, df in processed_data.items():
             if not df.empty:
                 filename = f"{base_filename}-{data_type}"
                 self.exporter.export(df, filename)
+                exported_files.append((data_type, filename))
                 exported_count += 1
+        
+        # 產生索引檔案
+        if exported_files:
+            self._generate_index_file(base_filename, exported_files)
         
         # 顯示統計摘要
         if not processed_data['statistics'].empty:
@@ -1490,6 +1496,45 @@ class UserStatsService(BaseService):
         elapsed_time = time.time() - start_time
         print(f"✓ 執行時間: {elapsed_time:.2f} 秒")
         print("=" * 70)
+    
+    def _generate_index_file(self, base_filename: str, exported_files: List[tuple]) -> None:
+        """
+        產生索引檔案，包含所有已匯出檔案的連結
+        
+        Args:
+            base_filename: 基礎檔名
+            exported_files: 已匯出的檔案列表 [(data_type, filename), ...]
+        """
+        index_filename = f"{base_filename}-INDEX.md"
+        index_path = self.exporter.output_dir / index_filename
+        
+        # 準備索引內容
+        content = f"# 使用者分析報告索引\n\n"
+        content += f"**產生時間：** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        content += f"## 匯出檔案清單\n\n"
+        
+        # 資料類型中文對照
+        type_names = {
+            'user_profile': '使用者基本資訊',
+            'user_events': '使用者事件',
+            'commits': '提交記錄',
+            'code_changes': '程式碼變更',
+            'merge_requests': '合併請求',
+            'code_reviews': '程式碼審查',
+            'permissions': '專案權限',
+            'statistics': '統計摘要',
+            'contributors': '貢獻者統計'
+        }
+        
+        for data_type, filename in exported_files:
+            chinese_name = type_names.get(data_type, data_type)
+            content += f"- [{chinese_name}]({filename}.csv)\n"
+        
+        # 寫入索引檔案
+        with open(index_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        print(f"✓ Index file generated: {index_path}")
 
 
 class UserProjectsService(BaseService):

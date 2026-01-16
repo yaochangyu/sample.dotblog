@@ -81,6 +81,9 @@ uv run python gl-cli.py user-details --username alice --start-date 2024-01-01 --
 | `*-code_reviews.csv` | Code Review 評論 | ✅ 原有 |
 | `*-permissions.csv` | 專案授權資訊 | ✅ 原有 |
 | `*-statistics.csv` | 統計摘要（17 個指標） | ⭐ 增強 |
+| `*-INDEX.md` | 索引檔案（自動產生） | 🆕 NEW |
+
+> 💡 **新功能：** 自動產生索引檔案（`*-INDEX.md`），包含所有匯出 CSV 的 Markdown 連結，方便快速瀏覽報告。
 
 #### 🚀 使用範例
 
@@ -365,8 +368,9 @@ uv run python gl-cli.py user-details --username alice bob --project-name "web-ap
 2. **資料獲取** - 透過 `UserDataFetcher` 取得使用者的 commits、MR、code review、授權等資料
 3. **資料處理** - 使用 `UserDataProcessor` 處理並整理成多類資料(commits、MR、code review、permissions、statistics)
 4. **資料匯出** - 將處理後的資料分別匯出成檔案，並顯示統計摘要
-5. **多筆處理** - 支援多使用者和多專案的笛卡爾積組合查詢，顯示進度（查詢 X/Y）🆕
-6. **錯誤提示** - 若無資料則提供可能原因和建議(時間範圍、Git 設定名稱、權限等)
+5. **索引檔案產生** - 自動產生 `*-INDEX.md` 索引檔案，包含所有已匯出檔案的 Markdown 連結 🆕
+6. **多筆處理** - 支援多使用者和多專案的笛卡爾積組合查詢，顯示進度（查詢 X/Y）🆕
+7. **錯誤提示** - 若無資料則提供可能原因和建議(時間範圍、Git 設定名稱、權限等)
 
 **查詢參數：**
 - `--username` - 使用者名稱（可選，不填則分析所有開發者；**支援多筆**，例如：`alice bob charlie`）🆕
@@ -378,7 +382,27 @@ uv run python gl-cli.py user-details --username alice bob --project-name "web-ap
 **輸出檔案：** 
 - 單一查詢：`{userName}-user-{type}.{csv,md}` 或 `{projectName}-users-{type}.{csv,md}`
 - 組合查詢：`{userName}-{projectName}-user-{type}.{csv,md}` 🆕
-- 類型包含：`commits`, `merge_requests`, `code_reviews`, `permissions`, `statistics`
+- 索引檔案：`{base_filename}-INDEX.md` （自動產生，包含所有 CSV 連結）🆕
+- 類型包含：`commits`, `merge_requests`, `code_reviews`, `permissions`, `statistics`, `user_profile`, `user_events`, `contributors`
+
+**索引檔案範例：**
+```markdown
+# 使用者分析報告索引
+
+**產生時間：** 2024-01-16 14:41:40
+
+## 匯出檔案清單
+
+- [使用者基本資訊](G2023018-web-components-vue3-user-user_profile.csv)
+- [使用者事件](G2023018-web-components-vue3-user-user_events.csv)
+- [提交記錄](G2023018-web-components-vue3-user-commits.csv)
+- [程式碼變更](G2023018-web-components-vue3-user-code_changes.csv)
+- [合併請求](G2023018-web-components-vue3-user-merge_requests.csv)
+- [程式碼審查](G2023018-web-components-vue3-user-code_reviews.csv)
+- [專案權限](G2023018-web-components-vue3-user-permissions.csv)
+- [統計摘要](G2023018-web-components-vue3-user-statistics.csv)
+```
+
 
 **授權統計欄位（新增）：**
 - `total_projects_with_access` - 有授權的專案總數
