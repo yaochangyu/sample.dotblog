@@ -1487,21 +1487,33 @@ class GitLabCLI:
   python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-12-31
   
   # 6. 取得特定使用者詳細資訊
-  python gl-cli.py user-stats --username johndoe --start-date 2024-01-01
+  python gl-cli.py user-stats --username alice --start-date 2024-01-01
   
-  # 7. 取得特定專案的開發者活動
+  # 7. 取得多位使用者的詳細資訊 🆕
+  python gl-cli.py user-stats --username alice bob charlie --start-date 2024-01-01
+  
+  # 8. 取得特定專案的開發者活動
   python gl-cli.py user-stats --project-name "web-api" --start-date 2024-01-01
   
-  # 8. 取得所有使用者的專案列表（包含授權資訊）
+  # 9. 取得多個專案的開發者活動 🆕
+  python gl-cli.py user-stats --project-name "web-api" "mobile-app" --start-date 2024-01-01
+  
+  # 10. 組合查詢：多位使用者在多個專案的活動 🆕
+  python gl-cli.py user-stats --username alice bob --project-name "web-api" "mobile-app" --start-date 2024-01-01
+  
+  # 11. 取得所有使用者的專案列表（包含授權資訊）
   python gl-cli.py user-projects
   
-  # 9. 取得特定使用者的專案列表（包含授權資訊）
-  python gl-cli.py user-projects --username johndoe
+  # 12. 取得特定使用者的專案列表
+  python gl-cli.py user-projects --username alice
   
-  # 10. 取得所有群組資訊
+  # 13. 取得多位使用者的專案列表 🆕
+  python gl-cli.py user-projects --username alice bob charlie
+  
+  # 14. 取得所有群組資訊
   python gl-cli.py group-stats
   
-  # 11. 取得特定群組資訊
+  # 15. 取得特定群組資訊
   python gl-cli.py group-stats --group-name "my-group"
             """
         )
@@ -1551,12 +1563,14 @@ class GitLabCLI:
         user_stats_parser.add_argument(
             '--username',
             type=str,
-            help='使用者名稱 (可選，不填則取得全部)'
+            nargs='*',
+            help='使用者名稱 (可選，不填則取得全部；可指定多個，例如: --username alice bob)'
         )
         user_stats_parser.add_argument(
             '--project-name',
             type=str,
-            help='專案名稱 (可選，不填則取得全部)'
+            nargs='*',
+            help='專案名稱 (可選，不填則取得全部；可指定多個，例如: --project-name web-api mobile-app)'
         )
         user_stats_parser.add_argument(
             '--start-date',
@@ -1583,7 +1597,8 @@ class GitLabCLI:
         user_projects_parser.add_argument(
             '--username',
             type=str,
-            help='使用者名稱 (可選，不填則取得全部)'
+            nargs='*',
+            help='使用者名稱 (可選，不填則取得全部；可指定多個，例如: --username alice bob)'
         )
         user_projects_parser.add_argument(
             '--group-id',
@@ -1623,23 +1638,75 @@ class GitLabCLI:
         )
     
     def _cmd_user_stats(self, args):
-        """執行使用者統計命令"""
+        """執行使用者統計命令（支援多筆使用者和專案）"""
         service = self.create_user_stats_service()
-        service.execute(
-            username=args.username,
-            project_name=args.project_name,
-            start_date=args.start_date or config.START_DATE,
-            end_date=args.end_date or config.END_DATE,
-            group_id=args.group_id or config.TARGET_GROUP_ID
-        )
+        
+        # 處理多筆使用者名稱
+        usernames = args.username if args.username else [None]
+        # 處理多筆專案名稱
+        project_names = args.project_name if args.project_name else [None]
+        
+        # 如果兩者都是空列表，設為 [None] 表示查詢全部
+        if not usernames:
+            usernames = [None]
+        if not project_names:
+            project_names = [None]
+        
+        # 組合所有查詢（笛卡爾積）
+        total_queries = len(usernames) * len(project_names)
+        current = 0
+        
+        for username in usernames:
+            for project_name in project_names:
+                current += 1
+                if total_queries > 1:
+                    print(f"\n{'='*70}")
+                    print(f"查詢 {current}/{total_queries}: ", end="")
+                    if username:
+                        print(f"使用者={username}", end="")
+                    if project_name:
+                        print(f" 專案={project_name}", end="")
+                    if not username and not project_name:
+                        print("所有使用者和專案", end="")
+                    print(f"\n{'='*70}")
+                
+                service.execute(
+                    username=username,
+                    project_name=project_name,
+                    start_date=args.start_date or config.START_DATE,
+                    end_date=args.end_date or config.END_DATE,
+                    group_id=args.group_id or config.TARGET_GROUP_ID
+                )
     
     def _cmd_user_projects(self, args):
-        """執行使用者專案命令"""
+        """執行使用者專案命令（支援多筆使用者）"""
         service = self.create_user_projects_service()
-        service.execute(
-            username=args.username,
-            group_id=args.group_id or config.TARGET_GROUP_ID
-        )
+        
+        # 處理多筆使用者名稱
+        usernames = args.username if args.username else [None]
+        
+        # 如果是空列表，設為 [None] 表示查詢全部
+        if not usernames:
+            usernames = [None]
+        
+        total_queries = len(usernames)
+        current = 0
+        
+        for username in usernames:
+            current += 1
+            if total_queries > 1:
+                print(f"\n{'='*70}")
+                print(f"查詢 {current}/{total_queries}: ", end="")
+                if username:
+                    print(f"使用者={username}")
+                else:
+                    print("所有使用者")
+                print(f"{'='*70}")
+            
+            service.execute(
+                username=username,
+                group_id=args.group_id or config.TARGET_GROUP_ID
+            )
     
     def _cmd_group_stats(self, args):
         """執行群組統計命令"""

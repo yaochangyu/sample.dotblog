@@ -8,7 +8,39 @@
 
 ## 🆕 最新功能 (2026-01-16)
 
-### ✨ 新增：使用者專案列表查詢 (`user-projects`)
+### ✨ v1.3.0 新增：多筆參數支援
+
+**快速體驗：**
+```bash
+# 同時查詢多位使用者
+uv run python gl-cli.py user-stats --username alice bob charlie --start-date 2024-01-01
+
+# 同時查詢多個專案
+uv run python gl-cli.py user-stats --project-name "web-api" "mobile-app" --start-date 2024-01-01
+
+# 組合查詢（2位使用者 × 2個專案 = 4次查詢）
+uv run python gl-cli.py user-stats --username alice bob --project-name "web-api" "mobile-app" --start-date 2024-01-01
+
+# 批次查詢專案列表
+uv run python gl-cli.py user-projects --username alice bob charlie
+```
+
+**主要功能：**
+- ✅ `user-stats` 支援多筆 `--username` 和 `--project-name`
+- ✅ `user-projects` 支援多筆 `--username`
+- ✅ 笛卡爾積邏輯（多使用者 × 多專案自動組合）
+- ✅ 清晰的進度顯示（查詢 X/Y）
+- ✅ 向下相容（單一值仍正常運作）
+
+**實際應用場景：**
+- 👥 **團隊績效評估** - 同時分析多位團隊成員的年度表現
+- 📊 **專案健康檢查** - 批次分析多個核心專案的開發活動
+- 🔍 **跨專案貢獻分析** - 查看開發者在多個專案的表現
+- 🔒 **離職人員權限盤點** - 批次查詢多位離職員工的專案權限
+
+---
+
+### ✨ v1.2.0 新增：使用者專案列表查詢 (`user-projects`)
 
 **快速體驗：**
 ```bash
@@ -31,12 +63,6 @@ uv run python gl-cli.py user-projects
 - 👥 **新人引導** - 了解新人被分配到哪些專案及權限等級
 - 📊 **權限審計** - 檢查使用者的專案授權是否合理
 - 🔒 **安全稽核** - 識別擁有敏感專案存取權的人員
-
-**技術實現：**
-- 新增 `UserProjectsFetcher` - 負責從 GitLab API 獲取用戶專案資料
-- 新增 `UserProjectsProcessor` - 處理專案資料並產生統計摘要
-- 新增 `UserProjectsService` - 整合資料獲取、處理、匯出流程
-- 遵循 SOLID 原則，完美融入現有架構
 
 **與 `user-stats` 的差異：**
 - `user-projects`: 專注於「使用者有哪些專案」（權限盤點）
@@ -150,7 +176,7 @@ uv run python gl-cli.py project-stats
 
 ---
 
-### 4️⃣ 使用者統計查詢 (`user-stats`)
+### 4️⃣ 使用者統計查詢 (`user-stats`) ⭐ 支援多筆參數
 深度分析開發者活動：commits、MR、code review、授權、統計
 
 ```bash
@@ -160,11 +186,21 @@ uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-12-31
 # 分析特定開發者（包含授權資訊）
 uv run python gl-cli.py user-stats --username alice --start-date 2024-01-01
 
-# 分析特定專案內的所有開發者 🆕
+# 同時分析多位開發者（批次查詢）🆕
+uv run python gl-cli.py user-stats --username alice bob charlie --start-date 2024-01-01
+
+# 分析特定專案內的所有開發者
 uv run python gl-cli.py user-stats --project-name "web-api" --start-date 2024-01-01
 
-# 分析特定開發者在特定專案的活動 🆕
-uv run python gl-cli.py user-stats --username alice --project-name "web-api" --start-date 2024-01-01
+# 同時分析多個專案（批次查詢）🆕
+uv run python gl-cli.py user-stats --project-name "web-api" "mobile-app" --start-date 2024-01-01
+
+# 組合查詢：分析特定開發者在多個專案的活動 🆕
+uv run python gl-cli.py user-stats --username alice --project-name "web-api" "mobile-app" --start-date 2024-01-01
+
+# 全面分析：多位開發者 × 多個專案（笛卡爾積）🆕
+uv run python gl-cli.py user-stats --username alice bob --project-name "web-api" "mobile-app" --start-date 2024-01-01
+# 會執行 2 × 2 = 4 次查詢，產生 20 個檔案（4次查詢 × 5種類型）
 ```
 
 **功能說明：**
@@ -172,21 +208,20 @@ uv run python gl-cli.py user-stats --username alice --project-name "web-api" --s
 2. **資料獲取** - 透過 `UserDataFetcher` 取得使用者的 commits、MR、code review、授權等資料
 3. **資料處理** - 使用 `UserDataProcessor` 處理並整理成多類資料(commits、MR、code review、permissions、statistics)
 4. **資料匯出** - 將處理後的資料分別匯出成檔案，並顯示統計摘要
-5. **錯誤提示** - 若無資料則提供可能原因和建議(時間範圍、Git 設定名稱、權限等)
+5. **多筆處理** - 支援多使用者和多專案的笛卡爾積組合查詢，顯示進度（查詢 X/Y）🆕
+6. **錯誤提示** - 若無資料則提供可能原因和建議(時間範圍、Git 設定名稱、權限等)
 
 **查詢參數：**
-- `--username` - 使用者名稱（可選，不填則分析所有開發者）
-- `--project-name` - 專案名稱（可選，不填則分析所有專案）🆕
+- `--username` - 使用者名稱（可選，不填則分析所有開發者；**支援多筆**，例如：`alice bob charlie`）🆕
+- `--project-name` - 專案名稱（可選，不填則分析所有專案；**支援多筆**，例如：`"web-api" "mobile-app"`）🆕
 - `--start-date` - 開始日期
 - `--end-date` - 結束日期
 - `--group-id` - 群組 ID（可選）
 
-**輸出檔案:** 
-- `commits.{csv,md}` - Commit 記錄
-- `merge_requests.{csv,md}` - MR 資料
-- `code_reviews.{csv,md}` - Code Review
-- `permissions.{csv,md}` - **授權資訊** 🆕
-- `statistics.{csv,md}` - **統計摘要**（包含授權統計）⭐
+**輸出檔案：** 
+- 單一查詢：`{userName}-user-{type}.{csv,md}` 或 `{projectName}-users-{type}.{csv,md}`
+- 組合查詢：`{userName}-{projectName}-user-{type}.{csv,md}` 🆕
+- 類型包含：`commits`, `merge_requests`, `code_reviews`, `permissions`, `statistics`
 
 **授權統計欄位（新增）：**
 - `total_projects_with_access` - 有授權的專案總數
@@ -198,7 +233,7 @@ uv run python gl-cli.py user-stats --username alice --project-name "web-api" --s
 
 ---
 
-### 5️⃣ 使用者專案列表查詢 (`user-projects`) 🆕
+### 5️⃣ 使用者專案列表查詢 (`user-projects`) ⭐ 支援多筆參數
 查詢使用者參與的所有專案及其授權資訊
 
 ```bash
@@ -207,6 +242,10 @@ uv run python gl-cli.py user-projects
 
 # 查詢特定使用者的專案列表
 uv run python gl-cli.py user-projects --username alice
+
+# 批次查詢多位使用者的專案列表（批次查詢）🆕
+uv run python gl-cli.py user-projects --username alice bob charlie
+# 會執行 3 次查詢，產生 6 個檔案（3次查詢 × 2種類型）
 ```
 
 **功能說明：**
@@ -214,10 +253,11 @@ uv run python gl-cli.py user-projects --username alice
 2. **資料獲取** - 透過 `UserProjectsFetcher` 取得使用者參與的所有專案及授權資訊
 3. **資料處理** - 使用 `UserProjectsProcessor` 處理並整理成專案列表和統計資料
 4. **資料匯出** - 將處理後的資料匯出成檔案，並顯示統計摘要
-5. **錯誤提示** - 若無資料則提供可能原因和建議
+5. **多筆處理** - 支援多使用者的批次查詢，顯示進度（查詢 X/Y）🆕
+6. **錯誤提示** - 若無資料則提供可能原因和建議
 
 **查詢參數：**
-- `--username` - 使用者名稱（可選，不填則查詢所有使用者）
+- `--username` - 使用者名稱（可選，不填則查詢所有使用者；**支援多筆**，例如：`alice bob charlie`）🆕
 - `--group-id` - 群組 ID（可選）
 
 **輸出檔案：** 
@@ -597,14 +637,15 @@ alice,Alice Chen,15,2,5,8
 - 🔒 **安全稽核** - 識別擁有敏感專案存取權的人員
 - 📋 **專案盤點** - 快速查看使用者負責維護哪些專案
 
-**查詢所有使用者的專案：**
+**批次查詢多位使用者的專案：** 🆕
 ```bash
-# 產生全公司的專案權限清單
-uv run python gl-cli.py user-projects
+# 批次查詢 3 位離職員工的專案權限
+uv run python gl-cli.py user-projects --username ex_employee1 ex_employee2 ex_employee3
 
-# 產生檔案：
-# - all-users_project.csv（所有使用者的專案清單）
-# - all-users_project-statistics.csv（每個使用者的專案統計）
+# 會執行 3 次查詢，產生 6 個檔案：
+# - ex_employee1-user_project.csv, ex_employee1-user_project-statistics.csv
+# - ex_employee2-user_project.csv, ex_employee2-user_project-statistics.csv
+# - ex_employee3-user_project.csv, ex_employee3-user_project-statistics.csv
 ```
 
 **範例分析：**
@@ -623,7 +664,29 @@ uv run python gl-cli.py user-projects
 
 ---
 
-### 範例 8: 評估開發者績效（年度報告）
+### 範例 8: 團隊績效評估（批次查詢）🆕
+```bash
+# 同時分析 4 位團隊成員的 2024 年表現
+uv run python gl-cli.py user-stats \
+    --username alice bob charlie david \
+    --start-date 2024-01-01 \
+    --end-date 2024-12-31
+
+# 會執行 4 次查詢，產生 20 個檔案（每人 5 種類型）：
+# - alice-user-{commits,code_changes,merge_requests,code_reviews,statistics}.csv
+# - bob-user-{commits,code_changes,merge_requests,code_reviews,statistics}.csv
+# - charlie-user-{commits,code_changes,merge_requests,code_reviews,statistics}.csv
+# - david-user-{commits,code_changes,merge_requests,code_reviews,statistics}.csv
+```
+
+**實際用途：**
+- 📊 快速產生多人績效報告
+- 📈 比較團隊成員的表現差異
+- 🎯 識別高績效和需要協助的成員
+
+---
+
+### 範例 9: 評估開發者績效（年度報告）
 ```bash
 # 分析特定開發者 2024 年的表現
 uv run python gl-cli.py user-stats --username alice --start-date 2024-01-01 --end-date 2024-12-31
@@ -654,7 +717,57 @@ projects_contributed     : 貢獻專案數（技術廣度）
 
 ---
 
-### 範例 9: 團隊月度報告
+### 範例 10: 專案健康檢查（批次查詢）🆕
+```bash
+# 批次分析 3 個核心專案的開發活動
+uv run python gl-cli.py user-stats \
+    --project-name "web-api" "mobile-app" "backend-service" \
+    --start-date 2024-01-01
+
+# 會執行 3 次查詢，產生 15 個檔案（每個專案 5 種類型）：
+# - web-api-users-{commits,code_changes,merge_requests,code_reviews,statistics}.csv
+# - mobile-app-users-{commits,code_changes,merge_requests,code_reviews,statistics}.csv
+# - backend-service-users-{commits,code_changes,merge_requests,code_reviews,statistics}.csv
+```
+
+**實際用途：**
+- 📊 快速評估多個專案的健康度
+- 📈 比較不同專案的開發活躍度
+- 🎯 識別需要更多資源的專案
+
+---
+
+### 範例 11: 跨專案貢獻分析（笛卡爾積）🆕
+```bash
+# 分析 2 位核心開發者在 3 個專案的貢獻
+uv run python gl-cli.py user-stats \
+    --username alice bob \
+    --project-name "web-api" "mobile-app" "backend" \
+    --start-date 2024-01-01
+
+# 會執行 2 × 3 = 6 次查詢，產生 30 個檔案（6次查詢 × 5種類型）：
+# - alice-web-api-user-commits.csv
+# - alice-web-api-user-statistics.csv
+# - alice-mobile-app-user-commits.csv
+# - alice-mobile-app-user-statistics.csv
+# - alice-backend-user-commits.csv
+# - alice-backend-user-statistics.csv
+# - bob-web-api-user-commits.csv
+# - bob-web-api-user-statistics.csv
+# - bob-mobile-app-user-commits.csv
+# - bob-mobile-app-user-statistics.csv
+# - bob-backend-user-commits.csv
+# - bob-backend-user-statistics.csv
+```
+
+**實際用途：**
+- 📊 全面了解特定開發者的跨專案貢獻
+- 📈 評估開發者的技術廣度
+- 🎯 識別專案間的資源分配情況
+
+---
+
+### 範例 12: 團隊月度報告
 ```bash
 # 分析團隊 2024 年 1 月的活動
 uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-01-31
@@ -670,7 +783,7 @@ uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-01-31
 
 ---
 
-### 範例 10: 批次分析多位開發者
+### 範例 13: 批次分析多位開發者
 ```bash
 # Linux/macOS
 cat > users.txt << EOF
@@ -703,7 +816,7 @@ Get-Content users.txt | ForEach-Object {
 
 ---
 
-### 範例 11: 專案群組分析
+### 範例 14: 專案群組分析
 ```bash
 # 只分析特定群組的專案（例如 group_id = 123）
 uv run python gl-cli.py project-stats --group-id 123
@@ -712,7 +825,7 @@ uv run python gl-cli.py user-stats --group-id 123 --start-date 2024-01-01
 
 ---
 
-### 範例 12: 隱藏 SSL 警告（Self-hosted GitLab）
+### 範例 15: 隱藏 SSL 警告（Self-hosted GitLab）
 ```bash
 # 方法 1: 環境變數
 export PYTHONWARNINGS="ignore:Unverified HTTPS request"
@@ -881,7 +994,26 @@ GitLab 專案資訊查詢
 
 ## 📝 更新歷史
 
-### v1.2.0 (2026-01-16) 🆕
+### v1.3.0 (2026-01-16 下午) 🆕
+**新增功能：多筆參數支援**
+- ✨ `user-stats` 支援多筆 `--username` 和 `--project-name` 參數
+- ✨ `user-projects` 支援多筆 `--username` 參數
+- ✨ 笛卡爾積邏輯 - 多使用者 × 多專案自動組合查詢
+- ✨ 進度顯示 - 清晰顯示當前查詢進度（查詢 X/Y）
+- 🎯 實際應用：團隊績效評估、專案健康檢查、跨專案貢獻分析、批次權限盤點
+
+**技術改進：**
+- ✅ 使用 `nargs='*'` 支援多筆參數值
+- ✅ 雙層迴圈實作笛卡爾積邏輯
+- ✅ 向下相容（單一值仍正常運作）
+- ✅ 最小化修改（只改參數定義和命令處理器）
+
+**文檔更新：**
+- 📖 更新 README.md，新增多筆參數支援說明
+- 📖 更新命令範例，展示批次查詢用法
+- 📖 新增 MULTI_VALUE_UPDATE.md - 詳細說明多筆參數功能
+
+### v1.2.0 (2026-01-16 上午)
 **新增功能：使用者專案列表查詢**
 - ✨ 新增 `user-projects` 命令 - 查詢使用者參與的所有專案及授權資訊
 - ✨ 新增 `UserProjectsFetcher` 類別 - 負責從 GitLab API 獲取用戶專案資料
@@ -901,6 +1033,7 @@ GitLab 專案資訊查詢
 - 📖 新增範例 7：查詢使用者的專案清單與權限
 - 📖 新增「最新功能」區塊，突出顯示新功能
 - 📖 更新「五大核心功能」（原為四大）
+- 📖 新增 UPDATE_SUMMARY.md - 詳細說明 v1.2.0 更新內容
 
 ### v1.1.0 (2026-01-15)
 **新增功能：進度提示**
@@ -924,7 +1057,7 @@ GitLab 專案資訊查詢
 
 ---
 
-**版本:** 1.2.0 🆕  
+**版本:** 1.3.0 🆕  
 **最後更新:** 2026-01-16  
-**新增功能:** 使用者專案列表查詢 (`user-projects`)  
+**新增功能:** 多筆參數支援 + 使用者專案列表查詢  
 **授權:** 僅供學習與內部使用
