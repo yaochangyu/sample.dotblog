@@ -8,19 +8,6 @@
 
 ---
 
-## 📚 文件快速導航
-
-| 文件 | 說明 | 適合對象 |
-|------|------|----------|
-| **[🚀 QUICKSTART.md](./QUICKSTART.md)** | **5 分鐘快速開始** | ⭐ 新手必讀 |
-| [📖 GL-CLI-README.md](./GL-CLI-README.md) | 完整詳細文件 | 深入使用者 |
-| [🏗️ PROJECT-SUMMARY.md](./PROJECT-SUMMARY.md) | 技術架構摘要 | 技術人員 |
-| [📁 FILES-MANIFEST.md](./FILES-MANIFEST.md) | 檔案清單 | 開發者 |
-
-**👉 第一次使用？** 請直接閱讀 [QUICKSTART.md](./QUICKSTART.md)
-
----
-
 ## ⚡ 超快速開始（3 步驟）
 
 ```bash
@@ -54,6 +41,11 @@ uv run python gl-cli.py project-stats
 # 特定專案（包含授權統計）
 uv run python gl-cli.py project-stats --project-name "web-app"
 ```
+
+**功能說明：**
+1. **資料獲取** - 透過 `ProjectDataFetcher` 取得指定專案(或所有專案)的資料，包含授權資訊
+2. **資料處理** - 使用 `ProjectDataProcessor` 處理並整理成專案統計和權限兩類資料
+3. **資料匯出** - 將處理後的資料分別匯出成檔案(專案統計、授權詳細資料)，並顯示專案總數和授權記錄數
 
 **輸出檔案：**
 - `all-project-stats.{csv,md}` - 專案資料 + 授權統計
