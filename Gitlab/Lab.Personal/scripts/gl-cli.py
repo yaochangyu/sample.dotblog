@@ -1527,8 +1527,7 @@ class UserStatsService(BaseService):
         }
         
         for data_type, filename in exported_files:
-            chinese_name = type_names.get(data_type, data_type)
-            content += f"- [{chinese_name}]({filename}.csv)\n"
+            content += f"- [{filename}]({filename}.csv)\n"
         
         # 寫入索引檔案
         with open(index_path, 'w', encoding='utf-8') as f:
