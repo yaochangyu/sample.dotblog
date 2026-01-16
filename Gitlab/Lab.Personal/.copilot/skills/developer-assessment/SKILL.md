@@ -21,12 +21,13 @@ GitLab 開發者評估與分析專家，透過 `gl-cli.py` 工具深度分析開
    - 使用 `gl-cli.py project-stats` 取得專案詳細資訊
    - 使用 `gl-cli.py group-stats` 取得群組資訊（團隊分析）
 
-3. **多維度評估**
+3. **多維度評估** (詳見 [程式碼品質評估規範](./references/code-quality-analysis-spec.md))
    - **提交品質**：分析 commit 頻率、commit message 規範、程式碼變更量
    - **活躍度**：評估提交頻率、MR 參與度、issue 回應速度
    - **協作能力**：分析 code review 參與、跨專案協作、知識分享
    - **技術深度**：識別技術棧使用、程式語言熟練度、架構設計能力
    - **專案貢獻**：統計專案參與數量、核心專案貢獻度
+   - **Code Review 品質**：Review 參與度、深度、時效性、問題發現能力
 
 4. **報告產生**
    - 產生結構化評估報告（markdown 格式）
@@ -149,7 +150,7 @@ pip install pandas openpyxl urllib3 python-gitlab
 
 ### 第 3 步：資料分析
 
-根據收集的資料，分析以下指標：
+根據收集的資料，分析以下指標（完整評估標準請參考 [code-quality-analysis-spec.md](./references/code-quality-analysis-spec.md)）：
 
 #### 3.1 提交活躍度
 - 總 commit 數量
@@ -434,6 +435,12 @@ Skill: 收到！開始執行完整評估...
    - 需取得開發者同意
    - 不應作為唯一績效評估依據
    - 報告應妥善保管，避免外洩
+
+---
+
+## 參考文檔
+
+- [程式碼品質分析規範](./references/code-quality-analysis-spec.md) - 詳細的評估維度、權重配置與評分標準
 
 ---
 
