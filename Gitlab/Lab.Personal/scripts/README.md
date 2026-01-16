@@ -95,7 +95,7 @@ uv run python gl-cli.py project-stats
 
 ## 🎯 五大核心功能
 
-### 1️⃣ 專案資訊查詢 (`project-stats`)
+### 1️⃣ 專案資訊查詢 (`project-stats`) ⭐ 支援多筆參數
 查詢專案基本資料、活動狀態、統計數據、**授權統計**
 
 ```bash
@@ -104,6 +104,9 @@ uv run python gl-cli.py project-stats
 
 # 特定專案（包含授權統計）
 uv run python gl-cli.py project-stats --project-name "web-app"
+
+# 多個專案（批次查詢）🆕
+uv run python gl-cli.py project-stats --project-name "web-app" "api-server" "mobile-app"
 ```
 
 **功能說明：**
@@ -124,7 +127,7 @@ uv run python gl-cli.py project-stats --project-name "web-app"
 
 ---
 
-### 2️⃣ 群組資訊查詢 (`group-stats`) 🆕
+### 2️⃣ 群組資訊查詢 (`group-stats`) ⭐ 支援多筆參數
 查詢群組完整資訊、子群組、專案、**授權統計**
 
 ```bash
@@ -161,7 +164,7 @@ uv run python gl-cli.py group-stats --group-name "group1" "group2" "group3"
 
 ---
 
-### 3️⃣ 專案授權查詢 (`project-permission`)
+### 3️⃣ 專案授權查詢 (`project-permission`) ⭐ 支援多筆參數
 專注於授權資訊的快速查詢
 
 ```bash
@@ -170,6 +173,9 @@ uv run python gl-cli.py project-permission
 
 # 查詢特定專案的授權資訊
 uv run python gl-cli.py project-permission --project-name "my-project"
+
+# 查詢多個專案的授權資訊（批次查詢）🆕
+uv run python gl-cli.py project-permission --project-name "proj1" "proj2" "proj3"
 ```
 
 **功能說明：**
@@ -526,11 +532,17 @@ uv run python gl-cli.py group-stats --group-name "backend" "frontend" "devops"
 uv run python gl-cli.py project-stats --project-name "web-component"
 
 # 輸出: web-component-project-stats.csv
+
+# 批次查詢多個專案 🆕
+uv run python gl-cli.py project-stats --project-name "web-app" "api-server" "mobile-app"
+
+# 輸出: 每個專案都會產生獨立的統計檔案
 ```
 
 **適用場景：**
 - 檢查特定專案的詳細資訊
 - 驗證專案設定是否正確
+- 批次分析多個相關專案 🆕
 
 ---
 
