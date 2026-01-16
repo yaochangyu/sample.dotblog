@@ -79,6 +79,11 @@ uv run python gl-cli.py group-stats
 uv run python gl-cli.py group-stats --group-name "my-group"
 ```
 
+**功能說明：**
+1. **資料獲取** - 透過 `GroupDataFetcher` 取得指定群組(或所有群組)的資料
+2. **資料處理** - 使用 `GroupDataProcessor` 處理並整理成群組、子群組、專案、權限四類資料
+3. **資料匯出** - 將處理後的資料分別匯出成檔案(群組統計、子群組統計、專案統計、權限統計)，並顯示各類資料的總數
+
 **輸出檔案：**
 - `all-groups-stats.{csv,md}` - 群組資料 + 成員統計
 - `all-groups-stats-subgroups.{csv,md}` - 子群組資料
