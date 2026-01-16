@@ -6,6 +6,44 @@
 
 > 🎯 **資深 GitLab 專家級 CLI 工具** - 深度分析開發者程式碼品質與技術水平
 
+## 🆕 最新功能 (2026-01-16)
+
+### ✨ 新增：使用者專案列表查詢 (`user-projects`)
+
+**快速體驗：**
+```bash
+# 查詢特定使用者的所有專案及權限
+uv run python gl-cli.py user-projects --username alice
+
+# 查詢所有使用者的專案清單（權限盤點）
+uv run python gl-cli.py user-projects
+```
+
+**主要功能：**
+- ✅ 列出使用者參與的所有專案
+- ✅ 顯示每個專案的授權等級（Guest/Reporter/Developer/Maintainer/Owner）
+- ✅ 包含專案詳細資訊（描述、可見性、最後活動時間）
+- ✅ 產生統計摘要（各權限等級專案數量）
+- ✅ 支援 CSV 和 Markdown 雙格式輸出
+
+**實際應用場景：**
+- 🔍 **離職處理** - 快速列出離職員工需要移除權限的所有專案
+- 👥 **新人引導** - 了解新人被分配到哪些專案及權限等級
+- 📊 **權限審計** - 檢查使用者的專案授權是否合理
+- 🔒 **安全稽核** - 識別擁有敏感專案存取權的人員
+
+**技術實現：**
+- 新增 `UserProjectsFetcher` - 負責從 GitLab API 獲取用戶專案資料
+- 新增 `UserProjectsProcessor` - 處理專案資料並產生統計摘要
+- 新增 `UserProjectsService` - 整合資料獲取、處理、匯出流程
+- 遵循 SOLID 原則，完美融入現有架構
+
+**與 `user-stats` 的差異：**
+- `user-projects`: 專注於「使用者有哪些專案」（權限盤點）
+- `user-stats`: 專注於「使用者做了什麼」（開發活動分析）
+
+詳細說明請參考 [功能說明 5️⃣](#5️⃣-使用者專案列表查詢-user-projects-🆕) 和 [範例 7](#範例-7-查詢使用者的專案清單與權限-🆕)
+
 ---
 
 ## ⚡ 超快速開始（3 步驟）
@@ -29,7 +67,7 @@ uv run python gl-cli.py project-stats
 
 ---
 
-## 🎯 四大核心功能
+## 🎯 五大核心功能
 
 ### 1️⃣ 專案資訊查詢 (`project-stats`)
 查詢專案基本資料、活動狀態、統計數據、**授權統計**
@@ -157,6 +195,81 @@ uv run python gl-cli.py user-stats --username alice --project-name "web-api" --s
 - `developer_projects` - Developer 權限專案數
 - `reporter_projects` - Reporter 權限專案數
 - `guest_projects` - Guest 權限專案數
+
+---
+
+### 5️⃣ 使用者專案列表查詢 (`user-projects`) 🆕
+查詢使用者參與的所有專案及其授權資訊
+
+```bash
+# 查詢所有使用者的專案列表
+uv run python gl-cli.py user-projects
+
+# 查詢特定使用者的專案列表
+uv run python gl-cli.py user-projects --username alice
+```
+
+**功能說明：**
+1. **使用者驗證** - 驗證指定使用者是否存在，顯示使用者資訊(姓名、username、email)
+2. **資料獲取** - 透過 `UserProjectsFetcher` 取得使用者參與的所有專案及授權資訊
+3. **資料處理** - 使用 `UserProjectsProcessor` 處理並整理成專案列表和統計資料
+4. **資料匯出** - 將處理後的資料匯出成檔案，並顯示統計摘要
+5. **錯誤提示** - 若無資料則提供可能原因和建議
+
+**查詢參數：**
+- `--username` - 使用者名稱（可選，不填則查詢所有使用者）
+- `--group-id` - 群組 ID（可選）
+
+**輸出檔案：** 
+- `all-users_project.{csv,md}` - 所有使用者的專案列表（當未指定 username）
+- `{userName}-user_project.{csv,md}` - 特定使用者的專案列表（當指定 username）
+- `*-statistics.{csv,md}` - 統計摘要
+
+**專案列表欄位：**
+- `username`, `name`, `email` - 使用者識別資訊
+- `project_id`, `project_name` - 專案基本資訊
+- `project_description` - 專案描述
+- `project_visibility` - 專案可見性 (public/private/internal)
+- `project_created_at` - 專案創建時間
+- `project_last_activity` - 專案最後活動時間
+- `access_level` - 授權等級代碼 (10/20/30/40/50)
+- `access_level_name` - 授權等級名稱 (Guest/Reporter/Developer/Maintainer/Owner)
+- `expires_at` - 授權到期日
+
+**統計摘要欄位：**
+- `username`, `name`, `email` - 使用者識別資訊
+- `total_projects` - 使用者參與的專案總數
+- `owner_projects` - Owner 權限專案數 (50)
+- `maintainer_projects` - Maintainer 權限專案數 (40)
+- `developer_projects` - Developer 權限專案數 (30)
+- `reporter_projects` - Reporter 權限專案數 (20)
+- `guest_projects` - Guest 權限專案數 (10)
+
+**實際用途：**
+- 📊 **使用者權限盤點** - 快速了解使用者可存取的所有專案
+- 🔒 **權限審計** - 檢查使用者的專案授權是否合理
+- 👥 **離職處理** - 離職人員的專案權限清單
+- 📋 **新人引導** - 了解新人被分配到哪些專案
+- 🔍 **跨專案分析** - 找出參與最多專案的核心成員
+- ⚠️ **風險識別** - 找出擁有過多 Owner/Maintainer 權限的使用者
+
+**與 `user-stats` 的差異：**
+| 功能 | user-projects | user-stats |
+|------|---------------|------------|
+| **主要目的** | 列出使用者的專案清單 | 分析使用者的開發活動 |
+| **資料範圍** | 專案列表 + 授權資訊 | Commits + MR + Code Review |
+| **時間範圍** | 不需要（當前狀態） | 需要指定（歷史分析） |
+| **輸出資料** | 專案資訊、授權等級 | 程式碼異動、審查記錄 |
+| **適用場景** | 權限盤點、專案清單 | 績效評估、技術水平 |
+
+**範例分析：**
+```bash
+# 在 Excel 中開啟 {userName}-user_project.csv
+# 使用篩選功能：
+# - access_level_name = "Owner"：查看該使用者擁有的所有專案
+# - project_last_activity < "2024-01-01"：找出長時間未活動的專案
+# - project_visibility = "public"：查看使用者參與的公開專案
+```
 
 ---
 
@@ -453,7 +566,64 @@ uv run python gl-cli.py user-stats \
 
 ---
 
-### 範例 7: 評估開發者績效（年度報告）
+### 範例 7: 查詢使用者的專案清單與權限 🆕
+```bash
+# 查詢特定使用者參與的所有專案
+uv run python gl-cli.py user-projects --username alice
+
+# 產生 2 個檔案
+# alice-user_project.csv - 使用者的專案列表
+# alice-user_project-statistics.csv - 統計摘要 ⭐
+```
+
+**專案列表內容 (alice-user_project.csv)：**
+```csv
+username,name,project_name,access_level_name,project_visibility,project_last_activity
+alice,Alice Chen,web-app,Developer,private,2024-03-15
+alice,Alice Chen,api-server,Maintainer,private,2024-03-20
+alice,Alice Chen,mobile-app,Owner,internal,2024-03-18
+```
+
+**統計摘要內容 (alice-user_project-statistics.csv)：**
+```csv
+username,name,total_projects,owner_projects,maintainer_projects,developer_projects
+alice,Alice Chen,15,2,5,8
+```
+
+**實際用途：**
+- 🔍 **離職處理** - 快速列出離職員工需要移除權限的所有專案
+- 👥 **新人引導** - 了解新人被分配到哪些專案及權限等級
+- 📊 **權限審計** - 檢查使用者的專案授權是否合理（是否有過多 Owner 權限）
+- 🔒 **安全稽核** - 識別擁有敏感專案存取權的人員
+- 📋 **專案盤點** - 快速查看使用者負責維護哪些專案
+
+**查詢所有使用者的專案：**
+```bash
+# 產生全公司的專案權限清單
+uv run python gl-cli.py user-projects
+
+# 產生檔案：
+# - all-users_project.csv（所有使用者的專案清單）
+# - all-users_project-statistics.csv（每個使用者的專案統計）
+```
+
+**範例分析：**
+```bash
+# 在 Excel 中開啟 alice-user_project.csv
+# 使用篩選功能：
+# - access_level_name = "Owner"：查看該使用者擁有哪些專案（需特別注意）
+# - project_visibility = "public"：查看使用者參與的公開專案
+# - project_last_activity < "2024-01-01"：找出長時間未活動的專案（考慮移除權限）
+
+# 在 Excel 中開啟 all-users_project-statistics.csv
+# 使用篩選功能：
+# - owner_projects > 5：找出擁有過多專案的使用者（風險高）
+# - total_projects > 20：找出參與過多專案的使用者（分散注意力）
+```
+
+---
+
+### 範例 8: 評估開發者績效（年度報告）
 ```bash
 # 分析特定開發者 2024 年的表現
 uv run python gl-cli.py user-stats --username alice --start-date 2024-01-01 --end-date 2024-12-31
@@ -484,7 +654,7 @@ projects_contributed     : 貢獻專案數（技術廣度）
 
 ---
 
-### 範例 8: 團隊月度報告
+### 範例 9: 團隊月度報告
 ```bash
 # 分析團隊 2024 年 1 月的活動
 uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-01-31
@@ -500,7 +670,7 @@ uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-01-31
 
 ---
 
-### 範例 9: 批次分析多位開發者
+### 範例 10: 批次分析多位開發者
 ```bash
 # Linux/macOS
 cat > users.txt << EOF
@@ -533,7 +703,7 @@ Get-Content users.txt | ForEach-Object {
 
 ---
 
-### 範例 10: 專案群組分析
+### 範例 11: 專案群組分析
 ```bash
 # 只分析特定群組的專案（例如 group_id = 123）
 uv run python gl-cli.py project-stats --group-id 123
@@ -542,7 +712,7 @@ uv run python gl-cli.py user-stats --group-id 123 --start-date 2024-01-01
 
 ---
 
-### 範例 11: 隱藏 SSL 警告（Self-hosted GitLab）
+### 範例 12: 隱藏 SSL 警告（Self-hosted GitLab）
 ```bash
 # 方法 1: 環境變數
 export PYTHONWARNINGS="ignore:Unverified HTTPS request"
@@ -709,7 +879,52 @@ GitLab 專案資訊查詢
 
 ---
 
-**版本:** 1.1.0 🆕  
-**最後更新:** 2026-01-15  
-**新增功能:** 進度提示、即時進度條、彩色輸出  
+## 📝 更新歷史
+
+### v1.2.0 (2026-01-16) 🆕
+**新增功能：使用者專案列表查詢**
+- ✨ 新增 `user-projects` 命令 - 查詢使用者參與的所有專案及授權資訊
+- ✨ 新增 `UserProjectsFetcher` 類別 - 負責從 GitLab API 獲取用戶專案資料
+- ✨ 新增 `UserProjectsProcessor` 類別 - 處理專案資料並產生統計摘要
+- ✨ 新增 `UserProjectsService` 類別 - 整合資料獲取、處理、匯出流程
+- 📊 支援輸出格式：`{userName}-user_project.{csv|md}` 和統計摘要
+- 🎯 實際應用：離職處理、新人引導、權限審計、安全稽核
+
+**技術改進：**
+- ✅ 遵循 SOLID 原則設計，完美融入現有架構
+- ✅ 使用依賴注入和介面隔離
+- ✅ 完整的錯誤處理和使用者驗證
+- ✅ 詳細的進度報告和統計摘要
+
+**文檔更新：**
+- 📖 更新 README.md，新增「使用者專案列表查詢」功能說明
+- 📖 新增範例 7：查詢使用者的專案清單與權限
+- 📖 新增「最新功能」區塊，突出顯示新功能
+- 📖 更新「五大核心功能」（原為四大）
+
+### v1.1.0 (2026-01-15)
+**新增功能：進度提示**
+- ✨ 新增 `IProgressReporter` 介面及實作
+- ✨ 新增即時進度條、彩色輸出
+- ✨ 所有命令都支援進度提示
+
+**文檔更新：**
+- 📖 新增 PROGRESS_INDICATOR.md
+- 📖 新增 PROGRESS_UPDATE_SUMMARY.md
+- 📖 新增 QUICK_REFERENCE.md
+
+### v1.0.0 (初始版本)
+**核心功能：**
+- ✨ 專案資訊查詢 (`project-stats`)
+- ✨ 群組資訊查詢 (`group-stats`)
+- ✨ 專案授權查詢 (`project-permission`)
+- ✨ 使用者統計查詢 (`user-stats`)
+- ✨ 支援 CSV 和 Markdown 雙格式輸出
+- ✨ 遵循 SOLID 原則設計
+
+---
+
+**版本:** 1.2.0 🆕  
+**最後更新:** 2026-01-16  
+**新增功能:** 使用者專案列表查詢 (`user-projects`)  
 **授權:** 僅供學習與內部使用

@@ -535,6 +535,80 @@ class UserDataFetcher(IDataFetcher):
         return user_data
 
 
+class UserProjectsFetcher(IDataFetcher):
+    """使用者專案列表獲取器"""
+    
+    def __init__(self, client: GitLabClient, progress_reporter: Optional[IProgressReporter] = None):
+        self.client = client
+        self.progress = progress_reporter or SilentProgressReporter()
+    
+    def fetch(self, username: Optional[str] = None, group_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        獲取使用者參與的專案列表
+        
+        Args:
+            username: 使用者名稱 (可選)
+            group_id: 群組 ID (可選)
+        
+        Returns:
+            使用者專案資料
+        """
+        self.progress.report_start("正在獲取專案列表...")
+        projects = self.client.get_projects(group_id=group_id)
+        self.progress.report_complete(f"找到 {len(projects)} 個專案")
+        
+        user_projects = []
+        
+        # 驗證使用者是否存在
+        user_info = None
+        if username:
+            try:
+                users = self.client.gl.users.list(username=username)
+                if users:
+                    user_info = users[0]
+                    self.progress.report_complete(f"找到使用者：{user_info.name} (@{user_info.username})")
+            except Exception as e:
+                self.progress.report_warning(f"無法驗證使用者: {e}")
+        
+        if projects:
+            self.progress.report_start(f"正在分析 {len(projects)} 個專案的成員資訊...")
+        
+        for idx, project in enumerate(projects, 1):
+            self.progress.report_progress(idx, len(projects), project.name)
+            
+            try:
+                project_detail = self.client.get_project(project.id)
+                members = project_detail.members.list(all=True)
+                
+                for member in members:
+                    # 如果指定了使用者名稱，則過濾
+                    if username:
+                        if user_info and member.username != user_info.username:
+                            continue
+                        elif not user_info and member.username != username:
+                            continue
+                    
+                    user_projects.append({
+                        'user_id': member.id,
+                        'username': member.username,
+                        'name': member.name,
+                        'email': getattr(member, 'email', ''),
+                        'project_id': project.id,
+                        'project_name': project.name,
+                        'project_description': project.description or '',
+                        'project_visibility': project.visibility,
+                        'project_created_at': project.created_at,
+                        'project_last_activity': project.last_activity_at,
+                        'access_level': member.access_level,
+                        'access_level_name': AccessLevelUtil.get_level_name(member.access_level),
+                        'expires_at': getattr(member, 'expires_at', None)
+                    })
+            except Exception as e:
+                self.progress.report_warning(f"Failed to get members for project {project.name}: {e}")
+        
+        return {'user_projects': user_projects}
+
+
 class GroupDataFetcher(IDataFetcher):
     """群組資料獲取器（包含子群組、專案、授權資訊）"""
     
@@ -898,6 +972,51 @@ class UserDataProcessor(IDataProcessor):
         return pd.DataFrame(stats)
 
 
+class UserProjectsProcessor(IDataProcessor):
+    """使用者專案資料處理器"""
+    
+    def process(self, data: Dict[str, Any]) -> Dict[str, pd.DataFrame]:
+        """處理使用者專案資料"""
+        result = {}
+        
+        if data['user_projects']:
+            result['projects'] = pd.DataFrame(data['user_projects'])
+        else:
+            result['projects'] = pd.DataFrame()
+        
+        # 產生統計資料
+        result['statistics'] = self._generate_statistics(result['projects'])
+        
+        return result
+    
+    def _generate_statistics(self, projects_df: pd.DataFrame) -> pd.DataFrame:
+        """產生統計資料"""
+        if projects_df.empty:
+            return pd.DataFrame()
+        
+        stats = []
+        
+        # 按使用者統計
+        for username in projects_df['username'].unique():
+            user_projects = projects_df[projects_df['username'] == username]
+            user_name = user_projects.iloc[0]['name']
+            user_email = user_projects.iloc[0]['email']
+            
+            stats.append({
+                'username': username,
+                'name': user_name,
+                'email': user_email,
+                'total_projects': len(user_projects),
+                'owner_projects': len(user_projects[user_projects['access_level'] == 50]),
+                'maintainer_projects': len(user_projects[user_projects['access_level'] == 40]),
+                'developer_projects': len(user_projects[user_projects['access_level'] == 30]),
+                'reporter_projects': len(user_projects[user_projects['access_level'] == 20]),
+                'guest_projects': len(user_projects[user_projects['access_level'] == 10]),
+            })
+        
+        return pd.DataFrame(stats)
+
+
 class GroupDataProcessor(IDataProcessor):
     """群組資料處理器"""
     
@@ -1158,6 +1277,81 @@ class UserStatsService(BaseService):
         print("=" * 70)
 
 
+class UserProjectsService(BaseService):
+    """使用者專案服務"""
+    
+    def execute(self, username: Optional[str] = None, group_id: Optional[int] = None) -> None:
+        """執行使用者專案查詢"""
+        print("=" * 70)
+        print("GitLab 使用者專案列表查詢")
+        print("=" * 70)
+        
+        # 驗證使用者是否存在
+        if username:
+            try:
+                users = self.fetcher.client.gl.users.list(username=username)
+                if not users:
+                    print(f"\n❌ 錯誤：找不到使用者 '{username}'")
+                    print("\n建議：")
+                    print(f"  • 檢查使用者名稱是否正確")
+                    print(f"  • 使用 GitLab username（不是顯示名稱）")
+                    print(f"  • 執行不帶 --username 參數查看所有使用者")
+                    print("\n" + "=" * 70)
+                    return
+                else:
+                    user_info = users[0]
+                    print(f"\n✓ 找到使用者：{user_info.name} (@{user_info.username})")
+                    if hasattr(user_info, 'email'):
+                        print(f"  Email: {user_info.email}")
+            except Exception as e:
+                print(f"\n⚠️  警告：無法驗證使用者 ({e})")
+                print("  繼續執行查詢...")
+        
+        # 獲取資料
+        user_data = self.fetcher.fetch(username=username, group_id=group_id)
+        
+        # 處理資料
+        processed_data = self.processor.process(user_data)
+        
+        # 匯出資料
+        if username:
+            base_filename = f"{username}-user_project"
+        else:
+            base_filename = "all-users_project"
+        
+        # 匯出各類資料並計數
+        exported_count = 0
+        for data_type, df in processed_data.items():
+            if not df.empty:
+                if data_type == 'projects':
+                    filename = base_filename
+                else:
+                    filename = f"{base_filename}-{data_type}"
+                self.exporter.export(df, filename)
+                exported_count += 1
+        
+        # 顯示統計摘要
+        if not processed_data['statistics'].empty:
+            print("\n" + "=" * 70)
+            print("統計摘要")
+            print("=" * 70)
+            print(processed_data['statistics'].to_string(index=False))
+        
+        print("\n" + "=" * 70)
+        
+        # 檢查是否有輸出資料
+        if exported_count == 0:
+            if username:
+                print(f"⚠️  警告：沒有找到使用者 '{username}' 的任何專案")
+            else:
+                print("⚠️  警告：沒有找到任何使用者專案資料")
+        else:
+            print("✓ 查詢完成！")
+            print(f"✓ 共匯出 {exported_count} 個資料檔案")
+        
+        print("=" * 70)
+
+
 class GroupStatsService(BaseService):
     """群組統計服務"""
     
@@ -1241,6 +1435,12 @@ class GitLabCLI:
         processor = UserDataProcessor()
         return UserStatsService(fetcher, processor, self.exporter)
     
+    def create_user_projects_service(self) -> UserProjectsService:
+        """創建使用者專案服務"""
+        fetcher = UserProjectsFetcher(self.client, self.progress)
+        processor = UserProjectsProcessor()
+        return UserProjectsService(fetcher, processor, self.exporter)
+    
     def create_group_stats_service(self) -> GroupStatsService:
         """創建群組統計服務"""
         fetcher = GroupDataFetcher(self.client, self.progress)
@@ -1283,19 +1483,25 @@ class GitLabCLI:
   # 4. 取得特定專案授權資訊
   python gl-cli.py project-permission --project-name "my-project"
   
-  # 5. 取得所有使用者資訊
+  # 5. 取得所有使用者詳細資訊（commits, code changes, merge requests, code reviews）
   python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-12-31
   
-  # 6. 取得特定使用者資訊
+  # 6. 取得特定使用者詳細資訊
   python gl-cli.py user-stats --username johndoe --start-date 2024-01-01
   
   # 7. 取得特定專案的開發者活動
   python gl-cli.py user-stats --project-name "web-api" --start-date 2024-01-01
   
-  # 8. 取得所有群組資訊
+  # 8. 取得所有使用者的專案列表（包含授權資訊）
+  python gl-cli.py user-projects
+  
+  # 9. 取得特定使用者的專案列表（包含授權資訊）
+  python gl-cli.py user-projects --username johndoe
+  
+  # 10. 取得所有群組資訊
   python gl-cli.py group-stats
   
-  # 9. 取得特定群組資訊
+  # 11. 取得特定群組資訊
   python gl-cli.py group-stats --group-name "my-group"
             """
         )
@@ -1369,7 +1575,24 @@ class GitLabCLI:
         )
         user_stats_parser.set_defaults(func=self._cmd_user_stats)
         
-        # 4. group-stats 命令
+        # 4. user-projects 命令
+        user_projects_parser = subparsers.add_parser(
+            'user-projects',
+            help='取得使用者專案列表'
+        )
+        user_projects_parser.add_argument(
+            '--username',
+            type=str,
+            help='使用者名稱 (可選，不填則取得全部)'
+        )
+        user_projects_parser.add_argument(
+            '--group-id',
+            type=int,
+            help=f'群組 ID (預設: {config.TARGET_GROUP_ID})'
+        )
+        user_projects_parser.set_defaults(func=self._cmd_user_projects)
+        
+        # 5. group-stats 命令
         group_stats_parser = subparsers.add_parser(
             'group-stats',
             help='取得群組所有資訊'
@@ -1407,6 +1630,14 @@ class GitLabCLI:
             project_name=args.project_name,
             start_date=args.start_date or config.START_DATE,
             end_date=args.end_date or config.END_DATE,
+            group_id=args.group_id or config.TARGET_GROUP_ID
+        )
+    
+    def _cmd_user_projects(self, args):
+        """執行使用者專案命令"""
+        service = self.create_user_projects_service()
+        service.execute(
+            username=args.username,
             group_id=args.group_id or config.TARGET_GROUP_ID
         )
     
