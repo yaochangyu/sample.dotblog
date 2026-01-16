@@ -76,7 +76,7 @@ show_help() {
     echo "     ./run-gl-cli.sh project-permission [--project-name NAME] [--group-id ID]"
     echo ""
     echo "  3. 使用者統計查詢："
-    echo "     ./run-gl-cli.sh user-stats [--username NAME] [--start-date YYYY-MM-DD] [--end-date YYYY-MM-DD] [--group-id ID]"
+    echo "     ./run-gl-cli.sh user-details [--username NAME] [--start-date YYYY-MM-DD] [--end-date YYYY-MM-DD] [--group-id ID]"
     echo ""
     echo "快速範例："
     echo ""
@@ -87,10 +87,10 @@ show_help() {
     echo "  ./run-gl-cli.sh project-permission --project-name \"my-project\""
     echo ""
     echo "  # 分析 2024 年的使用者活動"
-    echo "  ./run-gl-cli.sh user-stats --start-date 2024-01-01 --end-date 2024-12-31"
+    echo "  ./run-gl-cli.sh user-details --start-date 2024-01-01 --end-date 2024-12-31"
     echo ""
     echo "  # 分析特定使用者"
-    echo "  ./run-gl-cli.sh user-stats --username johndoe"
+    echo "  ./run-gl-cli.sh user-details --username johndoe"
     echo ""
     echo "其他命令："
     echo ""
@@ -175,7 +175,7 @@ main() {
         clean)
             clean_output
             ;;
-        project-stats|project-permission|user-stats)
+        project-stats|project-permission|user-details)
             run_cli "$@"
             ;;
         *)
