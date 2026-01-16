@@ -133,6 +133,9 @@ uv run python gl-cli.py group-stats
 
 # 特定群組
 uv run python gl-cli.py group-stats --group-name "my-group"
+
+# 多個群組 🆕
+uv run python gl-cli.py group-stats --group-name "group1" "group2" "group3"
 ```
 
 **功能說明：**
@@ -499,12 +502,17 @@ uv run python gl-cli.py group-stats
 uv run python gl-cli.py group-stats --group-name "backend"
 
 # 輸出: backend-group-stats.csv, backend-group-stats-permissions.csv 等
+
+# 查詢多個群組 🆕
+uv run python gl-cli.py group-stats --group-name "backend" "frontend" "devops"
+
+# 輸出: 每個群組都會產生獨立的統計檔案
 ```
 
 **適用場景：**
 - 檢查特定群組的詳細資訊
 - 驗證群組設定是否正確
-- 單一群組的權限審計
+- 單一或多個群組的權限審計 🆕
 
 ---
 
