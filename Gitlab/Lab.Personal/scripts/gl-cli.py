@@ -683,10 +683,17 @@ class UserProjectsFetcher(IDataFetcher):
                 self.progress.report_warning(f"無法驗證使用者: {e}")
         
         if projects:
-            self.progress.report_start(f"正在分析 {len(projects)} 個專案的成員資訊...")
+            if username:
+                self.progress.report_start(f"正在檢查 {len(projects)} 個專案，尋找使用者的參與專案...")
+            else:
+                self.progress.report_start(f"正在分析 {len(projects)} 個專案的成員資訊...")
         
         for idx, project in enumerate(projects, 1):
-            self.progress.report_progress(idx, len(projects), project.name)
+            # 只在找到使用者時才顯示進度，避免誤導
+            if username:
+                self.progress.report_progress(idx, len(projects), f"檢查中... 已找到 {len(user_projects)} 個")
+            else:
+                self.progress.report_progress(idx, len(projects), project.name)
             
             try:
                 project_detail = self.client.get_project(project.id)
