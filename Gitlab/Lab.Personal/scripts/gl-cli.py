@@ -359,7 +359,10 @@ class UserDataFetcher(IDataFetcher):
             'code_changes': [],
             'merge_requests': [],
             'code_reviews': [],
-            'permissions': []
+            'permissions': [],
+            'user_profile': [],  # 新增：使用者基本資訊
+            'user_events': [],   # 新增：使用者事件
+            'contributors': []   # 新增：貢獻者統計
         }
         
         # 準備匹配條件（使用 email 和 name 進行精確匹配）
@@ -371,6 +374,72 @@ class UserDataFetcher(IDataFetcher):
             target_email = getattr(user_info, 'email', None)
             target_name = getattr(user_info, 'name', None)
             target_username = getattr(user_info, 'username', username)
+            
+            # 收集使用者基本資訊
+            user_data['user_profile'].append({
+                'user_id': user_info.id,
+                'username': user_info.username,
+                'name': user_info.name,
+                'email': getattr(user_info, 'email', ''),
+                'public_email': getattr(user_info, 'public_email', ''),
+                'state': getattr(user_info, 'state', ''),
+                'avatar_url': getattr(user_info, 'avatar_url', ''),
+                'web_url': getattr(user_info, 'web_url', ''),
+                'created_at': getattr(user_info, 'created_at', ''),
+                'bio': getattr(user_info, 'bio', ''),
+                'location': getattr(user_info, 'location', ''),
+                'organization': getattr(user_info, 'organization', ''),
+                'job_title': getattr(user_info, 'job_title', ''),
+                'pronouns': getattr(user_info, 'pronouns', ''),
+                'website_url': getattr(user_info, 'website_url', ''),
+                'skype': getattr(user_info, 'skype', ''),
+                'linkedin': getattr(user_info, 'linkedin', ''),
+                'twitter': getattr(user_info, 'twitter', ''),
+                'last_activity_on': getattr(user_info, 'last_activity_on', ''),
+                'last_sign_in_at': getattr(user_info, 'last_sign_in_at', ''),
+                'current_sign_in_at': getattr(user_info, 'current_sign_in_at', ''),
+                'confirmed_at': getattr(user_info, 'confirmed_at', ''),
+                'is_admin': getattr(user_info, 'is_admin', False),
+                'can_create_group': getattr(user_info, 'can_create_group', False),
+                'can_create_project': getattr(user_info, 'can_create_project', False),
+                'projects_limit': getattr(user_info, 'projects_limit', 0),
+                'two_factor_enabled': getattr(user_info, 'two_factor_enabled', False),
+                'external': getattr(user_info, 'external', False),
+                'private_profile': getattr(user_info, 'private_profile', False),
+                'followers': getattr(user_info, 'followers', 0),
+                'following': getattr(user_info, 'following', 0),
+                'bot': getattr(user_info, 'bot', False),
+                'note': getattr(user_info, 'note', ''),
+                'namespace_id': getattr(user_info, 'namespace_id', '')
+            })
+            
+            # 獲取使用者事件
+            try:
+                self.progress.report_start(f"正在獲取使用者事件...")
+                user_obj = self.client.gl.users.get(user_info.id)
+                events = user_obj.events.list(
+                    after=start_date,
+                    before=end_date,
+                    all=True
+                )
+                
+                for event in events:
+                    user_data['user_events'].append({
+                        'user_id': user_info.id,
+                        'username': user_info.username,
+                        'event_id': event.id,
+                        'action_name': getattr(event, 'action_name', ''),
+                        'target_type': getattr(event, 'target_type', ''),
+                        'target_title': getattr(event, 'target_title', ''),
+                        'created_at': event.created_at,
+                        'author_username': getattr(event, 'author_username', ''),
+                        'project_id': getattr(event, 'project_id', ''),
+                        'push_data': str(getattr(event, 'push_data', {}))
+                    })
+                
+                self.progress.report_complete(f"找到 {len(events)} 個使用者事件")
+            except Exception as e:
+                self.progress.report_warning(f"Failed to get user events: {e}")
         
         if projects:
             self.progress.report_start(f"正在分析 {len(projects)} 個專案的使用者活動...")
@@ -531,6 +600,36 @@ class UserDataFetcher(IDataFetcher):
                     })
             except Exception as e:
                 self.progress.report_warning(f"Failed to get permissions for project {project.name}: {e}")
+            
+            # 獲取專案貢獻者統計
+            try:
+                contributors = project_detail.repository_contributors()
+                
+                for contributor in contributors:
+                    # 如果指定了使用者，只獲取該使用者的統計
+                    if username:
+                        match = False
+                        if target_email and contributor.get('email') == target_email:
+                            match = True
+                        elif target_name and contributor.get('name') == target_name:
+                            match = True
+                        elif contributor.get('name') == username:
+                            match = True
+                        
+                        if not match:
+                            continue
+                    
+                    user_data['contributors'].append({
+                        'project_id': project.id,
+                        'project_name': project.name,
+                        'contributor_name': contributor.get('name', ''),
+                        'contributor_email': contributor.get('email', ''),
+                        'total_commits': contributor.get('commits', 0),
+                        'total_additions': contributor.get('additions', 0),
+                        'total_deletions': contributor.get('deletions', 0)
+                    })
+            except Exception as e:
+                self.progress.report_warning(f"Failed to get contributors for project {project.name}: {e}")
         
         return user_data
 
@@ -877,6 +976,24 @@ class UserDataProcessor(IDataProcessor):
         """處理使用者資料"""
         result = {}
         
+        # 處理使用者基本資訊
+        if user_data.get('user_profile'):
+            result['user_profile'] = pd.DataFrame(user_data['user_profile'])
+        else:
+            result['user_profile'] = pd.DataFrame()
+        
+        # 處理使用者事件
+        if user_data.get('user_events'):
+            result['user_events'] = pd.DataFrame(user_data['user_events'])
+        else:
+            result['user_events'] = pd.DataFrame()
+        
+        # 處理貢獻者統計
+        if user_data.get('contributors'):
+            result['contributors'] = pd.DataFrame(user_data['contributors'])
+        else:
+            result['contributors'] = pd.DataFrame()
+        
         # 處理 commits
         if user_data['commits']:
             commits_df = pd.DataFrame([{
@@ -926,7 +1043,7 @@ class UserDataProcessor(IDataProcessor):
         return result
     
     def _generate_statistics(self, data: Dict[str, pd.DataFrame]) -> pd.DataFrame:
-        """產生統計資料（包含授權統計）"""
+        """產生統計資料（包含授權統計、貢獻者統計和事件統計）"""
         stats = []
         
         commits_df = data.get('commits', pd.DataFrame())
@@ -934,6 +1051,8 @@ class UserDataProcessor(IDataProcessor):
         reviews_df = data.get('code_reviews', pd.DataFrame())
         changes_df = data.get('code_changes', pd.DataFrame())
         permissions_df = data.get('permissions', pd.DataFrame())
+        contributors_df = data.get('contributors', pd.DataFrame())
+        events_df = data.get('user_events', pd.DataFrame())
         
         if not commits_df.empty:
             # 按作者統計
@@ -960,6 +1079,24 @@ class UserDataProcessor(IDataProcessor):
                 reporter_projects = len(author_perms[author_perms['access_level'] == 20]) if not author_perms.empty else 0
                 guest_projects = len(author_perms[author_perms['access_level'] == 10]) if not author_perms.empty else 0
                 
+                # 從貢獻者統計取得總計（如果有的話）
+                contributor_stats = contributors_df
+                if not contributors_df.empty:
+                    contributor_stats = contributors_df[
+                        (contributors_df['contributor_email'] == author_email) |
+                        (contributors_df['contributor_name'] == author)
+                    ]
+                
+                total_contrib_commits = contributor_stats['total_commits'].sum() if not contributor_stats.empty else 0
+                total_contrib_additions = contributor_stats['total_additions'].sum() if not contributor_stats.empty else 0
+                total_contrib_deletions = contributor_stats['total_deletions'].sum() if not contributor_stats.empty else 0
+                
+                # 統計事件
+                total_events = 0
+                if not events_df.empty:
+                    # 這裡根據 author_email 或 username 匹配
+                    total_events = len(events_df)
+                
                 stats.append({
                     'author_name': author,
                     'author_email': author_email,
@@ -980,6 +1117,12 @@ class UserDataProcessor(IDataProcessor):
                     'developer_projects': developer_projects,
                     'reporter_projects': reporter_projects,
                     'guest_projects': guest_projects,
+                    # 新增貢獻者統計（來自 repository_contributors API）
+                    'contributor_total_commits': total_contrib_commits,
+                    'contributor_total_additions': total_contrib_additions,
+                    'contributor_total_deletions': total_contrib_deletions,
+                    # 新增事件統計
+                    'total_user_events': total_events,
                 })
         
         return pd.DataFrame(stats)

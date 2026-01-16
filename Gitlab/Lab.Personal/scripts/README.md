@@ -8,6 +8,139 @@
 
 ## 🆕 最新功能 (2026-01-16)
 
+### ✨ v2.0.0 重大更新：完整開發者活動與貢獻資料分析
+
+**整合 GitLab API 開發者活動數據，提供業界最完整的程式碼品質分析！**
+
+#### 🎯 新增功能
+
+##### 1. 使用者基本資訊收集（30+ 欄位）
+```bash
+# 取得開發者完整個人資料
+uv run python gl-cli.py user-details --username alice --start-date 2024-01-01 --end-date 2024-12-31
+```
+
+**輸出 CSV：** `alice-user-user_profile.csv`
+
+**包含欄位：**
+- 基本資料：user_id, username, name, email, state, created_at
+- 個人資訊：organization, job_title, location, bio, website_url
+- 社交資訊：followers, following, linkedin, twitter
+- 帳號狀態：last_activity_on, last_sign_in_at, confirmed_at
+- 權限設定：is_admin, can_create_project, two_factor_enabled
+- 其他：avatar_url, web_url, namespace_id 等
+
+##### 2. 使用者活動事件追蹤
+**輸出 CSV：** `alice-user-user_events.csv`
+
+追蹤所有開發者活動：
+- Push 事件
+- MR 創建/合併事件
+- Issue 相關活動
+- Comment 評論
+- 其他專案互動
+
+##### 3. 貢獻者統計（來自 GitLab API）
+**輸出 CSV：** `alice-user-contributors.csv`
+
+使用 GitLab 官方 `repository_contributors()` API：
+- 各專案的總 commits 數
+- 總新增/刪除行數
+- 精準的貢獻統計
+
+##### 4. 增強統計摘要（17 個指標）
+**輸出 CSV：** `alice-user-statistics.csv`
+
+**新增欄位（4 個）：**
+- `contributor_total_commits` - 來自 GitLab API 的官方統計
+- `contributor_total_additions` - 總新增行數
+- `contributor_total_deletions` - 總刪除行數
+- `total_user_events` - 使用者活動事件總數
+
+**原有欄位（13 個，保留）：**
+- author_name, author_email
+- total_commits, total_additions, total_deletions, total_changes
+- avg_changes_per_commit
+- total_merge_requests, merged_mrs
+- total_code_reviews, total_files_changed
+- projects_contributed, total_projects_with_access
+- owner/maintainer/developer/reporter/guest_projects
+
+#### 📊 完整輸出檔案（9 個 CSV）
+
+執行 `user-details` 命令後產生：
+
+| CSV 檔案 | 說明 | 狀態 |
+|---------|------|------|
+| `*-user_profile.csv` | 使用者基本資訊（30+ 欄位） | 🆕 NEW |
+| `*-user_events.csv` | 使用者活動事件 | 🆕 NEW |
+| `*-contributors.csv` | 貢獻者統計（GitLab API） | 🆕 NEW |
+| `*-commits.csv` | Commit 詳細記錄 | ✅ 原有 |
+| `*-code_changes.csv` | 程式碼異動詳情 | ✅ 原有 |
+| `*-merge_requests.csv` | MR 記錄 | ✅ 原有 |
+| `*-code_reviews.csv` | Code Review 評論 | ✅ 原有 |
+| `*-permissions.csv` | 專案授權資訊 | ✅ 原有 |
+| `*-statistics.csv` | 統計摘要（17 個指標） | ⭐ 增強 |
+
+#### 🚀 使用範例
+
+```bash
+# 1. 單一開發者完整分析
+uv run python gl-cli.py user-details \
+  --username alice \
+  --start-date 2024-01-01 \
+  --end-date 2024-12-31
+
+# 2. 特定專案的開發者活動
+uv run python gl-cli.py user-details \
+  --project-name "web-api" \
+  --start-date 2024-01-01
+
+# 3. 多位開發者批次分析
+uv run python gl-cli.py user-details \
+  --username alice bob charlie \
+  --start-date 2024-01-01
+
+# 4. 組合查詢（多人 × 多專案）
+uv run python gl-cli.py user-details \
+  --username alice bob \
+  --project-name "web-api" "mobile-app" \
+  --start-date 2024-01-01
+
+# 5. 所有開發者分析
+uv run python gl-cli.py user-details \
+  --start-date 2024-01-01
+```
+
+#### 📈 品質評分建議
+
+| 分數 | 等級 | 標準 |
+|-----|------|------|
+| 9-10 | 🌟 優秀 | MR合併率>90%, Code Review參與度高, 跨專案貢獻>3 |
+| 7-8 | ✅ 良好 | MR合併率>75%, 有Code Review參與, 專注核心專案 |
+| 5-6 | ⚠️ 需改進 | MR合併率<75%, Code Review參與度低 |
+| <5 | ❌ 不足 | MR合併率<50%, 缺乏Code Review參與, 活躍度低 |
+
+#### 🔍 整合的 GitLab API
+
+| API | 功能 | 狀態 |
+|-----|------|------|
+| `gl.users.get()` | 使用者基本資訊（30+ 欄位） | ✅ 完整整合 |
+| `user.events.list()` | 使用者活動事件 | ✅ 完整整合 |
+| `project.repository_contributors()` | 貢獻者統計 | ✅ 完整整合 |
+| `project.commits.list()` | Commits 記錄 | ✅ 原已支援 |
+| `project.mergerequests.list()` | Merge Requests | ✅ 原已支援 |
+| `mr.discussions.list()` | Code Review | ✅ 原已支援 |
+
+#### ✅ 向後相容
+
+- ✅ 所有原有功能保持不變
+- ✅ 新增資料為可選，失敗不影響其他資料
+- ✅ 檔案命名規則一致
+- ✅ 原始腳本已備份為 `gl-cli.py.backup`
+
+---
+
 ### ✨ v1.3.0 新增：多筆參數支援
 
 **快速體驗：**
