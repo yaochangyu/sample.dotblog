@@ -182,12 +182,8 @@ class ProjectDataFetcher(IDataFetcher):
             包含專案列表和授權資訊的字典
         """
         self.progress.report_start("正在獲取專案列表...")
-        projects = self.client.get_projects(group_id=group_id)
+        projects = self.client.get_projects(group_id=group_id, search=project_name)
         self.progress.report_complete(f"找到 {len(projects)} 個專案")
-        
-        if project_name:
-            projects = [p for p in projects if project_name.lower() in p.name.lower()]
-            self.progress.report_complete(f"篩選後剩餘 {len(projects)} 個專案")
         
         result = {
             'projects': projects,
@@ -263,12 +259,8 @@ class ProjectPermissionFetcher(IDataFetcher):
             授權資料列表
         """
         self.progress.report_start("正在獲取專案列表...")
-        projects = self.client.get_projects(group_id=group_id)
+        projects = self.client.get_projects(group_id=group_id, search=project_name)
         self.progress.report_complete(f"找到 {len(projects)} 個專案")
-        
-        if project_name:
-            projects = [p for p in projects if project_name.lower() in p.name.lower()]
-            self.progress.report_complete(f"篩選後剩餘 {len(projects)} 個專案")
         
         permissions_data = []
         
@@ -343,16 +335,12 @@ class UserDataFetcher(IDataFetcher):
             使用者資料字典
         """
         self.progress.report_start("正在獲取專案列表...")
-        projects = self.client.get_projects(group_id=group_id)
+        projects = self.client.get_projects(group_id=group_id, search=project_name)
         self.progress.report_complete(f"找到 {len(projects)} 個專案")
         
-        # 如果指定了專案名稱，篩選專案
-        if project_name:
-            projects = [p for p in projects if project_name.lower() in p.name.lower()]
-            if not projects:
-                self.progress.report_warning(f"找不到名稱包含 '{project_name}' 的專案")
-            else:
-                self.progress.report_complete(f"篩選後剩餘 {len(projects)} 個專案")
+        # 檢查是否有找到專案
+        if project_name and not projects:
+            self.progress.report_warning(f"找不到名稱包含 '{project_name}' 的專案")
         
         user_data = {
             'commits': [],
