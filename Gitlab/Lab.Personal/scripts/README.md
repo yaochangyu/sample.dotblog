@@ -161,21 +161,25 @@ uv run python gl-cli.py group-stats --group-name "group1" "group2" "group3"
 
 ---
 
-### 3️⃣ 專案授權查詢 (`project-permission`) ⚠️ **已棄用**
-
-> **⚠️ 警告：此命令已棄用，建議使用 `project-stats`**
->
-> `project-stats` 已包含完整的授權資訊（統計 + 詳細資料），此命令僅為向下相容保留。
+### 3️⃣ 專案授權查詢 (`project-permission`)
+專注於授權資訊的快速查詢
 
 ```bash
-# ❌ 不建議使用（僅為向下相容）
+# 查詢所有專案的授權資訊
 uv run python gl-cli.py project-permission
 
-# ✅ 建議使用（功能更完整）
-uv run python gl-cli.py project-stats
+# 查詢特定專案的授權資訊
+uv run python gl-cli.py project-permission --project-name "my-project"
 ```
 
-**輸出:** `./output/all-project-permission.{csv,md}`
+**功能說明：**
+- 專注於快速獲取專案授權資訊
+- 適合需要單純授權資料的場景
+- 若需完整專案資訊（含授權統計），可使用 `project-stats`
+
+**輸出檔案：**
+- `all-project-permission.{csv,md}` - 所有專案授權詳細資料
+- `{project-name}-project-permission.{csv,md}` - 特定專案授權資料
 
 ---
 
