@@ -1505,7 +1505,7 @@ class UserStatsService(BaseService):
             base_filename: 基礎檔名
             exported_files: 已匯出的檔案列表 [(data_type, filename), ...]
         """
-        index_filename = f"{base_filename}-INDEX.md"
+        index_filename = f"{base_filename}-index.md"
         index_path = self.exporter.output_dir / index_filename
         
         # 準備索引內容
