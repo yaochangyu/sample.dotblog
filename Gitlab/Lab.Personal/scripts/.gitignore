@@ -16,7 +16,7 @@ env/
 uv.lock
 
 # Output files
-output/
+output*/
 *.csv
 
 # IDE
