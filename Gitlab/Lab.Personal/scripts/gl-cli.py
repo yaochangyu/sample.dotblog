@@ -19,7 +19,8 @@ from pathlib import Path
 import pandas as pd
 from datetime import datetime
 import urllib3
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FutureTimeoutError
+import signal
 
 # 抑制 SSL 不安全連線警告（self-signed certificates）
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -536,11 +537,13 @@ class UserDataFetcher(IDataFetcher):
                         user_data['code_changes'].extend(code_changes)
             
             # 獲取 Merge Requests
+            self.progress.report_start("正在獲取 Merge Requests...")
             mrs = self.client.get_project_merge_requests(
                 project.id,
                 updated_after=start_date,
                 updated_before=end_date
             )
+            self.progress.report_complete(f"找到 {len(mrs)} 個 Merge Requests")
             
             for mr in mrs:
                 # 改善匹配邏輯：使用 username 匹配
@@ -596,11 +599,20 @@ class UserDataFetcher(IDataFetcher):
                     continue
             
             # 獲取專案授權資訊和貢獻者統計
+            self.progress.report_start("正在獲取專案授權資訊...")
             try:
                 project_detail = self.client.get_project(project.id)
                 
-                # 獲取成員資訊
-                members = project_detail.members.list(all=True)
+                # 獲取成員資訊（加入超時保護）
+                members = []
+                try:
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(project_detail.members.list, all=True)
+                        members = future.result(timeout=30)  # 30秒超時
+                except FutureTimeoutError:
+                    self.progress.report_warning(f"獲取專案 {project.name} 成員列表超時 (30秒)，跳過此項目")
+                except Exception as e:
+                    self.progress.report_warning(f"獲取專案 {project.name} 成員列表失敗: {e}")
                 
                 for member in members:
                     # 改善匹配邏輯：使用 username 匹配
@@ -627,8 +639,17 @@ class UserDataFetcher(IDataFetcher):
                         'expires_at': getattr(member, 'expires_at', None)
                     })
                 
-                # 獲取專案貢獻者統計
-                contributors = project_detail.repository_contributors()
+                # 獲取專案貢獻者統計（加入超時保護）
+                contributors = []
+                try:
+                    # 使用 ThreadPoolExecutor 加入超時機制
+                    with ThreadPoolExecutor(max_workers=1) as executor:
+                        future = executor.submit(project_detail.repository_contributors)
+                        contributors = future.result(timeout=30)  # 30秒超時
+                except FutureTimeoutError:
+                    self.progress.report_warning(f"獲取專案 {project.name} 貢獻者統計超時 (30秒)，跳過此項目")
+                except Exception as e:
+                    self.progress.report_warning(f"獲取專案 {project.name} 貢獻者統計失敗: {e}")
                 
                 for contributor in contributors:
                     # 如果指定了使用者，只獲取該使用者的統計
