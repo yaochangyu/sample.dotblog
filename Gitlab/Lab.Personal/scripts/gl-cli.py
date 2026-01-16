@@ -1484,22 +1484,22 @@ class GitLabCLI:
   python gl-cli.py project-permission --project-name "my-project"
   
   # 5. 取得所有使用者詳細資訊（commits, code changes, merge requests, code reviews）
-  python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-12-31
+  python gl-cli.py user-details --start-date 2024-01-01 --end-date 2024-12-31
   
   # 6. 取得特定使用者詳細資訊
-  python gl-cli.py user-stats --username alice --start-date 2024-01-01
+  python gl-cli.py user-details --username alice --start-date 2024-01-01
   
   # 7. 取得多位使用者的詳細資訊 🆕
-  python gl-cli.py user-stats --username alice bob charlie --start-date 2024-01-01
+  python gl-cli.py user-details --username alice bob charlie --start-date 2024-01-01
   
   # 8. 取得特定專案的開發者活動
-  python gl-cli.py user-stats --project-name "web-api" --start-date 2024-01-01
+  python gl-cli.py user-details --project-name "web-api" --start-date 2024-01-01
   
   # 9. 取得多個專案的開發者活動 🆕
-  python gl-cli.py user-stats --project-name "web-api" "mobile-app" --start-date 2024-01-01
+  python gl-cli.py user-details --project-name "web-api" "mobile-app" --start-date 2024-01-01
   
   # 10. 組合查詢：多位使用者在多個專案的活動 🆕
-  python gl-cli.py user-stats --username alice bob --project-name "web-api" "mobile-app" --start-date 2024-01-01
+  python gl-cli.py user-details --username alice bob --project-name "web-api" "mobile-app" --start-date 2024-01-01
   
   # 11. 取得所有使用者的專案列表（包含授權資訊）
   python gl-cli.py user-projects
@@ -1555,9 +1555,9 @@ class GitLabCLI:
         )
         project_perm_parser.set_defaults(func=self._cmd_project_permission)
         
-        # 3. user-stats 命令
+        # 3. user-details 命令
         user_stats_parser = subparsers.add_parser(
-            'user-stats',
+            'user-details',
             help='取得使用者資訊'
         )
         user_stats_parser.add_argument(

@@ -13,20 +13,20 @@
 **快速體驗：**
 ```bash
 # 同時查詢多位使用者
-uv run python gl-cli.py user-stats --username alice bob charlie --start-date 2024-01-01
+uv run python gl-cli.py user-details --username alice bob charlie --start-date 2024-01-01
 
 # 同時查詢多個專案
-uv run python gl-cli.py user-stats --project-name "web-api" "mobile-app" --start-date 2024-01-01
+uv run python gl-cli.py user-details --project-name "web-api" "mobile-app" --start-date 2024-01-01
 
 # 組合查詢（2位使用者 × 2個專案 = 4次查詢）
-uv run python gl-cli.py user-stats --username alice bob --project-name "web-api" "mobile-app" --start-date 2024-01-01
+uv run python gl-cli.py user-details --username alice bob --project-name "web-api" "mobile-app" --start-date 2024-01-01
 
 # 批次查詢專案列表
 uv run python gl-cli.py user-projects --username alice bob charlie
 ```
 
 **主要功能：**
-- ✅ `user-stats` 支援多筆 `--username` 和 `--project-name`
+- ✅ `user-details` 支援多筆 `--username` 和 `--project-name`
 - ✅ `user-projects` 支援多筆 `--username`
 - ✅ 笛卡爾積邏輯（多使用者 × 多專案自動組合）
 - ✅ 清晰的進度顯示（查詢 X/Y）
@@ -64,9 +64,9 @@ uv run python gl-cli.py user-projects
 - 📊 **權限審計** - 檢查使用者的專案授權是否合理
 - 🔒 **安全稽核** - 識別擁有敏感專案存取權的人員
 
-**與 `user-stats` 的差異：**
+**與 `user-details` 的差異：**
 - `user-projects`: 專注於「使用者有哪些專案」（權限盤點）
-- `user-stats`: 專注於「使用者做了什麼」（開發活動分析）
+- `user-details`: 專注於「使用者做了什麼」（開發活動分析）
 
 詳細說明請參考 [功能說明 5️⃣](#5️⃣-使用者專案列表查詢-user-projects-🆕) 和 [範例 7](#範例-7-查詢使用者的專案清單與權限-🆕)
 
@@ -176,30 +176,30 @@ uv run python gl-cli.py project-stats
 
 ---
 
-### 4️⃣ 使用者統計查詢 (`user-stats`) ⭐ 支援多筆參數
+### 4️⃣ 使用者統計查詢 (`user-details`) ⭐ 支援多筆參數
 深度分析開發者活動：commits、MR、code review、授權、統計
 
 ```bash
 # 分析 2024 年所有開發者（包含授權資訊）
-uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-12-31
+uv run python gl-cli.py user-details --start-date 2024-01-01 --end-date 2024-12-31
 
 # 分析特定開發者（包含授權資訊）
-uv run python gl-cli.py user-stats --username alice --start-date 2024-01-01
+uv run python gl-cli.py user-details --username alice --start-date 2024-01-01
 
 # 同時分析多位開發者（批次查詢）🆕
-uv run python gl-cli.py user-stats --username alice bob charlie --start-date 2024-01-01
+uv run python gl-cli.py user-details --username alice bob charlie --start-date 2024-01-01
 
 # 分析特定專案內的所有開發者
-uv run python gl-cli.py user-stats --project-name "web-api" --start-date 2024-01-01
+uv run python gl-cli.py user-details --project-name "web-api" --start-date 2024-01-01
 
 # 同時分析多個專案（批次查詢）🆕
-uv run python gl-cli.py user-stats --project-name "web-api" "mobile-app" --start-date 2024-01-01
+uv run python gl-cli.py user-details --project-name "web-api" "mobile-app" --start-date 2024-01-01
 
 # 組合查詢：分析特定開發者在多個專案的活動 🆕
-uv run python gl-cli.py user-stats --username alice --project-name "web-api" "mobile-app" --start-date 2024-01-01
+uv run python gl-cli.py user-details --username alice --project-name "web-api" "mobile-app" --start-date 2024-01-01
 
 # 全面分析：多位開發者 × 多個專案（笛卡爾積）🆕
-uv run python gl-cli.py user-stats --username alice bob --project-name "web-api" "mobile-app" --start-date 2024-01-01
+uv run python gl-cli.py user-details --username alice bob --project-name "web-api" "mobile-app" --start-date 2024-01-01
 # 會執行 2 × 2 = 4 次查詢，產生 20 個檔案（4次查詢 × 5種類型）
 ```
 
@@ -293,8 +293,8 @@ uv run python gl-cli.py user-projects --username alice bob charlie
 - 🔍 **跨專案分析** - 找出參與最多專案的核心成員
 - ⚠️ **風險識別** - 找出擁有過多 Owner/Maintainer 權限的使用者
 
-**與 `user-stats` 的差異：**
-| 功能 | user-projects | user-stats |
+**與 `user-details` 的差異：**
+| 功能 | user-projects | user-details |
 |------|---------------|------------|
 | **主要目的** | 列出使用者的專案清單 | 分析使用者的開發活動 |
 | **資料範圍** | 專案列表 + 授權資訊 | Commits + MR + Code Review |
@@ -318,13 +318,13 @@ uv run python gl-cli.py user-projects --username alice bob charlie
 ### Linux/macOS:
 ```bash
 ./run-gl-cli.sh project-stats
-./run-gl-cli.sh user-stats --start-date 2024-01-01
+./run-gl-cli.sh user-details --start-date 2024-01-01
 ```
 
 ### Windows (PowerShell):
 ```powershell
 .\run-gl-cli.ps1 project-stats
-.\run-gl-cli.ps1 user-stats --start-date 2024-01-01
+.\run-gl-cli.ps1 user-details --start-date 2024-01-01
 ```
 
 ---
@@ -363,7 +363,7 @@ uv run python gl-cli.py user-projects --username alice bob charlie
 所有命令都已支援進度提示：
 - `group-stats` - 顯示群組分析進度
 - `project-stats` - 顯示專案查詢進度
-- `user-stats` - 顯示使用者分析進度
+- `user-details` - 顯示使用者分析進度
 - `project-permission` - 顯示授權查詢進度
 
 ### 進度提示架構
@@ -573,7 +573,7 @@ web-app,李四,user2,Maintainer
 ### 範例 6: 分析特定專案的開發者活動 🆕
 ```bash
 # 方法 1: 使用 --project-name 參數（推薦）
-uv run python gl-cli.py user-stats \
+uv run python gl-cli.py user-details \
     --project-name "web-api" \
     --start-date 2024-01-01
 
@@ -582,7 +582,7 @@ uv run python gl-cli.py user-stats \
 # - web-api-users-statistics.csv - 該專案的開發者統計
 
 # 方法 2: 分析特定開發者在特定專案的活動
-uv run python gl-cli.py user-stats \
+uv run python gl-cli.py user-details \
     --username alice \
     --project-name "web-api" \
     --start-date 2024-01-01
@@ -667,7 +667,7 @@ uv run python gl-cli.py user-projects --username ex_employee1 ex_employee2 ex_em
 ### 範例 8: 團隊績效評估（批次查詢）🆕
 ```bash
 # 同時分析 4 位團隊成員的 2024 年表現
-uv run python gl-cli.py user-stats \
+uv run python gl-cli.py user-details \
     --username alice bob charlie david \
     --start-date 2024-01-01 \
     --end-date 2024-12-31
@@ -689,7 +689,7 @@ uv run python gl-cli.py user-stats \
 ### 範例 9: 評估開發者績效（年度報告）
 ```bash
 # 分析特定開發者 2024 年的表現
-uv run python gl-cli.py user-stats --username alice --start-date 2024-01-01 --end-date 2024-12-31
+uv run python gl-cli.py user-details --username alice --start-date 2024-01-01 --end-date 2024-12-31
 
 # 產生 5 個檔案
 # alice-user-commits.csv        - 所有 commit 記錄
@@ -720,7 +720,7 @@ projects_contributed     : 貢獻專案數（技術廣度）
 ### 範例 10: 專案健康檢查（批次查詢）🆕
 ```bash
 # 批次分析 3 個核心專案的開發活動
-uv run python gl-cli.py user-stats \
+uv run python gl-cli.py user-details \
     --project-name "web-api" "mobile-app" "backend-service" \
     --start-date 2024-01-01
 
@@ -740,7 +740,7 @@ uv run python gl-cli.py user-stats \
 ### 範例 11: 跨專案貢獻分析（笛卡爾積）🆕
 ```bash
 # 分析 2 位核心開發者在 3 個專案的貢獻
-uv run python gl-cli.py user-stats \
+uv run python gl-cli.py user-details \
     --username alice bob \
     --project-name "web-api" "mobile-app" "backend" \
     --start-date 2024-01-01
@@ -770,7 +770,7 @@ uv run python gl-cli.py user-stats \
 ### 範例 12: 團隊月度報告
 ```bash
 # 分析團隊 2024 年 1 月的活動
-uv run python gl-cli.py user-stats --start-date 2024-01-01 --end-date 2024-01-31
+uv run python gl-cli.py user-details --start-date 2024-01-01 --end-date 2024-01-31
 
 # 輸出
 # all-users-statistics.csv  - 可直接放入月報
@@ -795,7 +795,7 @@ EOF
 
 while read username; do
   echo "分析: $username"
-  uv run python gl-cli.py user-stats --username "$username" --start-date 2024-01-01
+  uv run python gl-cli.py user-details --username "$username" --start-date 2024-01-01
 done < users.txt
 ```
 
@@ -810,7 +810,7 @@ david
 
 Get-Content users.txt | ForEach-Object {
     Write-Host "分析: $_"
-    uv run python gl-cli.py user-stats --username $_
+    uv run python gl-cli.py user-details --username $_
 }
 ```
 
@@ -820,7 +820,7 @@ Get-Content users.txt | ForEach-Object {
 ```bash
 # 只分析特定群組的專案（例如 group_id = 123）
 uv run python gl-cli.py project-stats --group-id 123
-uv run python gl-cli.py user-stats --group-id 123 --start-date 2024-01-01
+uv run python gl-cli.py user-details --group-id 123 --start-date 2024-01-01
 ```
 
 ---
@@ -904,7 +904,7 @@ A: 已在實際環境測試：
 
 ### v1.3.0 (2026-01-16 下午) 🆕
 **新增功能：多筆參數支援**
-- ✨ `user-stats` 支援多筆 `--username` 和 `--project-name` 參數
+- ✨ `user-details` 支援多筆 `--username` 和 `--project-name` 參數
 - ✨ `user-projects` 支援多筆 `--username` 參數
 - ✨ 笛卡爾積邏輯 - 多使用者 × 多專案自動組合查詢
 - ✨ 進度顯示 - 清晰顯示當前查詢進度（查詢 X/Y）
@@ -959,7 +959,7 @@ A: 已在實際環境測試：
 - ✨ 專案資訊查詢 (`project-stats`)
 - ✨ 群組資訊查詢 (`group-stats`)
 - ✨ 專案授權查詢 (`project-permission`)
-- ✨ 使用者統計查詢 (`user-stats`)
+- ✨ 使用者統計查詢 (`user-details`)
 - ✨ 支援 CSV 和 Markdown 雙格式輸出
 - ✨ 遵循 SOLID 原則設計
 
