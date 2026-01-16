@@ -442,6 +442,8 @@ class UserDataFetcher(IDataFetcher):
                 until=end_date
             )
             
+            # 過濾符合條件的 commits
+            filtered_commits = []
             for commit in commits:
                 # 改善匹配邏輯：使用 email 優先，其次 name，最後 username
                 if username:
@@ -455,6 +457,17 @@ class UserDataFetcher(IDataFetcher):
                     
                     if not match:
                         continue
+                
+                filtered_commits.append(commit)
+            
+            # 處理過濾後的 commits（加入進度提示）
+            if filtered_commits:
+                self.progress.report_start(f"正在處理 {len(filtered_commits)} 個 commits...")
+            
+            for commit_idx, commit in enumerate(filtered_commits, 1):
+                # 每處理 10 個 commit 顯示一次進度
+                if commit_idx % 10 == 0 or commit_idx == len(filtered_commits):
+                    self.progress.report_progress(commit_idx, len(filtered_commits), f"處理 commit {commit_idx}/{len(filtered_commits)}")
                 
                 # 獲取 commit 詳細資訊
                 try:
@@ -557,9 +570,11 @@ class UserDataFetcher(IDataFetcher):
                     print(f"Warning: Failed to get MR detail for {mr.iid}: {e}")
                     continue
             
-            # 獲取專案授權資訊
+            # 獲取專案授權資訊和貢獻者統計
             try:
                 project_detail = self.client.get_project(project.id)
+                
+                # 獲取成員資訊
                 members = project_detail.members.list(all=True)
                 
                 for member in members:
@@ -586,11 +601,8 @@ class UserDataFetcher(IDataFetcher):
                         'access_level_name': AccessLevelUtil.get_level_name(member.access_level),
                         'expires_at': getattr(member, 'expires_at', None)
                     })
-            except Exception as e:
-                self.progress.report_warning(f"Failed to get permissions for project {project.name}: {e}")
-            
-            # 獲取專案貢獻者統計
-            try:
+                
+                # 獲取專案貢獻者統計
                 contributors = project_detail.repository_contributors()
                 
                 for contributor in contributors:
@@ -617,7 +629,7 @@ class UserDataFetcher(IDataFetcher):
                         'total_deletions': contributor.get('deletions', 0)
                     })
             except Exception as e:
-                self.progress.report_warning(f"Failed to get contributors for project {project.name}: {e}")
+                self.progress.report_warning(f"Failed to get project details/contributors for {project.name}: {e}")
         
         return user_data
 
@@ -678,7 +690,8 @@ class UserProjectsFetcher(IDataFetcher):
             
             try:
                 project_detail = self.client.get_project(project.id)
-                members = project_detail.members.list(all=True)
+                # 使用 members_all 來包含繼承的權限（透過群組獲得的權限）
+                members = project_detail.members_all.list(all=True)
                 
                 for member in members:
                     # 如果指定了使用者名稱，則過濾
