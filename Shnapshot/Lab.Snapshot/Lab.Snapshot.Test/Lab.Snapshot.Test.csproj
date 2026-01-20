@@ -11,7 +11,7 @@
     <ItemGroup>
         <PackageReference Include="FluentAssertions" Version="6.12.0"/>
         <PackageReference Include="JsonDiffPatch.Net" Version="2.3.0"/>
-        <PackageReference Include="MessagePack" Version="2.5.129"/>
+        <PackageReference Include="MessagePack" Version="2.5.187"/>
         <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="7.0.0"/>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2"/>
         <PackageReference Include="MSTest.TestAdapter" Version="2.2.10"/>
