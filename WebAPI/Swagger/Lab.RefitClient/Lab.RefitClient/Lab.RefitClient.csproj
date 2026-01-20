@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="Refit" Version="7.0.0"/>
+        <PackageReference Include="Refit" Version="7.2.22"/>
         <PackageReference Include="Refit.HttpClientFactory" Version="7.0.0"/>
     </ItemGroup>
 
