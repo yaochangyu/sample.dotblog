@@ -1,0 +1,25 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+*.log
+*.tmp
+.env
+.DS_Store
+.vscode/
+
+# OpenLDAP
+data/ldap/data.mdb
+data/ldap/lock.mdb
+data/config/cn=config/olcDatabase={1}mdb/log.ldif
+data/config/cn=config/olcDatabase={1}mdb/logs
+data/config/docker-openldap-was-admin-password-set
+data/config/docker-openldap-was-started-with-tls
+
+# Certificates (if generated and not committed)
+certs/*.key
+certs/*.crt
+certs/*.pem

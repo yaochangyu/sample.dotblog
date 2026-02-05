@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: openldap
+    hostname: openldap
+    ports:
+      - "389:389"
+      - "636:636"
+    environment:
+      # Domain configuration
+      LDAP_ORGANISATION: "DevOps Lab"
+      LDAP_DOMAIN: "devopslab.com"
+      LDAP_ADMIN_PASSWORD: "adminpassword" # 請務必更改此密碼為複雜且安全的密碼
+      
+      # TLS/SSL configuration
+      LDAP_TLS_VERIFY_CLIENT: "never"
+      LDAP_TLS_CRT_FILENAME: "openldap.crt"
+      LDAP_TLS_KEY_FILENAME: "openldap.key"
+      LDAP_TLS_CA_CRT_FILENAME: "ca.crt"
+      
+      # Persistence
+      LDAP_REPLICATION_HOSTS: "openldap" # This is a placeholder, only needed for replication
+      
+      # For initial setup, allow root to bind without authentication (will be secured later)
+      LDAP_ALLOW_ANON_BIND: "false"
+
+    volumes:
+      - ./data/ldap:/var/lib/ldap # Persistent storage for LDAP data
+      - ./data/config:/etc/ldap/slapd.d # Persistent storage for LDAP configuration
+      - ./certs:/container/service/slapd/assets/certs # Certificates volume
+      - ./ldif:/etc/ldap/ldif # Volume for initial LDIF files
+      - ./scripts:/usr/local/bin # Volume for custom scripts
+    
+    # Ensure OpenLDAP container starts after certs are generated and initial LDIFs are applied
+    # This will be handled by a setup script that orchestrates the docker-compose commands.
+    
+    restart: always
+
+  phpldapadmin:
+    image: osixia/phpldapadmin:latest
+    container_name: phpldapadmin
+    hostname: phpldapadmin
+    ports:
+      - "8080:80"
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: "openldap"
+      PHPLDAPADMIN_LDAP_PORT: "636" # Use 636 for LDAPS
+      PHPLDAPADMIN_HTTPS: "false" # Keep false for http access to phpldapadmin's web UI
+      PHPLDAPADMIN_LDAP_PROTOCOL: "ldaps" # Use 'ldaps' for TLS/SSL connection
+      PHPLDAPADMIN_LDAP_BASE_DN: "dc=devopslab,dc=com"
+      PHPLDAPADMIN_LDAP_BIND_DN: "cn=admin,dc=devopslab,dc=com"
+      PHPLDAPADMIN_LDAP_PASS: "adminpassword" # 請務必更改此密碼與LDAP_ADMIN_PASSWORD一致
+
+    depends_on:
+      - openldap
+    restart: always
