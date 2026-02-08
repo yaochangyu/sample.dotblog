@@ -146,7 +146,7 @@ Lab.OpenTelemetrySerilog/
 ### 階段四：業務邏輯與追蹤鏈路
 
 - [x] **步驟 8：實作 backend-a 端點**
-  - 建立 `GET /api/weather` 端點
+  - 建立 `GET /weatherforecast` 端點
   - 該端點使用 `HttpClient` 呼叫 API-B 的 `GET /weatherforecast`
   - 加入 Serilog 結構化日誌記錄
   - 依賴：步驟 6
@@ -164,7 +164,7 @@ Lab.OpenTelemetrySerilog/
 
 ### 階段五：基礎建設 (Docker)
 
-- [ ] **步驟 11：建立 OTel Collector 設定檔**
+- [x] **步驟 11：建立 OTel Collector 設定檔**
   - 建立 `otel-collector-config.yaml`
   - 設定 Receivers：OTLP (gRPC + HTTP)
   - 設定 Exporters：Jaeger (OTLP)、Aspire Dashboard (OTLP)
