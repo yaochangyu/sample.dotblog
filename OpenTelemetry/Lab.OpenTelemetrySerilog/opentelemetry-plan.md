@@ -4,7 +4,7 @@
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Nuxt 4     │────▶│   API-A      │────▶│   API-B      │
+│   Nuxt 4     │────▶│   backend-a      │────▶│   backend-b      │
 │  (Frontend)  │     │ ASP.NET 10   │     │ ASP.NET 10   │
 └──────────────┘     └──────┬───────┘     └──────┬───────┘
                             │                     │
@@ -67,12 +67,12 @@ Lab.OpenTelemetrySerilog/
 │   │   ├── package.json
 │   │   ├── Dockerfile
 │   │   └── ...
-│   ├── Lab.ApiA/                      # 後端 API-A
+│   ├── backend-a/                     # 後端服務 A
 │   │   ├── Lab.ApiA.csproj
 │   │   ├── Program.cs
 │   │   ├── Dockerfile
 │   │   └── ...
-│   └── Lab.ApiB/                      # 後端 API-B
+│   └── backend-b/                     # 後端 API-B
 │       ├── Lab.ApiB.csproj
 │       ├── Program.cs
 │       ├── Dockerfile
@@ -84,8 +84,8 @@ Lab.OpenTelemetrySerilog/
 | 服務 | 本機端口 | 容器端口 | 用途 |
 |------|---------|---------|------|
 | Frontend (Nuxt) | 3000 | 3000 | 前端 UI |
-| API-A | 5100 | 8080 | 後端服務 A |
-| API-B | 5200 | 8080 | 後端服務 B |
+| backend-a | 5100 | 8080 | 後端服務 A |
+| backend-b | 5200 | 8080 | 後端服務 B |
 | OTel Collector (OTLP gRPC) | 4317 | 4317 | OTLP gRPC 接收 |
 | OTel Collector (OTLP HTTP) | 4318 | 4318 | OTLP HTTP 接收 |
 | Jaeger UI | 16686 | 16686 | Trace 查詢 UI |
@@ -96,24 +96,24 @@ Lab.OpenTelemetrySerilog/
 
 ### 階段一：專案初始化
 
-- [ ] **步驟 1：建立後端專案 API-A**
-  - 使用 `dotnet new webapi` 建立 `src/Lab.ApiA`
+- [x] **步驟 1：建立後端專案 backend-a**
+  - 使用 `dotnet new webapi` 建立 `src/backend-a`
   - 設定基本的 `appsettings.json`（端口、環境變數）
   - 驗證：`dotnet build` 成功
 
-- [ ] **步驟 2：建立後端專案 API-B**
-  - 使用 `dotnet new webapi` 建立 `src/Lab.ApiB`
+- [x] **步驟 2：建立後端專案 backend-b**
+  - 使用 `dotnet new webapi` 建立 `src/backend-b`
   - 設定基本的 `appsettings.json`（端口、環境變數）
   - 驗證：`dotnet build` 成功
 
-- [ ] **步驟 3：建立前端專案 Frontend**
+- [x] **步驟 3：建立前端專案 Frontend**
   - 使用 `npx nuxi@latest init` 建立 `src/frontend`
   - 安裝基本依賴
   - 驗證：`npm run dev` 可啟動
 
 ### 階段二：Serilog 整合
 
-- [ ] **步驟 4：API-A 整合 Serilog**
+- [ ] **步驟 4：backend-a 整合 Serilog**
   - 安裝 NuGet 套件：
     - `Serilog.AspNetCore`
     - `Serilog.Sinks.Console`
@@ -123,13 +123,13 @@ Lab.OpenTelemetrySerilog/
   - 設定結構化日誌格式
   - 依賴：步驟 1
 
-- [ ] **步驟 5：API-B 整合 Serilog**
+- [ ] **步驟 5：backend-b 整合 Serilog**
   - 同步驟 4，安裝相同套件並設定 Serilog
   - 依賴：步驟 2
 
 ### 階段三：OpenTelemetry SDK 整合
 
-- [ ] **步驟 6：API-A 整合 OpenTelemetry**
+- [ ] **步驟 6：backend-a 整合 OpenTelemetry**
   - 安裝 NuGet 套件：
     - `OpenTelemetry.Extensions.Hosting`
     - `OpenTelemetry.Instrumentation.AspNetCore`
@@ -139,19 +139,19 @@ Lab.OpenTelemetrySerilog/
   - 設定 `HttpClient` 注入（用於呼叫 API-B）
   - 依賴：步驟 4
 
-- [ ] **步驟 7：API-B 整合 OpenTelemetry**
+- [ ] **步驟 7：backend-b 整合 OpenTelemetry**
   - 同步驟 6，安裝相同套件並設定 OTel
   - 依賴：步驟 5
 
 ### 階段四：業務邏輯與追蹤鏈路
 
-- [ ] **步驟 8：實作 API-A 端點**
+- [ ] **步驟 8：實作 backend-a 端點**
   - 建立 `GET /api/weather` 端點
   - 該端點使用 `HttpClient` 呼叫 API-B 的 `GET /api/forecast`
   - 加入 Serilog 結構化日誌記錄
   - 依賴：步驟 6
 
-- [ ] **步驟 9：實作 API-B 端點**
+- [ ] **步驟 9：實作 backend-b 端點**
   - 建立 `GET /api/forecast` 端點
   - 回傳模擬的天氣預報資料
   - 加入 Serilog 結構化日誌記錄
@@ -182,8 +182,8 @@ Lab.OpenTelemetrySerilog/
 - [ ] **步驟 14：建立 docker-compose.yml**
   - 編排所有服務：
     - `frontend`（Nuxt 4）
-    - `api-a`（ASP.NET Core 10）
-    - `api-b`（ASP.NET Core 10）
+    - `backend-a`（ASP.NET Core 10）
+    - `backend-b`（ASP.NET Core 10）
     - `otel-collector`（OpenTelemetry Collector Contrib）
     - `jaeger`（Jaeger All-in-One）
     - `seq`（Seq）
@@ -198,18 +198,18 @@ Lab.OpenTelemetrySerilog/
   - 執行 `docker compose up -d`
   - 驗證項目：
     - [ ] Nuxt 前端 http://localhost:3000 可存取
-    - [ ] API-A http://localhost:5100/api/weather 回傳資料
-    - [ ] API-B http://localhost:5200/api/forecast 回傳資料
-    - [ ] 前端呼叫 → API-A → API-B 完整鏈路正常
+    - [ ] backend-a http://localhost:5100/api/weather 回傳資料
+    - [ ] backend-b http://localhost:5200/api/forecast 回傳資料
+    - [ ] 前端呼叫 → backend-a → API-B 完整鏈路正常
     - [ ] Jaeger UI http://localhost:16686 可看到跨服務 Trace
     - [ ] Seq UI http://localhost:5341 可看到結構化日誌
     - [ ] Aspire Dashboard http://localhost:18888 可看到 Traces / Metrics / Logs
-    - [ ] Trace 中的 TraceId 在 API-A → API-B 之間正確傳播
+    - [ ] Trace 中的 TraceId 在 backend-a → backend-b 之間正確傳播
     - [ ] Serilog 日誌包含 TraceId / SpanId 關聯資訊
 
 ## 驗收標準
 
-1. **分散式追蹤**：從 Jaeger UI 可看到一個完整的 Trace 包含 Frontend → API-A → API-B 三個 Span
+1. **分散式追蹤**：從 Jaeger UI 可看到一個完整的 Trace 包含 Frontend → backend-a → backend-b 三個 Span
 2. **日誌關聯**：Seq 中的日誌記錄包含 TraceId，可與 Jaeger Trace 互相關聯
 3. **Aspire Dashboard**：可同時查看 Traces、Metrics、Logs
 4. **一鍵啟動**：`docker compose up -d` 即可啟動所有服務

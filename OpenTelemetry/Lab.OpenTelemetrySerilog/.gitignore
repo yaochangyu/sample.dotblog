@@ -1,0 +1,35 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+*.log
+*.bak
+*.ncb
+*.sdf
+*.vshost.*
+
+# NuGet
+.nuget/
+packages/
+*.nupkg
+*.snupkg
+
+# Rider
+.idea/
+
+# Node.js
+node_modules/
+.nuxt/
+.output/
+dist/
+.env
+.env.local
+.DS_Store
+Thumbs.db
