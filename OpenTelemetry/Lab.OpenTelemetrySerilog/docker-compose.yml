@@ -26,7 +26,6 @@ services:
       - SEQ_URL=http://seq:80
       - OTEL_ENDPOINT=http://otel-collector:4317
       - BACKEND_B_URL=http://backend-b:8080
-      - Serilog__WriteTo__1__Args__endpoint=http://otel-collector:4317
     depends_on:
       - backend-b
       - otel-collector
@@ -46,7 +45,6 @@ services:
       - ASPNETCORE_URLS=http://+:8080
       - SEQ_URL=http://seq:80
       - OTEL_ENDPOINT=http://otel-collector:4317
-      - Serilog__WriteTo__1__Args__endpoint=http://otel-collector:4317
     depends_on:
       - otel-collector
       - seq
