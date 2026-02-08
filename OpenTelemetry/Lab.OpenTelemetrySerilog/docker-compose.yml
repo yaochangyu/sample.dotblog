@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  seq:
+    image: datalust/seq:latest
+    container_name: seq
+    ports:
+      - "5341:80"
+      - "8081:8081"
+    environment:
+      - ACCEPT_EULA=Y
+    volumes:
+      - ./data/seq-data:/data
+    networks:
+      - opentelemetry-lab
+
+networks:
+  opentelemetry-lab:
+    driver: bridge
