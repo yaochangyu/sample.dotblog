@@ -3,16 +3,24 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
+using Serilog.Sinks.OpenTelemetry;
 
 var seqUrl = Environment.GetEnvironmentVariable("SEQ_URL") ?? "http://localhost:5341";
 var otelEndpoint = Environment.GetEnvironmentVariable("OTEL_ENDPOINT") ?? "http://localhost:4317";
 
 Log.Logger = new LoggerConfiguration()
         .MinimumLevel.Information()
-        .Enrich.WithProperty("application", "backend-b")
+        .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+        .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
+        .Enrich.WithProperty("Application", "backend-b")
         .Enrich.FromLogContext()
-        .WriteTo.Seq(seqUrl)
         .WriteTo.Console()
+        .WriteTo.Seq(seqUrl)
+        .WriteTo.OpenTelemetry(options =>
+        {
+            options.Endpoint = otelEndpoint;
+            options.Protocol = OtlpProtocol.Grpc;
+        })
         .WriteTo.File("logs/host-.txt", rollingInterval: RollingInterval.Day)
         .CreateBootstrapLogger()
     ;
