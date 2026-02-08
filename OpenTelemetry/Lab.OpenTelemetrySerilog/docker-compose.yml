@@ -24,7 +24,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
       - SEQ_URL=http://seq:80
-      - OTEL_ENDPOINT=http://otel-collector:4317
+      - OTEL_GRPC_ENDPOINT=http://otel-collector:4317
+      - OTEL_HTTP_ENDPOINT=http://otel-collector:4318
       - BACKEND_B_URL=http://backend-b:8080
     depends_on:
       - backend-b
@@ -44,7 +45,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
       - SEQ_URL=http://seq:80
-      - OTEL_ENDPOINT=http://otel-collector:4317
+      - OTEL_GRPC_ENDPOINT=http://otel-collector:4317
+      - OTEL_HTTP_ENDPOINT=http://otel-collector:4318
     depends_on:
       - otel-collector
       - seq
