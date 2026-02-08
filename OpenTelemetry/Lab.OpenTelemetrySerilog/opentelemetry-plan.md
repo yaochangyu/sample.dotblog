@@ -129,7 +129,7 @@ Lab.OpenTelemetrySerilog/
 
 ### 階段三：OpenTelemetry SDK 整合
 
-- [ ] **步驟 6：backend-a 整合 OpenTelemetry**
+- [x] **步驟 6：backend-a 整合 OpenTelemetry**
   - 安裝 NuGet 套件：
     - `OpenTelemetry.Extensions.Hosting`
     - `OpenTelemetry.Instrumentation.AspNetCore`
@@ -139,7 +139,7 @@ Lab.OpenTelemetrySerilog/
   - 設定 `HttpClient` 注入（用於呼叫 API-B）
   - 依賴：步驟 4
 
-- [ ] **步驟 7：backend-b 整合 OpenTelemetry**
+- [x] **步驟 7：backend-b 整合 OpenTelemetry**
   - 同步驟 6，安裝相同套件並設定 OTel
   - 依賴：步驟 5
 
