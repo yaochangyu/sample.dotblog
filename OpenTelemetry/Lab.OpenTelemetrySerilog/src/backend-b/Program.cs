@@ -13,6 +13,7 @@ Log.Logger = new LoggerConfiguration()
 try
 {
     var builder = WebApplication.CreateBuilder(args);
+    builder.Host.UseSerilog();
 
     // Add services to the container.
     // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
