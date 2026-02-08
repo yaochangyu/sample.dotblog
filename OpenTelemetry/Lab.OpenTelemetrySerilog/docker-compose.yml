@@ -98,7 +98,6 @@ services:
       - "18888:18888"
     environment:
       - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
-      - DASHBOARD__OTLP__ENDPOINTURL=http://0.0.0.0:18889
     networks:
       - opentelemetry-lab
 
