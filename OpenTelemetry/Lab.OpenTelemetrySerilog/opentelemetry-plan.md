@@ -113,7 +113,7 @@ Lab.OpenTelemetrySerilog/
 
 ### 階段二：Serilog 整合
 
-- [ ] **步驟 4：backend-a 整合 Serilog**
+- [x] **步驟 4：backend-a 整合 Serilog**
   - 安裝 NuGet 套件：
     - `Serilog.AspNetCore`
     - `Serilog.Sinks.Console`
@@ -123,7 +123,7 @@ Lab.OpenTelemetrySerilog/
   - 設定結構化日誌格式
   - 依賴：步驟 1
 
-- [ ] **步驟 5：backend-b 整合 Serilog**
+- [x] **步驟 5：backend-b 整合 Serilog**
   - 同步驟 4，安裝相同套件並設定 Serilog
   - 依賴：步驟 2
 
