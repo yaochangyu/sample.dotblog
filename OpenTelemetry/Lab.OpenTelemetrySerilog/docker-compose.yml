@@ -1,17 +1,104 @@
 version: '3.8'
 
 services:
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend-a
+    networks:
+      - opentelemetry-lab
+
+  backend-a:
+    build:
+      context: ./src/backend-a
+      dockerfile: Dockerfile
+    container_name: backend-a
+    ports:
+      - "5100:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - SEQ_URL=http://seq:80
+      - OTEL_ENDPOINT=http://otel-collector:4317
+      - BACKEND_B_URL=http://backend-b:8080
+      - Serilog__WriteTo__1__Args__endpoint=http://otel-collector:4317
+    depends_on:
+      - backend-b
+      - otel-collector
+      - seq
+    networks:
+      - opentelemetry-lab
+
+  backend-b:
+    build:
+      context: ./src/backend-b
+      dockerfile: Dockerfile
+    container_name: backend-b
+    ports:
+      - "5200:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - SEQ_URL=http://seq:80
+      - OTEL_ENDPOINT=http://otel-collector:4317
+      - Serilog__WriteTo__1__Args__endpoint=http://otel-collector:4317
+    depends_on:
+      - otel-collector
+      - seq
+    networks:
+      - opentelemetry-lab
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    depends_on:
+      - jaeger
+      - aspire-dashboard
+    networks:
+      - opentelemetry-lab
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - opentelemetry-lab
+
   seq:
     image: datalust/seq:latest
     container_name: seq
     ports:
       - "5341:80"
-      - "8081:8081"
     environment:
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_ADMINPASSWORD=admin
     volumes:
       - ./data/seq-data:/data
+    networks:
+      - opentelemetry-lab
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:latest
+    container_name: aspire-dashboard
+    ports:
+      - "18888:18888"
+    environment:
+      - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
+      - DASHBOARD__OTLP__ENDPOINTURL=http://0.0.0.0:18889
     networks:
       - opentelemetry-lab
 
