@@ -145,20 +145,20 @@ Lab.OpenTelemetrySerilog/
 
 ### 階段四：業務邏輯與追蹤鏈路
 
-- [ ] **步驟 8：實作 backend-a 端點**
+- [x] **步驟 8：實作 backend-a 端點**
   - 建立 `GET /api/weather` 端點
-  - 該端點使用 `HttpClient` 呼叫 API-B 的 `GET /api/forecast`
+  - 該端點使用 `HttpClient` 呼叫 API-B 的 `GET /weatherforecast`
   - 加入 Serilog 結構化日誌記錄
   - 依賴：步驟 6
 
-- [ ] **步驟 9：實作 backend-b 端點**
-  - 建立 `GET /api/forecast` 端點
+- [x] **步驟 9：實作 backend-b 端點**
+  - 建立 `GET /weatherforecast` 端點
   - 回傳模擬的天氣預報資料
   - 加入 Serilog 結構化日誌記錄
   - 依賴：步驟 7
 
-- [ ] **步驟 10：實作 Nuxt 前端頁面**
-  - 建立首頁，呼叫 API-A 的 `GET /api/weather`
+- [x] **步驟 10：實作 Nuxt 前端頁面**
+  - 建立首頁，呼叫 API-A 的 `GET /weatherforecast`
   - 顯示回傳的天氣資料
   - 依賴：步驟 3
 
