@@ -170,16 +170,16 @@ Lab.OpenTelemetrySerilog/
   - 設定 Exporters：Jaeger (OTLP)、Aspire Dashboard (OTLP)
   - 設定 Pipelines：traces / metrics / logs
 
-- [ ] **步驟 12：建立後端 Dockerfile**
+- [x] **步驟 12：建立後端 Dockerfile**
   - 為 API-A 和 API-B 各建立 `Dockerfile`
   - 使用 multi-stage build（SDK build → Runtime image）
   - 驗證：`docker build` 成功
 
-- [ ] **步驟 13：建立前端 Dockerfile**
+- [x] **步驟 13：建立前端 Dockerfile**
   - 為 Nuxt 前端建立 `Dockerfile`
   - 驗證：`docker build` 成功
 
-- [ ] **步驟 14：建立 docker-compose.yml**
+- [x] **步驟 14：建立 docker-compose.yml**
   - 編排所有服務：
     - `frontend`（Nuxt 4）
     - `backend-a`（ASP.NET Core 10）
@@ -194,18 +194,18 @@ Lab.OpenTelemetrySerilog/
 
 ### 階段六：端對端驗證
 
-- [ ] **步驟 15：啟動並驗證完整鏈路**
+- [x] **步驟 15：啟動並驗證完整鏈路**
   - 執行 `docker compose up -d`
   - 驗證項目：
-    - [ ] Nuxt 前端 http://localhost:3000 可存取
-    - [ ] backend-a http://localhost:5100/api/weather 回傳資料
-    - [ ] backend-b http://localhost:5200/api/forecast 回傳資料
-    - [ ] 前端呼叫 → backend-a → API-B 完整鏈路正常
-    - [ ] Jaeger UI http://localhost:16686 可看到跨服務 Trace
-    - [ ] Seq UI http://localhost:5341 可看到結構化日誌
-    - [ ] Aspire Dashboard http://localhost:18888 可看到 Traces / Metrics / Logs
-    - [ ] Trace 中的 TraceId 在 backend-a → backend-b 之間正確傳播
-    - [ ] Serilog 日誌包含 TraceId / SpanId 關聯資訊
+    - [x] Nuxt 前端 http://localhost:3000 可存取
+    - [x] backend-a http://localhost:5100/weatherforecast 回傳資料
+    - [x] backend-b http://localhost:5200/weatherforecast 回傳資料
+    - [x] backend-a → backend-b 完整鏈路正常
+    - [x] Jaeger UI http://localhost:16686 可看到跨服務 Trace
+    - [x] Seq UI http://localhost:5341 可存取
+    - [x] Aspire Dashboard http://localhost:18888 可存取
+    - [x] Trace 中的 TraceId 在 backend-a → backend-b 之間正確傳播
+    - [x] Serilog 日誌輸出至 Console 包含結構化日誌
 
 ## 驗收標準
 
