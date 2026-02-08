@@ -1,6 +1,9 @@
-@Lab.ApiA_HostAddress = http://localhost:5197
+@Lab.ApiA_HostAddress = http://localhost:5100
 
 GET {{Lab.ApiA_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+
+GET http://localhost:5100/weatherforecast/
