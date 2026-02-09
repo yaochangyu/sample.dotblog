@@ -36,6 +36,7 @@ try
     // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
     builder.Services.AddOpenApi();
     builder.Services.AddHttpClient();
+    builder.Services.AddControllers();
 
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource.AddService("backend-a"))
@@ -69,26 +70,12 @@ try
     var app = builder.Build();
     app.UseSerilogRequestLogging();
 
-    // Configure the HTTP request pipeline.
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi();
     }
 
-    app.MapGet("/weatherforecast", async (HttpClient client) =>
-        {
-            try
-            {
-                var response = await client.GetStringAsync($"{backendBUrl}/weatherforecast");
-                return Results.Content(response, "application/json");
-            }
-            catch (HttpRequestException ex)
-            {
-                return Results.Problem($"Error calling Backend-B: {ex.Message}");
-            }
-        })
-        .WithName("GetWeatherForecast");
-
+    app.MapControllers();
     app.Run();
 }
 catch (Exception ex)

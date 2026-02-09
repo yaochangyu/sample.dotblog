@@ -9,7 +9,10 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - backend-a
+      - jaeger
+      - aspire-dashboard
+      - otel-collector
+      - seq
     networks:
       - opentelemetry-lab
 
@@ -28,9 +31,11 @@ services:
       - OTEL_HTTP_ENDPOINT=http://otel-collector:4318
       - BACKEND_B_URL=http://backend-b:8080
     depends_on:
-      - backend-b
+      - jaeger
+      - aspire-dashboard
       - otel-collector
       - seq
+      - backend-b
     networks:
       - opentelemetry-lab
 
@@ -48,6 +53,8 @@ services:
       - OTEL_GRPC_ENDPOINT=http://otel-collector:4317
       - OTEL_HTTP_ENDPOINT=http://otel-collector:4318
     depends_on:
+      - jaeger
+      - aspire-dashboard
       - otel-collector
       - seq
     networks:
