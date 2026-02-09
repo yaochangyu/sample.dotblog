@@ -6,9 +6,9 @@ receivers:
       http:
         endpoint: 0.0.0.0:4318
         cors:
-          allowed-origins:
+          allowed_origins:
             - "http://localhost:3000"
-          allowed-headers:
+          allowed_headers:
             - "*"
 
 exporters:

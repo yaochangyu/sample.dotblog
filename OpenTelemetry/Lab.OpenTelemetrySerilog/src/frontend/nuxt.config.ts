@@ -4,17 +4,9 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   runtimeConfig: {
+    backendAUrl: 'http://localhost:5100',
     public: {
       otelCollectorUrl: process.env.OTEL_COLLECTOR_URL || 'http://localhost:4318',
-    },
-  },
-
-  routeRules: {
-    '/api/weather/**': {
-      proxy: `${process.env.BACKEND_A_URL || 'http://localhost:5100'}/Weather/**`,
-    },
-    '/api/weather': {
-      proxy: `${process.env.BACKEND_A_URL || 'http://localhost:5100'}/Weather`,
     },
   },
 })

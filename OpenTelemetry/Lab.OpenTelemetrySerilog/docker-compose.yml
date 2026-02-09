@@ -9,7 +9,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - BACKEND_A_URL=http://backend-a:8080
+      - NUXT_BACKEND_A_URL=http://backend-a:8080
     depends_on:
       - backend-a
       - jaeger
