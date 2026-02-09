@@ -5,6 +5,11 @@ receivers:
         endpoint: 0.0.0.0:4317
       http:
         endpoint: 0.0.0.0:4318
+        cors:
+          allowed-origins:
+            - "http://localhost:3000"
+          allowed-headers:
+            - "*"
 
 exporters:
   otlp/jaeger:

@@ -25,15 +25,17 @@
 ### 流水線追蹤鏈路
 
 ```
-Nuxt Frontend (HTTP Request)
-  └──▶ API-A (接收請求，處理後呼叫 API-B)
-         └──▶ API-B (處理請求，回傳結果)
+Browser (OTel fetch span, 注入 traceparent)
+  └──▶ Nuxt Server Proxy (/api/weather → backend-a:8080/Weather, 透傳 traceparent)
+         └──▶ API-A (讀取 traceparent, 建立 child span, 呼叫 API-B)
+                └──▶ API-B (讀取 traceparent, 建立 child span)
 ```
 
 ### 資料流向
 
 | 訊號類型 | 來源 | 傳輸方式 | 目的地 |
 |---------|------|---------|--------|
+| Traces | Frontend (OTel Web SDK) | OTLP HTTP → OTel Collector | Jaeger + Aspire Dashboard |
 | Traces | API-A / API-B (OTel SDK) | OTLP gRPC → OTel Collector | Jaeger + Aspire Dashboard |
 | Logs | API-A / API-B (Serilog) | OTLP → OTel Collector | Aspire Dashboard |
 | Logs | API-A / API-B (Serilog) | Serilog Seq Sink (直連) | Seq |
@@ -143,6 +145,27 @@ Lab.OpenTelemetrySerilog/
   - 同步驟 6，安裝相同套件並設定 OTel
   - 依賴：步驟 5
 
+### 階段三-B：Frontend OpenTelemetry 瀏覽器端追蹤
+
+- [x] **步驟 7a：安裝前端 OTel npm 套件**
+  - 安裝 `@opentelemetry/api`、`@opentelemetry/sdk-trace-web`、`@opentelemetry/sdk-trace-base`、`@opentelemetry/exporter-trace-otlp-http`、`@opentelemetry/instrumentation-fetch`、`@opentelemetry/instrumentation`、`@opentelemetry/resources`、`@opentelemetry/semantic-conventions`、`@opentelemetry/context-zone`
+  - 依賴：步驟 3
+
+- [x] **步驟 7b：建立 Nuxt OTel client-only plugin**
+  - 新增 `src/frontend/plugins/opentelemetry.client.ts`
+  - 設定 WebTracerProvider、BatchSpanProcessor、OTLPTraceExporter、ZoneContextManager、W3CTraceContextPropagator、FetchInstrumentation
+  - 透過 `runtimeConfig.public.otelCollectorUrl` 讀取可配置的端點
+  - 依賴：步驟 7a
+
+- [x] **步驟 7c：設定 Nuxt Server Proxy + runtimeConfig**
+  - 更新 `nuxt.config.ts`，新增 `runtimeConfig.public.otelCollectorUrl`
+  - 新增 `routeRules` 設定 `/api/weather` → backend-a `/Weather` proxy
+  - 依賴：步驟 7b
+
+- [x] **步驟 7d：更新 OTel Collector CORS 設定**
+  - 在 `otel-collector-config.yaml` 的 `receivers.otlp.protocols.http` 下新增 CORS
+  - 允許來源 `http://localhost:3000`，允許 headers `*`
+
 ### 階段四：業務邏輯與追蹤鏈路
 
 - [x] **步驟 8：實作 backend-a 端點**
@@ -210,7 +233,9 @@ Lab.OpenTelemetrySerilog/
 ## 驗收標準
 
 1. **分散式追蹤**：從 Jaeger UI 可看到一個完整的 Trace 包含 Frontend → backend-a → backend-b 三個 Span
-2. **日誌關聯**：Seq 中的日誌記錄包含 TraceId，可與 Jaeger Trace 互相關聯
-3. **Aspire Dashboard**：可同時查看 Traces、Metrics、Logs
-4. **一鍵啟動**：`docker compose up -d` 即可啟動所有服務
-5. **Console 日誌**：透過 `docker compose logs` 可看到格式化的結構化日誌
+2. **前端追蹤**：瀏覽器 fetch 請求自動帶有 `traceparent` header，OTLP HTTP 請求成功送到 OTel Collector
+3. **日誌關聯**：Seq 中的日誌記錄包含 TraceId，可與 Jaeger Trace 互相關聯
+4. **Aspire Dashboard**：可同時查看 Traces、Metrics、Logs
+5. **一鍵啟動**：`docker compose up -d` 即可啟動所有服務
+6. **Console 日誌**：透過 `docker compose logs` 可看到格式化的結構化日誌
+7. **天氣介面**：前端頁面可查詢天氣列表、新增天氣資料，並自動刷新
