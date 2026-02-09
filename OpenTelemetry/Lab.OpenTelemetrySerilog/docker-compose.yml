@@ -10,6 +10,7 @@ services:
       - "3000:3000"
     environment:
       - NUXT_BACKEND_A_URL=http://backend-a:8080
+      - NUXT_OTEL_EXPORTER_URL=http://otel-collector:4318
     depends_on:
       - backend-a
       - jaeger
