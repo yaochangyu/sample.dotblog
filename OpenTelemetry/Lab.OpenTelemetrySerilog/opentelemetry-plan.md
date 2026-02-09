@@ -169,21 +169,24 @@ Lab.OpenTelemetrySerilog/
 ### 階段四：業務邏輯與追蹤鏈路
 
 - [x] **步驟 8：實作 backend-a 端點**
-  - 建立 `GET /weatherforecast` 端點
-  - 該端點使用 `HttpClient` 呼叫 API-B 的 `GET /weatherforecast`
+  - 建立 `GET /Weather` 和 `POST /Weather` 端點
+  - `GET` 端點使用 `HttpClient` 呼叫 backend-b 的 `GET /Weather`
   - 加入 Serilog 結構化日誌記錄
   - 依賴：步驟 6
 
 - [x] **步驟 9：實作 backend-b 端點**
-  - 建立 `GET /weatherforecast` 端點
+  - 建立 `GET /Weather` 端點
   - 回傳模擬的天氣預報資料
   - 加入 Serilog 結構化日誌記錄
   - 依賴：步驟 7
 
-- [x] **步驟 10：實作 Nuxt 前端頁面**
-  - 建立首頁，呼叫 API-A 的 `GET /weatherforecast`
-  - 顯示回傳的天氣資料
-  - 依賴：步驟 3
+- [x] **步驟 10：實作 Nuxt 前端天氣介面**
+  - 修改檔案：`src/frontend/app/app.vue` — 替換 `NuxtWelcome` 為 `NuxtPage`
+  - 新增檔案：`src/frontend/app/pages/index.vue`
+  - 頁面功能：
+    - **查詢天氣**：按鈕觸發 `GET /api/weather`，以表格顯示天氣預報列表
+    - **新增天氣**：表單輸入資料，Submit 觸發 `POST /api/weather`，成功後自動重新載入天氣列表
+  - 依賴：步驟 7c
 
 ### 階段五：基礎建設 (Docker)
 
@@ -220,15 +223,17 @@ Lab.OpenTelemetrySerilog/
 - [x] **步驟 15：啟動並驗證完整鏈路**
   - 執行 `docker compose up -d`
   - 驗證項目：
-    - [x] Nuxt 前端 http://localhost:3000 可存取
-    - [x] backend-a http://localhost:5100/weatherforecast 回傳資料
-    - [x] backend-b http://localhost:5200/weatherforecast 回傳資料
-    - [x] backend-a → backend-b 完整鏈路正常
-    - [x] Jaeger UI http://localhost:16686 可看到跨服務 Trace
-    - [x] Seq UI http://localhost:5341 可存取
-    - [x] Aspire Dashboard http://localhost:18888 可存取
-    - [x] Trace 中的 TraceId 在 backend-a → backend-b 之間正確傳播
-    - [x] Serilog 日誌輸出至 Console 包含結構化日誌
+    - [x] **前端介面**：開啟 http://localhost:3000，看到天氣介面
+    - [x] **查詢天氣**：點擊「查詢天氣」，表格顯示由 backend-b 提供的天氣資料
+    - [x] **新增天氣**：填寫表單並提交，確認新增成功並自動刷新列表
+    - [x] **前端追蹤**：開啟瀏覽器 DevTools Network，確認 fetch 請求帶有 `traceparent` header
+    - [x] **前端 OTLP**：確認瀏覽器有發送 OTLP HTTP 請求到 `http://localhost:4318/v1/traces`
+    - [x] **後端端點**：backend-a http://localhost:5100/Weather 回傳資料
+    - [x] **後端端點**：backend-b http://localhost:5200/Weather 回傳資料
+    - [x] **完整鏈路**：Jaeger UI http://localhost:16686，搜尋 `frontend` service，可看到 frontend → backend-a → backend-b 完整 Trace
+    - [x] **日誌系統**：Seq UI http://localhost:5341 可看到結構化日誌
+    - [x] **整合儀表板**：Aspire Dashboard http://localhost:18888 可看到 Traces/Metrics/Logs
+    - [x] **日誌輸出**：`docker compose logs` 可看到格式化的結構化日誌
 
 ## 驗收標準
 
