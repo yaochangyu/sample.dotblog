@@ -4,13 +4,13 @@
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Nuxt 4     │────▶│   backend-a      │────▶│   backend-b      │
+│   Nuxt 4     │────▶│   backend-a  │────▶│   backend-b  │
 │  (Frontend)  │     │ ASP.NET 10   │     │ ASP.NET 10   │
 └──────────────┘     └──────┬───────┘     └──────┬───────┘
-                            │                     │
-                     Serilog│+ OTel SDK    Serilog│+ OTel SDK
-                            │                     │
-                            ▼                     ▼
+                            │                    │
+                     Serilog│+ OTel SDK   Serilog│+ OTel SDK
+                            │                    │
+                            ▼                    ▼
                     ┌───────────────────────────────┐
                     │      OTel Collector (OTLP)    │
                     └───┬──────────┬────────────┬───┘
