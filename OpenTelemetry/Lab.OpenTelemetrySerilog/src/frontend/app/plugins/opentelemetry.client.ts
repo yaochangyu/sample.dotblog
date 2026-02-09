@@ -1,3 +1,4 @@
+import { context, propagation } from '@opentelemetry/api'
 import { WebTracerProvider } from '@opentelemetry/sdk-trace-web'
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
@@ -9,6 +10,11 @@ import { ZoneContextManager } from '@opentelemetry/context-zone'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 
 export default defineNuxtPlugin(() => {
+  // Skip if running on server-side
+  if (import.meta.server) {
+    return
+  }
+
   const config = useRuntimeConfig()
   const collectorUrl = config.public.otelCollectorUrl as string
 
@@ -25,10 +31,16 @@ export default defineNuxtPlugin(() => {
     spanProcessors: [new BatchSpanProcessor(exporter)],
   })
 
-  provider.register({
-    contextManager: new ZoneContextManager(),
-    propagator: new W3CTraceContextPropagator(),
-  })
+  // Register the provider (v2.x API)
+  provider.register()
+
+  // Set up context manager
+  const contextManager = new ZoneContextManager()
+  contextManager.enable()
+  context.setGlobalContextManager(contextManager)
+
+  // Set up propagator
+  propagation.setGlobalPropagator(new W3CTraceContextPropagator())
 
   registerInstrumentations({
     instrumentations: [

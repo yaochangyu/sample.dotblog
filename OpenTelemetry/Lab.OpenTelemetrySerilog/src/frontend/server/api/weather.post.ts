@@ -5,10 +5,13 @@ export default defineEventHandler(async (event) => {
     baseURL: backendAUrl,
     method: 'POST',
     body,
-    headers: Object.fromEntries(
-      Object.entries(getProxyRequestHeaders(event))
-        .filter(([key]) => key.toLowerCase() !== 'content-length'),
-    ),
+    headers: {
+      ...Object.fromEntries(
+        Object.entries(getProxyRequestHeaders(event))
+          .filter(([key]) => key.toLowerCase() !== 'content-length'),
+      ),
+      ...getTraceHeaders(event),
+    },
   })
   return response
 })
