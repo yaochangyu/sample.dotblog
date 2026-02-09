@@ -28,7 +28,7 @@ namespace backend_a.Controllers
                 _logger.LogInformation("Calling Backend-B weatherforecast endpoint at {BackendBUrl}", _backendBUrl);
                 try
                 {
-                    var response = await _httpClient.GetStringAsync($"{_backendBUrl}/weatherforecast");
+                    var response = await _httpClient.GetStringAsync($"{_backendBUrl}/Weather");
                     _logger.LogInformation("Successfully received response from Backend-B.");
                     return Content(response, "application/json");
                 }
