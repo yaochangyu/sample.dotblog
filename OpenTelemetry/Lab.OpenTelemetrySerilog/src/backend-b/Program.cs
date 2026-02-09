@@ -6,8 +6,8 @@ using Serilog;
 using Serilog.Sinks.OpenTelemetry;
 
 var seqUrl = Environment.GetEnvironmentVariable("SEQ_URL") ?? "http://localhost:5341";
-var otelGrpcEndpoint = Environment.GetEnvironmentVariable("OTEL_GRPC_ENDPOINT") ?? "http://localhost:4317";
-var otelHttpEndpoint = Environment.GetEnvironmentVariable("OTEL_HTTP_ENDPOINT") ?? "http://localhost:4318";
+var otlpGrpcEndpoint = Environment.GetEnvironmentVariable("OTLP_GRPC_ENDPOINT") ?? "http://localhost:4317";
+var otlpHttpEndpoint = Environment.GetEnvironmentVariable("OTLP_HTTP_ENDPOINT") ?? "http://localhost:4318";
 
 Log.Logger = new LoggerConfiguration()
         // .MinimumLevel.Information()
@@ -19,7 +19,7 @@ Log.Logger = new LoggerConfiguration()
         .WriteTo.Seq(seqUrl)
         .WriteTo.OpenTelemetry(options =>
         {
-            options.Endpoint = otelGrpcEndpoint;
+            options.Endpoint = otlpGrpcEndpoint;
             options.Protocol = OtlpProtocol.Grpc;
         })
         .WriteTo.File("logs/host-.txt", rollingInterval: RollingInterval.Day)
@@ -43,27 +43,29 @@ try
             .AddHttpClientInstrumentation()
             .AddOtlpExporter("otlp-grpc", options =>
             {
-                options.Endpoint = new Uri(otelGrpcEndpoint);
+                options.Endpoint = new Uri(otlpGrpcEndpoint);
                 options.Protocol = OtlpExportProtocol.Grpc;
             })
-            .AddOtlpExporter("otlp-http", options =>
-            {
-                options.Endpoint = new Uri(otelHttpEndpoint);
-                options.Protocol = OtlpExportProtocol.HttpProtobuf;
-            }))
+            //.AddOtlpExporter("otlp-http", options =>
+            //{
+            //    options.Endpoint = new Uri($"{otlpHttpEndpoint}/v1/traces");
+            //    options.Protocol = OtlpExportProtocol.HttpProtobuf;
+            //})
+            )
         .WithMetrics(metrics => metrics
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddOtlpExporter("otlp-grpc", options =>
             {
-                options.Endpoint = new Uri(otelGrpcEndpoint);
+                options.Endpoint = new Uri(otlpGrpcEndpoint);
                 options.Protocol = OtlpExportProtocol.Grpc;
             })
-            .AddOtlpExporter("otlp-http", options =>
-            {
-                options.Endpoint = new Uri(otelHttpEndpoint);
-                options.Protocol = OtlpExportProtocol.HttpProtobuf;
-            }));
+            //.AddOtlpExporter("otlp-http", options =>
+            //{
+            //    options.Endpoint = new Uri($"{otlpHttpEndpoint}/v1/metrics");
+            //    options.Protocol = OtlpExportProtocol.HttpProtobuf;
+            //})
+            );
 
     var app = builder.Build();
     app.UseSerilogRequestLogging();

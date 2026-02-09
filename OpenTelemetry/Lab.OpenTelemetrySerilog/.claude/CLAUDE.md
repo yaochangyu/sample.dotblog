@@ -145,11 +145,11 @@ headers: Object.fromEntries(
     .AddAspNetCoreInstrumentation()    // 自動 instrument ASP.NET Core 請求
     .AddHttpClientInstrumentation()    // 自動 instrument HttpClient 呼叫
     .AddOtlpExporter("otlp-grpc", options => {
-        options.Endpoint = new Uri(otelGrpcEndpoint);  // http://otel-collector:4317
+        options.Endpoint = new Uri(otlpGrpcEndpoint);  // http://otel-collector:4317
         options.Protocol = OtlpExportProtocol.Grpc;
     })
     .AddOtlpExporter("otlp-http", options => {
-        options.Endpoint = new Uri(otelHttpEndpoint);  // http://otel-collector:4318
+        options.Endpoint = new Uri(otlpHttpEndpoint);  // http://otel-collector:4318
         options.Protocol = OtlpExportProtocol.HttpProtobuf;
     }))
 
@@ -268,7 +268,7 @@ Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()        // 標準輸出
     .WriteTo.Seq(seqUrl)      // 直連 Seq (http://seq:80)
     .WriteTo.OpenTelemetry(options => {
-        options.Endpoint = otelGrpcEndpoint;  // http://otel-collector:4317
+        options.Endpoint = otlpGrpcEndpoint;  // http://otel-collector:4317
         options.Protocol = OtlpProtocol.Grpc;
     })
     .WriteTo.File("logs/host-.txt", rollingInterval: RollingInterval.Day)
@@ -359,8 +359,8 @@ backend-a
 │    - ASPNETCORE_URLS=http://+:8080
 │    - BACKEND_B_URL=http://backend-b:8080
 │    - SEQ_URL=http://seq:80
-│    - OTEL_GRPC_ENDPOINT=http://otel-collector:4317
-│    - OTEL_HTTP_ENDPOINT=http://otel-collector:4318
+│    - OTLP_GRPC_ENDPOINT=http://otel-collector:4317
+│    - OTLP_HTTP_ENDPOINT=http://otel-collector:4318
 │
 backend-b
 ├─ depends_on: [jaeger, aspire-dashboard, otel-collector, seq]
