@@ -97,7 +97,7 @@
 
 ### 階段一：Elasticsearch 基礎建設
 
-- [ ] **步驟 1：建立 Elasticsearch 服務配置**
+- [x] **步驟 1：建立 Elasticsearch 服務配置**
   - **目的**：部署 Elasticsearch 作為中心儲存
   - **檔案**：`docker-compose.yml`
   - **配置內容**：
@@ -108,7 +108,7 @@
   - **端口**：9200
   - **依賴**：無
 
-- [ ] **步驟 2：建立 Kibana 服務配置**
+- [x] **步驟 2：建立 Kibana 服務配置**
   - **目的**：提供 Elasticsearch 資料的視覺化介面
   - **檔案**：`docker-compose.yml`
   - **配置內容**：
@@ -117,7 +117,7 @@
   - **端口**：5601
   - **依賴**：elasticsearch
 
-- [ ] **步驟 3：啟動並驗證 Elasticsearch + Kibana**
+- [x] **步驟 3：啟動並驗證 Elasticsearch + Kibana**
   - **目的**：確認基礎服務正常運作
   - **驗證方式**：
     ```bash
