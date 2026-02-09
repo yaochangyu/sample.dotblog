@@ -157,6 +157,9 @@ def verify_jaeger_services() -> None:
     """9. Jaeger services 包含 frontend、backend-a、backend-b"""
     desc = "Jaeger 已註冊 frontend、backend-a、backend-b 服務"
     try:
+        # 先確保 traces 已被載入，避免時序問題
+        _ensure_traces_loaded()
+
         resp = http_get("http://localhost:16686/api/services")
         data = json.loads(resp.read())
         services = data.get("data", [])
