@@ -11,9 +11,9 @@ var otelHttpEndpoint = Environment.GetEnvironmentVariable("OTEL_HTTP_ENDPOINT") 
 var backendBUrl = Environment.GetEnvironmentVariable("BACKEND_B_URL") ?? "http://localhost:5200";
 
 Log.Logger = new LoggerConfiguration()
-        .MinimumLevel.Information()
-        .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
-        .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
+        // .MinimumLevel.Information()
+        // .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+        // .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
         .Enrich.WithProperty("Application", "backend-a")
         .Enrich.FromLogContext()
         .WriteTo.Console()

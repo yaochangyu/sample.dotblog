@@ -10,9 +10,9 @@ var otelGrpcEndpoint = Environment.GetEnvironmentVariable("OTEL_GRPC_ENDPOINT") 
 var otelHttpEndpoint = Environment.GetEnvironmentVariable("OTEL_HTTP_ENDPOINT") ?? "http://localhost:4318";
 
 Log.Logger = new LoggerConfiguration()
-        .MinimumLevel.Information()
-        .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
-        .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
+        // .MinimumLevel.Information()
+        // .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+        // .MinimumLevel.Override("System", Serilog.Events.LogEventLevel.Warning)
         .Enrich.WithProperty("Application", "backend-b")
         .Enrich.FromLogContext()
         .WriteTo.Console()
