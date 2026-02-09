@@ -68,7 +68,7 @@ services:
     container_name: otel-collector
     command: ["--config=/etc/otelcol/config.yaml"]
     volumes:
-      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+      - ./data/otel-collector/otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
     ports:
       - "4317:4317"   # OTLP gRPC
       - "4318:4318"   # OTLP HTTP
@@ -83,8 +83,11 @@ services:
     container_name: jaeger
     ports:
       - "16686:16686"
+    volumes:
+      - ./data/jaeger-ui/jaeger-ui.json:/etc/jaeger/jaeger-ui.json:ro
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+      - QUERY_UI_CONFIG=/etc/jaeger/jaeger-ui.json
     networks:
       - opentelemetry-lab
 
