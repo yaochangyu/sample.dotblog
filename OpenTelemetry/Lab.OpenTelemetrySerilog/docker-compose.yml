@@ -8,7 +8,10 @@ services:
     container_name: frontend
     ports:
       - "3000:3000"
+    environment:
+      - BACKEND_A_URL=http://backend-a:8080
     depends_on:
+      - backend-a
       - jaeger
       - aspire-dashboard
       - otel-collector

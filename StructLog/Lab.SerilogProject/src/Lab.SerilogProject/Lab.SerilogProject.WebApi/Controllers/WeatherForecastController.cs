@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Serilog.Context;
 
 namespace Lab.SerilogProject.WebApi.Controllers;
 
@@ -41,5 +42,21 @@ public class WeatherForecastController : ControllerBase
                 Summary = Summaries[Random.Shared.Next(Summaries.Length)]
             })
             .ToArray();
+    }
+    
+    [HttpPost]
+    public IActionResult Post(WeatherForecast forecast)
+    {
+        this.HttpContext.Request.Headers.TryGetValue("x-my-head", out var head);
+        using (LogContext.PushProperty("Action", "AddWeatherForecastToBackendB"))
+        using (LogContext.PushProperty("UserID", "user-456")) // Placeholder
+        using (LogContext.PushProperty("ProductID", "prod-789")) // Placeholder
+        {
+            _logger.LogInformation("Received request to add weather forecast: {@Forecast}", forecast);
+            // In a real application, you would save this to a database
+            // For now, we'll just log it.
+            _logger.LogInformation("Weather forecast added successfully (simulated).");
+            return Ok(forecast);
+        }
     }
 }

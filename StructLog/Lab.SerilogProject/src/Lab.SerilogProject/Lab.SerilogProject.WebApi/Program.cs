@@ -2,12 +2,14 @@ using Lab.SerilogProject.WebApi;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Json;
+var seqUrl = Environment.GetEnvironmentVariable("SEQ_URL") ?? "http://localhost:5341";
 
 Log.Logger = new LoggerConfiguration()
         .MinimumLevel.Information()
-        .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+        // .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
         .Enrich.FromLogContext()
         .WriteTo.Console()
+        .WriteTo.Seq(seqUrl)
         .WriteTo.File("logs/host-.txt", rollingInterval: RollingInterval.Day)
         .CreateBootstrapLogger()
     ;

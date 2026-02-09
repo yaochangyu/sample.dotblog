@@ -10,6 +10,15 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/context-zone": "^2.5.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.211.0",
+    "@opentelemetry/instrumentation": "^0.211.0",
+    "@opentelemetry/instrumentation-fetch": "^0.211.0",
+    "@opentelemetry/resources": "^2.5.0",
+    "@opentelemetry/sdk-trace-base": "^2.5.0",
+    "@opentelemetry/sdk-trace-web": "^2.5.0",
+    "@opentelemetry/semantic-conventions": "^1.39.0",
     "nuxt": "^4.3.1",
     "vue": "^3.5.27",
     "vue-router": "^4.6.4"
