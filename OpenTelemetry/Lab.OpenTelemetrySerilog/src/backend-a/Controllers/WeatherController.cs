@@ -50,7 +50,7 @@ namespace backend_a.Controllers
                 _logger.LogInformation("Received request to add weather forecast: {@Forecast}", forecast);
                 try
                 {
-                    var response = await _httpClient.PostAsJsonAsync($"{_backendBUrl}/weatherforecast", forecast);
+                    var response = await _httpClient.PostAsJsonAsync($"{_backendBUrl}/weather", forecast);
                     response.EnsureSuccessStatusCode(); // Throws if not a success code.
                     _logger.LogInformation("Successfully forwarded and added weather forecast to Backend-B.");
                     return Ok(forecast);
