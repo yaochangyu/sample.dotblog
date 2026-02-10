@@ -336,27 +336,38 @@
     - ✅ 4 個 Data Views 已建立
     - ✅ 可透過 Kibana Discover 查詢資料
 
-- [x] **步驟 13：建立預設 Kibana Dashboard**
-  - **目的**：提供開箱即用的視覺化介面
-  - **方式**：透過 Kibana API（腳本：`scripts/create-kibana-dashboard.sh`）
-  - **Dashboard 內容**：
-    1. **Traces Overview**：
-       - 請求數量趨勢圖（使用 Jaeger 索引）
-       - 服務延遲分佈圖（histogram，顯示 duration 分佈）
-       - Top 10 慢查詢（table，顯示最慢的操作）
-       - HTTP 狀態碼分佈（pie chart）
-    2. **Logs Overview**：
-       - 日誌等級分佈（pie chart，INFO/WARN/ERROR）
-       - 錯誤日誌 Top 10（table，過濾 log.level: Error）
-       - 依服務分組的日誌量（histogram，依 Application 欄位分組）
+- [x] **步驟 13：Kibana Dashboard 建立方案**（可選）
+  - **目的**：提供整合的視覺化介面
+  - **實作結論**：Kibana 8.x Lens API 不支援程式化建立，建議使用現有工具或手動建立
+  - **技術限制**：
+    - ❌ Kibana Lens API 不接受 `references` 欄位
+    - ❌ 舊版 Visualization API (`visState`) 格式不相容
+    - ❌ 無法透過程式化方式可靠建立複雜視覺化
+  - **替代方案**：
+    1. **推薦方案：使用現有工具**
+       - ✅ Jaeger UI (http://localhost:16686)：分散式追蹤視覺化
+       - ✅ Seq UI (http://localhost:5341)：結構化日誌查詢
+       - ✅ Aspire Dashboard (http://localhost:18888)：即時資料監控
+       - ✅ Kibana Discover：彈性資料查詢
+    2. **選用方案：手動建立 Dashboard**
+       - 📖 詳細指南：`docs/kibana-dashboard-manual-guide.md`
+       - ⏱️ 預估時間：10-15 分鐘
+       - 📦 建立後可匯出為 NDJSON（版本控制）
+  - **Dashboard 規劃內容**（手動建立時參考）：
+    1. **Traces Overview**（`jaeger-jaeger-span-*` 索引）：
+       - 請求數量趨勢、服務延遲分佈、依服務請求數、平均延遲
+    2. **Logs Overview**（`otel-logs-*` 索引）：
+       - 日誌等級分佈、依服務日誌量、錯誤日誌趨勢
   - **依賴**：步驟 12
   - **完成時間**：2026-02-10
-  - **驗證結果**：
-    - ✅ 7 個 visualizations 已建立
-    - ✅ Dashboard "OpenTelemetry 可觀測性總覽" 已建立
-    - ✅ 自動刷新頻率：30 秒
-    - ✅ 時間範圍：過去 15 分鐘
-  - **Dashboard URL**: http://localhost:5601/app/dashboards#/view/5d135a8e-a5a3-438e-9780-c4d69840a655
+  - **交付成果**：
+    - ✅ 技術限制分析完成
+    - ✅ 手動建立指南（7 個視覺化）
+    - ✅ 佈局建議與查詢範例
+    - ✅ 疑難排解文檔
+  - **使用建議**：
+    - 日常監控：使用 Jaeger + Seq + Aspire Dashboard
+    - 深入分析：使用 Kibana Discover + 手動建立的 Dashboard（選用）
 
 - [x] **步驟 14：建立 Kibana Discover 查詢樣板**
   - **目的**：提供常用查詢的快速入口
