@@ -22,6 +22,14 @@ exporters:
     tls:
       insecure: true
 
+  elasticsearch:
+    endpoints: ["http://elasticsearch:9200"]
+    logs_index: "otel-logs"
+    traces_index: "otel-traces"
+    metrics_index: "otel-metrics"
+    mapping:
+      mode: ecs
+
 processors:
   batch:
 
@@ -30,12 +38,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/jaeger, otlp/aspire]
+      exporters: [otlp/jaeger, otlp/aspire, elasticsearch]
     metrics:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/aspire]
+      exporters: [otlp/aspire, elasticsearch]
     logs:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/aspire]
+      exporters: [otlp/aspire, elasticsearch]
