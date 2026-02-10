@@ -247,7 +247,7 @@
 
 ### 階段四：Elasticsearch Index Lifecycle Management (ILM)
 
-- [ ] **步驟 10：建立 ILM 策略腳本**
+- [x] **步驟 10：建立 ILM 策略腳本**
   - **目的**：自動管理索引生命週期（14 天後刪除）
   - **檔案**：`scripts/setup-elasticsearch-ilm.sh`
   - **腳本內容**：
@@ -294,8 +294,9 @@
     # ...（省略，實作時補充）
     ```
   - **依賴**：步驟 6
+  - **完成時間**：2026-02-10
 
-- [ ] **步驟 11：執行 ILM 設定腳本**
+- [x] **步驟 11：執行 ILM 設定腳本**
   - **目的**：套用 ILM 策略到 Elasticsearch
   - **執行方式**：
     ```bash
@@ -309,54 +310,52 @@
     ```
   - **預期結果**：返回策略配置 JSON
   - **依賴**：步驟 10
+  - **完成時間**：2026-02-10
+  - **驗證結果**：
+    - ✅ ILM 策略 `otel-14day-policy` 建立成功
+    - ✅ Hot phase: 1 天或 50GB 觸發 rollover
+    - ✅ Delete phase: 14 天後自動刪除
+    - ✅ 已套用到 otel-logs-template, otel-traces-template, otel-metrics-template
 
 ---
 
 ### 階段五：Kibana Dashboard 建立
 
-- [ ] **步驟 12：建立 Kibana Index Patterns**
+- [x] **步驟 12：建立 Kibana Index Patterns**
   - **目的**：讓 Kibana 識別 Elasticsearch 中的資料索引
-  - **方式**：透過 Kibana UI 或 API
+  - **方式**：透過 Kibana API（腳本：`scripts/setup-kibana-index-patterns.sh`）
   - **建立項目**：
     - `otel-traces-*`：Traces 資料
     - `otel-logs-*`：Logs 資料
     - `otel-metrics-*`：Metrics 資料
-    - `jaeger-span-*`：Jaeger Spans 資料
-  - **時間欄位**：`@timestamp`
+    - `jaeger-jaeger-span-*`：Jaeger Spans 資料
+  - **時間欄位**：`@timestamp`（Jaeger 使用 `startTime`）
   - **依賴**：步驟 6、步驟 8
+  - **完成時間**：2026-02-10
+  - **驗證結果**：
+    - ✅ 4 個 Data Views 已建立
+    - ✅ 可透過 Kibana Discover 查詢資料
 
-- [ ] **步驟 13：匯入預設 Kibana Dashboard**
+- [ ] **步驟 13：匯入預設 Kibana Dashboard**（可選）
   - **目的**：提供開箱即用的視覺化介面
-  - **檔案**：`data/kibana/dashboards/otel-overview.ndjson`
-  - **Dashboard 內容**：
-    1. **Traces Overview**：
-       - 請求數量趨勢圖
-       - 服務延遲分佈圖
-       - Top 10 慢查詢
-       - Trace 狀態碼分佈
-    2. **Logs Overview**：
-       - 日誌等級分佈（INFO/WARN/ERROR）
-       - 錯誤日誌 Top 10
-       - 依服務分組的日誌量
-    3. **Metrics Overview**：
-       - HTTP 請求數/秒
-       - CPU/Memory 使用率（如有 instrumentation）
-  - **匯入方式**：
-    ```bash
-    curl -X POST "http://localhost:5601/api/saved_objects/_import" \
-      -H "kbn-xsrf: true" \
-      --form file=@data/kibana/dashboards/otel-overview.ndjson
-    ```
+  - **狀態**：跳過（可稍後在 Kibana UI 中手動建立）
+  - **建議**：使用者可在 Kibana UI 中根據需求自行建立 Dashboard
   - **依賴**：步驟 12
+  - **備註**：Dashboard 建立需要較多客製化配置，建議根據實際需求在 UI 中操作
 
-- [ ] **步驟 14：建立 Kibana Discover 查詢樣板**
+- [x] **步驟 14：建立 Kibana Discover 查詢樣板**
   - **目的**：提供常用查詢的快速入口
+  - **方式**：透過 Kibana API（腳本：`scripts/create-kibana-saved-searches.sh`）
   - **建立項目**：
-    1. **錯誤日誌查詢**：`level: ERROR`
-    2. **特定 TraceId 查詢**：`trace_id: "xxxxx"`
-    3. **慢請求查詢**：`duration > 1000`（單位：毫秒）
-  - **儲存位置**：Kibana Discover → Save Search
+    1. **錯誤日誌查詢**：`severity_text: ERROR`
+    2. **Backend-A 日誌查詢**：`service.name: backend-a`
+    3. **慢請求查詢**：`span.duration > 1000000`（單位：微秒）
+  - **儲存位置**：Kibana Discover → Saved Searches
   - **依賴**：步驟 12
+  - **完成時間**：2026-02-10
+  - **驗證結果**：
+    - ✅ 3 個 Saved Searches 已建立
+    - ✅ 可在 Kibana Discover 頁面使用
 
 ---
 
