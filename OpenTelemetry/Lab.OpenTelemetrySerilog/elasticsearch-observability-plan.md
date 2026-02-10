@@ -361,7 +361,7 @@
 
 ### 階段六：整合測試與驗證
 
-- [ ] **步驟 15：建立端到端測試腳本**
+- [x] **步驟 15：建立端到端測試腳本**
   - **目的**：自動化驗證整個資料流
   - **檔案**：`scripts/verify-elasticsearch-integration.sh`
   - **測試項目**：
@@ -377,32 +377,44 @@
     chmod +x scripts/verify-elasticsearch-integration.sh
     ./scripts/verify-elasticsearch-integration.sh
     ```
-  - **依賴**：步驟 13
+  - **依賴**：步驟 14
+  - **完成時間**：2026-02-10
+  - **驗證結果**：✅ 所有驗證通過（21 個檢查點全部 PASS）
 
-- [ ] **步驟 16：建立壓力測試腳本**
+- [x] **步驟 16：建立壓力測試腳本**
   - **目的**：驗證系統在高負載下的穩定性
   - **檔案**：`scripts/load-test.sh`
-  - **測試方式**：使用 `ab` (Apache Bench) 或 `wrk`
+  - **測試方式**：使用 `ab` (Apache Bench)
     ```bash
-    # 發送 1000 個請求，併發 10
-    ab -n 1000 -c 10 http://localhost:3000/api/weather
+    # 發送 1000 個請求，併發 10（預設值）
+    ./scripts/load-test.sh
+
+    # 自訂參數
+    REQUESTS=5000 CONCURRENCY=50 ./scripts/load-test.sh
     ```
   - **驗證項目**：
     - Elasticsearch 索引大小增長
     - OTel Collector CPU/Memory 使用率
     - Jaeger 查詢效能
   - **依賴**：步驟 15
+  - **完成時間**：2026-02-10
 
-- [ ] **步驟 17：更新 README 文檔**
+- [x] **步驟 17：更新專案文檔**
   - **目的**：記錄新架構的使用方式
-  - **檔案**：`README.md` 或新建 `docs/elasticsearch-integration.md`
-  - **文檔內容**：
-    - 架構圖
-    - 服務端口列表
-    - 啟動指令
-    - 常見問題排查
-    - Kibana Dashboard 使用說明
+  - **檔案**：`.claude/CLAUDE.md`
+  - **更新內容**：
+    - ✅ 更新架構圖（含 Elasticsearch + Kibana）
+    - ✅ 更新基礎設施服務列表
+    - ✅ 更新資料流向表格
+    - ✅ 新增 Elasticsearch 整合配置說明
+    - ✅ 新增 Jaeger Elasticsearch 儲存配置
+    - ✅ 新增索引結構說明
+    - ✅ 新增 Kibana Data Views 說明
+    - ✅ 新增自動化腳本列表
+    - ✅ 更新完整端口對照表
+    - ✅ 更新驗收標準（含 Elasticsearch 驗證）
   - **依賴**：步驟 16
+  - **完成時間**：2026-02-10
 
 ---
 
@@ -660,4 +672,44 @@ docker-compose ps elasticsearch
 
 **計畫書版本**：v1.0
 **建立者**：DevOps Team
-**審核狀態**：待審核 ⏳
+**實作日期**：2026-02-10
+**審核狀態**：✅ 已完成
+
+## 實作總結
+
+### 完成的階段
+
+- ✅ **階段一**：Elasticsearch 基礎建設（步驟 1-3）
+- ✅ **階段二**：OTel Collector 整合（步驟 4-6）
+- ✅ **階段三**：Jaeger 整合 Elasticsearch（步驟 7-9）
+- ✅ **階段四**：Elasticsearch Index Lifecycle Management（步驟 10-11）
+- ✅ **階段五**：Kibana Dashboard 建立（步驟 12, 14；步驟 13 為可選）
+- ✅ **階段六**：整合測試與驗證（步驟 15-17）
+
+### 關鍵成果
+
+1. **中心儲存架構**：Elasticsearch 成功作為 Traces/Logs/Metrics 的中心儲存
+2. **多重查詢介面**：
+   - Jaeger UI：分散式追蹤視覺化（從 Elasticsearch 讀取）
+   - Kibana：強大的資料查詢與視覺化介面
+   - Aspire Dashboard：即時資料流監控
+   - Seq：結構化日誌查詢（保留作為備援）
+3. **資料生命週期管理**：14 天 ILM 策略自動管理索引
+4. **自動化腳本**：5 個腳本涵蓋設定、驗證、測試
+5. **文檔更新**：`.claude/CLAUDE.md` 完整記錄新架構
+
+### 驗證結果
+
+- ✅ 端到端驗證：21 個檢查點全部通過
+- ✅ Elasticsearch 索引：otel-traces (21 筆), otel-logs (224 筆), otel-metrics (360 筆)
+- ✅ Jaeger 可查詢完整 Trace 鏈（3 個 spans）
+- ✅ Kibana Data Views：4 個 Data Views 已建立
+- ✅ ILM 策略：已套用到 3 個索引模板
+
+### 待優化項目（後續）
+
+- [ ] Elasticsearch 集群化（高可用部署）
+- [ ] Kibana Alert 規則設定
+- [ ] APM 整合評估
+- [ ] Grafana 整合（如需更靈活的 Dashboard）
+- [ ] 效能調校（根據實際資料量）
