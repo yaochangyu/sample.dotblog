@@ -336,12 +336,27 @@
     - ✅ 4 個 Data Views 已建立
     - ✅ 可透過 Kibana Discover 查詢資料
 
-- [ ] **步驟 13：匯入預設 Kibana Dashboard**（可選）
+- [x] **步驟 13：建立預設 Kibana Dashboard**
   - **目的**：提供開箱即用的視覺化介面
-  - **狀態**：跳過（可稍後在 Kibana UI 中手動建立）
-  - **建議**：使用者可在 Kibana UI 中根據需求自行建立 Dashboard
+  - **方式**：透過 Kibana API（腳本：`scripts/create-kibana-dashboard.sh`）
+  - **Dashboard 內容**：
+    1. **Traces Overview**：
+       - 請求數量趨勢圖（使用 Jaeger 索引）
+       - 服務延遲分佈圖（histogram，顯示 duration 分佈）
+       - Top 10 慢查詢（table，顯示最慢的操作）
+       - HTTP 狀態碼分佈（pie chart）
+    2. **Logs Overview**：
+       - 日誌等級分佈（pie chart，INFO/WARN/ERROR）
+       - 錯誤日誌 Top 10（table，過濾 log.level: Error）
+       - 依服務分組的日誌量（histogram，依 Application 欄位分組）
   - **依賴**：步驟 12
-  - **備註**：Dashboard 建立需要較多客製化配置，建議根據實際需求在 UI 中操作
+  - **完成時間**：2026-02-10
+  - **驗證結果**：
+    - ✅ 7 個 visualizations 已建立
+    - ✅ Dashboard "OpenTelemetry 可觀測性總覽" 已建立
+    - ✅ 自動刷新頻率：30 秒
+    - ✅ 時間範圍：過去 15 分鐘
+  - **Dashboard URL**: http://localhost:5601/app/dashboards#/view/5d135a8e-a5a3-438e-9780-c4d69840a655
 
 - [x] **步驟 14：建立 Kibana Discover 查詢樣板**
   - **目的**：提供常用查詢的快速入口
