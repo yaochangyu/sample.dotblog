@@ -2,7 +2,7 @@
 
 ## 1. 服務架構概覽
 
-架構概覽
+架構概覽（含 Elasticsearch 整合）
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
@@ -15,13 +15,27 @@
                             ▼                    ▼
                     ┌───────────────────────────────┐
                     │      OTel Collector (OTLP)    │
-                    └───┬──────────┬────────────┬───┘
-                        │          │            │
-                        ▼          ▼            ▼
-                    ┌───────┐ ┌─────────┐ ┌─────────────┐
-                    │Jaeger │ │  Seq    │ │   Aspire    │
-                    │Traces │ │  Logs   │ │  Dashboard  │
-                    └───────┘ └─────────┘ └─────────────┘
+                    └───┬───────────┬───────────────┘
+                        │           │
+                        │           └──────────────┐
+                        ▼                          ▼
+                ┌───────────────┐          ┌─────────┐
+                │ Elasticsearch │          │   Seq   │
+                │   (中心儲存)   │          │  (保留)  │
+                └───┬───────┬───┘          └─────────┘
+                    │       │                    ▲
+        ┌───────────┘       └───────────┐        │
+        ▼                               ▼        │
+┌───────────────┐                ┌─────────────┐ │
+│    Jaeger     │                │   Kibana    │ │
+│  All-in-One   │                │  Dashboard  │ │
+│ (從 ES 讀取)   │                │ (Logs/Traces│ │
+└───────────────┘                │  /Metrics)  │ │
+                                 └─────────────┘ │
+┌─────────────────┐                              │
+│ Aspire Dashboard│ ← 維持從 OTel Collector  ─────┘
+│  (即時資料流)     │    接收即時資料
+└─────────────────┘
 ```
 
 ### 核心服務列表
@@ -37,9 +51,11 @@
 | 服務名稱 | 技術 | 本機端口 | 用途 |
 |---------|-----|--------|------|
 | **otel-collector** | OpenTelemetry Collector Contrib | 4317 (gRPC), 4318 (HTTP) | 接收 & 轉發 Traces/Metrics/Logs |
-| **jaeger** | Jaeger All-in-One | 16686 | 分散式追蹤 UI |
+| **elasticsearch** | Elasticsearch 8.17.1 | 9200 | 中心儲存（Traces/Logs/Metrics） |
+| **kibana** | Kibana 8.17.1 | 5601 | 資料視覺化與查詢 UI |
+| **jaeger** | Jaeger All-in-One | 16686 | 分散式追蹤 UI（從 Elasticsearch 讀取） |
 | **seq** | Seq | 5341 | 結構化日誌 UI |
-| **aspire-dashboard** | .NET Aspire Dashboard | 18888 | 整合 Traces/Metrics/Logs 儀表板 |
+| **aspire-dashboard** | .NET Aspire Dashboard | 18888 | 整合 Traces/Metrics/Logs 儀表板（即時資料流） |
 
 ---
 
@@ -58,12 +74,10 @@ Browser (OTel fetch span, 注入 traceparent)
 
 | 訊號類型 | 來源 | 傳輸方式 | 目的地 |
 |---------|------|---------|--------|
-| Traces | Frontend (OTel Web SDK) | OTLP HTTP → OTel Collector | Jaeger + Aspire Dashboard |
-| Traces | API-A / API-B (OTel SDK) | OTLP gRPC → OTel Collector | Jaeger + Aspire Dashboard |
-| Logs | API-A / API-B (Serilog) | OTLP → OTel Collector | Aspire Dashboard |
-| Logs | API-A / API-B (Serilog) | Serilog Seq Sink (直連) | Seq |
-| Logs | API-A / API-B (Serilog) | Serilog Console Sink | Console (stdout) |
-| Metrics | API-A / API-B (OTel SDK) | OTLP gRPC → OTel Collector | Aspire Dashboard |
+| Traces | Frontend (OTel Web SDK) | OTLP HTTP → OTel Collector | → Elasticsearch → Jaeger<br>→ Aspire Dashboard (即時) |
+| Traces | API-A / API-B (OTel SDK) | OTLP gRPC → OTel Collector | → Elasticsearch → Jaeger<br>→ Aspire Dashboard (即時) |
+| Logs | API-A / API-B (Serilog) | 1) OTLP gRPC → OTel Collector<br>2) Serilog Seq Sink (直連) | → Elasticsearch → Kibana<br>→ Seq<br>→ Aspire Dashboard (即時) |
+| Metrics | API-A / API-B (OTel SDK) | OTLP gRPC → OTel Collector | → Elasticsearch → Kibana<br>→ Aspire Dashboard (即時) |
 
 ### 技術規格
 
@@ -433,10 +447,138 @@ network: opentelemetry-lab (bridge mode)
 
 ---
 
-## 10. 驗收標準與驗證方式
+## 10. Elasticsearch 整合配置
+
+### 10.1 OTel Collector Elasticsearch Exporter
+
+**檔案**: `/data/otel-collector/otel-collector-config.yaml`
+
+```yaml
+exporters:
+  elasticsearch:
+    endpoints: ["http://elasticsearch:9200"]
+    logs_index: "otel-logs"
+    traces_index: "otel-traces"
+    metrics_index: "otel-metrics"
+    mapping:
+      mode: ecs  # Elastic Common Schema
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/jaeger, otlp/aspire, elasticsearch]  # ← 新增
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/aspire, elasticsearch]  # ← 新增
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/aspire, elasticsearch]  # ← 新增
+```
+
+### 10.2 Jaeger Elasticsearch 儲存
+
+**檔案**: `/docker-compose.yml`
+
+```yaml
+jaeger:
+  image: jaegertracing/all-in-one:latest
+  environment:
+    - SPAN_STORAGE_TYPE=elasticsearch
+    - ES_SERVER_URLS=http://elasticsearch:9200
+    - ES_INDEX_PREFIX=jaeger
+    - ES_VERSION=8
+  depends_on:
+    - elasticsearch
+```
+
+### 10.3 Elasticsearch 索引結構
+
+| 索引名稱 | 用途 | 資料來源 | 保留策略 |
+|---------|------|---------|---------|
+| `otel-traces-*` | OpenTelemetry Traces | OTel Collector | 14 天 (ILM) |
+| `otel-logs-*` | OpenTelemetry Logs | OTel Collector | 14 天 (ILM) |
+| `otel-metrics-*` | OpenTelemetry Metrics | OTel Collector | 14 天 (ILM) |
+| `jaeger-jaeger-span-*` | Jaeger Spans | Jaeger (從 OTel Collector 接收) | 手動管理 |
+| `jaeger-jaeger-service-*` | Jaeger Services | Jaeger | 手動管理 |
+
+### 10.4 Kibana Data Views
+
+透過腳本 `scripts/setup-kibana-index-patterns.sh` 建立：
+
+- **OpenTelemetry Traces** (`otel-traces-*`)
+- **OpenTelemetry Logs** (`otel-logs-*`)
+- **OpenTelemetry Metrics** (`otel-metrics-*`)
+- **Jaeger Spans** (`jaeger-jaeger-span-*`)
+
+### 10.5 自動化腳本
+
+| 腳本 | 功能 |
+|------|------|
+| `scripts/setup-elasticsearch-ilm.sh` | 建立 14 天 ILM 策略並套用到 OTel 索引 |
+| `scripts/setup-kibana-index-patterns.sh` | 建立 Kibana Data Views |
+| `scripts/create-kibana-saved-searches.sh` | 建立常用查詢樣板 |
+| `scripts/verify-elasticsearch-integration.sh` | 端到端整合驗證 |
+| `scripts/load-test.sh` | 壓力測試 |
+
+---
+
+## 11. 完整端口對照表
+
+| 服務 | 本機端口 | 容器端口 | 用途 |
+|------|---------|---------|------|
+| frontend | 3000 | 3000 | Nuxt 前端 |
+| backend-a | 5100 | 8080 | ASP.NET API-A |
+| backend-b | 5200 | 8080 | ASP.NET API-B |
+| otel-collector | 4317, 4318 | 4317, 4318 | OTLP Receiver |
+| **elasticsearch** | **9200** | **9200** | Elasticsearch API |
+| **kibana** | **5601** | **5601** | Kibana UI |
+| jaeger | 16686 | 16686 | Jaeger UI |
+| seq | 5341 | 80 | Seq UI |
+| aspire-dashboard | 18888 | 18888 | Aspire Dashboard |
+
+---
+
+## 12. 驗收標準與驗證方式
+
+### 12.1 基本功能驗證
 
 1. **分散式追蹤**: Jaeger UI (http://localhost:16686) 可查看完整 frontend → backend-a → backend-b 的 Trace 鏈
 2. **前端追蹤**: 瀏覽器 fetch 自動帶 `traceparent` header，OTLP HTTP 請求成功發送
 3. **日誌關聯**: Seq (http://localhost:5341) 中的日誌包含 TraceId，可與 Jaeger Trace 關聯
 4. **整合儀表板**: Aspire Dashboard (http://localhost:18888) 顯示 Traces/Metrics/Logs
 5. **天氣介面**: Frontend (http://localhost:3000) 可查詢天氣列表、新增天氣
+
+### 12.2 Elasticsearch 整合驗證
+
+6. **Elasticsearch 健康**: `curl http://localhost:9200/_cluster/health` 返回 green 或 yellow
+7. **Kibana 可訪問**: http://localhost:5601 顯示 Kibana 首頁
+8. **OTel 索引存在**: `curl http://localhost:9200/_cat/indices?v` 顯示 `otel-traces`, `otel-logs`, `otel-metrics`
+9. **Jaeger 從 ES 讀取**: Jaeger UI 可查詢完整 Trace（資料來自 Elasticsearch）
+10. **Kibana Data Views**: Kibana Discover 可查詢 OTel 資料
+11. **ILM 策略套用**: `curl http://localhost:9200/_ilm/policy/otel-14day-policy` 返回策略配置
+12. **端到端驗證**: 執行 `./scripts/verify-elasticsearch-integration.sh` 所有測試通過
+
+### 12.3 快速驗證指令
+
+```bash
+# 1. 啟動所有服務
+docker compose up -d
+
+# 2. 等待服務健康檢查通過
+docker compose ps
+
+# 3. 執行端到端驗證
+./scripts/verify-elasticsearch-integration.sh
+
+# 4. 訪問各服務 UI
+# - Frontend:         http://localhost:3000
+# - Jaeger UI:        http://localhost:16686
+# - Kibana:           http://localhost:5601
+# - Seq:              http://localhost:5341
+# - Aspire Dashboard: http://localhost:18888
+# - Elasticsearch:    http://localhost:9200
+```
