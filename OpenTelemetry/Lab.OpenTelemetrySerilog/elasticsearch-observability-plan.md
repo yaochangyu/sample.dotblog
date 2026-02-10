@@ -134,7 +134,7 @@
 
 ### 階段二：OTel Collector 整合
 
-- [ ] **步驟 4：配置 OTel Collector Elasticsearch Exporter**
+- [x] **步驟 4：配置 OTel Collector Elasticsearch Exporter**
   - **目的**：將 Traces、Logs、Metrics 寫入 Elasticsearch
   - **檔案**：`data/otel-collector/otel-collector-config.yaml`
   - **配置內容**：
@@ -153,8 +153,9 @@
     - logs: 新增 `elasticsearch` 到 exporters 列表
     - metrics: 新增 `elasticsearch` 到 exporters 列表
   - **依賴**：步驟 3
+  - **完成時間**：2026-02-10
 
-- [ ] **步驟 5：更新 OTel Collector 服務依賴**
+- [x] **步驟 5：更新 OTel Collector 服務依賴**
   - **目的**：確保 OTel Collector 在 Elasticsearch 啟動後才啟動
   - **檔案**：`docker-compose.yml`
   - **修改內容**：
@@ -166,8 +167,9 @@
         - elasticsearch  # ← 新增
     ```
   - **依賴**：步驟 3
+  - **完成時間**：2026-02-10
 
-- [ ] **步驟 6：重啟 OTel Collector 並驗證資料寫入**
+- [x] **步驟 6：重啟 OTel Collector 並驗證資料寫入**
   - **目的**：確認資料正確寫入 Elasticsearch
   - **驗證方式**：
     ```bash
@@ -182,6 +184,11 @@
     ```
   - **預期結果**：看到 `otel-traces`, `otel-logs`, `otel-metrics` 索引
   - **依賴**：步驟 4、步驟 5
+  - **完成時間**：2026-02-10
+  - **驗證結果**：
+    - ✅ `otel-traces`: 3 筆 traces（ECS 格式）
+    - ✅ `otel-logs`: 56 筆 logs
+    - ✅ 資料結構正確，包含 trace_id、span_id、service_name 等欄位
 
 ---
 
