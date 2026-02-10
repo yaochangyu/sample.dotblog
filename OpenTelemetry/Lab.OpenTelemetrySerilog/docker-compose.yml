@@ -90,6 +90,12 @@ services:
     environment:
       - COLLECTOR_OTLP_ENABLED=true
       - QUERY_UI_CONFIG=/etc/jaeger/jaeger-ui.json
+      - SPAN_STORAGE_TYPE=elasticsearch
+      - ES_SERVER_URLS=http://elasticsearch:9200
+      - ES_INDEX_PREFIX=jaeger
+      - ES_VERSION=8
+    depends_on:
+      - elasticsearch
     networks:
       - opentelemetry-lab
 
