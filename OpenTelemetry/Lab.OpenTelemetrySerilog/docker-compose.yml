@@ -74,9 +74,12 @@ services:
       - "4317:4317"   # OTLP gRPC
       - "4318:4318"   # OTLP HTTP
     depends_on:
-      - jaeger
-      - aspire-dashboard
-      - elasticsearch
+      jaeger:
+        condition: service_started
+      aspire-dashboard:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
     networks:
       - opentelemetry-lab
 
@@ -95,7 +98,8 @@ services:
       - ES_INDEX_PREFIX=jaeger
       - ES_VERSION=8
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - opentelemetry-lab
 
@@ -156,7 +160,8 @@ services:
     ports:
       - "5601:5601"
     depends_on:
-      - elasticsearch
+      elasticsearch:
+        condition: service_healthy
     networks:
       - opentelemetry-lab
     healthcheck:
