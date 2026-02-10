@@ -5,6 +5,7 @@
   從 Traces 自動生成 RED Metrics（Rate, Errors, Duration）
 
   # otel-collector-config.yaml
+  ```yaml
   connectors:
     spanmetrics:
       histogram:
@@ -27,7 +28,7 @@
         receivers: [otlp, spanmetrics]  # ← 從 connector 接收
         processors: [batch]
         exporters: [otlp/aspire, prometheus]  # ← 可以加 Prometheus
-
+```
   自動產生的 Metrics：
   - calls_total - 請求總數 (依 service, operation, status_code 分組)
   - duration_milliseconds - 請求延遲直方圖
@@ -39,7 +40,7 @@
   方案 2：OpenTelemetry Collector - Log Metrics Transform
 
   從結構化 Logs 提取 Metrics
-
+```yaml
   processors:
     transform/logs_to_metrics:
       metric_statements:
@@ -59,13 +60,14 @@
         receivers: [otlp]
         processors: [batch, transform/logs_to_metrics]
         exporters: [otlp/aspire, metricstransform]  # ← 轉成 metrics
-
+```
   ---
   方案 3：Prometheus Elasticsearch Exporter
 
   從 Elasticsearch 定期查詢並暴露 Metrics
 
   # docker-compose.yml
+  ```yml
   elasticsearch-exporter:
     image: quay.io/prometheuscommunity/elasticsearch-exporter:latest
     command:
@@ -84,14 +86,14 @@
     - job_name: 'elasticsearch'
       static_configs:
         - targets: ['elasticsearch-exporter:9114']
-
+```
   ---
   方案 4：Seq Metrics Exporter（自訂）
 
   從 Seq API 查詢 Logs 並轉換成 Metrics
 
   寫一個簡單的 exporter 服務：
-
+```csharp
   // SeqMetricsExporter (偽碼)
   app.MapGet("/metrics", async (HttpClient seqClient) =>
   {
@@ -106,7 +108,7 @@
   seq_error_total {errorCount}
       ";
   });
-
+```
   ---
   🏆 針對您的專案，我推薦的方案
 
