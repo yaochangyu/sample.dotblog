@@ -194,7 +194,7 @@
 
 ### 階段三：Jaeger 整合 Elasticsearch
 
-- [ ] **步驟 7：修改 Jaeger 服務配置**
+- [x] **步驟 7：修改 Jaeger 服務配置**
   - **目的**：將 Jaeger 儲存後端切換為 Elasticsearch
   - **檔案**：`docker-compose.yml`
   - **配置內容**：
@@ -211,8 +211,10 @@
     ```
   - **移除內容**：移除記憶體儲存相關的環境變數（如有）
   - **依賴**：步驟 3
+  - **完成時間**：2026-02-10
+  - **備註**：暫時未啟用 ES_USE_ILM，將在階段四單獨配置 ILM 策略
 
-- [ ] **步驟 8：建立 Jaeger Elasticsearch Index Template**
+- [x] **步驟 8：建立 Jaeger Elasticsearch Index Template**
   - **目的**：確保 Jaeger 的 Span 資料結構正確
   - **方式**：Jaeger 會在啟動時自動建立索引模板
   - **驗證方式**：
@@ -222,8 +224,12 @@
     ```
   - **預期結果**：看到 `jaeger-span-*` 和 `jaeger-service-*` 索引
   - **依賴**：步驟 7
+  - **完成時間**：2026-02-10
+  - **驗證結果**：
+    - ✅ `jaeger-jaeger-span-2026-02-10` 索引已建立
+    - ✅ `jaeger-jaeger-service-2026-02-10` 索引已建立
 
-- [ ] **步驟 9：驗證 Jaeger UI 可查詢 Elasticsearch 資料**
+- [x] **步驟 9：驗證 Jaeger UI 可查詢 Elasticsearch 資料**
   - **目的**：確認 Jaeger 正確讀取 Elasticsearch 中的 Traces
   - **驗證方式**：
     1. 訪問 http://localhost:16686
@@ -231,6 +237,11 @@
     3. 點擊 "Find Traces"
   - **預期結果**：顯示完整的 Trace 鏈路
   - **依賴**：步驟 8
+  - **完成時間**：2026-02-10
+  - **驗證結果**：
+    - ✅ Jaeger UI 可查詢服務：backend-a, backend-b
+    - ✅ Trace 資料完整（traceID: 3f072ef604ac1310a073dc205650201d, 3 個 spans）
+    - ✅ 涵蓋 2 個 processes（backend-a 和 backend-b）
 
 ---
 
