@@ -572,6 +572,52 @@ export default defineEventHandler(async (event) => {
 
 ---
 
+## 疑難排解：Clock Skew（時鐘偏差）
+
+### 問題現象
+
+在 Jaeger UI 查看 Trace 時，可能會發現子 span（backend-a）的開始時間比父 span（frontend）更早，時序出現因果關係倒置。Jaeger 會顯示類似以下警告：
+
+```
+clock skew adjustment disabled; not applying calculated delta of 4.32317975s
+```
+
+### 根因分析
+
+本專案的追蹤鏈跨越了不同的時鐘來源：
+
+| Span 來源 | 時鐘來源 |
+|-----------|---------|
+| frontend (root span) | 瀏覽器端（使用者的 Windows 主機時鐘） |
+| backend-a / backend-b | Docker 容器（WSL2 核心時鐘） |
+
+當 Windows 主機時鐘與 WSL2/Docker 時鐘不同步時（常見於休眠/喚醒後），就會出現 Clock Skew。
+
+以實際的 Trace 數據為例：
+
+```
+frontend (HTTP GET, root):   startTime = 1771085788976000 μs
+backend-a (GET Weather):     startTime = 1771085784654696 μs
+                             差異 = 4.32 秒（子 span 比父 span 早）
+```
+
+### 解決方式
+
+**方案 1：同步 WSL 時鐘（推薦）**
+
+```bash
+# 安裝 ntpdate
+sudo apt-get install -y ntpdate
+
+# 使用 NTP 校時
+sudo ntpdate time.google.com
+```
+
+同時在 Windows 端同步時間：設定 → 時間與語言 → 日期和時間 → 立即同步。
+
+
+---
+
 ## 範例原始碼
 
 完整範例放在 GitHub：https://github.com/nickyc975/Lab.OpenTelemetrySerilog

@@ -407,6 +407,30 @@ processors:
 - 確認 Docker network 設定正確
 - 確認 OTel Collector 的 `exporters.otlp/aspire.endpoint` 設定為 `aspire-dashboard:18889`
 
+### Q4：Jaeger 顯示 Clock Skew 警告，Trace 時序倒置？
+
+**問題描述**：
+
+Jaeger UI 中 backend-a 的 span 開始時間比 frontend 的 root span 更早，並顯示：
+
+```
+clock skew adjustment disabled; not applying calculated delta of 4.32317975s
+```
+
+**原因**：
+
+frontend 的 root span 由瀏覽器端的 `@opentelemetry/instrumentation-fetch` 產生，使用 **Windows 主機時鐘**；backend-a/b 的 span 使用 **Docker 容器時鐘（WSL2 核心時鐘）**。兩者不同步時就會出現 Clock Skew，常見於電腦休眠/喚醒後。
+
+**解決方式**：
+
+1. **同步 WSL 時鐘**（推薦）：
+   ```bash
+   sudo apt-get install -y ntpdate
+   sudo ntpdate time.google.com
+   ```
+
+2. **同步 Windows 時鐘**：設定 → 時間與語言 → 日期和時間 → 立即同步
+
 ---
 
 ## 心得
