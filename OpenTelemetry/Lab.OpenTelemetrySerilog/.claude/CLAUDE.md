@@ -433,7 +433,48 @@ network: opentelemetry-lab (bridge mode)
 
 ---
 
-## 10. 驗收標準與驗證方式
+## 10. 疑難排解：Clock Skew（時鐘偏差）
+
+### 問題現象
+
+在 Jaeger UI 中查看 Trace 時，發現 backend-a 的 span 開始時間比 frontend 的 root span **更早**，出現因果關係倒置的情況。Jaeger 會顯示警告：
+
+```
+clock skew adjustment disabled; not applying calculated delta of 4.32317975s
+```
+
+### 根因分析
+
+本專案的追蹤鏈中，時鐘來源不同：
+
+| Span 來源 | 時鐘來源 |
+|-----------|---------|
+| frontend (root span) | **瀏覽器端**（使用者的 Windows 主機時鐘） |
+| backend-a / backend-b | **Docker 容器時鐘**（WSL2 核心時鐘） |
+
+當 Windows 主機時鐘與 WSL2/Docker 時鐘不同步時，就會出現 Clock Skew，導致子 span 的開始時間比父 span 更早。
+
+### 解決方案
+
+#### 方案 1：同步 WSL 時鐘（推薦）
+
+```bash
+# 安裝 ntpdate
+sudo apt-get install -y ntpdate
+
+# 使用 NTP 校時
+sudo ntpdate time.google.com
+```
+
+同時需要在 **Windows 端**同步時間：
+- 設定 → 時間與語言 → 日期和時間 → 立即同步
+
+
+若設為 `0s` 則停用自動校正，會顯示真實時序（含偏差）。此方案僅修正顯示，不修正根本原因。
+
+---
+
+## 11. 驗收標準與驗證方式
 
 1. **分散式追蹤**: Jaeger UI (http://localhost:16686) 可查看完整 frontend → backend-a → backend-b 的 Trace 鏈
 2. **前端追蹤**: 瀏覽器 fetch 自動帶 `traceparent` header，OTLP HTTP 請求成功發送
