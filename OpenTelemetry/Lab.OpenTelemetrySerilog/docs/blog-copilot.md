@@ -260,6 +260,142 @@ Browser (產生 traceparent)
 
 ---
 
+## 前端追蹤配置
+
+前端使用 OpenTelemetry Web SDK，在瀏覽器中自動追蹤 fetch 請求。
+
+### Nuxt Plugin（opentelemetry.client.ts）
+
+```typescript
+import { context, propagation } from '@opentelemetry/api'
+import { WebTracerProvider } from '@opentelemetry/sdk-trace-web'
+import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base'
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
+import { FetchInstrumentation } from '@opentelemetry/instrumentation-fetch'
+import { registerInstrumentations } from '@opentelemetry/instrumentation'
+import { resourceFromAttributes } from '@opentelemetry/resources'
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
+import { ZoneContextManager } from '@opentelemetry/context-zone'
+import { W3CTraceContextPropagator } from '@opentelemetry/core'
+
+export default defineNuxtPlugin(() => {
+  if (import.meta.server) return
+
+  const config = useRuntimeConfig()
+  const collectorUrl = config.public.otelCollectorUrl as string
+
+  const resource = resourceFromAttributes({
+    [ATTR_SERVICE_NAME]: 'frontend',
+  })
+
+  const exporter = new OTLPTraceExporter({
+    url: `${collectorUrl}/v1/traces`,
+  })
+
+  const provider = new WebTracerProvider({
+    resource,
+    spanProcessors: [new BatchSpanProcessor(exporter)],
+  })
+
+  provider.register()
+
+  const contextManager = new ZoneContextManager()
+  contextManager.enable()
+  context.setGlobalContextManager(contextManager)
+
+  propagation.setGlobalPropagator(new W3CTraceContextPropagator())
+
+  registerInstrumentations({
+    instrumentations: [
+      new FetchInstrumentation({
+        propagateTraceHeaderCorsUrls: [/\/api\//],
+      }),
+    ],
+  })
+})
+```
+
+**重點說明**：
+
+- `ZoneContextManager`：Zone.js 提供的 Context Manager，確保瀏覽器非同步操作中的追蹤上下文不會遺失
+- `W3CTraceContextPropagator`：自動在 fetch 請求中注入 `traceparent` header
+- `FetchInstrumentation`：自動 instrument 所有 fetch 請求
+- `propagateTraceHeaderCorsUrls`：只對匹配 `/api/` 的 URL 注入追蹤 header
+
+### Nuxt Server 追蹤配置
+
+Nuxt Server 端也需要初始化 Node.js 端的 OTel SDK，才能產生 server-side span。
+
+#### Server Plugin（初始化 NodeTracerProvider）
+
+```typescript
+// server/plugins/otel.ts
+import { NodeTracerProvider } from '@opentelemetry/sdk-trace-node'
+import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base'
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
+import { resourceFromAttributes } from '@opentelemetry/resources'
+import { ATTR_SERVICE_NAME } from '@opentelemetry/semantic-conventions'
+import { W3CTraceContextPropagator } from '@opentelemetry/core'
+import { propagation } from '@opentelemetry/api'
+
+export default defineNitroPlugin(() => {
+  const config = useRuntimeConfig()
+  const exporterUrl = `${config.otelExporterUrl}/v1/traces`
+
+  const provider = new NodeTracerProvider({
+    resource: resourceFromAttributes({
+      [ATTR_SERVICE_NAME]: 'frontend-server',
+    }),
+    spanProcessors: [
+      new BatchSpanProcessor(
+        new OTLPTraceExporter({ url: exporterUrl }),
+      ),
+    ],
+  })
+
+  provider.register()
+  propagation.setGlobalPropagator(new W3CTraceContextPropagator())
+})
+```
+
+#### Tracing Middleware（建立 server span）
+
+```typescript
+// server/middleware/tracing.ts
+// 自動從 request headers 提取 trace context，建立 server span
+// 將 OTel context 存入 event.context.otelContext 供 API handler 使用
+```
+
+#### fetchWithTracing（建立 client span）
+
+```typescript
+// server/utils/tracing.ts
+// fetchWithTracing(event, url, options)
+// 包裹 $fetch 並自動建立 SpanKind.CLIENT span + 注入 traceparent header
+```
+
+#### API Route 使用 fetchWithTracing
+
+```typescript
+// server/api/weather.get.ts
+export default defineEventHandler(async (event) => {
+  const { backendAUrl } = useRuntimeConfig()
+  return await fetchWithTracing(event, '/Weather', {
+    baseURL: backendAUrl,
+    headers: { ...getProxyRequestHeaders(event) },
+  })
+})
+```
+
+**重點說明**：
+
+- `NodeTracerProvider`：Node.js 端的 TracerProvider，service name 為 `frontend-server`（區別於瀏覽器端的 `frontend`）
+- Tracing middleware 建立 **server span**，提取 incoming trace context
+- `fetchWithTracing` 建立 **client span**，注入 outgoing trace context
+- Nuxt config 設定 `nitro.noExternals: true`，將所有依賴 inline 到 bundle，避免 CJS/ESM 不相容問題
+
+---
+
 ## Aspire Dashboard 整合
 
 ### 特色
