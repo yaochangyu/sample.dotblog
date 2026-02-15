@@ -12,15 +12,6 @@ export default defineNuxtConfig({
   },
 
   nitro: {
-    externals: {
-      inline: [
-        '@opentelemetry/api',
-        '@opentelemetry/sdk-trace-base',
-        '@opentelemetry/exporter-trace-otlp-http',
-        '@opentelemetry/resources',
-        '@opentelemetry/semantic-conventions',
-        '@opentelemetry/core',
-      ],
-    },
+    noExternals: true,
   },
 })
