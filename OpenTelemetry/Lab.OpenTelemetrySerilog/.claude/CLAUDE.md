@@ -48,9 +48,10 @@
 ### 流水線追蹤鏈路
 ```
 Browser (OTel fetch span, 注入 traceparent)
-  └──▶ Nuxt Server Proxy (/api/weather → backend-a:8080/Weather, 透傳 traceparent)
-         └──▶ API-A (讀取 traceparent, 建立 child span, 呼叫 API-B)
-                └──▶ API-B (讀取 traceparent, 建立 child span)
+  └──▶ Nuxt Server (server span, 從 request headers 提取 trace context)
+         └──▶ Nuxt Server (client span, 透過 fetchWithTracing 建立, 注入 traceparent)
+                └──▶ API-A (讀取 traceparent, 建立 child span, 呼叫 API-B)
+                       └──▶ API-B (讀取 traceparent, 建立 child span)
 ```
 ---
 
@@ -58,6 +59,7 @@ Browser (OTel fetch span, 注入 traceparent)
 
 | 訊號類型 | 來源 | 傳輸方式 | 目的地 |
 |---------|------|---------|--------|
+| Traces | Frontend Server (OTel Node SDK) | OTLP HTTP → OTel Collector | Jaeger + Aspire Dashboard |
 | Traces | Frontend (OTel Web SDK) | OTLP HTTP → OTel Collector | Jaeger + Aspire Dashboard |
 | Traces | API-A / API-B (OTel SDK) | OTLP gRPC → OTel Collector | Jaeger + Aspire Dashboard |
 | Logs | API-A / API-B (Serilog) | OTLP → OTel Collector | Aspire Dashboard |
@@ -100,16 +102,59 @@ Browser (OTel fetch span, 注入 traceparent)
 - 自動注入 `traceparent` header (W3C Trace Context 標準)
 - CORS 允許列表: `http://localhost:3000` (OTel Collector 配置)
 
-### 3.2 Nuxt Server Proxy
+### 3.2 Nuxt Server 追蹤配置
+
+#### Server Plugin（初始化 OTel SDK）
+
+**檔案**: `/src/frontend/server/plugins/otel.ts`
+
+```typescript
+// 核心組件
+- NodeTracerProvider (service: "frontend-server")
+- BatchSpanProcessor (OTLP HTTP exporter)
+- OTLPTraceExporter (端點: ${runtimeConfig.otelExporterUrl}/v1/traces)
+- W3CTraceContextPropagator (全域 propagator)
+```
+
+#### Server Middleware（建立 server span）
+
+**檔案**: `/src/frontend/server/middleware/tracing.ts`
+
+```typescript
+// 行為：
+// 1. 從 request headers 提取 incoming trace context (propagation.extract)
+// 2. 建立 SpanKind.SERVER span
+// 3. 將 OTel context 存入 event.context.otelContext 供 API handler 使用
+// 4. 在 response finish 時結束 span
+```
+
+#### Tracing Utils（trace context 傳播 + client span）
+
+**檔案**: `/src/frontend/server/utils/tracing.ts`
+
+```typescript
+// getTraceHeaders(event) - 從 event.context.otelContext 注入 trace headers
+// fetchWithTracing(event, url, options) - 包裹 $fetch 並自動建立 SpanKind.CLIENT span
+//   - 建立 client span，名稱為 `${method} ${fullUrl}`
+//   - 自動注入 traceparent header 到 outgoing request
+//   - 自動設定 http.response.status_code attribute
+```
+
+**Nuxt Config**:
 
 **檔案**: `/src/frontend/nuxt.config.ts`
 
 ```typescript
 runtimeConfig: {
   backendAUrl: 'http://localhost:5100',
+  otelExporterUrl: process.env.OTEL_EXPORTER_URL || 'http://localhost:4318',
   public: {
     otelCollectorUrl: process.env.OTEL_COLLECTOR_URL || 'http://localhost:4318',
   },
+}
+
+nitro: {
+  noExternals: true,  // 所有依賴 inline 到 bundle，避免 CJS/ESM 不相容
 }
 ```
 
@@ -117,19 +162,13 @@ runtimeConfig: {
 - `GET /api/weather` → `/src/frontend/server/api/weather.get.ts`
 - `POST /api/weather` → `/src/frontend/server/api/weather.post.ts`
 
-**透傳行為**:
+**呼叫行為**:
 ```typescript
-// weather.get.ts
-const response = await $fetch('/Weather', {
+// weather.get.ts - 使用 fetchWithTracing 自動建立 client span + 注入 traceparent
+return await fetchWithTracing(event, '/Weather', {
   baseURL: backendAUrl,
-  headers: getProxyRequestHeaders(event),  // ← 透傳 traceparent header
+  headers: { ...getProxyRequestHeaders(event) },
 })
-
-// weather.post.ts
-headers: Object.fromEntries(
-  Object.entries(getProxyRequestHeaders(event))
-    .filter(([key]) => key.toLowerCase() !== 'content-length'),  // 移除 content-length 避免衝突
-)
 ```
 
 ### 3.3 Backend-A 追蹤配置
@@ -239,14 +278,15 @@ public IActionResult Post(WeatherForecast forecast)
 
 ```
 Jaeger Trace (單一 Trace ID)
-├─ Span: browser.GET /api/weather
+├─ Span: browser.GET /api/weather (frontend, client)
 │   └─ traceparent: 01-{trace-id}-{span-id}-01
 │
-├─ Span: frontend (OTel Plugin 發送)
-│   └─ OTLP HTTP → OTel Collector
+├─ Span: frontend-server.GET /api/weather (server span, middleware 建立)
+│   └─ Span: frontend-server.GET http://backend-a:8080/Weather (client span, fetchWithTracing 建立)
+│       └─ 注入 traceparent header 到 Backend-A 請求
 │
 ├─ Span: backend-a.GET /Weather (收到 traceparent)
-│   │   parent_span_id: {上一層 span-id}
+│   │   parent_span_id: {frontend-server 的 client span}
 │   │
 │   └─ Span: backend-a.HttpClient.GET backend-b (child)
 │       └─ 注入 traceparent header 到 Backend-B 請求
@@ -341,6 +381,7 @@ service:
 | 來源 | 訊號類型 | 傳輸方式 | 目的地 |
 |------|---------|---------|--------|
 | Frontend (瀏覽器) | Traces | OTLP HTTP (port 4318) | OTel Collector → Jaeger + Aspire |
+| Frontend Server (Node.js) | Traces | OTLP HTTP (port 4318) | OTel Collector → Jaeger + Aspire |
 | Backend-A/B | Traces | OTLP gRPC (port 4317) | OTel Collector → Jaeger + Aspire |
 | Backend-A/B | Logs (Serilog) | OTLP gRPC + Seq Sink | OTel Collector + Seq (直連) |
 | Backend-A/B | Metrics | OTLP gRPC (port 4317) | OTel Collector → Aspire |
@@ -404,6 +445,7 @@ network: opentelemetry-lab (bridge mode)
   "@opentelemetry/instrumentation-fetch": "^0.211.0",
   "@opentelemetry/resources": "^2.5.0",
   "@opentelemetry/sdk-trace-base": "^2.5.0",
+  "@opentelemetry/sdk-trace-node": "^2.5.1",
   "@opentelemetry/sdk-trace-web": "^2.5.0",
   "@opentelemetry/semantic-conventions": "^1.39.0",
   "nuxt": "^4.3.1",
@@ -425,8 +467,11 @@ network: opentelemetry-lab (bridge mode)
 | `/src/backend-b/Program.cs` | Backend-B 啟動與 OTel 配置 |
 | `/src/backend-a/appsettings.json` | Backend-A 日誌設定 |
 | `/src/backend-b/appsettings.json` | Backend-B 日誌設定 |
-| `/src/frontend/nuxt.config.ts` | Frontend 配置 (runtimeConfig、proxy rules) |
-| `/src/frontend/app/plugins/opentelemetry.client.ts` | Frontend OTel 初始化 |
+| `/src/frontend/nuxt.config.ts` | Frontend 配置 (runtimeConfig、nitro noExternals) |
+| `/src/frontend/app/plugins/opentelemetry.client.ts` | Frontend 瀏覽器端 OTel 初始化 |
+| `/src/frontend/server/plugins/otel.ts` | Frontend Server 端 OTel 初始化 (NodeTracerProvider) |
+| `/src/frontend/server/middleware/tracing.ts` | Frontend Server 端 tracing middleware (建立 server span) |
+| `/src/frontend/server/utils/tracing.ts` | Frontend Server 端 tracing utils (getTraceHeaders, fetchWithTracing) |
 | `/src/frontend/app/pages/index.vue` | 天氣查詢/新增 UI |
 | `/src/frontend/server/api/weather.get.ts` | Nuxt Server API (GET) |
 | `/src/frontend/server/api/weather.post.ts` | Nuxt Server API (POST) |
@@ -476,8 +521,9 @@ sudo ntpdate time.google.com
 
 ## 11. 驗收標準與驗證方式
 
-1. **分散式追蹤**: Jaeger UI (http://localhost:16686) 可查看完整 frontend → backend-a → backend-b 的 Trace 鏈
+1. **分散式追蹤**: Jaeger UI (http://localhost:16686) 可查看完整 frontend → frontend-server → backend-a → backend-b 的 Trace 鏈（6 個 span）
 2. **前端追蹤**: 瀏覽器 fetch 自動帶 `traceparent` header，OTLP HTTP 請求成功發送
-3. **日誌關聯**: Seq (http://localhost:5341) 中的日誌包含 TraceId，可與 Jaeger Trace 關聯
+3. **Server 端追蹤**: Nuxt Server 產生 server span 和 client span，正確傳播 trace context
+4. **日誌關聯**: Seq (http://localhost:5341) 中的日誌包含 TraceId，可與 Jaeger Trace 關聯
 4. **整合儀表板**: Aspire Dashboard (http://localhost:18888) 顯示 Traces/Metrics/Logs
 5. **天氣介面**: Frontend (http://localhost:3000) 可查詢天氣列表、新增天氣
