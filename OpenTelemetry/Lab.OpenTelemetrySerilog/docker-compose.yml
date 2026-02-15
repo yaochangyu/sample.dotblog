@@ -115,6 +115,19 @@ services:
     networks:
       - opentelemetry-lab
 
+  warmup:
+    image: curlimages/curl:latest
+    container_name: warmup
+    depends_on:
+      - frontend
+      - backend-a
+      - backend-b
+    volumes:
+      - ./scripts/warmup.sh:/warmup.sh:ro
+    entrypoint: ["/bin/sh", "/warmup.sh"]
+    networks:
+      - opentelemetry-lab
+
 networks:
   opentelemetry-lab:
     driver: bridge
