@@ -57,6 +57,7 @@ OpenTelemetry 定義了三種遙測資料：
 | 來源 | 訊號類型 | 傳輸協定 | 目的地 |
 |------|---------|---------|--------|
 | Frontend | Traces | OTLP HTTP (4318) | OTel Collector → Jaeger + Aspire |
+| Frontend Server | Traces | OTLP HTTP (4318) | OTel Collector → Jaeger + Aspire |
 | Backend-A/B | Traces | OTLP gRPC (4317) | OTel Collector → Jaeger + Aspire |
 | Backend-A/B | Logs | OTLP gRPC + Seq Sink | OTel Collector + Seq |
 | Backend-A/B | Metrics | OTLP gRPC (4317) | OTel Collector → Aspire |
@@ -244,14 +245,17 @@ traceparent: 00-{trace-id}-{span-id}-01
 
 ```
 Browser (產生 traceparent)
-  └──▶ Nuxt Server Proxy (透傳 traceparent)
-         └──▶ Backend-A (讀取 traceparent, 建立 child span)
-                └──▶ Backend-B (讀取 traceparent, 建立 child span)
+  └──▶ Nuxt Server (server span, 從 request headers 提取 trace context)
+         └──▶ Nuxt Server (client span, fetchWithTracing 建立, 注入 traceparent)
+                └──▶ Backend-A (讀取 traceparent, 建立 child span)
+                       └──▶ Backend-B (讀取 traceparent, 建立 child span)
 ```
 
 **自動化機制**：
 - `AddAspNetCoreInstrumentation()`：自動讀取請求的 `traceparent` header
 - `AddHttpClientInstrumentation()`：自動在 HttpClient 請求中注入 `traceparent` header
+- Nuxt Server 的 `tracing.ts` middleware：從 request headers 提取 trace context，建立 server span
+- Nuxt Server 的 `fetchWithTracing()`：包裹 `$fetch` 建立 client span，自動注入 traceparent header
 - 無需手動處理，SDK 自動建立正確的 parent-child 關係
 
 ---
@@ -331,8 +335,8 @@ curl -X POST http://localhost:5100/Weather \
 ### 3. 檢視追蹤
 
 - **Jaeger**：http://localhost:16686
-  - 搜尋 Service: `backend-a`
-  - 查看完整 Trace 鏈路
+  - 搜尋 Service: `frontend-server` 或 `backend-a`
+  - 查看完整 Trace 鏈路（6 個 span：browser → frontend-server server/client → backend-a → backend-a HttpClient → backend-b）
   
 - **Seq**：http://localhost:5341
   - 使用 `TraceId = "{trace-id}"` 查詢日誌
