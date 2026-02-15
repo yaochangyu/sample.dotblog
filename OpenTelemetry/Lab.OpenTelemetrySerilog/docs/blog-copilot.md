@@ -407,6 +407,35 @@ processors:
 - 確認 Docker network 設定正確
 - 確認 OTel Collector 的 `exporters.otlp/aspire.endpoint` 設定為 `aspire-dashboard:18889`
 
+### Q4：Jaeger 出現 Clock Skew 警告，Span 時序倒置？
+
+在 Jaeger UI 查看 Trace 時，可能會發現子 span（backend-a）的開始時間比父 span（frontend）更早，Jaeger 顯示類似以下警告：
+
+```
+clock skew adjustment disabled; not applying calculated delta of 4.32317975s
+```
+
+**根因**：本專案的追蹤鏈跨越不同時鐘來源：
+
+| Span 來源 | 時鐘來源 |
+|-----------|---------|
+| frontend (root span) | 瀏覽器端（使用者的 Windows 主機時鐘） |
+| backend-a / backend-b | Docker 容器（WSL2 核心時鐘） |
+
+當 Windows 主機時鐘與 WSL2/Docker 時鐘不同步時（常見於休眠/喚醒後），就會出現 Clock Skew。
+
+**解決方式**：同步 WSL 時鐘
+
+```bash
+# 安裝 ntpdate
+sudo apt-get install -y ntpdate
+
+# 使用 NTP 校時
+sudo ntpdate time.google.com
+```
+
+同時在 Windows 端同步時間：設定 → 時間與語言 → 日期和時間 → 立即同步。
+
 ---
 
 ## 心得
