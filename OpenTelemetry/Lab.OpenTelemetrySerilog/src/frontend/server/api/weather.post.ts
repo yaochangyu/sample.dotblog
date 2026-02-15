@@ -1,7 +1,7 @@
 export default defineEventHandler(async (event) => {
   const { backendAUrl } = useRuntimeConfig()
   const body = await readBody(event)
-  const response = await $fetch('/Weather', {
+  return await fetchWithTracing(event, '/Weather', {
     baseURL: backendAUrl,
     method: 'POST',
     body,
@@ -10,8 +10,6 @@ export default defineEventHandler(async (event) => {
         Object.entries(getProxyRequestHeaders(event))
           .filter(([key]) => key.toLowerCase() !== 'content-length'),
       ),
-      ...getTraceHeaders(event),
     },
   })
-  return response
 })

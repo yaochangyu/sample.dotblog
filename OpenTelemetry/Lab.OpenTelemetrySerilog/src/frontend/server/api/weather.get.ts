@@ -1,11 +1,9 @@
 export default defineEventHandler(async (event) => {
   const { backendAUrl } = useRuntimeConfig()
-  const response = await $fetch('/Weather', {
+  return await fetchWithTracing(event, '/Weather', {
     baseURL: backendAUrl,
     headers: {
       ...getProxyRequestHeaders(event),
-      ...getTraceHeaders(event),
     },
   })
-  return response
 })
