@@ -186,7 +186,11 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
 
     private static string ComputeFingerprint(IDictionary<string, object?> actionArguments, JsonSerializerOptions jsonOptions)
     {
-        var json = JsonSerializer.Serialize(actionArguments, jsonOptions);
+        // 排除 CancellationToken 等 framework 注入的非 payload 參數
+        var payload = actionArguments
+            .Where(kv => kv.Value is not CancellationToken)
+            .ToDictionary(kv => kv.Key, kv => kv.Value);
+        var json = JsonSerializer.Serialize(payload, jsonOptions);
         var hash = MD5.HashData(Encoding.UTF8.GetBytes(json));
         return Convert.ToHexString(hash);
     }

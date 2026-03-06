@@ -10,7 +10,7 @@ POST {{baseUrl}}/weatherforecast/25
 
 ###
 # ============================================================
-# 情境 2：第一次請求（帶 Idempotency-Key）→ 200 成功，回傳隨機 Summary
+# 情境 2：第一次請求（帶 Idempotency-Key，route param）→ 200 成功
 # ============================================================
 @idempotencyKey = my-unique-key-001
 
@@ -19,17 +19,32 @@ Idempotency-Key: {{idempotencyKey}}
 
 ###
 # ============================================================
-# 情境 3：重複請求（相同 key、相同 payload）→ 200，回傳與情境 2 完全相同的結果
+# 情境 3：重複請求（相同 key、相同路徑）→ 200，回傳與情境 2 完全相同的結果（快取命中）
 # ============================================================
 POST {{baseUrl}}/weatherforecast/25
 Idempotency-Key: {{idempotencyKey}}
 
 ###
 # ============================================================
-# 情境 4：相同 key、但不同 payload（改變 temperature）→ 422 Unprocessable Entity
+# 情境 4：相同 key、不同 body（同一路徑）→ 422 Unprocessable Entity（fingerprint mismatch）
+# 注意：必須用 POST /weatherforecast（body endpoint）才能示範此情境
+# 先用 key-body-001 建立第一筆，再用相同 key 但不同 body 觸發 422
 # ============================================================
-POST {{baseUrl}}/weatherforecast/99
-Idempotency-Key: {{idempotencyKey}}
+@bodyKey = my-body-key-001
+
+POST {{baseUrl}}/weatherforecast
+Idempotency-Key: {{bodyKey}}
+Content-Type: application/json
+
+{ "temperatureC": 25 }
+
+###
+# 相同 key，不同 body → 422
+POST {{baseUrl}}/weatherforecast
+Idempotency-Key: {{bodyKey}}
+Content-Type: application/json
+
+{ "temperatureC": 99 }
 
 ###
 # ============================================================
