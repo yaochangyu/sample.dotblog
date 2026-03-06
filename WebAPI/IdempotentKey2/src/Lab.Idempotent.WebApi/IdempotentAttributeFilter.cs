@@ -40,7 +40,7 @@ public class IdempotentAttribute : Attribute, IFilterFactory
 
 public class IdempotentAttributeFilter : IAsyncActionFilter
 {
-    public const string HeaderName = "IdempotencyKey";
+    public const string HeaderName = "Idempotency-Key";
 
     private readonly HybridCache _hybridCache;
     private readonly HybridCacheEntryOptions _cacheOptions;
