@@ -11,13 +11,29 @@ namespace Lab.Idempotent.WebApi;
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = false)]
 public class IdempotentAttribute : Attribute, IFilterFactory
 {
+    private readonly int? _expireSeconds;
+
+    public IdempotentAttribute(int expireSeconds)
+    {
+        _expireSeconds = expireSeconds;
+    }
+
+    public IdempotentAttribute()
+    {
+    }
+
     public bool IsReusable => false;
 
     public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
     {
         var hybridCache = serviceProvider.GetRequiredService<HybridCache>();
-        var cacheOptions = serviceProvider.GetRequiredService<HybridCacheEntryOptions>();
+        var defaultOptions = serviceProvider.GetRequiredService<HybridCacheEntryOptions>();
         var jsonOptions = serviceProvider.GetRequiredService<JsonSerializerOptions>();
+
+        var cacheOptions = _expireSeconds.HasValue
+            ? new HybridCacheEntryOptions { Expiration = TimeSpan.FromSeconds(_expireSeconds.Value) }
+            : defaultOptions;
+
         return new IdempotentAttributeFilter(hybridCache, cacheOptions, jsonOptions);
     }
 }
