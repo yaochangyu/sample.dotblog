@@ -1,4 +1,5 @@
 using System.Net;
+using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
@@ -54,6 +55,12 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
                 {
                     nextInvoked = true;
                     var executedContext = await next();
+
+                    // Action 拋出未處理的例外，保留原始 stack trace 並重新拋出
+                    if (executedContext.Exception != null && !executedContext.ExceptionHandled)
+                    {
+                        ExceptionDispatchInfo.Throw(executedContext.Exception);
+                    }
 
                     if (executedContext.Result is not ObjectResult objectResult ||
                         objectResult.StatusCode != (int)HttpStatusCode.OK)
