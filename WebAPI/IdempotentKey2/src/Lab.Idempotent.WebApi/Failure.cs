@@ -19,7 +19,7 @@ public class Failure
                 Message = "Not found Idempotent key in header",
                 Data = new
                 {
-                    Property = "IdempotentKey",
+                    Property = "Idempotency-Key",
                     Value = ""
                 },
             })
