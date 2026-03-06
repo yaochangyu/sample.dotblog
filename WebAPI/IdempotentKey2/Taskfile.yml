@@ -1,0 +1,15 @@
+# Taskfile.yml
+
+version: "3"
+
+dotenv: [ "secrets/secrets.env" ]
+
+tasks:
+  ## Develop ---------------------------------------------------
+  dev-init:
+    desc: Init development environment
+    cmds:
+      - task: redis-start
+
+
+    
