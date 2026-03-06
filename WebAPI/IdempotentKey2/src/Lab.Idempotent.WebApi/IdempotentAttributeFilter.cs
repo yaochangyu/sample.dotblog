@@ -134,7 +134,8 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
     {
         var method = httpContext.Request.Method;
         var path = httpContext.Request.Path.Value ?? string.Empty;
-        return $"Idempotent:{method}:{path}:{idempotencyKey}";
+        var queryString = httpContext.Request.QueryString.Value ?? string.Empty;
+        return $"Idempotent:{method}:{path}{queryString}:{idempotencyKey}";
     }
 }
 
