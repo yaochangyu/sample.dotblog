@@ -36,9 +36,30 @@ public class WeatherForecastController : ControllerBase
         return data;
     }
 
+    // 接受 request body，用來示範 fingerprint mismatch (422) 情境
+    [HttpPost]
+    [Idempotent]
+    public async Task<ActionResult<WeatherForecast>> PostWithBody(
+        [FromBody] CreateWeatherRequest request,
+        CancellationToken cancel = default)
+    {
+        var rng = new Random();
+        var data = new WeatherForecast
+        {
+            TemperatureC = request.TemperatureC,
+            Summary =  Summaries[rng.Next(Summaries.Length)],
+            Date = DateTime.UtcNow
+        };
+        s_repository.Add(data);
+
+        return data;
+    }
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<WeatherForecast>>> Get()
     {
         return s_repository;
     }
 }
+
+public record CreateWeatherRequest(int TemperatureC);
