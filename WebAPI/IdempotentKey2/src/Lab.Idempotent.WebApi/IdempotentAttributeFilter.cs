@@ -81,15 +81,22 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
                         ExceptionDispatchInfo.Throw(executedContext.Exception);
                     }
 
-                    if (executedContext.Result is not ObjectResult objectResult ||
-                        objectResult.StatusCode is not (>= 200 and <= 299))
+                    if (executedContext.Result is not ObjectResult objectResult)
+                    {
+                        // 非 ObjectResult 不快取
+                        throw new IdempotentNonSuccessException();
+                    }
+
+                    // StatusCode 為 null 時 ASP.NET Core 預設回傳 200
+                    var statusCode = objectResult.StatusCode ?? (int)HttpStatusCode.OK;
+                    if (statusCode is not (>= 200 and <= 299))
                     {
                         // 非 2xx 不快取，讓後續請求可重試
                         throw new IdempotentNonSuccessException();
                     }
 
                     return new IdempotentCacheEntry(
-                        objectResult.StatusCode!.Value,
+                        statusCode,
                         JsonSerializer.Serialize(objectResult.Value, _jsonOptions),
                         context.HttpContext.Response.Headers
                             .Where(h => !h.Key.StartsWith(':'))
