@@ -12,59 +12,33 @@ using Microsoft.Extensions.Logging;
 namespace Lab.Idempotent.WebApi;
 
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = false)]
-public class IdempotentAttribute : Attribute, IFilterFactory
+public class IdempotentAttribute : Attribute, IAsyncActionFilter
 {
+    public const string HeaderName = "Idempotency-Key";
+
     private readonly int? _expireSeconds;
+
+    public IdempotentAttribute()
+    {
+    }
 
     public IdempotentAttribute(int expireSeconds)
     {
         _expireSeconds = expireSeconds;
     }
 
-    public IdempotentAttribute()
+    public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-    }
-
-    public bool IsReusable => false;
-
-    public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
-    {
-        var hybridCache = serviceProvider.GetRequiredService<HybridCache>();
-        var defaultOptions = serviceProvider.GetRequiredService<HybridCacheEntryOptions>();
-        var jsonOptions = serviceProvider.GetRequiredService<JsonSerializerOptions>();
-        var logger = serviceProvider.GetRequiredService<ILogger<IdempotentAttributeFilter>>();
+        var services = context.HttpContext.RequestServices;
+        var hybridCache = services.GetRequiredService<HybridCache>();
+        var defaultOptions = services.GetRequiredService<HybridCacheEntryOptions>();
+        var jsonOptions = services.GetRequiredService<JsonSerializerOptions>();
+        var logger = services.GetRequiredService<ILogger<IdempotentAttribute>>();
 
         var cacheOptions = _expireSeconds.HasValue
             ? new HybridCacheEntryOptions { Expiration = TimeSpan.FromSeconds(_expireSeconds.Value) }
             : defaultOptions;
 
-        return new IdempotentAttributeFilter(hybridCache, cacheOptions, jsonOptions, logger);
-    }
-}
-
-public class IdempotentAttributeFilter : IAsyncActionFilter
-{
-    public const string HeaderName = "Idempotency-Key";
-
-    private readonly HybridCache _hybridCache;
-    private readonly HybridCacheEntryOptions _cacheOptions;
-    private readonly JsonSerializerOptions _jsonOptions;
-    private readonly ILogger<IdempotentAttributeFilter> _logger;
-
-    public IdempotentAttributeFilter(
-        HybridCache hybridCache,
-        HybridCacheEntryOptions cacheOptions,
-        JsonSerializerOptions jsonOptions,
-        ILogger<IdempotentAttributeFilter> logger)
-    {
-        _hybridCache = hybridCache;
-        _cacheOptions = cacheOptions;
-        _jsonOptions = jsonOptions;
-        _logger = logger;
-    }
-
-    public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
-    {
         if (!context.HttpContext.Request.Headers.TryGetValue(HeaderName, out var idempotencyKeyValues) ||
             string.IsNullOrWhiteSpace(idempotencyKeyValues.ToString()))
         {
@@ -74,7 +48,7 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
 
         var idempotencyKey = idempotencyKeyValues.ToString();
         var cacheKey = GetCacheKey(context.HttpContext, idempotencyKey);
-        var fingerprint = ComputeFingerprint(context.ActionArguments);
+        var fingerprint = ComputeFingerprint(context.ActionArguments, jsonOptions);
 
         bool nextInvoked = false;
         ActionExecutedContext? executedContext = null;
@@ -85,7 +59,7 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
         // 對未完成的重試回傳 HTTP 409 Conflict。
         try
         {
-            var cached = await _hybridCache.GetOrCreateAsync(
+            var cached = await hybridCache.GetOrCreateAsync(
                 cacheKey,
                 async ct =>
                 {
@@ -114,14 +88,14 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
 
                     return new IdempotentCacheEntry(
                         statusCode,
-                        JsonSerializer.Serialize(objectResult.Value, _jsonOptions),
+                        JsonSerializer.Serialize(objectResult.Value, jsonOptions),
                         context.HttpContext.Response.Headers
                             .Where(h => !h.Key.StartsWith(':'))
                             .ToDictionary(h => h.Key, h => h.Value.Select(v => v ?? string.Empty).ToArray()),
                         fingerprint
                     );
                 },
-                _cacheOptions
+                cacheOptions
             );
 
             if (!nextInvoked)
@@ -155,7 +129,7 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Cache 基礎設施失敗（Redis 連線中斷等），記錄錯誤後 fallthrough 直接執行 action
-            _logger.LogError(ex, "Idempotency cache operation failed for key {CacheKey}. Falling through to direct action execution.", cacheKey);
+            logger.LogError(ex, "Idempotency cache operation failed for key {CacheKey}. Falling through to direct action execution.", cacheKey);
 
             if (!nextInvoked)
             {
@@ -167,9 +141,9 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
         }
     }
 
-    private string ComputeFingerprint(IDictionary<string, object?> actionArguments)
+    private static string ComputeFingerprint(IDictionary<string, object?> actionArguments, JsonSerializerOptions jsonOptions)
     {
-        var json = JsonSerializer.Serialize(actionArguments, _jsonOptions);
+        var json = JsonSerializer.Serialize(actionArguments, jsonOptions);
         var hash = MD5.HashData(Encoding.UTF8.GetBytes(json));
         return Convert.ToHexString(hash);
     }
