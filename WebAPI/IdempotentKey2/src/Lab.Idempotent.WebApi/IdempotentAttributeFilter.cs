@@ -7,6 +7,8 @@ using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
+using StackExchange.Redis;
 
 namespace Lab.Idempotent.WebApi;
 
@@ -14,6 +16,7 @@ namespace Lab.Idempotent.WebApi;
 public class IdempotentAttribute : Attribute, IAsyncActionFilter
 {
     public const string HeaderName = "Idempotency-Key";
+    private static readonly TimeSpan LockExpiry = TimeSpan.FromSeconds(30);
 
     private readonly int? _expireSeconds;
 
@@ -47,21 +50,32 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
 
         var idempotencyKey = idempotencyKeyValues.ToString();
         var cacheKey = GetCacheKey(context.HttpContext, idempotencyKey);
+        var lockKey = $"{cacheKey}:lock";
+        var lockToken = Guid.NewGuid().ToString("N");
+        var lockExpiry = LockExpiry;
         var fingerprint = ComputeFingerprint(context.ActionArguments, jsonOptions);
+
+        var connectionMultiplexer = services.GetRequiredService<IConnectionMultiplexer>();
+        var db = connectionMultiplexer.GetDatabase();
 
         bool nextInvoked = false;
         ActionExecutedContext? executedContext = null;
+        string? acquiredToken = null; // 持有鎖的 token，在 finally 用來釋放鎖
 
-        // NOTE: HybridCache 提供單一 instance 內的 stampede protection（相同 key 只執行一次 factory）。
-        // 在多節點（多 pod）情境下，不同節點仍可能並發執行 factory，導致重複副作用。
-        // 若需跨節點的並發保護，應在此加入分散式鎖（例如 Redlock），並在原始請求處理期間
-        // 對未完成的重試回傳 HTTP 409 Conflict。
         try
         {
             var cached = await hybridCache.GetOrCreateAsync(
                 cacheKey,
                 async ct =>
                 {
+                    // 分散式鎖：SETNX，只有第一個 pod 能成功取得鎖
+                    // acquiredToken 提升到 try 外層，確保鎖在 HybridCache 寫入 L2 後才釋放
+                    var lockAcquired = await db.StringSetAsync(lockKey, lockToken, lockExpiry, When.NotExists);
+                    if (!lockAcquired)
+                        throw new ConcurrentIdempotentRequestException();
+
+                    acquiredToken = lockToken;
+
                     nextInvoked = true;
                     executedContext = await next();
 
@@ -119,6 +133,11 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
                 };
             }
         }
+        catch (ConcurrentIdempotentRequestException)
+        {
+            // 同一個 idempotency key 正在被另一個 pod 處理中，回傳 409
+            context.Result = Failure.Results[FailureCode.ConcurrentRequest];
+        }
         catch (IdempotentNonSuccessException)
         {
             // Action 已執行但回傳非 2xx，明確透傳 action 的結果，不快取
@@ -136,6 +155,31 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
                 if (executedContext.Exception != null && !executedContext.ExceptionHandled)
                     ExceptionDispatchInfo.Throw(executedContext.Exception);
                 context.Result = executedContext.Result;
+            }
+        }
+        finally
+        {
+            // 釋放分散式鎖（此時 HybridCache 已完成 L2 寫入）
+            // 使用 Lua script 確保原子性：只有持有鎖的 token 才能刪除
+            if (acquiredToken != null)
+            {
+                try
+                {
+                    const string releaseLockScript = """
+                        if redis.call('get', KEYS[1]) == ARGV[1] then
+                            return redis.call('del', KEYS[1])
+                        else
+                            return 0
+                        end
+                        """;
+                    await db.ScriptEvaluateAsync(releaseLockScript,
+                        [(RedisKey)lockKey],
+                        [(RedisValue)acquiredToken]);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to release idempotency lock for {LockKey}. It will expire automatically.", lockKey);
+                }
             }
         }
     }
@@ -159,3 +203,5 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
 public record IdempotentCacheEntry(int StatusCode, string DataJson, Dictionary<string, string[]> Headers, string Fingerprint);
 
 file sealed class IdempotentNonSuccessException : Exception;
+
+file sealed class ConcurrentIdempotentRequestException : Exception;
