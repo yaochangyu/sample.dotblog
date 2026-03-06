@@ -6,6 +6,7 @@ namespace Lab.Idempotent.WebApi;
 public enum FailureCode
 {
     NotFoundIdempotentKey,
+    IdempotentKeyPayloadMismatch,
 }
 
 public class Failure
@@ -13,7 +14,7 @@ public class Failure
     public static IReadOnlyDictionary<FailureCode, ObjectResult> Results = new Dictionary<FailureCode, ObjectResult>()
     {
         {
-            FailureCode.NotFoundIdempotentKey,new ObjectResult(new Failure
+            FailureCode.NotFoundIdempotentKey, new ObjectResult(new Failure
             {
                 Code = FailureCode.NotFoundIdempotentKey.ToString(),
                 Message = "Not found Idempotent key in header",
@@ -25,6 +26,21 @@ public class Failure
             })
             {
                 StatusCode = (int)HttpStatusCode.BadRequest
+            }
+        },
+        {
+            FailureCode.IdempotentKeyPayloadMismatch, new ObjectResult(new Failure
+            {
+                Code = FailureCode.IdempotentKeyPayloadMismatch.ToString(),
+                Message = "Idempotency-Key is already used with a different request payload",
+                Data = new
+                {
+                    Property = "Idempotency-Key",
+                    Value = ""
+                },
+            })
+            {
+                StatusCode = (int)HttpStatusCode.UnprocessableEntity
             }
         },
     };
