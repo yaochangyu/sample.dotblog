@@ -17,7 +17,8 @@ public class IdempotentAttribute : Attribute, IFilterFactory
     {
         var hybridCache = serviceProvider.GetRequiredService<HybridCache>();
         var cacheOptions = serviceProvider.GetRequiredService<HybridCacheEntryOptions>();
-        return new IdempotentAttributeFilter(hybridCache, cacheOptions);
+        var jsonOptions = serviceProvider.GetRequiredService<JsonSerializerOptions>();
+        return new IdempotentAttributeFilter(hybridCache, cacheOptions, jsonOptions);
     }
 }
 
@@ -27,11 +28,13 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
 
     private readonly HybridCache _hybridCache;
     private readonly HybridCacheEntryOptions _cacheOptions;
+    private readonly JsonSerializerOptions _jsonOptions;
 
-    public IdempotentAttributeFilter(HybridCache hybridCache, HybridCacheEntryOptions cacheOptions)
+    public IdempotentAttributeFilter(HybridCache hybridCache, HybridCacheEntryOptions cacheOptions, JsonSerializerOptions jsonOptions)
     {
         _hybridCache = hybridCache;
         _cacheOptions = cacheOptions;
+        _jsonOptions = jsonOptions;
     }
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -71,7 +74,7 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
 
                     return new IdempotentCacheEntry(
                         objectResult.StatusCode!.Value,
-                        JsonSerializer.Serialize(objectResult.Value)
+                        JsonSerializer.Serialize(objectResult.Value, _jsonOptions)
                     );
                 },
                 _cacheOptions
