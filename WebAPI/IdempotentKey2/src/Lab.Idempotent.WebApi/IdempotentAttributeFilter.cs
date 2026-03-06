@@ -1,5 +1,7 @@
 using System.Net;
 using System.Runtime.ExceptionServices;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
@@ -64,6 +66,7 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
 
         var idempotencyKey = idempotencyKeyValues.ToString();
         var cacheKey = GetCacheKey(context.HttpContext, idempotencyKey);
+        var fingerprint = ComputeFingerprint(context.ActionArguments);
 
         bool nextInvoked = false;
         ActionExecutedContext? executedContext = null;
@@ -101,7 +104,8 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
                         JsonSerializer.Serialize(objectResult.Value, _jsonOptions),
                         context.HttpContext.Response.Headers
                             .Where(h => !h.Key.StartsWith(':'))
-                            .ToDictionary(h => h.Key, h => h.Value.Select(v => v ?? string.Empty).ToArray())
+                            .ToDictionary(h => h.Key, h => h.Value.Select(v => v ?? string.Empty).ToArray()),
+                        fingerprint
                     );
                 },
                 _cacheOptions
@@ -109,6 +113,13 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
 
             if (!nextInvoked)
             {
+                // Cache hit：驗證 request payload 是否與原始請求一致
+                if (cached.Fingerprint != fingerprint)
+                {
+                    context.Result = Failure.Results[FailureCode.IdempotentKeyPayloadMismatch];
+                    return;
+                }
+
                 // Cache hit：還原自訂 response headers
                 foreach (var (key, values) in cached.Headers)
                 {
@@ -130,6 +141,13 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
         }
     }
 
+    private string ComputeFingerprint(IDictionary<string, object?> actionArguments)
+    {
+        var json = JsonSerializer.Serialize(actionArguments, _jsonOptions);
+        var hash = MD5.HashData(Encoding.UTF8.GetBytes(json));
+        return Convert.ToHexString(hash);
+    }
+
     private static string GetCacheKey(HttpContext httpContext, string idempotencyKey)
     {
         var method = httpContext.Request.Method;
@@ -139,6 +157,6 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
     }
 }
 
-public record IdempotentCacheEntry(int StatusCode, string DataJson, Dictionary<string, string[]> Headers);
+public record IdempotentCacheEntry(int StatusCode, string DataJson, Dictionary<string, string[]> Headers, string Fingerprint);
 
 file sealed class IdempotentNonSuccessException : Exception;
