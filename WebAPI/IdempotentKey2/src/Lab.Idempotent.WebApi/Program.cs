@@ -2,6 +2,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
+using Microsoft.Extensions.Caching.Hybrid;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,10 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.Configuration = builder.Configuration.GetConnectionString("Redis");
 });
 builder.Services.AddHybridCache();
+builder.Services.AddSingleton(new HybridCacheEntryOptions
+{
+    Expiration = TimeSpan.FromSeconds(60)
+});
 builder.Services.AddSingleton(p => new JsonSerializerOptions
 {
     Encoder = JavaScriptEncoder.Create(UnicodeRanges.BasicLatin, UnicodeRanges.CjkUnifiedIdeographs),

@@ -15,7 +15,8 @@ public class IdempotentAttribute : Attribute, IFilterFactory
     public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
     {
         var hybridCache = serviceProvider.GetRequiredService<HybridCache>();
-        return new IdempotentAttributeFilter(hybridCache);
+        var cacheOptions = serviceProvider.GetRequiredService<HybridCacheEntryOptions>();
+        return new IdempotentAttributeFilter(hybridCache, cacheOptions);
     }
 }
 
@@ -23,16 +24,13 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
 {
     public const string HeaderName = "IdempotencyKey";
 
-    private static readonly HybridCacheEntryOptions CacheOptions = new()
-    {
-        Expiration = TimeSpan.FromSeconds(60)
-    };
-
     private readonly HybridCache _hybridCache;
+    private readonly HybridCacheEntryOptions _cacheOptions;
 
-    public IdempotentAttributeFilter(HybridCache hybridCache)
+    public IdempotentAttributeFilter(HybridCache hybridCache, HybridCacheEntryOptions cacheOptions)
     {
         _hybridCache = hybridCache;
+        _cacheOptions = cacheOptions;
     }
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -69,7 +67,7 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
                         JsonSerializer.Serialize(objectResult.Value)
                     );
                 },
-                CacheOptions
+                _cacheOptions
             );
 
             if (!nextInvoked)
