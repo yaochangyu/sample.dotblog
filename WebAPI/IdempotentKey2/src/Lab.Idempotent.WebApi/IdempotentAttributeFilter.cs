@@ -90,7 +90,10 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
 
                     return new IdempotentCacheEntry(
                         objectResult.StatusCode!.Value,
-                        JsonSerializer.Serialize(objectResult.Value, _jsonOptions)
+                        JsonSerializer.Serialize(objectResult.Value, _jsonOptions),
+                        context.HttpContext.Response.Headers
+                            .Where(h => !h.Key.StartsWith(':'))
+                            .ToDictionary(h => h.Key, h => h.Value.Select(v => v ?? string.Empty).ToArray())
                     );
                 },
                 _cacheOptions
@@ -98,6 +101,12 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
 
             if (!nextInvoked)
             {
+                // Cache hit：還原自訂 response headers
+                foreach (var (key, values) in cached.Headers)
+                {
+                    context.HttpContext.Response.Headers[key] = values;
+                }
+
                 // Cache hit：回傳快取的結果
                 context.Result = new ObjectResult(JsonNode.Parse(cached.DataJson))
                 {
@@ -119,6 +128,6 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
     }
 }
 
-public record IdempotentCacheEntry(int StatusCode, string DataJson);
+public record IdempotentCacheEntry(int StatusCode, string DataJson, Dictionary<string, string[]> Headers);
 
 file sealed class IdempotentNonSuccessException : Exception;
