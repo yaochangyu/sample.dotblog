@@ -1,0 +1,45 @@
+### 本機直接執行時使用 http://localhost:5000（或 https://localhost:7000）
+### docker-compose 啟動時使用 http://localhost:8080
+@baseUrl = http://localhost:8080
+
+###
+# ============================================================
+# 情境 1：正常請求（無 Idempotency-Key）→ 400 Bad Request
+# ============================================================
+POST {{baseUrl}}/weatherforecast/25
+
+###
+# ============================================================
+# 情境 2：第一次請求（帶 Idempotency-Key）→ 200 成功，回傳隨機 Summary
+# ============================================================
+@idempotencyKey = my-unique-key-001
+
+POST {{baseUrl}}/weatherforecast/25
+Idempotency-Key: {{idempotencyKey}}
+
+###
+# ============================================================
+# 情境 3：重複請求（相同 key、相同 payload）→ 200，回傳與情境 2 完全相同的結果
+# ============================================================
+POST {{baseUrl}}/weatherforecast/25
+Idempotency-Key: {{idempotencyKey}}
+
+###
+# ============================================================
+# 情境 4：相同 key、但不同 payload（改變 temperature）→ 422 Unprocessable Entity
+# ============================================================
+POST {{baseUrl}}/weatherforecast/99
+Idempotency-Key: {{idempotencyKey}}
+
+###
+# ============================================================
+# 情境 5：新的 key → 200 成功（獨立的 idempotency 範圍）
+# ============================================================
+POST {{baseUrl}}/weatherforecast/25
+Idempotency-Key: my-unique-key-002
+
+###
+# ============================================================
+# 情境 6：查看所有已新增的資料
+# ============================================================
+GET {{baseUrl}}/weatherforecast
