@@ -66,9 +66,9 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
                     }
 
                     if (executedContext.Result is not ObjectResult objectResult ||
-                        objectResult.StatusCode != (int)HttpStatusCode.OK)
+                        objectResult.StatusCode is not (>= 200 and <= 299))
                     {
-                        // 非 200 不快取，讓後續請求可重試
+                        // 非 2xx 不快取，讓後續請求可重試
                         throw new IdempotentNonSuccessException();
                     }
 
