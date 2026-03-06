@@ -66,6 +66,7 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
         var cacheKey = GetCacheKey(context.HttpContext, idempotencyKey);
 
         bool nextInvoked = false;
+        ActionExecutedContext? executedContext = null;
         try
         {
             var cached = await _hybridCache.GetOrCreateAsync(
@@ -73,7 +74,7 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
                 async ct =>
                 {
                     nextInvoked = true;
-                    var executedContext = await next();
+                    executedContext = await next();
 
                     // Action 拋出未處理的例外，保留原始 stack trace 並重新拋出
                     if (executedContext.Exception != null && !executedContext.ExceptionHandled)
@@ -123,7 +124,9 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
         }
         catch (IdempotentNonSuccessException)
         {
-            // Action 已執行且回傳非 200，讓結果自然流出，不做任何處理
+            // Action 已執行但回傳非 2xx，明確透傳 action 的結果，不快取
+            if (executedContext?.Result != null)
+                context.Result = executedContext.Result;
         }
     }
 
