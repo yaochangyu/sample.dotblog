@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
 
 namespace Lab.Idempotent.WebApi;
 
@@ -31,12 +32,13 @@ public class IdempotentAttribute : Attribute, IFilterFactory
         var hybridCache = serviceProvider.GetRequiredService<HybridCache>();
         var defaultOptions = serviceProvider.GetRequiredService<HybridCacheEntryOptions>();
         var jsonOptions = serviceProvider.GetRequiredService<JsonSerializerOptions>();
+        var logger = serviceProvider.GetRequiredService<ILogger<IdempotentAttributeFilter>>();
 
         var cacheOptions = _expireSeconds.HasValue
             ? new HybridCacheEntryOptions { Expiration = TimeSpan.FromSeconds(_expireSeconds.Value) }
             : defaultOptions;
 
-        return new IdempotentAttributeFilter(hybridCache, cacheOptions, jsonOptions);
+        return new IdempotentAttributeFilter(hybridCache, cacheOptions, jsonOptions, logger);
     }
 }
 
@@ -47,12 +49,18 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
     private readonly HybridCache _hybridCache;
     private readonly HybridCacheEntryOptions _cacheOptions;
     private readonly JsonSerializerOptions _jsonOptions;
+    private readonly ILogger<IdempotentAttributeFilter> _logger;
 
-    public IdempotentAttributeFilter(HybridCache hybridCache, HybridCacheEntryOptions cacheOptions, JsonSerializerOptions jsonOptions)
+    public IdempotentAttributeFilter(
+        HybridCache hybridCache,
+        HybridCacheEntryOptions cacheOptions,
+        JsonSerializerOptions jsonOptions,
+        ILogger<IdempotentAttributeFilter> logger)
     {
         _hybridCache = hybridCache;
         _cacheOptions = cacheOptions;
         _jsonOptions = jsonOptions;
+        _logger = logger;
     }
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -138,6 +146,19 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
             // Action 已執行但回傳非 2xx，明確透傳 action 的結果，不快取
             if (executedContext?.Result != null)
                 context.Result = executedContext.Result;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Cache 基礎設施失敗（Redis 連線中斷等），記錄錯誤後 fallthrough 直接執行 action
+            _logger.LogError(ex, "Idempotency cache operation failed for key {CacheKey}. Falling through to direct action execution.", cacheKey);
+
+            if (!nextInvoked)
+            {
+                executedContext = await next();
+                if (executedContext.Exception != null && !executedContext.ExceptionHandled)
+                    ExceptionDispatchInfo.Throw(executedContext.Exception);
+                context.Result = executedContext.Result;
+            }
         }
     }
 
