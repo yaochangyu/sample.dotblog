@@ -11,5 +11,46 @@ tasks:
     cmds:
       - task: redis-start
 
+  ## Docker ----------------------------------------------------
+  up:
+    desc: Start all services via docker compose and wait until healthy
+    cmds:
+      - docker compose up -d --build
+      - cmd: |
+          echo "Waiting for webapi to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/weatherforecast > /dev/null 2>&1; then
+              echo "WebAPI is ready."
+              exit 0
+            fi
+            echo "  attempt $i/30 ..."
+            sleep 2
+          done
+          echo "WebAPI did not become ready in time." >&2
+          exit 1
+        silent: false
 
+  down:
+    desc: Stop all services
+    cmds:
+      - docker compose down
+
+  ## Test -------------------------------------------------------
+  test-install:
+    desc: Install httpyac CLI (requires Node.js)
+    cmds:
+      - npm install -g httpyac
+
+  test:
+    desc: Run .http test scenarios against running services
+    cmds:
+      - httpyac send src/Lab.Idempotent.WebApi/Lab.Idempotent.WebApi.http --all --output short
+
+  ## E2E -------------------------------------------------------
+  e2e:
+    desc: Start services, run .http tests, then stop services
+    cmds:
+      - task: up
+      - defer: { task: down }
+      - task: test
     
