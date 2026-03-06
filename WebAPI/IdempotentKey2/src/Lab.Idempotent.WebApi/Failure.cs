@@ -7,6 +7,7 @@ public enum FailureCode
 {
     NotFoundIdempotentKey,
     IdempotentKeyPayloadMismatch,
+    ConcurrentRequest,
 }
 
 public class Failure
@@ -41,6 +42,21 @@ public class Failure
             })
             {
                 StatusCode = (int)HttpStatusCode.UnprocessableEntity
+            }
+        },
+        {
+            FailureCode.ConcurrentRequest, new ObjectResult(new Failure
+            {
+                Code = FailureCode.ConcurrentRequest.ToString(),
+                Message = "A request with the same Idempotency-Key is currently being processed",
+                Data = new
+                {
+                    Property = "Idempotency-Key",
+                    Value = ""
+                },
+            })
+            {
+                StatusCode = (int)HttpStatusCode.Conflict
             }
         },
     };
