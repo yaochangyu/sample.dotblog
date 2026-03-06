@@ -78,6 +78,11 @@ public class IdempotentAttributeFilter : IAsyncActionFilter
 
         bool nextInvoked = false;
         ActionExecutedContext? executedContext = null;
+
+        // NOTE: HybridCache 提供單一 instance 內的 stampede protection（相同 key 只執行一次 factory）。
+        // 在多節點（多 pod）情境下，不同節點仍可能並發執行 factory，導致重複副作用。
+        // 若需跨節點的並發保護，應在此加入分散式鎖（例如 Redlock），並在原始請求處理期間
+        // 對未完成的重試回傳 HTTP 409 Conflict。
         try
         {
             var cached = await _hybridCache.GetOrCreateAsync(
