@@ -8,21 +8,16 @@ vars:
   POD2_PID_FILE: .api2.pid
 
 tasks:
-  default:
-    desc: 執行完整測試流程（啟動容器 → 遷移 → 全部測試 → 清除）
+  test:all:
+    desc: 啟動容器 → 遷移 → 啟動 Pod1 + Pod2 → 執行所有測試 → 清除（一鍵完整執行）
     cmds:
       - task: docker:up
       - task: migrate
-      - defer: { task: docker:down }
-      - task: test:all
-
-  test:all:
-    desc: 啟動 Pod1 + Pod2 → 執行所有測試 → 停止 Pod（自備環境，可獨立執行）
-    cmds:
       - task: api:start
       - task: api:start-pod2
       - defer: { task: api:stop }
       - defer: { task: api:stop-pod2 }
+      - defer: { task: docker:down }
       - task: api:wait
       - task: api:wait-pod2
       - cmd: |
