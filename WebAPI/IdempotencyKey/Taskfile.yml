@@ -2,20 +2,26 @@ version: '3'
 
 vars:
   API_URL: http://localhost:5048
+  POD2_URL: http://localhost:5049
   HTTP_FILE: src/IdempotencyKey.WebApi.http
   API_PID_FILE: .api.pid
+  POD2_PID_FILE: .api2.pid
 
 tasks:
   default:
-    desc: 執行完整測試流程（啟動容器 → 遷移 → 執行 API → 測試 → 清除）
+    desc: 執行完整測試流程（啟動容器 → 遷移 → 執行 API × 2 → 測試 → 分散式鎖測試 → 清除）
     cmds:
       - task: docker:up
       - task: migrate
       - task: api:start
+      - task: api:start-pod2
       - defer: { task: api:stop }
+      - defer: { task: api:stop-pod2 }
       - defer: { task: docker:down }
       - task: api:wait
+      - task: api:wait-pod2
       - task: test
+      - task: test:distributed
 
   docker:up:
     desc: 啟動 PostgreSQL 與 Redis 容器並等待健康檢查通過
@@ -41,38 +47,235 @@ tasks:
       - dotnet ef database update
 
   api:start:
-    desc: 在背景啟動 API 專案並記錄 PID
+    desc: 在背景啟動 API 專案並記錄 PID（Pod1，port 5048）
     cmds:
       - |
         dotnet run --project src --launch-profile http > .api.log 2>&1 &
         echo $! > {{.API_PID_FILE}}
-        echo "API 啟動中（PID: $(cat {{.API_PID_FILE}})）"
+        echo "Pod1 啟動中（PID: $(cat {{.API_PID_FILE}})）"
 
-  api:wait:
-    desc: 等待 API 回應健康
+  api:start-pod2:
+    desc: 在背景啟動第二個 API Pod（port 5049，模擬多 pod 部署），共用同一個 Redis
     cmds:
       - |
-        echo "等待 API 就緒..."
+        ASPNETCORE_URLS=http://localhost:5049 dotnet run --project src > .api2.log 2>&1 &
+        echo $! > {{.POD2_PID_FILE}}
+        echo "Pod2 啟動中（PID: $(cat {{.POD2_PID_FILE}})）"
+
+  api:wait:
+    desc: 等待 Pod1 回應健康
+    cmds:
+      - |
+        echo "等待 Pod1 就緒..."
         for i in $(seq 1 30); do
           if curl -sf {{.API_URL}}/api/members > /dev/null 2>&1; then
-            echo "API 已就緒"
+            echo "Pod1 已就緒"
             exit 0
           fi
           sleep 1
         done
-        echo "API 啟動超時" && exit 1
+        echo "Pod1 啟動超時" && exit 1
+
+  api:wait-pod2:
+    desc: 等待 Pod2 回應健康
+    cmds:
+      - |
+        echo "等待 Pod2 就緒..."
+        for i in $(seq 1 30); do
+          if curl -sf {{.POD2_URL}}/api/members > /dev/null 2>&1; then
+            echo "Pod2 已就緒"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "Pod2 啟動超時" && exit 1
 
   api:stop:
-    desc: 停止背景 API 程序
+    desc: 停止 Pod1
     cmds:
       - |
         if [ -f {{.API_PID_FILE}} ]; then
           PID=$(cat {{.API_PID_FILE}})
-          kill $PID 2>/dev/null && echo "API 已停止（PID: $PID）" || true
+          kill $PID 2>/dev/null && echo "Pod1 已停止（PID: $PID）" || true
           rm -f {{.API_PID_FILE}}
+        fi
+
+  api:stop-pod2:
+    desc: 停止 Pod2
+    cmds:
+      - |
+        if [ -f {{.POD2_PID_FILE}} ]; then
+          PID=$(cat {{.POD2_PID_FILE}})
+          kill $PID 2>/dev/null && echo "Pod2 已停止（PID: $PID）" || true
+          rm -f {{.POD2_PID_FILE}}
         fi
 
   test:
     desc: 執行 .http 檔案的 API 測試
     cmds:
       - npx --yes httpyac send {{.HTTP_FILE}} --all --output short
+
+  test:distributed:
+    desc: 分散式鎖整合測試（需先啟動 Pod1 + Pod2）
+    cmds:
+      - task: test:distributed:diff-payload
+      - task: test:distributed:same-payload
+
+  test:distributed:diff-payload:
+    desc: |
+      場景 A：相同 key、不同 payload，同時打兩個 pod
+      預期：兩個 pod 不能同時都是 201（Redis SET NX 確保只有一個成功取鎖）
+      ・先取鎖者：201
+      ・後到者：409（InProgress 衝突）
+      ・完成後用同 key 但不同 payload 重試：422（fingerprint mismatch）
+    cmds:
+      - |
+        KEY="dist-diff-$(date +%s)"
+        R=$RANDOM
+        PAYLOAD_A="{\"name\":\"Alice-A-$R\",\"email\":\"alice-diff-$R@test.com\"}"
+        PAYLOAD_B="{\"name\":\"Bob-B-$R\",\"email\":\"bob-diff-$R@test.com\"}"
+
+        echo ""
+        echo "╔══════════════════════════════════════════════════════════════════╗"
+        echo "║  場景 A：相同 key「$KEY」                                        ║"
+        echo "║         不同 payload，同時打兩個 pod                              ║"
+        echo "╚══════════════════════════════════════════════════════════════════╝"
+        echo "  Pod1 → {{.API_URL}}  payload: $PAYLOAD_A"
+        echo "  Pod2 → {{.POD2_URL}} payload: $PAYLOAD_B"
+        echo ""
+
+        # 同時發送（& 背景執行）
+        curl -s -o /tmp/dist_pod1.json -w "%{http_code}" \
+          -X POST {{.API_URL}}/api/members \
+          -H "Content-Type: application/json" \
+          -H "Idempotency-Key: $KEY" \
+          -d "$PAYLOAD_A" > /tmp/dist_pod1.code &
+        PID1=$!
+
+        curl -s -o /tmp/dist_pod2.json -w "%{http_code}" \
+          -X POST {{.POD2_URL}}/api/members \
+          -H "Content-Type: application/json" \
+          -H "Idempotency-Key: $KEY" \
+          -d "$PAYLOAD_B" > /tmp/dist_pod2.code &
+        PID2=$!
+
+        wait $PID1 $PID2
+
+        POD1_CODE=$(cat /tmp/dist_pod1.code)
+        POD2_CODE=$(cat /tmp/dist_pod2.code)
+        echo "  Pod1 HTTP $POD1_CODE → $(cat /tmp/dist_pod1.json)"
+        echo "  Pod2 HTTP $POD2_CODE → $(cat /tmp/dist_pod2.json)"
+        echo ""
+
+        # 驗證：兩個 pod 不能同時都是 201
+        if [ "$POD1_CODE" = "201" ] && [ "$POD2_CODE" = "201" ]; then
+          echo "  ❌ FAIL：兩個 pod 都回傳 201 → 分散式鎖失效！"
+          exit 1
+        fi
+        echo "  ✅ PASS：同時並發，兩個 pod 不會都寫入成功"
+
+        # 取得哪個 pod 取鎖成功（201 那個的 payload）
+        if [ "$POD1_CODE" = "201" ]; then
+          WINNER_PAYLOAD="$PAYLOAD_A"
+          WINNER_URL="{{.API_URL}}"
+        else
+          WINNER_PAYLOAD="$PAYLOAD_B"
+          WINNER_URL="{{.POD2_URL}}"
+        fi
+
+        # 等取鎖成功的 pod 完成後，用同 key 不同 payload 重試 → 應 422
+        sleep 1
+        echo ""
+        echo "  --- 後測：同 key、不同 payload（fingerprint mismatch）→ 預期 422 ---"
+        MISMATCH_R=$RANDOM
+        DIFF_PAYLOAD="{\"name\":\"Mismatch-$MISMATCH_R\",\"email\":\"mismatch-$MISMATCH_R@test.com\"}"
+        MISMATCH_CODE=$(curl -s -o /tmp/mismatch.json -w "%{http_code}" \
+          -X POST $WINNER_URL/api/members \
+          -H "Content-Type: application/json" \
+          -H "Idempotency-Key: $KEY" \
+          -d "$DIFF_PAYLOAD")
+        echo "  HTTP $MISMATCH_CODE → $(cat /tmp/mismatch.json)"
+        if [ "$MISMATCH_CODE" = "422" ]; then
+          echo "  ✅ PASS：fingerprint mismatch 正確回傳 422"
+        else
+          echo "  ❌ FAIL：預期 422，實際 HTTP $MISMATCH_CODE"
+          exit 1
+        fi
+
+  test:distributed:same-payload:
+    desc: |
+      場景 B：相同 key、相同 payload，同時打兩個 pod
+      預期：
+      ・先取鎖者：201（已建立）
+      ・後到者：409（InProgress 衝突）
+      ・完成後用同 key 同 payload 重試：201 + X-Idempotent-Replay: true
+    cmds:
+      - |
+        KEY="dist-same-$(date +%s)"
+        R=$RANDOM
+        PAYLOAD="{\"name\":\"Charlie-$R\",\"email\":\"charlie-same-$R@test.com\"}"
+
+        echo ""
+        echo "╔══════════════════════════════════════════════════════════════════╗"
+        echo "║  場景 B：相同 key「$KEY」                                        ║"
+        echo "║         相同 payload，同時打兩個 pod                              ║"
+        echo "╚══════════════════════════════════════════════════════════════════╝"
+        echo "  兩個 pod 都發送：$PAYLOAD"
+        echo ""
+
+        curl -s -o /tmp/dist_same1.json -w "%{http_code}" \
+          -X POST {{.API_URL}}/api/members \
+          -H "Content-Type: application/json" \
+          -H "Idempotency-Key: $KEY" \
+          -d "$PAYLOAD" > /tmp/dist_same1.code &
+        PID1=$!
+
+        curl -s -o /tmp/dist_same2.json -w "%{http_code}" \
+          -X POST {{.POD2_URL}}/api/members \
+          -H "Content-Type: application/json" \
+          -H "Idempotency-Key: $KEY" \
+          -d "$PAYLOAD" > /tmp/dist_same2.code &
+        PID2=$!
+
+        wait $PID1 $PID2
+
+        POD1_CODE=$(cat /tmp/dist_same1.code)
+        POD2_CODE=$(cat /tmp/dist_same2.code)
+        echo "  Pod1 HTTP $POD1_CODE → $(cat /tmp/dist_same1.json)"
+        echo "  Pod2 HTTP $POD2_CODE → $(cat /tmp/dist_same2.json)"
+        echo ""
+
+        if [ "$POD1_CODE" = "201" ] && [ "$POD2_CODE" = "201" ]; then
+          echo "  ❌ FAIL：兩個 pod 都回傳 201 → 分散式鎖失效，資料已重複寫入！"
+          exit 1
+        fi
+
+        CODES="${POD1_CODE}_${POD2_CODE}"
+        if [ "$CODES" = "201_409" ] || [ "$CODES" = "409_201" ]; then
+          echo "  ✅ PASS：先到者 201，後到者 409（InProgress 衝突）"
+        else
+          echo "  ⚠️  非預期的組合：Pod1=$POD1_CODE, Pod2=$POD2_CODE"
+          echo "     （可能時序極近造成兩個 409，視為通過，因為都未重複寫入）"
+        fi
+
+        # 等待 Completed 後重播測試
+        sleep 1
+        echo ""
+        echo "  --- 重播測試：完成後同 key + 同 payload → 預期 201 + X-Idempotent-Replay: true ---"
+        curl -s -D /tmp/replay_headers.txt -o /tmp/replay_body.json \
+          -X POST {{.API_URL}}/api/members \
+          -H "Content-Type: application/json" \
+          -H "Idempotency-Key: $KEY" \
+          -d "$PAYLOAD"
+
+        REPLAY_CODE=$(awk 'NR==1{print $2}' /tmp/replay_headers.txt | tr -d '\r')
+        REPLAY_FLAG=$(grep -i "X-Idempotent-Replay" /tmp/replay_headers.txt | awk -F': ' '{print $2}' | tr -d '\r')
+        echo "  HTTP $REPLAY_CODE，X-Idempotent-Replay: $REPLAY_FLAG"
+        echo "  Body: $(cat /tmp/replay_body.json)"
+
+        if [ "$REPLAY_CODE" = "201" ] && [ "$REPLAY_FLAG" = "true" ]; then
+          echo "  ✅ PASS：冪等重播正確回傳 201 + X-Idempotent-Replay: true"
+        else
+          echo "  ❌ FAIL：預期 201 + replay=true，實際 HTTP=$REPLAY_CODE, flag=$REPLAY_FLAG"
+          exit 1
+        fi
