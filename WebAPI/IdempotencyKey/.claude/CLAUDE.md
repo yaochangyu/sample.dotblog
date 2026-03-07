@@ -1,7 +1,13 @@
 ﻿# 技術規範
-- 實作程式碼之前先撰寫計畫步驟，輸出到當前資料夾，名為 *.plan.md，每實作完一個步驟，就更新一次計畫步驟，直到完成整個功能。
+- 在開始實作程式碼之前，請先確保你已經完全理解了需求和功能規格，不清楚的地方要及時跟我確認，詢問我問題，直到你完全理解為止。
+- 實作程式碼之前先撰寫計畫步驟，輸出到當前資料夾，名為 *.plan.md。
+  - 步驟要描述清楚，讓其他人也能理解。也要有一個確認框 [ ]。
+  - 每完成一個步驟，就更新一次步驟 [v]，直到完成整個功能。
+  - 功能完成後刪除檔案。
 - 遵守 SOLID 原則
-
+- 程式碼實作後要確保沒有問題，先使用 dotnet build 確保編譯成功，再使用 dotnet test 執行測試，確保所有測試通過。
+- 使用 Git 進行版本控制，確保每次提交都包含清晰的描述，並且遵循 Git commit message 規則。
+- 執行 .http 確保 api 正常運作。
 
 ## git commit message 規則
 Write a concise commit message from 'git diff --staged' output in the format `[EMOJI] [TYPE](file/topic): [description in {locale}]`. Use GitMoji emojis (e.g., ✨ → feat), present tense, active voice, max 120 characters per line, no code blocks.
