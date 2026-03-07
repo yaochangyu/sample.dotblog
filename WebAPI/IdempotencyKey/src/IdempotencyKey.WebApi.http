@@ -94,3 +94,50 @@ Idempotency-Key: {{idemKey}}
   "name": "Different Payload Carol",
   "email": "carol-different-{{$randomInt 100000 999999}}@example.com"
 }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Failed 狀態重播測試
+# 場景：第一次請求因業務錯誤失敗（409 DuplicateEmail），
+#       之後用同 key + 同 payload 再打，應直接重播 409，不重新執行業務邏輯
+# ──────────────────────────────────────────────────────────────────────────────
+
+### 冪等鍵 Failed 重播測試準備
+{{
+  exports.failedKey = `idem-failed-${Date.now()}`;
+  exports.duplicateEmail = `dup-${Date.now()}@test.com`;
+}}
+
+### 11. 先建立一位會員（佔用 email）
+# @description 建立一位會員，其 email 將在下一步被重複使用以觸發 409
+POST {{baseUrl}}/api/members
+Content-Type: application/json
+Idempotency-Key: idem-pre-{{$randomInt 100000 999999}}
+
+{
+  "name": "Pre-existing Member",
+  "email": "{{duplicateEmail}}"
+}
+
+### 12. 冪等鍵 - 業務失敗首次請求（應 409 DuplicateEmail）
+# @description 用不同的 idempotency-key 嘗試建立相同 email 的會員，預期 409
+#              此次請求會被記錄為 Failed 狀態
+POST {{baseUrl}}/api/members
+Content-Type: application/json
+Idempotency-Key: {{failedKey}}
+
+{
+  "name": "Duplicate Member",
+  "email": "{{duplicateEmail}}"
+}
+
+### 13. 冪等鍵 - Failed 狀態重播（應 409 + X-Idempotent-Replay: true）
+# @description 用同一個 key + 同一個 payload 再打一次，
+#              預期直接重播快取的 409，不重新執行業務邏輯
+POST {{baseUrl}}/api/members
+Content-Type: application/json
+Idempotency-Key: {{failedKey}}
+
+{
+  "name": "Duplicate Member",
+  "email": "{{duplicateEmail}}"
+}
