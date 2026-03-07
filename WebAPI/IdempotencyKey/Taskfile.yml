@@ -26,6 +26,7 @@ tasks:
           echo "  [1/2] 功能測試（httpyac .http）"
           echo "        CRUD 會員 + 冪等鍵單 pod 情境"
           echo "══════════════════════════════════════════════════════════════════"
+      - task: data:clean
       - task: test
       - cmd: |
           echo ""
@@ -34,12 +35,30 @@ tasks:
           echo "        場景 A：相同 key 不同 payload"
           echo "        場景 B：相同 key 相同 payload + 重播"
           echo "══════════════════════════════════════════════════════════════════"
+      - task: data:clean
       - task: test:distributed
       - cmd: |
           echo ""
           echo "══════════════════════════════════════════════════════════════════"
           echo "  ✅ 全部測試完成"
           echo "══════════════════════════════════════════════════════════════════"
+
+  data:clean:
+    desc: 清除測試資料（截斷 Members 資料表 + 刪除 Redis idempotency keys）
+    cmds:
+      - cmd: |
+          docker exec idempotency-postgres \
+            psql -U postgres -d member -c 'TRUNCATE "Members" RESTART IDENTITY CASCADE;'
+          echo "PostgreSQL Members 已清除"
+      - cmd: |
+          KEY_COUNT=$(docker exec idempotency-redis \
+            redis-cli -p 6379 --scan --pattern 'idempotency:*' | wc -l)
+          if [ "$KEY_COUNT" -gt 0 ]; then
+            docker exec idempotency-redis \
+              redis-cli -p 6379 --scan --pattern 'idempotency:*' | \
+              xargs docker exec -i idempotency-redis redis-cli -p 6379 DEL
+          fi
+          echo "Redis idempotency keys 已清除（共 $KEY_COUNT 個）"
 
   docker:up:
     desc: 啟動 PostgreSQL 與 Redis 容器並等待健康檢查通過
