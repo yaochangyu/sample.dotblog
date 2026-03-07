@@ -69,6 +69,10 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
 
         try
         {
+            // 假設：HybridCache.GetOrCreateAsync 在 factory 拋出例外時不會重試，
+            // 例外會直接往上傳播（.NET 10 實作確認行為）。
+            // 若未來替換為其他 cache 實作，請確認 factory 不會被重複呼叫，
+            // 否則 nextInvoked/executedContext/acquiredToken 等 closure 變數將產生非預期副作用。
             var cached = await hybridCache.GetOrCreateAsync(
                 cacheKey,
                 async ct =>
