@@ -15,6 +15,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(
     ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
 
 builder.Services.AddScoped<IMemberRepository, EfMemberRepository>();
+builder.Services.AddScoped<MemberHandler>();
 builder.Services.AddSingleton<IIdempotencyKeyStore, RedisIdempotencyKeyStore>();
 
 var app = builder.Build();
