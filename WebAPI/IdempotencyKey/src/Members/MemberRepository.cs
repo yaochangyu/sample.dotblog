@@ -70,6 +70,7 @@ public class EfMemberRepository(MemberDbContext db) : IMemberRepository
             {
                 Code = nameof(FailureCode.DbConcurrency),
                 Message = "資料衝突，請稍後再試",
+                IsRetryable = true,
                 Exception = ex
             });
         }
@@ -107,6 +108,7 @@ public class EfMemberRepository(MemberDbContext db) : IMemberRepository
             {
                 Code = nameof(FailureCode.DbConcurrency),
                 Message = "資料衝突，請稍後再試",
+                IsRetryable = true,
                 Exception = ex
             });
         }

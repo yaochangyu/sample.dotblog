@@ -160,6 +160,16 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
             return;
         }
 
+        // 無副作用的業務錯誤（如 DuplicateEmail、DbConcurrency）：刪除 key，讓客戶端修正後重試
+        if (executedContext.HttpContext.Items.ContainsKey("Idempotency:ShouldDeleteKey"))
+        {
+            logger.LogInformation(
+                "Retryable failure (HTTP {StatusCode}) for idempotency key {Key}, deleting key to allow retry",
+                statusCode, idempotencyKey);
+            await store.DeleteAsync(idempotencyKey, ct);
+            return;
+        }
+
         // 成功或確定性失敗（含副作用的業務邏輯錯誤）：快取回應
         if (statusCode >= 400)
         {

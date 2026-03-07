@@ -27,4 +27,11 @@ public class Failure
     /// <summary>原始例外（不回傳給 API 呼叫端）</summary>
     [JsonIgnore]
     public Exception? Exception { get; init; }
+
+    /// <summary>
+    /// 若為 true，表示此錯誤發生時尚無業務副作用，
+    /// Idempotency Filter 應刪除 key 讓客戶端可修正後以相同 key 重試。
+    /// </summary>
+    [JsonIgnore]
+    public bool IsRetryable { get; init; }
 }

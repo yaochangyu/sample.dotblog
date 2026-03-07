@@ -19,7 +19,8 @@ public class MemberHandler(IMemberRepository repository, MemberDbContext db)
             return Result.Failure<Member, Failure>(new Failure
             {
                 Code = nameof(FailureCode.DuplicateEmail),
-                Message = $"Email '{request.Email}' 已被使用"
+                Message = $"Email '{request.Email}' 已被使用",
+                IsRetryable = true
             });
 
         var member = new Member { Name = request.Name, Email = request.Email };
@@ -35,7 +36,8 @@ public class MemberHandler(IMemberRepository repository, MemberDbContext db)
             return Result.Failure<Member, Failure>(new Failure
             {
                 Code = nameof(FailureCode.DuplicateEmail),
-                Message = $"Email '{request.Email}' 已被使用"
+                Message = $"Email '{request.Email}' 已被使用",
+                IsRetryable = true
             });
 
         return await repository.UpdateAsync(id, request, ct);
