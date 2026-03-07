@@ -16,6 +16,11 @@ namespace Lab.Idempotent.WebApi;
 public class IdempotentAttribute : Attribute, IAsyncActionFilter
 {
     public const string HeaderName = "Idempotency-Key";
+
+    /// <summary>
+    /// 分散式鎖的過期時間。Action 執行時間（含 DB、外部 API 呼叫等）不應超過此值，
+    /// 否則鎖提前釋放可能導致跨 Pod 的重複執行，破壞冪等性保證。預設 30 秒。
+    /// </summary>
     private static readonly TimeSpan LockExpiry = TimeSpan.FromSeconds(30);
 
     private readonly int? _expireSeconds;
