@@ -1,4 +1,9 @@
-﻿## git commit message 規則
+﻿# 技術規範
+- 實作程式碼之前先撰寫計畫步驟，輸出到當前資料夾，名為 *.plan.md，每實作完一個步驟，就更新一次計畫步驟，直到完成整個功能。
+- 遵守 SOLID 原則
+
+
+## git commit message 規則
 Write a concise commit message from 'git diff --staged' output in the format `[EMOJI] [TYPE](file/topic): [description in {locale}]`. Use GitMoji emojis (e.g., ✨ → feat), present tense, active voice, max 120 characters per line, no code blocks.
 注意：
 使用繁體中文回答
