@@ -1,6 +1,39 @@
-@IdempotencyKey.WebApi_HostAddress = http://localhost:5048
+@baseUrl = http://localhost:5048
 
-GET {{IdempotencyKey.WebApi_HostAddress}}/weatherforecast/
+### 1. 新增會員
+# @name createMember
+POST {{baseUrl}}/api/members
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john@example.com"
+}
+
+{{
+  exports.memberId = response.parsedBody.id;
+}}
+
+### 2. 取得所有會員
+GET {{baseUrl}}/api/members
 Accept: application/json
 
-###
+### 3. 取得單一會員
+GET {{baseUrl}}/api/members/{{memberId}}
+Accept: application/json
+
+### 4. 更新會員
+PUT {{baseUrl}}/api/members/{{memberId}}
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com"
+}
+
+### 5. 刪除會員
+DELETE {{baseUrl}}/api/members/{{memberId}}
+
+### 6. 確認刪除後回傳 404
+GET {{baseUrl}}/api/members/{{memberId}}
+Accept: application/json

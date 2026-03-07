@@ -1,0 +1,78 @@
+version: '3'
+
+vars:
+  API_URL: http://localhost:5048
+  HTTP_FILE: src/IdempotencyKey.WebApi.http
+  API_PID_FILE: .api.pid
+
+tasks:
+  default:
+    desc: 執行完整測試流程（啟動容器 → 遷移 → 執行 API → 測試 → 清除）
+    cmds:
+      - task: docker:up
+      - task: migrate
+      - task: api:start
+      - defer: { task: api:stop }
+      - defer: { task: docker:down }
+      - task: api:wait
+      - task: test
+
+  docker:up:
+    desc: 啟動 PostgreSQL 與 Redis 容器並等待健康檢查通過
+    cmds:
+      - docker compose up -d
+      - echo "等待容器健康..."
+      - >
+        until docker compose ps | grep "idempotency-postgres" | grep -q "healthy"; do
+          sleep 2;
+        done
+      - echo "PostgreSQL 已就緒"
+
+  docker:down:
+    desc: 停止並移除容器與 Volume
+    cmds:
+      - docker compose down -v
+      - echo "容器已清除"
+
+  migrate:
+    desc: 執行 EF Core 資料庫遷移
+    dir: src
+    cmds:
+      - dotnet ef database update
+
+  api:start:
+    desc: 在背景啟動 API 專案並記錄 PID
+    cmds:
+      - |
+        dotnet run --project src --launch-profile http > .api.log 2>&1 &
+        echo $! > {{.API_PID_FILE}}
+        echo "API 啟動中（PID: $(cat {{.API_PID_FILE}})）"
+
+  api:wait:
+    desc: 等待 API 回應健康
+    cmds:
+      - |
+        echo "等待 API 就緒..."
+        for i in $(seq 1 30); do
+          if curl -sf {{.API_URL}}/api/members > /dev/null 2>&1; then
+            echo "API 已就緒"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "API 啟動超時" && exit 1
+
+  api:stop:
+    desc: 停止背景 API 程序
+    cmds:
+      - |
+        if [ -f {{.API_PID_FILE}} ]; then
+          PID=$(cat {{.API_PID_FILE}})
+          kill $PID 2>/dev/null && echo "API 已停止（PID: $PID）" || true
+          rm -f {{.API_PID_FILE}}
+        fi
+
+  test:
+    desc: 執行 .http 檔案的 API 測試
+    cmds:
+      - npx --yes httpyac send {{.HTTP_FILE}} --all --output short
