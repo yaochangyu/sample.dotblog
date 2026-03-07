@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,13 +15,16 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-var redisMultiplexer = ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!);
-builder.Services.AddSingleton<IConnectionMultiplexer>(redisMultiplexer);
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    // 複用同一個 IConnectionMultiplexer，避免建立第二條 Redis 連線
-    options.ConnectionMultiplexerFactory = () => Task.FromResult<IConnectionMultiplexer>(redisMultiplexer);
-});
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!));
+builder.Services.AddStackExchangeRedisCache(_ => { });
+builder.Services.AddOptions<RedisCacheOptions>()
+    .Configure<IConnectionMultiplexer>((options, multiplexer) =>
+    {
+        // 從 DI Container 取出 IConnectionMultiplexer，複用同一條 Redis 連線
+        options.ConnectionMultiplexerFactory = () => Task.FromResult(multiplexer);
+    });
 builder.Services.AddHybridCache();
 builder.Services.AddSingleton(new HybridCacheEntryOptions
 {
