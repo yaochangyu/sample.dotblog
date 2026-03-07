@@ -8,7 +8,7 @@ namespace IdempotencyKey.WebApi.IdempotencyKeys;
 
 /// <summary>
 /// 套用 Idempotency Key 保護的 Action Filter。
-/// 使用 IFilterFactory 支援 DI，可直接標註於 Controller action 上。
+/// 可直接標註於 Controller action 上，透過 RequestServices 取得依賴。
 /// </summary>
 /// <example>
 /// [HttpPost]
@@ -19,37 +19,23 @@ namespace IdempotencyKey.WebApi.IdempotencyKeys;
 /// [IdempotencyKey(TtlHours = 48, Required = false)]
 /// </example>
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
-public class IdempotencyKeyAttribute : Attribute, IFilterFactory
+public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
 {
+    private const string IdempotencyKeyHeader = "Idempotency-Key";
+    private const string ReplayHeader = "X-Idempotent-Replay";
+
     /// <summary>Idempotency key 的保留時間（小時），預設 24 小時。</summary>
     public int TtlHours { get; set; } = 24;
 
     /// <summary>若為 true，缺少 Idempotency-Key header 時回傳 400；否則略過冪等保護。預設 true。</summary>
     public bool Required { get; set; } = true;
 
-    public bool IsReusable => false;
-
-    public IFilterMetadata CreateInstance(IServiceProvider serviceProvider)
-    {
-        var filter = ActivatorUtilities.CreateInstance<IdempotencyKeyFilter>(serviceProvider);
-        filter.TtlHours = TtlHours;
-        filter.Required = Required;
-        return filter;
-    }
-}
-
-public class IdempotencyKeyFilter(
-    IIdempotencyKeyStore store,
-    ILogger<IdempotencyKeyFilter> logger) : IAsyncActionFilter
-{
-    private const string IdempotencyKeyHeader = "Idempotency-Key";
-    private const string ReplayHeader = "X-Idempotent-Replay";
-
-    public int TtlHours { get; set; } = 24;
-    public bool Required { get; set; } = true;
-
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
+        var services = context.HttpContext.RequestServices;
+        var store = services.GetRequiredService<IIdempotencyKeyStore>();
+        var logger = services.GetRequiredService<ILogger<IdempotencyKeyAttribute>>();
+
         // 只對非冪等的寫入操作套用保護
         var method = context.HttpContext.Request.Method;
         if (!HttpMethods.IsPost(method) && !HttpMethods.IsPatch(method))
@@ -84,7 +70,7 @@ public class IdempotencyKeyFilter(
         if (existing is not null)
         {
             // Key 已存在，依狀態處理
-            await HandleExistingKey(context, existing, fingerprint);
+            HandleExistingKey(context, existing, fingerprint, logger);
             return;
         }
 
@@ -93,18 +79,18 @@ public class IdempotencyKeyFilter(
 
         var executedContext = await next();
 
-        await HandleActionResult(executedContext, idempotencyKey, context.HttpContext.RequestAborted);
+        await HandleActionResult(executedContext, idempotencyKey, store, logger, context.HttpContext.RequestAborted);
     }
 
-    private async Task HandleExistingKey(
-        ActionExecutingContext context, IdempotencyKeyRecord existing, string fingerprint)
+    private static void HandleExistingKey(
+        ActionExecutingContext context, IdempotencyKeyRecord existing, string fingerprint,
+        ILogger logger)
     {
         var key = existing.Key;
 
         switch (existing.Status)
         {
             case IdempotencyKeyStatus.InProgress:
-                // 併發請求，拒絕並要求客戶端稍後重試
                 logger.LogInformation("Idempotency key {Key} is IN_PROGRESS, rejecting concurrent request", key);
                 context.Result = new ConflictObjectResult(new
                 {
@@ -143,8 +129,9 @@ public class IdempotencyKeyFilter(
         }
     }
 
-    private async Task HandleActionResult(
-        ActionExecutedContext executedContext, string idempotencyKey, CancellationToken ct)
+    private static async Task HandleActionResult(
+        ActionExecutedContext executedContext, string idempotencyKey,
+        IIdempotencyKeyStore store, ILogger logger, CancellationToken ct)
     {
         // 若發生未處理的例外，刪除 key 讓客戶端可以重試
         if (executedContext.Exception is not null && !executedContext.ExceptionHandled)
@@ -170,15 +157,13 @@ public class IdempotencyKeyFilter(
         // 成功或確定性失敗（含副作用的業務邏輯錯誤）：快取回應
         if (statusCode >= 400)
         {
-            logger.LogInformation(
-                "Caching failed response (HTTP {StatusCode}) for idempotency key {Key}",
+            logger.LogInformation("Caching failed response (HTTP {StatusCode}) for idempotency key {Key}",
                 statusCode, idempotencyKey);
             await store.SetFailedAsync(idempotencyKey, statusCode, body, contentType, ct);
         }
         else
         {
-            logger.LogInformation(
-                "Caching successful response (HTTP {StatusCode}) for idempotency key {Key}",
+            logger.LogInformation("Caching successful response (HTTP {StatusCode}) for idempotency key {Key}",
                 statusCode, idempotencyKey);
             await store.SetCompletedAsync(idempotencyKey, statusCode, body, contentType, ct);
         }
