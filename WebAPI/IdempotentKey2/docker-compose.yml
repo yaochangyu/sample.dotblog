@@ -21,3 +21,17 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+
+  # 第二個 Pod，用於測試分散式鎖（concurrent 409）
+  webapi2:
+    build:
+      context: .
+      dockerfile: src/Lab.Idempotent.WebApi/Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__Redis=redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
