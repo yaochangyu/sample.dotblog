@@ -44,7 +44,7 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
         if (!context.HttpContext.Request.Headers.TryGetValue(HeaderName, out var idempotencyKeyValues) ||
             string.IsNullOrWhiteSpace(idempotencyKeyValues.ToString()))
         {
-            context.Result = Failure.Results[FailureCode.NotFoundIdempotentKey];
+            context.Result = Failure.NewResult(FailureCode.NotFoundIdempotentKey);
             return;
         }
 
@@ -116,7 +116,7 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
                 // Cache hit：驗證 request payload 是否與原始請求一致
                 if (cached.Fingerprint != fingerprint)
                 {
-                    context.Result = Failure.Results[FailureCode.IdempotentKeyPayloadMismatch];
+                    context.Result = Failure.NewResult(FailureCode.IdempotentKeyPayloadMismatch);
                     return;
                 }
 
@@ -136,7 +136,7 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
         catch (ConcurrentIdempotentRequestException)
         {
             // 同一個 idempotency key 正在被另一個 pod 處理中，回傳 409
-            context.Result = Failure.Results[FailureCode.ConcurrentRequest];
+            context.Result = Failure.NewResult(FailureCode.ConcurrentRequest);
         }
         catch (IdempotentNonSuccessException)
         {
