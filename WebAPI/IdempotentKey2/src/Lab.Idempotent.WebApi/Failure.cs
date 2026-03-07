@@ -39,11 +39,11 @@ public class Failure
         _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
     };
 
-    public string Code { get; set; }
+    public required string Code { get; set; }
 
-    public string Message { get; set; }
+    public required string Message { get; set; }
 
-    public object Data { get; set; }
+    public object? Data { get; set; }
 
-    public IEnumerable<Failure> Failures { get; set; }
+    public IEnumerable<Failure>? Failures { get; set; }
 }
