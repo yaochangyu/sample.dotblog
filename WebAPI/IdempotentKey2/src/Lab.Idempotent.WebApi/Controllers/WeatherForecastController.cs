@@ -24,6 +24,9 @@ public class WeatherForecastController : ControllerBase
     [Idempotent]
     public async Task<ActionResult<WeatherForecast>> Post(int temperature, CancellationToken cancel = default)
     {
+        // 模擬真實業務處理時間，讓並發測試（concurrent test）能可靠觸發分散式鎖
+        await Task.Delay(300, cancel);
+
         var rng = new Random();
         var data = new WeatherForecast
         {
