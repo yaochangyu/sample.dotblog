@@ -21,7 +21,7 @@ public class WeatherForecastController : ControllerBase
     }
 
     [HttpPost("{temperature}")]
-    [Idempotent]
+    [IdempotencyKey]
     public async Task<ActionResult<WeatherForecast>> Post(int temperature, CancellationToken cancel = default)
     {
         // 模擬真實業務處理時間，讓並發測試（concurrent test）能可靠觸發分散式鎖
@@ -41,7 +41,7 @@ public class WeatherForecastController : ControllerBase
 
     // 接受 request body，用來示範 fingerprint mismatch (422) 情境
     [HttpPost]
-    [Idempotent]
+    [IdempotencyKey]
     public async Task<ActionResult<WeatherForecast>> PostWithBody(
         [FromBody] CreateWeatherRequest request,
         CancellationToken cancel = default)
