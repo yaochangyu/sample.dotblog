@@ -54,3 +54,5 @@ dist/
 
 # Entity Framework Migrations (Optional: typically keep these, but some users ignore certain generated files)
 # *.Designer.cs
+
+binDebug
