@@ -9,7 +9,7 @@ vars:
 
 tasks:
   default:
-    desc: 執行完整測試流程（啟動容器 → 遷移 → 執行 API × 2 → 測試 → 分散式鎖測試 → 清除）
+    desc: 執行完整測試流程（啟動容器 → 遷移 → 執行 API × 2 → 全部測試 → 清除）
     cmds:
       - task: docker:up
       - task: migrate
@@ -20,6 +20,14 @@ tasks:
       - defer: { task: docker:down }
       - task: api:wait
       - task: api:wait-pod2
+      - task: test:all
+
+  test:all:
+    desc: |
+      執行所有測試（需先啟動 Pod1 + Pod2）
+      1. test             — 功能測試（httpyac .http，單 pod）
+      2. test:distributed — 分散式鎖測試（兩個 pod 並發）
+    cmds:
       - task: test
       - task: test:distributed
 
