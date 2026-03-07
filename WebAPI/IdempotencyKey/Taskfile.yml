@@ -9,10 +9,11 @@ vars:
 
 tasks:
   test:all:
-    desc: 啟動容器 → 遷移 → 啟動 Pod1 + Pod2 → 執行所有測試 → 清除（一鍵完整執行）
+    desc: 啟動容器 → 遷移 → 建置 → 啟動 Pod1 + Pod2 → 執行所有測試 → 清除（一鍵完整執行）
     cmds:
       - task: docker:up
       - task: migrate
+      - task: api:build
       - task: api:start
       - task: api:start-pod2
       - defer: { task: api:stop }
@@ -83,19 +84,25 @@ tasks:
     cmds:
       - dotnet ef database update
 
+  api:build:
+    desc: 建置 API 專案（兩個 pod 啟動前須先建置，避免並行 build 競爭）
+    dir: src
+    cmds:
+      - dotnet build --no-incremental -c Debug -v minimal
+
   api:start:
-    desc: 在背景啟動 API 專案並記錄 PID（Pod1，port 5048）
+    desc: 在背景啟動 Pod1（port 5048，--no-build）
     cmds:
       - |
-        dotnet run --project src --launch-profile http > .api.log 2>&1 &
+        dotnet run --project src --no-build --urls http://localhost:5048 > .api.log 2>&1 &
         echo $! > {{.API_PID_FILE}}
         echo "Pod1 啟動中（PID: $(cat {{.API_PID_FILE}})）"
 
   api:start-pod2:
-    desc: 在背景啟動第二個 API Pod（port 5049，模擬多 pod 部署），共用同一個 Redis
+    desc: 在背景啟動 Pod2（port 5049，--no-build，模擬多 pod 部署），共用同一個 Redis
     cmds:
       - |
-        ASPNETCORE_URLS=http://localhost:5049 dotnet run --project src > .api2.log 2>&1 &
+        dotnet run --project src --no-build --urls http://localhost:5049 > .api2.log 2>&1 &
         echo $! > {{.POD2_PID_FILE}}
         echo "Pod2 啟動中（PID: $(cat {{.POD2_PID_FILE}})）"
 
@@ -283,16 +290,27 @@ tasks:
         echo ""
 
         if [ "$POD1_CODE" = "201" ] && [ "$POD2_CODE" = "201" ]; then
-          echo "  ❌ FAIL：兩個 pod 都回傳 201 → 分散式鎖失效，資料已重複寫入！"
-          exit 1
-        fi
-
-        CODES="${POD1_CODE}_${POD2_CODE}"
-        if [ "$CODES" = "201_409" ] || [ "$CODES" = "409_201" ]; then
-          echo "  ✅ PASS：先到者 201，後到者 409（InProgress 衝突）"
+          # 兩個都 201 時，需確認 ID 是否相同
+          # 若相同 → Pod2 在 Pod1 完成後讀到 Completed 狀態並重播，屬正確冪等行為
+          # 若不同 → 分散式鎖失效，兩筆資料被寫入
+          POD1_ID=$(cat /tmp/dist_same1.json | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+          POD2_ID=$(cat /tmp/dist_same2.json | grep -o '"[Ii]d":"[^"]*"' | head -1 | cut -d'"' -f4)
+          if [ "$POD1_ID" = "$POD2_ID" ] && [ -n "$POD1_ID" ]; then
+            echo "  ✅ PASS：兩個 pod 都回傳 201，但 ID 相同（$POD1_ID）"
+            echo "     → Pod2 在 Pod1 完成後讀到 Completed 並重播，屬正確冪等行為"
+          else
+            echo "  ❌ FAIL：兩個 pod 都回傳 201 且 ID 不同（Pod1=$POD1_ID, Pod2=$POD2_ID）"
+            echo "     → 分散式鎖失效，資料已重複寫入！"
+            exit 1
+          fi
         else
-          echo "  ⚠️  非預期的組合：Pod1=$POD1_CODE, Pod2=$POD2_CODE"
-          echo "     （可能時序極近造成兩個 409，視為通過，因為都未重複寫入）"
+          CODES="${POD1_CODE}_${POD2_CODE}"
+          if [ "$CODES" = "201_409" ] || [ "$CODES" = "409_201" ]; then
+            echo "  ✅ PASS：先到者 201，後到者 409（InProgress 衝突）"
+          else
+            echo "  ⚠️  非預期的組合：Pod1=$POD1_CODE, Pod2=$POD2_CODE"
+            echo "     （可能時序極近造成兩個 409，視為通過，因為都未重複寫入）"
+          fi
         fi
 
         # 等待 Completed 後重播測試

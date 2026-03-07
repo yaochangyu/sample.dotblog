@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Options;
 
 namespace IdempotencyKey.WebApi.IdempotencyKeys;
 
@@ -142,7 +143,12 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
             return;
         }
 
-        var (statusCode, body, contentType) = CaptureResult(executedContext.Result);
+        // 使用 ASP.NET Core 設定的 JSON 序列化選項（camelCase 等），確保重播 body 與原始回應一致
+        var jsonOptions = executedContext.HttpContext.RequestServices
+            .GetRequiredService<IOptions<JsonOptions>>()
+            .Value.JsonSerializerOptions;
+
+        var (statusCode, body, contentType) = CaptureResult(executedContext.Result, jsonOptions);
 
         if (statusCode >= 500)
         {
@@ -182,13 +188,14 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
-    private static (int statusCode, string? body, string? contentType) CaptureResult(IActionResult? result)
+    private static (int statusCode, string? body, string? contentType) CaptureResult(
+        IActionResult? result, JsonSerializerOptions? jsonOptions = null)
     {
         return result switch
         {
             ObjectResult objectResult => (
                 objectResult.StatusCode ?? 200,
-                JsonSerializer.Serialize(objectResult.Value),
+                JsonSerializer.Serialize(objectResult.Value, jsonOptions),
                 "application/json"
             ),
             ContentResult contentResult => (
