@@ -16,28 +16,7 @@ tasks:
     desc: Start all services via docker compose and wait until healthy
     cmds:
       - docker compose up -d --build
-      - cmd: |
-          echo "Waiting for webapi (pod1) to be ready..."
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:8080/weatherforecast > /dev/null 2>&1; then
-              echo "Pod1 (8080) is ready."
-              break
-            fi
-            echo "  pod1 attempt $i/30 ..."
-            sleep 2
-          done
-          echo "Waiting for webapi2 (pod2) to be ready..."
-          for i in $(seq 1 30); do
-            if curl -sf http://localhost:8081/weatherforecast > /dev/null 2>&1; then
-              echo "Pod2 (8081) is ready."
-              exit 0
-            fi
-            echo "  pod2 attempt $i/30 ..."
-            sleep 2
-          done
-          echo "Services did not become ready in time." >&2
-          exit 1
-        silent: false
+      - bash scripts/wait-for-ready.sh
 
   down:
     desc: Stop all services
@@ -58,36 +37,7 @@ tasks:
   test-concurrent:
     desc: Fire two concurrent requests to two different pods with the same key - expects one 200 and one 409
     cmds:
-      - cmd: |
-          KEY="concurrent-test-$(date +%s)"
-          echo "Testing concurrent requests with Idempotency-Key: $KEY"
-          echo "Pod1 → http://localhost:8080  |  Pod2 → http://localhost:8081"
-
-          # 兩個請求同時送往不同 pod，共享同一個 Redis 分散式鎖
-          curl -s -o /dev/null -w "%{http_code}" -X POST \
-            "http://localhost:8080/weatherforecast/25" \
-            -H "Idempotency-Key: $KEY" > /tmp/idempotent_code1.txt &
-          PID1=$!
-
-          curl -s -o /dev/null -w "%{http_code}" -X POST \
-            "http://localhost:8081/weatherforecast/25" \
-            -H "Idempotency-Key: $KEY" > /tmp/idempotent_code2.txt &
-          PID2=$!
-
-          wait $PID1 $PID2
-
-          CODE1=$(cat /tmp/idempotent_code1.txt)
-          CODE2=$(cat /tmp/idempotent_code2.txt)
-          echo "Pod1 (8080): HTTP $CODE1"
-          echo "Pod2 (8081): HTTP $CODE2"
-
-          if { [ "$CODE1" = "200" ] && [ "$CODE2" = "409" ]; } || \
-             { [ "$CODE1" = "409" ] && [ "$CODE2" = "200" ]; }; then
-            echo "✅ Concurrent test passed: one 200, one 409"
-          else
-            echo "❌ Concurrent test failed: expected one 200 and one 409, got $CODE1 and $CODE2"
-            exit 1
-          fi
+      - bash scripts/test-concurrent.sh
 
   ## E2E -------------------------------------------------------
   e2e:
