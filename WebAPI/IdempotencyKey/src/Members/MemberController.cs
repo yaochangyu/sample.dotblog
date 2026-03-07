@@ -5,45 +5,52 @@ namespace IdempotencyKey.WebApi.Members;
 
 [ApiController]
 [Route("api/members")]
-public class MemberController(IMemberRepository repository) : ControllerBase
+public class MemberController(MemberHandler handler) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<Member>>> GetAll() =>
-        Ok(await repository.GetAllAsync());
+    public async Task<IActionResult> GetAll(CancellationToken ct)
+    {
+        var result = await handler.GetAllAsync(ct);
+        if (result.IsFailure)
+            return StatusCode((int)FailureCodeMapper.GetHttpStatusCode(result.Error), result.Error);
+        return Ok(result.Value);
+    }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<Member>> GetById(Guid id)
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
-        var member = await repository.GetByIdAsync(id);
-        return member is null ? NotFound() : Ok(member);
+        var result = await handler.GetByIdAsync(id, ct);
+        if (result.IsFailure)
+            return StatusCode((int)FailureCodeMapper.GetHttpStatusCode(result.Error), result.Error);
+        return Ok(result.Value);
     }
 
     [HttpPost]
     [IdempotencyKey]
-    public async Task<ActionResult<Member>> Create(CreateMemberRequest request)
+    public async Task<IActionResult> Create(CreateMemberRequest request, CancellationToken ct)
     {
-        var member = new Member
-        {
-            Name = request.Name,
-            Email = request.Email
-        };
-
-        await repository.AddAsync(member);
-
-        return CreatedAtAction(nameof(GetById), new { id = member.Id }, member);
+        var result = await handler.CreateAsync(request, ct);
+        if (result.IsFailure)
+            return StatusCode((int)FailureCodeMapper.GetHttpStatusCode(result.Error), result.Error);
+        return CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value);
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<ActionResult<Member>> Update(Guid id, UpdateMemberRequest request)
+    public async Task<IActionResult> Update(Guid id, UpdateMemberRequest request, CancellationToken ct)
     {
-        var member = await repository.UpdateAsync(id, request);
-        return member is null ? NotFound() : Ok(member);
+        var result = await handler.UpdateAsync(id, request, ct);
+        if (result.IsFailure)
+            return StatusCode((int)FailureCodeMapper.GetHttpStatusCode(result.Error), result.Error);
+        return Ok(result.Value);
     }
 
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        var deleted = await repository.DeleteAsync(id);
-        return deleted ? NoContent() : NotFound();
+        var result = await handler.DeleteAsync(id, ct);
+        if (result.IsFailure)
+            return StatusCode((int)FailureCodeMapper.GetHttpStatusCode(result.Error), result.Error);
+        return NoContent();
     }
 }
+
