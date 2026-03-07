@@ -13,7 +13,7 @@ using StackExchange.Redis;
 namespace Lab.Idempotent.WebApi;
 
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, Inherited = false)]
-public class IdempotentAttribute : Attribute, IAsyncActionFilter
+public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
 {
     public const string HeaderName = "Idempotency-Key";
 
@@ -25,11 +25,11 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
 
     private readonly int? _expireSeconds;
 
-    public IdempotentAttribute()
+    public IdempotencyKeyAttribute()
     {
     }
 
-    public IdempotentAttribute(int expireSeconds)
+    public IdempotencyKeyAttribute(int expireSeconds)
     {
         _expireSeconds = expireSeconds;
     }
@@ -40,7 +40,7 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
         var hybridCache = provider.GetRequiredService<HybridCache>();
         var defaultOptions = provider.GetRequiredService<HybridCacheEntryOptions>();
         var jsonOptions = provider.GetRequiredService<JsonSerializerOptions>();
-        var logger = provider.GetRequiredService<ILogger<IdempotentAttribute>>();
+        var logger = provider.GetRequiredService<ILogger<IdempotencyKeyAttribute>>();
 
         var cacheOptions = _expireSeconds.HasValue
             ? new HybridCacheEntryOptions { Expiration = TimeSpan.FromSeconds(_expireSeconds.Value) }
@@ -67,58 +67,49 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
         ActionExecutedContext? executedContext = null;
         string? acquiredToken = null; // 持有鎖的 token，在 finally 用來釋放鎖
 
+        // local function：執行 action 並建立快取項目
+        // 捕獲外部變數（db、lockKey、lockToken 等），由 GetOrCreateAsync 在 cache miss 時呼叫
+        async ValueTask<IdempotentCacheEntry> BuildCacheEntry(CancellationToken ct)
+        {
+            // 分散式鎖：SETNX，只有第一個 pod 能成功取得鎖
+            // acquiredToken 提升到 outer try 外層，確保鎖在 HybridCache 寫入 L2 後才釋放
+            var lockAcquired = await db.StringSetAsync(lockKey, lockToken, lockExpiry, When.NotExists);
+            if (!lockAcquired)
+                throw new ConcurrentIdempotentRequestException();
+
+            acquiredToken = lockToken;
+            nextInvoked = true;
+            executedContext = await next();
+
+            // Action 拋出未處理的例外，保留原始 stack trace 並重新拋出
+            if (executedContext.Exception != null && !executedContext.ExceptionHandled)
+                ExceptionDispatchInfo.Throw(executedContext.Exception);
+
+            if (executedContext.Result is not ObjectResult objectResult)
+                throw new IdempotentNonSuccessException();
+
+            // StatusCode 為 null 時 ASP.NET Core 預設回傳 200
+            var statusCode = objectResult.StatusCode ?? (int)HttpStatusCode.OK;
+            if (statusCode is not (>= 200 and <= 299))
+                throw new IdempotentNonSuccessException();
+
+            return new IdempotentCacheEntry(
+                statusCode,
+                JsonSerializer.Serialize(objectResult.Value, jsonOptions),
+                context.HttpContext.Response.Headers
+                    .Where(h => !h.Key.StartsWith(':'))
+                    .ToDictionary(h => h.Key, h => h.Value.Select(v => v ?? string.Empty).ToArray()),
+                fingerprint
+            );
+        }
+
         try
         {
             // 假設：HybridCache.GetOrCreateAsync 在 factory 拋出例外時不會重試，
             // 例外會直接往上傳播（.NET 10 實作確認行為）。
             // 若未來替換為其他 cache 實作，請確認 factory 不會被重複呼叫，
             // 否則 nextInvoked/executedContext/acquiredToken 等 closure 變數將產生非預期副作用。
-            var cached = await hybridCache.GetOrCreateAsync(
-                cacheKey,
-                async ct =>
-                {
-                    // 分散式鎖：SETNX，只有第一個 pod 能成功取得鎖
-                    // acquiredToken 提升到 try 外層，確保鎖在 HybridCache 寫入 L2 後才釋放
-                    var lockAcquired = await db.StringSetAsync(lockKey, lockToken, lockExpiry, When.NotExists);
-                    if (!lockAcquired)
-                        throw new ConcurrentIdempotentRequestException();
-
-                    acquiredToken = lockToken;
-
-                    nextInvoked = true;
-                    executedContext = await next();
-
-                    // Action 拋出未處理的例外，保留原始 stack trace 並重新拋出
-                    if (executedContext.Exception != null && !executedContext.ExceptionHandled)
-                    {
-                        ExceptionDispatchInfo.Throw(executedContext.Exception);
-                    }
-
-                    if (executedContext.Result is not ObjectResult objectResult)
-                    {
-                        // 非 ObjectResult 不快取
-                        throw new IdempotentNonSuccessException();
-                    }
-
-                    // StatusCode 為 null 時 ASP.NET Core 預設回傳 200
-                    var statusCode = objectResult.StatusCode ?? (int)HttpStatusCode.OK;
-                    if (statusCode is not (>= 200 and <= 299))
-                    {
-                        // 非 2xx 不快取，讓後續請求可重試
-                        throw new IdempotentNonSuccessException();
-                    }
-
-                    return new IdempotentCacheEntry(
-                        statusCode,
-                        JsonSerializer.Serialize(objectResult.Value, jsonOptions),
-                        context.HttpContext.Response.Headers
-                            .Where(h => !h.Key.StartsWith(':'))
-                            .ToDictionary(h => h.Key, h => h.Value.Select(v => v ?? string.Empty).ToArray()),
-                        fingerprint
-                    );
-                },
-                cacheOptions
-            );
+            var cached = await hybridCache.GetOrCreateAsync<IdempotentCacheEntry>(cacheKey, BuildCacheEntry, cacheOptions);
 
             if (!nextInvoked)
             {
