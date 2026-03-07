@@ -1,3 +1,4 @@
+using IdempotencyKey.WebApi.IdempotencyKeys;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IdempotencyKey.WebApi.Members;
@@ -18,6 +19,7 @@ public class MemberController(IMemberRepository repository) : ControllerBase
     }
 
     [HttpPost]
+    [IdempotencyKey]
     public async Task<ActionResult<Member>> Create(CreateMemberRequest request)
     {
         var member = new Member

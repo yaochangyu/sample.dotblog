@@ -1,3 +1,4 @@
+using IdempotencyKey.WebApi.IdempotencyKeys;
 using IdempotencyKey.WebApi.Members;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,7 @@ builder.Services.AddDbContext<MemberDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddScoped<IMemberRepository, EfMemberRepository>();
+builder.Services.AddScoped<IIdempotencyKeyStore, EfIdempotencyKeyStore>();
 
 var app = builder.Build();
 
