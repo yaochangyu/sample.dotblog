@@ -9,22 +9,22 @@ vars:
 
 tasks:
   default:
-    desc: 執行完整測試流程（啟動容器 → 遷移 → 執行 API × 2 → 全部測試 → 清除）
+    desc: 執行完整測試流程（啟動容器 → 遷移 → 全部測試 → 清除）
     cmds:
       - task: docker:up
       - task: migrate
+      - defer: { task: docker:down }
+      - task: test:all
+
+  test:all:
+    desc: 啟動 Pod1 + Pod2 → 執行所有測試 → 停止 Pod（自備環境，可獨立執行）
+    cmds:
       - task: api:start
       - task: api:start-pod2
       - defer: { task: api:stop }
       - defer: { task: api:stop-pod2 }
-      - defer: { task: docker:down }
       - task: api:wait
       - task: api:wait-pod2
-      - task: test:all
-
-  test:all:
-    desc: 執行所有測試（需先啟動 Pod1 + Pod2）
-    cmds:
       - cmd: |
           echo ""
           echo "══════════════════════════════════════════════════════════════════"
