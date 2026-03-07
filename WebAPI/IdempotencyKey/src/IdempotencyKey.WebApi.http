@@ -1,28 +1,102 @@
 @baseUrl = http://localhost:5048
 
+# ──────────────────────────────────────────────────────────────────────────────
+# 輔助函式：DB / Redis 查詢（供各測試步驟的驗證區塊使用）
+# ──────────────────────────────────────────────────────────────────────────────
+{{
+  const { execSync } = require('child_process');
+
+  // 查詢 Members 資料表，回傳符合 email 的筆數
+  exports.dbCountByEmail = (email) => {
+    const result = execSync(
+      `docker exec idempotency-postgres psql -U postgres -d member -t -c "SELECT COUNT(*) FROM \\"Members\\" WHERE \\"Email\\" = '${email}'"`
+    ).toString().trim();
+    return parseInt(result);
+  };
+
+  // 查詢 Members 資料表，回傳符合 id 的筆數
+  exports.dbCountById = (id) => {
+    const result = execSync(
+      `docker exec idempotency-postgres psql -U postgres -d member -t -c "SELECT COUNT(*) FROM \\"Members\\" WHERE \\"Id\\" = '${id}'"`
+    ).toString().trim();
+    return parseInt(result);
+  };
+
+  // 查詢 Members 資料表，回傳符合 id 的 Name
+  exports.dbNameById = (id) => {
+    return execSync(
+      `docker exec idempotency-postgres psql -U postgres -d member -t -c "SELECT \\"Name\\" FROM \\"Members\\" WHERE \\"Id\\" = '${id}'"`
+    ).toString().trim();
+  };
+
+  // 查詢 Redis idempotency key，回傳 parsed JSON 或 null
+  exports.redisGetKey = (key) => {
+    const raw = execSync(
+      `docker exec idempotency-redis redis-cli -p 6379 GET idempotency:${key}`
+    ).toString().trim();
+    return raw ? JSON.parse(raw) : null;
+  };
+}}
+
+# ──────────────────────────────────────────────────────────────────────────────
+# CRUD 測試
+# ──────────────────────────────────────────────────────────────────────────────
+
+### CRUD 測試準備
+{{
+  const ts = Date.now();
+  exports.crudEmail = `crud-${ts}@test.com`;
+  exports.crudKey   = `crud-key-${ts}`;
+  exports.janeEmail = `jane-${ts}@test.com`;
+}}
+
 ### 1. 新增會員
 # @name createMember
 # @description CRUD 基礎測試：建立一名會員，後續測試以 memberId 取得、更新、刪除
 POST {{baseUrl}}/api/members
 Content-Type: application/json
-Idempotency-Key: crud-create-{{$randomInt 100000 999999}}
+Idempotency-Key: {{crudKey}}
 
 {
   "name": "John Doe",
-  "email": "john-{{$randomInt 100000 999999}}@example.com"
+  "email": "{{crudEmail}}"
 }
 
 {{
   exports.memberId = response.parsedBody.id;
+
+  test('HTTP 201', () => response.statusCode === 201);
+  // DB：會員已寫入
+  test('DB: 會員已建立', () => dbCountByEmail(crudEmail) === 1);
+  // Redis：key 已記錄，狀態 Completed(1)
+  const rec1 = redisGetKey(crudKey);
+  test('Redis: key 存在',              () => rec1 !== null);
+  test('Redis: Status = Completed(1)', () => rec1 && rec1.Status === 1);
+  test('Redis: ResponseStatusCode 201',() => rec1 && rec1.ResponseStatusCode === 201);
 }}
 
 ### 2. 取得所有會員
 GET {{baseUrl}}/api/members
 Accept: application/json
 
+{{
+  test('HTTP 200', () => response.statusCode === 200);
+  // DB：至少有一筆
+  const total = dbCountByEmail(crudEmail);
+  test('DB: 剛建立的會員存在於清單', () => total === 1);
+  // Redis：GET 不走冪等 filter，無新 key
+}}
+
 ### 3. 取得單一會員
 GET {{baseUrl}}/api/members/{{memberId}}
 Accept: application/json
+
+{{
+  test('HTTP 200', () => response.statusCode === 200);
+  // DB：該 ID 存在
+  test('DB: 會員存在', () => dbCountById(memberId) === 1);
+  // Redis：GET 不走冪等 filter，無新 key
+}}
 
 ### 4. 更新會員
 PUT {{baseUrl}}/api/members/{{memberId}}
@@ -30,28 +104,51 @@ Content-Type: application/json
 
 {
   "name": "Jane Doe",
-  "email": "jane@example.com"
+  "email": "{{janeEmail}}"
 }
+
+{{
+  test('HTTP 200', () => response.statusCode === 200);
+  // DB：名稱與 email 已更新
+  test('DB: 名稱更新為 Jane Doe', () => dbNameById(memberId) === 'Jane Doe');
+  test('DB: 舊 email 不存在',     () => dbCountByEmail(crudEmail) === 0);
+  test('DB: 新 email 已寫入',     () => dbCountByEmail(janeEmail) === 1);
+  // Redis：PUT 不走冪等 filter，無新 key
+}}
 
 ### 5. 刪除會員
 DELETE {{baseUrl}}/api/members/{{memberId}}
+
+{{
+  test('HTTP 204', () => response.statusCode === 204);
+  // DB：會員已刪除
+  test('DB: 會員已刪除', () => dbCountById(memberId) === 0);
+  // Redis：DELETE 不走冪等 filter，無新 key
+}}
 
 ### 6. 確認刪除後回傳 404
 GET {{baseUrl}}/api/members/{{memberId}}
 Accept: application/json
 
+{{
+  test('HTTP 404', () => response.statusCode === 404);
+  // DB：確認不存在
+  test('DB: 確認會員不存在', () => dbCountById(memberId) === 0);
+  // Redis：GET 不走冪等 filter，無新 key
+}}
+
 # ──────────────────────────────────────────────────────────────────────────────
 # 冪等鍵（Idempotency Key）測試
 # ──────────────────────────────────────────────────────────────────────────────
 
-### 冪等鍵測試準備：產生本次執行唯一的 key 與 email（避免重複執行時 DuplicateEmail）
+### 冪等鍵測試準備
 {{
-  exports.idemKey = `idem-key-${Date.now()}`;
-  exports.idemEmail = `idem-alice-${Date.now()}@test.com`;
+  const ts2 = Date.now();
+  exports.idemKey   = `idem-key-${ts2}`;
+  exports.idemEmail = `idem-alice-${ts2}@test.com`;
 }}
 
 ### 7. 冪等鍵 - 首次請求（應 201）
-# @name idempotentCreate
 # @description 首次使用某 idempotency-key 建立會員，預期 201
 POST {{baseUrl}}/api/members
 Content-Type: application/json
@@ -62,8 +159,19 @@ Idempotency-Key: {{idemKey}}
   "email": "{{idemEmail}}"
 }
 
+{{
+  test('HTTP 201', () => response.statusCode === 201);
+  // DB：會員已建立
+  test('DB: 會員已建立', () => dbCountByEmail(idemEmail) === 1);
+  // Redis：Completed(1)
+  const rec7 = redisGetKey(idemKey);
+  test('Redis: key 存在',               () => rec7 !== null);
+  test('Redis: Status = Completed(1)',  () => rec7 && rec7.Status === 1);
+  test('Redis: ResponseStatusCode 201', () => rec7 && rec7.ResponseStatusCode === 201);
+}}
+
 ### 8. 冪等鍵 - 重播相同請求（應 201 + X-Idempotent-Replay: true）
-# @description 用同一個 key + 同一個 payload 再送一次，預期回傳快取的 201 並帶 X-Idempotent-Replay: true header
+# @description 同 key + 同 payload，預期回傳快取的 201 並帶 X-Idempotent-Replay: true
 POST {{baseUrl}}/api/members
 Content-Type: application/json
 Idempotency-Key: {{idemKey}}
@@ -73,9 +181,18 @@ Idempotency-Key: {{idemKey}}
   "email": "{{idemEmail}}"
 }
 
+{{
+  test('HTTP 201',                   () => response.statusCode === 201);
+  test('X-Idempotent-Replay: true',  () => response.headers['x-idempotent-replay'] === 'true');
+  // DB：仍只有一筆（未重複寫入）
+  test('DB: 未重複寫入（count=1）',  () => dbCountByEmail(idemEmail) === 1);
+  // Redis：key 狀態不變 Completed(1)
+  const rec8 = redisGetKey(idemKey);
+  test('Redis: Status 仍為 Completed(1)', () => rec8 && rec8.Status === 1);
+}}
+
 ### 9. 冪等鍵 - 缺少 header（應 400）
 # @description 未帶 Idempotency-Key header，預期 400
-# @no-reject-unauthorized
 POST {{baseUrl}}/api/members
 Content-Type: application/json
 
@@ -84,8 +201,14 @@ Content-Type: application/json
   "email": "no-key-bob-{{$randomInt 100000 999999}}@example.com"
 }
 
+{{
+  test('HTTP 400', () => response.statusCode === 400);
+  // DB：未建立任何會員（400 在 filter 層被攔截，業務邏輯未執行）
+  // Redis：無 key（請求被攔截，未進入冪等流程）
+}}
+
 ### 10. 冪等鍵 - Fingerprint mismatch（應 422）
-# @description 用同一個 key 但換不同的 payload，預期 422（已使用此 key 但 payload 不符）
+# @description 同 key、不同 payload，預期 422
 POST {{baseUrl}}/api/members
 Content-Type: application/json
 Idempotency-Key: {{idemKey}}
@@ -95,32 +218,49 @@ Idempotency-Key: {{idemKey}}
   "email": "carol-different-{{$randomInt 100000 999999}}@example.com"
 }
 
+{{
+  test('HTTP 422', () => response.statusCode === 422);
+  // DB：未建立新會員（422 在 filter 層被攔截）
+  test('DB: idemEmail 仍只有一筆', () => dbCountByEmail(idemEmail) === 1);
+  // Redis：key 仍為 Completed(1)（未被覆寫）
+  const rec10 = redisGetKey(idemKey);
+  test('Redis: Status 仍為 Completed(1)', () => rec10 && rec10.Status === 1);
+}}
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Failed 狀態重播測試
-# 場景：第一次請求因業務錯誤失敗（409 DuplicateEmail），
-#       之後用同 key + 同 payload 再打，應直接重播 409，不重新執行業務邏輯
 # ──────────────────────────────────────────────────────────────────────────────
 
-### 冪等鍵 Failed 重播測試準備
+### Failed 重播測試準備
 {{
-  exports.failedKey = `idem-failed-${Date.now()}`;
-  exports.duplicateEmail = `dup-${Date.now()}@test.com`;
+  const ts3 = Date.now();
+  exports.failedKey      = `idem-failed-${ts3}`;
+  exports.preKey         = `idem-pre-${ts3}`;
+  exports.duplicateEmail = `dup-${ts3}@test.com`;
 }}
 
 ### 11. 先建立一位會員（佔用 email）
 # @description 建立一位會員，其 email 將在下一步被重複使用以觸發 409
 POST {{baseUrl}}/api/members
 Content-Type: application/json
-Idempotency-Key: idem-pre-{{$randomInt 100000 999999}}
+Idempotency-Key: {{preKey}}
 
 {
   "name": "Pre-existing Member",
   "email": "{{duplicateEmail}}"
 }
 
+{{
+  test('HTTP 201', () => response.statusCode === 201);
+  // DB：佔用 email 的會員已建立
+  test('DB: 會員已建立', () => dbCountByEmail(duplicateEmail) === 1);
+  // Redis：preKey Completed(1)
+  const rec11 = redisGetKey(preKey);
+  test('Redis: preKey Completed(1)', () => rec11 && rec11.Status === 1);
+}}
+
 ### 12. 冪等鍵 - 業務失敗首次請求（應 409 DuplicateEmail）
-# @description 用不同的 idempotency-key 嘗試建立相同 email 的會員，預期 409
-#              此次請求會被記錄為 Failed 狀態
+# @description 相同 email 觸發 DuplicateEmail，key 進入 Failed(2) 狀態
 POST {{baseUrl}}/api/members
 Content-Type: application/json
 Idempotency-Key: {{failedKey}}
@@ -129,10 +269,20 @@ Idempotency-Key: {{failedKey}}
   "name": "Duplicate Member",
   "email": "{{duplicateEmail}}"
 }
+
+{{
+  test('HTTP 409', () => response.statusCode === 409);
+  // DB：email 仍只有原本那一筆（未重複寫入）
+  test('DB: 未寫入重複會員（count=1）', () => dbCountByEmail(duplicateEmail) === 1);
+  // Redis：failedKey 存在，狀態 Failed(2)
+  const rec12 = redisGetKey(failedKey);
+  test('Redis: failedKey 存在',          () => rec12 !== null);
+  test('Redis: Status = Failed(2)',       () => rec12 && rec12.Status === 2);
+  test('Redis: ResponseStatusCode 409',  () => rec12 && rec12.ResponseStatusCode === 409);
+}}
 
 ### 13. 冪等鍵 - Failed 狀態重播（應 409 + X-Idempotent-Replay: true）
-# @description 用同一個 key + 同一個 payload 再打一次，
-#              預期直接重播快取的 409，不重新執行業務邏輯
+# @description 同 key + 同 payload，預期重播快取的 409，不重新執行業務邏輯
 POST {{baseUrl}}/api/members
 Content-Type: application/json
 Idempotency-Key: {{failedKey}}
@@ -141,3 +291,13 @@ Idempotency-Key: {{failedKey}}
   "name": "Duplicate Member",
   "email": "{{duplicateEmail}}"
 }
+
+{{
+  test('HTTP 409',                   () => response.statusCode === 409);
+  test('X-Idempotent-Replay: true',  () => response.headers['x-idempotent-replay'] === 'true');
+  // DB：email 仍只有原本一筆（重播未重新執行業務邏輯）
+  test('DB: 未再次寫入（count=1）',  () => dbCountByEmail(duplicateEmail) === 1);
+  // Redis：key 仍為 Failed(2)
+  const rec13 = redisGetKey(failedKey);
+  test('Redis: Status 仍為 Failed(2)', () => rec13 && rec13.Status === 2);
+}}
