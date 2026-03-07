@@ -12,53 +12,31 @@ public enum FailureCode
 
 public class Failure
 {
-    public static IReadOnlyDictionary<FailureCode, ObjectResult> Results = new Dictionary<FailureCode, ObjectResult>()
+    // 每次呼叫建立新的 ObjectResult 實例，避免跨請求共用可變物件造成 race condition
+    public static ObjectResult NewResult(FailureCode code) => code switch
     {
+        FailureCode.NotFoundIdempotentKey => new ObjectResult(new Failure
         {
-            FailureCode.NotFoundIdempotentKey, new ObjectResult(new Failure
-            {
-                Code = FailureCode.NotFoundIdempotentKey.ToString(),
-                Message = "Not found Idempotent key in header",
-                Data = new
-                {
-                    Property = "Idempotency-Key",
-                    Value = ""
-                },
-            })
-            {
-                StatusCode = (int)HttpStatusCode.BadRequest
-            }
-        },
+            Code = code.ToString(),
+            Message = "Not found Idempotent key in header",
+            Data = new { Property = "Idempotency-Key", Value = "" },
+        }) { StatusCode = (int)HttpStatusCode.BadRequest },
+
+        FailureCode.IdempotentKeyPayloadMismatch => new ObjectResult(new Failure
         {
-            FailureCode.IdempotentKeyPayloadMismatch, new ObjectResult(new Failure
-            {
-                Code = FailureCode.IdempotentKeyPayloadMismatch.ToString(),
-                Message = "Idempotency-Key is already used with a different request payload",
-                Data = new
-                {
-                    Property = "Idempotency-Key",
-                    Value = ""
-                },
-            })
-            {
-                StatusCode = (int)HttpStatusCode.UnprocessableEntity
-            }
-        },
+            Code = code.ToString(),
+            Message = "Idempotency-Key is already used with a different request payload",
+            Data = new { Property = "Idempotency-Key", Value = "" },
+        }) { StatusCode = (int)HttpStatusCode.UnprocessableEntity },
+
+        FailureCode.ConcurrentRequest => new ObjectResult(new Failure
         {
-            FailureCode.ConcurrentRequest, new ObjectResult(new Failure
-            {
-                Code = FailureCode.ConcurrentRequest.ToString(),
-                Message = "A request with the same Idempotency-Key is currently being processed",
-                Data = new
-                {
-                    Property = "Idempotency-Key",
-                    Value = ""
-                },
-            })
-            {
-                StatusCode = (int)HttpStatusCode.Conflict
-            }
-        },
+            Code = code.ToString(),
+            Message = "A request with the same Idempotency-Key is currently being processed",
+            Data = new { Property = "Idempotency-Key", Value = "" },
+        }) { StatusCode = (int)HttpStatusCode.Conflict },
+
+        _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
     };
 
     public string Code { get; set; }
