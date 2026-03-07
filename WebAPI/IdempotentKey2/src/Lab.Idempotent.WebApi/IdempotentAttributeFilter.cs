@@ -31,11 +31,11 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        var services = context.HttpContext.RequestServices;
-        var hybridCache = services.GetRequiredService<HybridCache>();
-        var defaultOptions = services.GetRequiredService<HybridCacheEntryOptions>();
-        var jsonOptions = services.GetRequiredService<JsonSerializerOptions>();
-        var logger = services.GetRequiredService<ILogger<IdempotentAttribute>>();
+        var provider = context.HttpContext.RequestServices;
+        var hybridCache = provider.GetRequiredService<HybridCache>();
+        var defaultOptions = provider.GetRequiredService<HybridCacheEntryOptions>();
+        var jsonOptions = provider.GetRequiredService<JsonSerializerOptions>();
+        var logger = provider.GetRequiredService<ILogger<IdempotentAttribute>>();
 
         var cacheOptions = _expireSeconds.HasValue
             ? new HybridCacheEntryOptions { Expiration = TimeSpan.FromSeconds(_expireSeconds.Value) }
@@ -55,7 +55,7 @@ public class IdempotentAttribute : Attribute, IAsyncActionFilter
         var lockExpiry = LockExpiry;
         var fingerprint = ComputeFingerprint(context.ActionArguments, jsonOptions);
 
-        var connectionMultiplexer = services.GetRequiredService<IConnectionMultiplexer>();
+        var connectionMultiplexer = provider.GetRequiredService<IConnectionMultiplexer>();
         var db = connectionMultiplexer.GetDatabase();
 
         bool nextInvoked = false;
