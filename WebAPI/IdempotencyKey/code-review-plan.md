@@ -42,7 +42,7 @@
 
 ---
 
-#### [ ] Task 1.1：建立統一的 Retryable Failure 機制（修復 #3 + #4）
+#### [x] Task 1.1：建立統一的 Retryable Failure 機制（修復 #3 + #4）
 
 **目標**：讓每個 `Failure` 帶有「是否應刪除 key 允許重試」的語意，由業務層決定，Filter 執行。
 
@@ -119,7 +119,10 @@ if (statusCode >= 400)
 
 ---
 
-#### [ ] Task 1.2：Redis `UpdateRecordAsync` 改用 Lua script（修復 #2）
+#### [~] Task 1.2：Redis `UpdateRecordAsync` 改用 Lua script（修復 #2）
+
+> **決策：暫緩。** 24hr TTL 下，TOCTOU 窗口（毫秒級）幾乎不可能觸發，生產風險可接受。  
+> 屬防禦性程式設計，非緊急修復。若未來支援短 TTL（分鐘級）再處理。
 
 **目標**：將三步驟的 GET TTL → GET value → SET value 改為原子操作，防止並發競爭。
 
