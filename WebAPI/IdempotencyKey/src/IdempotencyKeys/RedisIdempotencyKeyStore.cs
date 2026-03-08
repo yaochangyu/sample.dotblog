@@ -3,7 +3,10 @@ using StackExchange.Redis;
 
 namespace IdempotencyKey.WebApi.IdempotencyKeys;
 
-public class RedisIdempotencyKeyStore(IConnectionMultiplexer redis, ILogger<RedisIdempotencyKeyStore> logger)
+public class RedisIdempotencyKeyStore(
+    IConnectionMultiplexer redis,
+    JsonSerializerOptions jsonOptions,
+    ILogger<RedisIdempotencyKeyStore> logger)
     : IIdempotencyKeyStore
 {
     private static string RedisKey(string key) => $"idempotency:{key}";
@@ -24,7 +27,7 @@ public class RedisIdempotencyKeyStore(IConnectionMultiplexer redis, ILogger<Redi
             ExpiresAt = DateTimeOffset.UtcNow.Add(ttl)
         };
 
-        var value = JsonSerializer.Serialize(record);
+        var value = JsonSerializer.Serialize(record, jsonOptions);
 
         // SET NX EX：原子操作，只有 key 不存在時才寫入
         var acquired = await db.StringSetAsync(redisKey, value, ttl, When.NotExists);
@@ -54,7 +57,7 @@ public class RedisIdempotencyKeyStore(IConnectionMultiplexer redis, ILogger<Redi
             return new IdempotencyKeyRecord { Key = key, Status = IdempotencyKeyStatus.InProgress };
         }
 
-        return JsonSerializer.Deserialize<IdempotencyKeyRecord>((string)existing!);
+        return JsonSerializer.Deserialize<IdempotencyKeyRecord>((string)existing!, jsonOptions);
     }
 
     public async Task SetCompletedAsync(
@@ -87,14 +90,14 @@ public class RedisIdempotencyKeyStore(IConnectionMultiplexer redis, ILogger<Redi
         var existing = await db.StringGetAsync(redisKey);
         var record = existing.IsNullOrEmpty
             ? new IdempotencyKeyRecord { Key = key, CreatedAt = DateTimeOffset.UtcNow }
-            : JsonSerializer.Deserialize<IdempotencyKeyRecord>((string)existing!) ?? new IdempotencyKeyRecord { Key = key };
+            : JsonSerializer.Deserialize<IdempotencyKeyRecord>((string)existing!, jsonOptions) ?? new IdempotencyKeyRecord { Key = key };
 
         record.Status = status;
         record.ResponseStatusCode = statusCode;
         record.ResponseBody = body;
         record.ResponseContentType = contentType;
 
-        var value = JsonSerializer.Serialize(record);
+        var value = JsonSerializer.Serialize(record, jsonOptions);
         await db.StringSetAsync(redisKey, value, ttl ?? TimeSpan.FromHours(24));
     }
 }
