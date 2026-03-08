@@ -61,15 +61,13 @@ public static class DateTimeExtensions
     public static IEnumerable<(DateTime start, DateTime end)> Each(this DateTime inputStart, DateTime inputEnd,
         TimeSpan step)
     {
-        DateTime dtStart, dtEnd;
-        dtStart = inputStart;
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(step, TimeSpan.Zero, nameof(step));
+        DateTime dtStart = inputStart;
         while (dtStart < inputEnd)
         {
-            dtEnd = dtStart + step;
+            var dtEnd = dtStart + step;
             if (dtEnd > inputEnd)
-            {
                 dtEnd = inputEnd;
-            }
 
             yield return (dtStart, dtEnd);
 
