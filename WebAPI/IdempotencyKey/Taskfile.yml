@@ -45,9 +45,10 @@ tasks:
           echo "══════════════════════════════════════════════════════════════════"
 
   data:init:
-    desc: 執行 EF Core 資料庫遷移並初始化結構
+    desc: 還原套件並執行 EF Core 資料庫遷移（初始化結構）
     dir: src
     cmds:
+      - task: api:restore
       - dotnet ef database update
 
   data:clean:
@@ -84,10 +85,17 @@ tasks:
       - docker compose down -v
       - echo "容器已清除"
 
+  api:restore:
+    desc: 還原 NuGet 套件
+    dir: src
+    cmds:
+      - dotnet restore
+
   api:build:
     desc: 建置 API 專案（兩個 pod 啟動前須先建置，避免並行 build 競爭）
     dir: src
     cmds:
+      - task: api:restore
       - dotnet build --no-incremental -c Debug -v minimal
 
   api:start:
