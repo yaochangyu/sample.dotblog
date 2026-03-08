@@ -1,3 +1,4 @@
+using IdempotencyKey.WebApi;
 using IdempotencyKey.WebApi.IdempotencyKeys;
 using IdempotencyKey.WebApi.Members;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,9 @@ using StackExchange.Redis;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options => JsonSerializeFactory.Apply(options.JsonSerializerOptions))
+    ;
 
 builder.Services.AddDbContext<MemberDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -17,6 +20,7 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(
 builder.Services.AddScoped<IMemberRepository, EfMemberRepository>();
 builder.Services.AddScoped<MemberHandler>();
 builder.Services.AddSingleton<IIdempotencyKeyStore, RedisIdempotencyKeyStore>();
+builder.Services.AddSingleton(p => JsonSerializeFactory.DefaultOptions);
 
 var app = builder.Build();
 
