@@ -294,7 +294,9 @@ private static string ComputeFingerprint(ActionExecutingContext context)
 
 ---
 
-#### [ ] Task 3.3：`Idempotency-Key` header 格式驗證（修復 #8）
+#### [x] Task 3.3：`Idempotency-Key` header 格式驗證（修復 #8）
+
+> **決策**：格式驗證（UUID 等）交由調用端決定。Server 端僅實作長度上限（255 chars）防止儲存濫用。
 
 **目標**：拒絕不符合格式的 key，減少惡意或誤用的 key 佔用儲存空間。
 
