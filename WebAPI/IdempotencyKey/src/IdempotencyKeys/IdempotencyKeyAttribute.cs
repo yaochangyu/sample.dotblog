@@ -62,6 +62,15 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
             return;
         }
 
+        if (idempotencyKey.Length > 255)
+        {
+            context.Result = new BadRequestObjectResult(new
+            {
+                error = $"{IdempotencyKeyHeader} must not exceed 255 characters"
+            });
+            return;
+        }
+
         var fingerprint = ComputeFingerprint(context);
 
         // [1] 原子操作嘗試取得鎖（SET NX）
