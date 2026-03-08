@@ -264,7 +264,7 @@ public class IdempotencyKeyCleanupService(IServiceScopeFactory scopeFactory, ILo
 
 ---
 
-#### [ ] Task 3.2：Fingerprint 加入 HTTP Method + Path（修復 #7）
+#### [x] Task 3.2：Fingerprint 加入 HTTP Method + Path（修復 #7）
 
 **目標**：防止同一個 idempotency key 在不同端點之間誤判為 fingerprint 相符。
 

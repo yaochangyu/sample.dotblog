@@ -185,15 +185,23 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
         }
     }
 
-    /// <summary>使用 action arguments 計算 SHA-256 fingerprint，避免重新讀取已消費的 request body stream。</summary>
+    /// <summary>使用 HTTP Method、Path 與 action arguments 計算 SHA-256 fingerprint，防止相同 key 跨端點誤判相符。</summary>
     private static string ComputeFingerprint(ActionExecutingContext context)
     {
+        var request = context.HttpContext.Request;
         var args = context.ActionArguments
             .Where(kv => kv.Value is not CancellationToken)
             .OrderBy(kv => kv.Key)
             .ToDictionary(kv => kv.Key, kv => kv.Value);
 
-        var json = JsonSerializer.Serialize(args);
+        var input = new
+        {
+            Method = request.Method,
+            Path = request.Path.Value,
+            Args = args
+        };
+
+        var json = JsonSerializer.Serialize(input);
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(json));
         return Convert.ToHexString(hash).ToLowerInvariant();
     }
