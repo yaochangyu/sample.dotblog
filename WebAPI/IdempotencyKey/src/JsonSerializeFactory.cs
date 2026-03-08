@@ -41,7 +41,7 @@ public class DateTimeOffsetJsonConverter : JsonConverter<DateTimeOffset>
         var raw = reader.GetString();
         return raw is null
             ? default
-            : DateTimeOffset.Parse(raw, DateTimeExtensions.DefaultDateTimeCultureInfo, DateTimeStyles.AdjustToUniversal);
+            : DateTimeOffset.Parse(raw, DateTimeExtensions.DefaultDateTimeCultureInfo);
     }
 
     public override void Write(
