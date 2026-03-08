@@ -202,7 +202,9 @@ private static bool IsUniqueConstraintViolation(DbUpdateException ex)
 
 ---
 
-#### [ ] Task 2.2：EfIdempotencyKeyStore 設定化（修復 #1 + #9）
+#### [~] Task 2.2：EfIdempotencyKeyStore 設定化（修復 #1 + #9）
+
+> **決策：擱置。** 目前 Redis 為主要 store，EF store 尚未進入生產使用，設定化需求不急迫。
 
 **目標**：透過 `appsettings.json` 決定使用哪種 Store，消除「死碼 + 語意衝突」問題。
 
@@ -234,7 +236,9 @@ else
 
 ---
 
-#### [ ] Task 3.1：EF Store 增加清理背景服務（修復 #6）
+#### [~] Task 3.1：EF Store 增加清理背景服務（修復 #6）
+
+> **決策：擱置。** 依賴 Task 2.2，且目前未使用 EF store，無清理需求。
 
 **目標**：定期清除 `IdempotencyKeys` 資料表中已過期的紀錄。
 
