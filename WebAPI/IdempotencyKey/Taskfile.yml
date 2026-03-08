@@ -101,6 +101,7 @@ tasks:
   api:start:
     desc: 在背景啟動 Pod1（port 5048，--no-build）
     cmds:
+      - task: api:stop
       - |
         dotnet run --project src --no-build --urls http://localhost:5048 > .api.log 2>&1 &
         echo $! > {{.API_PID_FILE}}
@@ -109,6 +110,7 @@ tasks:
   api:start-pod2:
     desc: 在背景啟動 Pod2（port 5049，--no-build，模擬多 pod 部署），共用同一個 Redis
     cmds:
+      - task: api:stop-pod2
       - |
         dotnet run --project src --no-build --urls http://localhost:5049 > .api2.log 2>&1 &
         echo $! > {{.POD2_PID_FILE}}
