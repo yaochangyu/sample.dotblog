@@ -38,10 +38,10 @@ public class DateTimeOffsetJsonConverter : JsonConverter<DateTimeOffset>
         Type typeToConvert,
         JsonSerializerOptions options)
     {
-        return DateTimeOffset.Parse(
-            reader.GetString(),
-            DateTimeExtensions.DefaultDateTimeCultureInfo,
-            DateTimeStyles.AdjustToUniversal);
+        var raw = reader.GetString();
+        return raw is null
+            ? default
+            : DateTimeOffset.Parse(raw, DateTimeExtensions.DefaultDateTimeCultureInfo, DateTimeStyles.AdjustToUniversal);
     }
 
     public override void Write(
