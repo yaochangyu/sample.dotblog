@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Text.Encodings.Web;
+﻿using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -28,60 +27,5 @@ public static class JsonSerializeFactory
         options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         options.Converters.Add(new JsonStringEnumConverter());
         options.Converters.Add(new DateTimeOffsetJsonConverter());
-    }
-}
-
-public class DateTimeOffsetJsonConverter : JsonConverter<DateTimeOffset>
-{
-    public override DateTimeOffset Read(
-        ref Utf8JsonReader reader,
-        Type typeToConvert,
-        JsonSerializerOptions options)
-    {
-        var raw = reader.GetString();
-        return raw is null
-            ? default
-            : DateTimeOffset.Parse(raw, DateTimeExtensions.DefaultDateTimeCultureInfo);
-    }
-
-    public override void Write(
-        Utf8JsonWriter writer,
-        DateTimeOffset dateTimeValue,
-        JsonSerializerOptions options)
-    {
-        writer.WriteStringValue(dateTimeValue.ToUtcString());
-    }
-}
-
-public static class DateTimeExtensions
-{
-    public const string DefaultDateTimeFormat = "o";
-    public static readonly CultureInfo DefaultDateTimeCultureInfo = CultureInfo.InvariantCulture;
-
-    public static IEnumerable<(DateTime start, DateTime end)> Each(this DateTime inputStart, DateTime inputEnd,
-        TimeSpan step)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(step, TimeSpan.Zero, nameof(step));
-        DateTime dtStart = inputStart;
-        while (dtStart < inputEnd)
-        {
-            var dtEnd = dtStart + step;
-            if (dtEnd > inputEnd)
-                dtEnd = inputEnd;
-
-            yield return (dtStart, dtEnd);
-
-            dtStart += step;
-        }
-    }
-
-    public static string ToUtcString(this DateTimeOffset dto)
-    {
-        return dto.UtcDateTime.ToString(DefaultDateTimeFormat, DefaultDateTimeCultureInfo);
-    }
-
-    public static string ToUtcString(this DateTime dt)
-    {
-        return dt.ToString(DefaultDateTimeFormat, DefaultDateTimeCultureInfo);
     }
 }
