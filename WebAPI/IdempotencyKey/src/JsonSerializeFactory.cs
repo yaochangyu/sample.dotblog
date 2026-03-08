@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace IdempotencyKey.WebApi;
 
-public class JsonSerializeFactory
+public static class JsonSerializeFactory
 {
     private static readonly Lazy<JsonSerializerOptions> s_defaultOptionLazy = new(CreateDefaultOptions);
 
