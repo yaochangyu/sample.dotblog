@@ -11,14 +11,14 @@ public static class JsonSerializeFactory
 
     public static JsonSerializerOptions DefaultOptions => s_defaultOptionLazy.Value;
 
-    public static JsonSerializerOptions CreateDefaultOptions()
+    private static JsonSerializerOptions CreateDefaultOptions()
     {
         var options = new JsonSerializerOptions();
         Apply(options);
         return options;
     }
 
-    public static JsonSerializerOptions Apply(JsonSerializerOptions options)
+    public static void Apply(JsonSerializerOptions options)
     {
         options.MaxDepth = 20;
         options.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
@@ -28,7 +28,6 @@ public static class JsonSerializeFactory
         options.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         options.Converters.Add(new JsonStringEnumConverter());
         options.Converters.Add(new DateTimeOffsetJsonConverter());
-        return options;
     }
 }
 
