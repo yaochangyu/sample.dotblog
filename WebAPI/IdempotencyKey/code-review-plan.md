@@ -164,7 +164,7 @@ return updated
 
 ---
 
-#### [ ] Task 2.1：移除 Check-then-Act 反模式（修復 #5）
+#### [x] Task 2.1：移除 Check-then-Act 反模式（修復 #5）
 
 **目標**：刪除 `MemberHandler` 的 pre-check，改為在 Repository 層依賴 DB unique constraint，並正確將 `23505` 例外轉換為 `DuplicateEmail`。
 
