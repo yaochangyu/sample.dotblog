@@ -159,6 +159,128 @@ tasks:
     cmds:
       - npx --yes httpyac send {{.HTTP_FILE}} --all --output short
 
+  test:stress:all:
+    desc: 啟動容器 → 遷移 → 建置 → 啟動 Pod1 + Pod2 → 執行壓測 → 清除（一鍵完整執行）
+    cmds:
+      - task: docker:up
+      - task: migrate
+      - task: api:build
+      - task: api:start
+      - task: api:start-pod2
+      - defer: { task: api:stop }
+      - defer: { task: api:stop-pod2 }
+      - defer: { task: docker:down }
+      - task: api:wait
+      - task: api:wait-pod2
+      - task: data:clean
+      - task: test:stress
+
+  test:stress:
+    desc: |
+      50 RPS 壓力測試（需先啟動 Pod1 + Pod2）
+      以相同 Idempotency-Key 同時打兩個 Pod，驗證：
+        1. 不重複寫入（全部請求最多只創建 1 筆 Member）
+        2. 回應碼分佈正常（201 / 409 InProgress / 201 Replay）
+        3. 高並發下有機會觸發 UpdateRecordAsync 的 TOCTOU 競爭條件
+    cmds:
+      - cmd: |
+          KEY="stress-$(date +%s)"
+          R=$RANDOM
+          PAYLOAD="{\"name\":\"StressMember-$R\",\"email\":\"stress-$R@test.com\"}"
+          TOTAL=100
+          RATE_INTERVAL=0.02
+
+          echo ""
+          echo "╔══════════════════════════════════════════════════════════════════╗"
+          echo "║  50 RPS 壓力測試                                                 ║"
+          printf "║  Key   : %-55s║\n" "$KEY"
+          printf "║  請求數  : %-4s（50 RPS × 2s，交替送往 Pod1 / Pod2）         ║\n" "$TOTAL"
+          echo "╚══════════════════════════════════════════════════════════════════╝"
+          echo ""
+
+          rm -f /tmp/stress_*.json /tmp/stress_*.code
+
+          for i in $(seq 1 $TOTAL); do
+            if [ $((i % 2)) -eq 0 ]; then
+              TARGET="{{.API_URL}}"
+            else
+              TARGET="{{.POD2_URL}}"
+            fi
+            curl -s \
+              -o /tmp/stress_$i.json \
+              -w "%{http_code}" \
+              -X POST $TARGET/api/members \
+              -H "Content-Type: application/json" \
+              -H "Idempotency-Key: $KEY" \
+              -d "$PAYLOAD" > /tmp/stress_$i.code 2>&1 &
+            sleep $RATE_INTERVAL
+          done
+
+          echo "等待所有請求完成..."
+          wait || true
+          echo ""
+
+          C201=0; C409=0; C422=0; COTHER=0
+          MEMBER_IDS=""
+
+          for i in $(seq 1 $TOTAL); do
+            CODE=$(cat /tmp/stress_$i.code 2>/dev/null | tr -d '[:space:]')
+            BODY=$(cat /tmp/stress_$i.json 2>/dev/null)
+            case "$CODE" in
+              201)
+                C201=$((C201+1))
+                ID=$(echo "$BODY" | grep -oi '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+                if [ -n "$ID" ]; then MEMBER_IDS="$MEMBER_IDS $ID"; fi
+                ;;
+              409) C409=$((C409+1)) ;;
+              422) C422=$((C422+1)) ;;
+              *)   COTHER=$((COTHER+1)); echo "  [WARN] 請求 $i → HTTP $CODE: $BODY" ;;
+            esac
+          done
+
+          UNIQUE_IDS=$(echo "$MEMBER_IDS" | tr ' ' '\n' | sort -u | awk 'NF{c++} END{print c+0}')
+
+          echo "══════════════════════════════════════════════════════════════════"
+          echo "  統計結果（共 $TOTAL 個請求）"
+          echo "══════════════════════════════════════════════════════════════════"
+          echo "  HTTP 201（創建 / Replay） : $C201"
+          echo "  HTTP 409（InProgress 衝突）: $C409"
+          echo "  HTTP 422（Fingerprint 不符）: $C422"
+          echo "  其他                        : $COTHER"
+          echo ""
+          echo "  唯一 Member ID 數: $UNIQUE_IDS"
+          echo ""
+
+          REDIS_STATE=$(docker exec idempotency-redis redis-cli get "idempotency:$KEY" 2>/dev/null \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'status={d[\"status\"]}, responseStatusCode={d.get(\"responseStatusCode\",\"N/A\")}')" 2>/dev/null \
+            || echo "無法取得")
+          echo "  Redis Key 最終狀態: $REDIS_STATE"
+          echo ""
+
+          FAIL=0
+          if [ "$UNIQUE_IDS" -gt 1 ]; then
+            echo "  ❌ FAIL：發現 $UNIQUE_IDS 個不同 Member ID → 資料重複寫入！"
+            FAIL=1
+          fi
+          if [ "$C201" -eq 0 ]; then
+            echo "  ❌ FAIL：沒有任何請求成功（201 = 0）"
+            FAIL=1
+          fi
+          if [ "$C422" -gt 0 ]; then
+            echo "  ⚠️  WARNING：出現 $C422 個 422 Fingerprint Mismatch"
+            echo "     → 可能是 TOCTOU 競爭條件造成 Key 狀態被異常覆寫"
+          fi
+          if [ "$COTHER" -gt 0 ]; then
+            echo "  ❌ FAIL：出現 $COTHER 個非預期回應碼"
+            FAIL=1
+          fi
+
+          if [ "$FAIL" -eq 0 ]; then
+            echo "  ✅ PASS：$TOTAL 個請求中只有 1 筆 Member 被創建，冪等性正常"
+          else
+            exit 1
+          fi
+
   test:distributed:
     desc: 分散式鎖整合測試（需先啟動 Pod1 + Pod2）
     cmds:
