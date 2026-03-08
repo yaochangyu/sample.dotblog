@@ -64,6 +64,15 @@ public class EfMemberRepository(MemberDbContext db) : IMemberRepository
             await db.SaveChangesAsync(ct);
             return Result.Success<Member, Failure>(member);
         }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            return Result.Failure<Member, Failure>(new Failure
+            {
+                Code = nameof(FailureCode.DuplicateEmail),
+                Message = $"Email '{member.Email}' 已被使用",
+                IsRetryable = true
+            });
+        }
         catch (DbUpdateConcurrencyException ex)
         {
             return Result.Failure<Member, Failure>(new Failure
@@ -101,6 +110,15 @@ public class EfMemberRepository(MemberDbContext db) : IMemberRepository
             member.Email = request.Email;
             await db.SaveChangesAsync(ct);
             return Result.Success<Member, Failure>(member);
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            return Result.Failure<Member, Failure>(new Failure
+            {
+                Code = nameof(FailureCode.DuplicateEmail),
+                Message = $"Email '{request.Email}' 已被使用",
+                IsRetryable = true
+            });
         }
         catch (DbUpdateConcurrencyException ex)
         {
@@ -149,5 +167,8 @@ public class EfMemberRepository(MemberDbContext db) : IMemberRepository
             });
         }
     }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+        => ex.InnerException is Npgsql.PostgresException { SqlState: "23505" };
 }
 
