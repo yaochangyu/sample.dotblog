@@ -9,10 +9,10 @@ vars:
 
 tasks:
   test:all:
-    desc: 啟動容器 → 遷移 → 建置 → 啟動 Pod1 + Pod2 → 執行所有測試 → 清除（一鍵完整執行）
+    desc: 啟動容器 → 初始化 → 建置 → 啟動 Pod1 + Pod2 → 執行所有測試 → 清除（一鍵完整執行）
     cmds:
       - task: docker:up
-      - task: migrate
+      - task: data:init
       - task: api:build
       - task: api:start
       - task: api:start-pod2
@@ -43,6 +43,12 @@ tasks:
           echo "══════════════════════════════════════════════════════════════════"
           echo "  ✅ 全部測試完成"
           echo "══════════════════════════════════════════════════════════════════"
+
+  data:init:
+    desc: 執行 EF Core 資料庫遷移並初始化結構
+    dir: src
+    cmds:
+      - dotnet ef database update
 
   data:clean:
     desc: 清除測試資料（截斷 Members 資料表 + 刪除 Redis idempotency keys）
@@ -77,12 +83,6 @@ tasks:
     cmds:
       - docker compose down -v
       - echo "容器已清除"
-
-  migrate:
-    desc: 執行 EF Core 資料庫遷移
-    dir: src
-    cmds:
-      - dotnet ef database update
 
   api:build:
     desc: 建置 API 專案（兩個 pod 啟動前須先建置，避免並行 build 競爭）
@@ -160,10 +160,10 @@ tasks:
       - npx --yes httpyac send {{.HTTP_FILE}} --all --output short
 
   test:stress:all:
-    desc: 啟動容器 → 遷移 → 建置 → 啟動 Pod1 + Pod2 → 執行壓測 → 清除（一鍵完整執行）
+    desc: 啟動容器 → 初始化 → 建置 → 啟動 Pod1 + Pod2 → 執行壓測 → 清除（一鍵完整執行）
     cmds:
       - task: docker:up
-      - task: migrate
+      - task: data:init
       - task: api:build
       - task: api:start
       - task: api:start-pod2
