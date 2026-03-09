@@ -153,9 +153,11 @@ tasks:
       - |
         if [ -f {{.API_PID_FILE}} ]; then
           PID=$(cat {{.API_PID_FILE}})
-          kill $PID 2>/dev/null && echo "Pod1 已停止（PID: $PID）" || true
+          kill -9 $PID 2>/dev/null && echo "Pod1 已停止（PID: $PID）" || true
           rm -f {{.API_PID_FILE}}
         fi
+        # 保險：確保沒有殘留程序佔用 5048
+        fuser -k 5048/tcp 2>/dev/null || true
 
   api:stop-pod2:
     desc: 停止 Pod2
@@ -163,9 +165,11 @@ tasks:
       - |
         if [ -f {{.POD2_PID_FILE}} ]; then
           PID=$(cat {{.POD2_PID_FILE}})
-          kill $PID 2>/dev/null && echo "Pod2 已停止（PID: $PID）" || true
+          kill -9 $PID 2>/dev/null && echo "Pod2 已停止（PID: $PID）" || true
           rm -f {{.POD2_PID_FILE}}
         fi
+        # 保險：確保沒有殘留程序佔用 5049
+        fuser -k 5049/tcp 2>/dev/null || true
 
   test:
     desc: 執行 .http 檔案的 API 測試
