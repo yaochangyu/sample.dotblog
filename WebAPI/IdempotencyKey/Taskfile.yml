@@ -96,6 +96,8 @@ tasks:
     desc: 建置 API 專案（兩個 pod 啟動前須先建置，避免並行 build 競爭）
     dir: src
     cmds:
+      - task: :api:stop
+      - task: :api:stop-pod2
       - task: api:restore
       - dotnet build --no-incremental -c Debug -v minimal
 
