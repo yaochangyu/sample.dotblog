@@ -14,9 +14,6 @@ public interface IIdempotencyKeyStore
     Task SetCompletedAsync(string key, int statusCode, string? body, string? contentType,
         int ttlHours, CancellationToken ct = default);
 
-    Task SetFailedAsync(string key, int statusCode, string? body, string? contentType,
-        int ttlHours, CancellationToken ct = default);
-
     /// <summary>刪除 key，讓客戶端可用相同 key 重試（暫時性失敗時使用）</summary>
     Task DeleteAsync(string key, CancellationToken ct = default);
 }
