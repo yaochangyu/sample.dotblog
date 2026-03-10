@@ -67,12 +67,6 @@ public class RedisIdempotencyKeyStore(
         await UpdateRecordAsync(key, statusCode, body, contentType, IdempotencyKeyStatus.Completed, ttlHours);
     }
 
-    public async Task SetFailedAsync(
-        string key, int statusCode, string? body, string? contentType, int ttlHours, CancellationToken ct = default)
-    {
-        await UpdateRecordAsync(key, statusCode, body, contentType, IdempotencyKeyStatus.Failed, ttlHours);
-    }
-
     public async Task DeleteAsync(string key, CancellationToken ct = default)
     {
         var db = redis.GetDatabase();
