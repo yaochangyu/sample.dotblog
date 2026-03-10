@@ -112,6 +112,7 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
                 return;
 
             case IdempotencyKeyStatus.Completed:
+            case IdempotencyKeyStatus.Failed:
                 // [3] 驗證 request fingerprint，防止相同 key 搭配不同 payload
                 if (existing.RequestFingerprint != fingerprint)
                 {
@@ -182,9 +183,18 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
         }
 
         // 成功或確定性失敗（含副作用的業務邏輯錯誤）：快取回應
-        logger.LogInformation("Caching response (HTTP {StatusCode}) for idempotency key {Key}",
-            statusCode, idempotencyKey);
-        await store.SetCompletedAsync(idempotencyKey, statusCode, body, contentType, ttlHours, ct);
+        if (statusCode >= 400)
+        {
+            logger.LogInformation("Caching failed response (HTTP {StatusCode}) for idempotency key {Key}",
+                statusCode, idempotencyKey);
+            await store.SetFailedAsync(idempotencyKey, statusCode, body, contentType, ttlHours, ct);
+        }
+        else
+        {
+            logger.LogInformation("Caching successful response (HTTP {StatusCode}) for idempotency key {Key}",
+                statusCode, idempotencyKey);
+            await store.SetCompletedAsync(idempotencyKey, statusCode, body, contentType, ttlHours, ct);
+        }
     }
 
     /// <summary>使用 HTTP Method、Path 與 action arguments 計算 SHA-256 fingerprint，防止相同 key 跨端點誤判相符。</summary>
