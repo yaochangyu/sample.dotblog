@@ -47,18 +47,6 @@ public class EfIdempotencyKeyStore(MemberDbContext db) : IIdempotencyKeyStore
                 .SetProperty(k => k.ResponseContentType, contentType), ct);
     }
 
-    public async Task SetFailedAsync(
-        string key, int statusCode, string? body, string? contentType, int ttlHours, CancellationToken ct = default)
-    {
-        await db.IdempotencyKeys
-            .Where(k => k.Key == key)
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(k => k.Status, IdempotencyKeyStatus.Failed)
-                .SetProperty(k => k.ResponseStatusCode, statusCode)
-                .SetProperty(k => k.ResponseBody, body)
-                .SetProperty(k => k.ResponseContentType, contentType), ct);
-    }
-
     public async Task DeleteAsync(string key, CancellationToken ct = default)
     {
         await db.IdempotencyKeys
