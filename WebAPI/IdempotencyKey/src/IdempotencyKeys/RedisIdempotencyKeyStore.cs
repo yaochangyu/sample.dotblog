@@ -12,11 +12,12 @@ public class RedisIdempotencyKeyStore(
     private static string RedisKey(string key) => $"idempotency:{key}";
 
     public async Task<IdempotencyKeyRecord?> TryAcquireAsync(
-        string key, string fingerprint, int ttlHours, CancellationToken ct = default)
+        string key, string fingerprint, int ttlHours, int lockTtlSeconds = 30, CancellationToken ct = default)
     {
         var db = redis.GetDatabase();
         var redisKey = RedisKey(key);
-        var ttl = TimeSpan.FromHours(ttlHours);
+        var lockTtl = TimeSpan.FromSeconds(lockTtlSeconds);
+        var fullTtl = TimeSpan.FromHours(ttlHours);
 
         var record = new IdempotencyKeyRecord
         {
@@ -24,17 +25,17 @@ public class RedisIdempotencyKeyStore(
             Status = IdempotencyKeyStatus.InProgress,
             RequestFingerprint = fingerprint,
             CreatedAt = DateTimeOffset.UtcNow,
-            ExpiresAt = DateTimeOffset.UtcNow.Add(ttl)
+            ExpiresAt = DateTimeOffset.UtcNow.Add(fullTtl)
         };
 
         var value = JsonSerializer.Serialize(record, jsonOptions);
 
-        // SET NX EX：原子操作，只有 key 不存在時才寫入
-        var acquired = await db.StringSetAsync(redisKey, value, ttl, When.NotExists);
+        // SET NX EX：原子操作，只有 key 不存在時才寫入，使用短 TTL 作為鎖定期
+        var acquired = await db.StringSetAsync(redisKey, value, lockTtl, When.NotExists);
 
         if (acquired)
         {
-            logger.LogDebug("Redis SET NX succeeded for key {Key}", key);
+            logger.LogDebug("Redis SET NX succeeded for key {Key} (lock TTL: {LockTtl}s)", key, lockTtlSeconds);
             return null; // 成功取得鎖
         }
 
@@ -44,7 +45,7 @@ public class RedisIdempotencyKeyStore(
         {
             // 極端情況：SET NX 失敗但 GET 取不到（key 在這之間過期），視為可重試
             logger.LogWarning("Redis key {Key} disappeared between SET NX and GET, retrying acquire", key);
-            acquired = await db.StringSetAsync(redisKey, value, ttl, When.NotExists);
+            acquired = await db.StringSetAsync(redisKey, value, lockTtl, When.NotExists);
             if (acquired)
                 return null;
 
@@ -61,15 +62,15 @@ public class RedisIdempotencyKeyStore(
     }
 
     public async Task SetCompletedAsync(
-        string key, int statusCode, string? body, string? contentType, CancellationToken ct = default)
+        string key, int statusCode, string? body, string? contentType, int ttlHours, CancellationToken ct = default)
     {
-        await UpdateRecordAsync(key, statusCode, body, contentType, IdempotencyKeyStatus.Completed);
+        await UpdateRecordAsync(key, statusCode, body, contentType, IdempotencyKeyStatus.Completed, ttlHours);
     }
 
     public async Task SetFailedAsync(
-        string key, int statusCode, string? body, string? contentType, CancellationToken ct = default)
+        string key, int statusCode, string? body, string? contentType, int ttlHours, CancellationToken ct = default)
     {
-        await UpdateRecordAsync(key, statusCode, body, contentType, IdempotencyKeyStatus.Failed);
+        await UpdateRecordAsync(key, statusCode, body, contentType, IdempotencyKeyStatus.Failed, ttlHours);
     }
 
     public async Task DeleteAsync(string key, CancellationToken ct = default)
@@ -79,13 +80,11 @@ public class RedisIdempotencyKeyStore(
     }
 
     private async Task UpdateRecordAsync(
-        string key, int statusCode, string? body, string? contentType, IdempotencyKeyStatus status)
+        string key, int statusCode, string? body, string? contentType, IdempotencyKeyStatus status, int ttlHours)
     {
         var db = redis.GetDatabase();
         var redisKey = RedisKey(key);
-
-        // 保留原本的 TTL
-        var ttl = await db.KeyTimeToLiveAsync(redisKey);
+        var fullTtl = TimeSpan.FromHours(ttlHours);
 
         var existing = await db.StringGetAsync(redisKey);
         var record = existing.IsNullOrEmpty
@@ -97,7 +96,8 @@ public class RedisIdempotencyKeyStore(
         record.ResponseBody = body;
         record.ResponseContentType = contentType;
 
+        // 完成後換成完整的長 TTL，覆蓋原本的短鎖定 TTL
         var value = JsonSerializer.Serialize(record, jsonOptions);
-        await db.StringSetAsync(redisKey, value, ttl ?? TimeSpan.FromHours(24));
+        await db.StringSetAsync(redisKey, value, fullTtl);
     }
 }
