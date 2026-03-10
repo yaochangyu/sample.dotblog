@@ -6,7 +6,7 @@ namespace IdempotencyKey.WebApi.IdempotencyKeys;
 public class EfIdempotencyKeyStore(MemberDbContext db) : IIdempotencyKeyStore
 {
     public async Task<IdempotencyKeyRecord?> TryAcquireAsync(
-        string key, string fingerprint, int ttlHours, CancellationToken ct = default)
+        string key, string fingerprint, int ttlHours, int lockTtlSeconds = 30, CancellationToken ct = default)
     {
         var now = DateTimeOffset.UtcNow;
         var record = new IdempotencyKeyRecord
@@ -36,7 +36,7 @@ public class EfIdempotencyKeyStore(MemberDbContext db) : IIdempotencyKeyStore
     }
 
     public async Task SetCompletedAsync(
-        string key, int statusCode, string? body, string? contentType, CancellationToken ct = default)
+        string key, int statusCode, string? body, string? contentType, int ttlHours, CancellationToken ct = default)
     {
         await db.IdempotencyKeys
             .Where(k => k.Key == key)
@@ -48,7 +48,7 @@ public class EfIdempotencyKeyStore(MemberDbContext db) : IIdempotencyKeyStore
     }
 
     public async Task SetFailedAsync(
-        string key, int statusCode, string? body, string? contentType, CancellationToken ct = default)
+        string key, int statusCode, string? body, string? contentType, int ttlHours, CancellationToken ct = default)
     {
         await db.IdempotencyKeys
             .Where(k => k.Key == key)

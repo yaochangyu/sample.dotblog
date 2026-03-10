@@ -28,6 +28,9 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
     /// <summary>Idempotency key 的保留時間（小時），預設 24 小時。</summary>
     public int TtlHours { get; set; } = 24;
 
+    /// <summary>InProgress 狀態的鎖定時間（秒），系統崩潰後自動釋放。預設 30 秒。</summary>
+    public int LockTtlSeconds { get; set; } = 30;
+
     /// <summary>若為 true，缺少 Idempotency-Key header 時回傳 400；否則略過冪等保護。預設 true。</summary>
     public bool Required { get; set; } = true;
 
@@ -73,8 +76,8 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
 
         var fingerprint = ComputeFingerprint(context);
 
-        // [1] 原子操作嘗試取得鎖（SET NX）
-        var existing = await store.TryAcquireAsync(idempotencyKey, fingerprint, TtlHours,
+        // [1] 原子操作嘗試取得鎖（SET NX），使用短 TTL 防止系統崩潰後鎖永久占用
+        var existing = await store.TryAcquireAsync(idempotencyKey, fingerprint, TtlHours, LockTtlSeconds,
             context.HttpContext.RequestAborted);
 
         if (existing is not null)
@@ -89,7 +92,7 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
 
         var executedContext = await next();
 
-        await HandleActionResult(executedContext, idempotencyKey, store, logger, context.HttpContext.RequestAborted);
+        await HandleActionResult(executedContext, idempotencyKey, TtlHours, store, logger, context.HttpContext.RequestAborted);
     }
 
     private static void HandleExistingKey(
@@ -140,7 +143,7 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
     }
 
     private static async Task HandleActionResult(
-        ActionExecutedContext executedContext, string idempotencyKey,
+        ActionExecutedContext executedContext, string idempotencyKey, int ttlHours,
         IIdempotencyKeyStore store, ILogger logger, CancellationToken ct)
     {
         // 若發生未處理的例外，刪除 key 讓客戶端可以重試
@@ -184,13 +187,13 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
         {
             logger.LogInformation("Caching failed response (HTTP {StatusCode}) for idempotency key {Key}",
                 statusCode, idempotencyKey);
-            await store.SetFailedAsync(idempotencyKey, statusCode, body, contentType, ct);
+            await store.SetFailedAsync(idempotencyKey, statusCode, body, contentType, ttlHours, ct);
         }
         else
         {
             logger.LogInformation("Caching successful response (HTTP {StatusCode}) for idempotency key {Key}",
                 statusCode, idempotencyKey);
-            await store.SetCompletedAsync(idempotencyKey, statusCode, body, contentType, ct);
+            await store.SetCompletedAsync(idempotencyKey, statusCode, body, contentType, ttlHours, ct);
         }
     }
 
