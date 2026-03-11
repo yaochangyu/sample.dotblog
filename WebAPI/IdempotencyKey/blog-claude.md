@@ -352,7 +352,7 @@ delay = min(base × 2^attempt + jitter, 30s)
 
 ## 開發環境
 
-- .NET 9
+- .NET 10
 - Redis 7（`docker compose up -d`）
 - PostgreSQL 17（EF Core 儲存層替代方案）
 - [Task](https://taskfile.dev/)（一鍵執行測試）
