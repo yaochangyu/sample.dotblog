@@ -34,6 +34,10 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
     /// <summary>若為 true，缺少 Idempotency-Key header 時回傳 400；否則略過冪等保護。預設 true。</summary>
     public bool Required { get; set; } = true;
 
+    /// <summary>計算 fingerprint 時要排除的欄位名稱（大小寫不敏感），適合排除每次重試可能變動但不影響業務語意的欄位，例如 timestamp、nonce。</summary>
+    /// <example>[IdempotencyKey(ExcludeFields = ["clientTimestamp", "requestNonce"])]</example>
+    public string[] ExcludeFields { get; set; } = [];
+
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
         var services = context.HttpContext.RequestServices;
@@ -74,7 +78,7 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
             return;
         }
 
-        var fingerprint = ComputeFingerprint(context);
+        var fingerprint = ComputeFingerprint(context, ExcludeFields);
 
         // [1] 原子操作嘗試取得鎖（SET NX），使用短 TTL 防止系統崩潰後鎖永久占用
         var existing = await store.TryAcquireAsync(idempotencyKey, fingerprint, TtlHours, LockTtlSeconds,
@@ -198,7 +202,7 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
     }
 
     /// <summary>使用 HTTP Method、Path 與 action arguments 計算 SHA-256 fingerprint，防止相同 key 跨端點誤判相符。</summary>
-    private static string ComputeFingerprint(ActionExecutingContext context)
+    private static string ComputeFingerprint(ActionExecutingContext context, string[] excludeFields)
     {
         var request = context.HttpContext.Request;
         var args = context.ActionArguments
@@ -214,8 +218,33 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
         };
 
         var json = JsonSerializer.Serialize(input);
+
+        if (excludeFields.Length > 0)
+        {
+            var excluded = new HashSet<string>(excludeFields, StringComparer.OrdinalIgnoreCase);
+            using var doc = JsonDocument.Parse(json);
+            var filtered = FilterJsonElement(doc.RootElement, excluded);
+            json = JsonSerializer.Serialize(filtered);
+        }
+
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(json));
         return Convert.ToHexString(hash).ToLowerInvariant();
+    }
+
+    /// <summary>遞迴過濾 JSON 物件中指定的欄位（含巢狀物件）。</summary>
+    private static object? FilterJsonElement(JsonElement element, HashSet<string> excluded)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.Object => element.EnumerateObject()
+                .Where(p => !excluded.Contains(p.Name))
+                .OrderBy(p => p.Name)
+                .ToDictionary(p => p.Name, p => FilterJsonElement(p.Value, excluded)),
+            JsonValueKind.Array => element.EnumerateArray()
+                .Select(e => FilterJsonElement(e, excluded))
+                .ToArray(),
+            _ => JsonSerializer.Deserialize<object>(element.GetRawText())
+        };
     }
 
     private static (int statusCode, string? body, string? contentType) CaptureResult(
