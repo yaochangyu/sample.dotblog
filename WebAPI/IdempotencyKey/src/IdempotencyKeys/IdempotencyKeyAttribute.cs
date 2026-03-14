@@ -78,7 +78,8 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
             return;
         }
 
-        var fingerprint = ComputeFingerprint(context, ExcludeFields);
+        var jsonOptions = services.GetRequiredService<IOptions<JsonOptions>>().Value.JsonSerializerOptions;
+        var fingerprint = ComputeFingerprint(context, ExcludeFields, jsonOptions);
 
         // [1] 原子操作嘗試取得鎖（SET NX），使用短 TTL 防止系統崩潰後鎖永久占用
         var existing = await store.TryAcquireAsync(idempotencyKey, fingerprint, TtlHours, LockTtlSeconds,
@@ -202,7 +203,7 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
     }
 
     /// <summary>使用 HTTP Method、Path 與 action arguments 計算 SHA-256 fingerprint，防止相同 key 跨端點誤判相符。</summary>
-    private static string ComputeFingerprint(ActionExecutingContext context, string[] excludeFields)
+    private static string ComputeFingerprint(ActionExecutingContext context, string[] excludeFields, JsonSerializerOptions jsonOptions)
     {
         var request = context.HttpContext.Request;
         var args = context.ActionArguments
@@ -217,14 +218,14 @@ public class IdempotencyKeyAttribute : Attribute, IAsyncActionFilter
             Args = args
         };
 
-        var json = JsonSerializer.Serialize(input);
+        var json = JsonSerializer.Serialize(input, jsonOptions);
 
         if (excludeFields.Length > 0)
         {
             var excluded = new HashSet<string>(excludeFields, StringComparer.OrdinalIgnoreCase);
             using var doc = JsonDocument.Parse(json);
             var filtered = FilterJsonElement(doc.RootElement, excluded);
-            json = JsonSerializer.Serialize(filtered);
+            json = JsonSerializer.Serialize(filtered, jsonOptions);
         }
 
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(json));
