@@ -156,6 +156,9 @@ Value: { "key": "...", "status": "InProgress", "requestFingerprint": "sha256:...
 對 Method + Path + Action Arguments 做 SHA-256，防止同一個 Key 被不同內容的請求重複使用。支援透過 `ExcludeFields` 排除每次重試可能變動但不影響業務語意的欄位（例如 `clientTimestamp`、`requestNonce`）：
 
 ```csharp
+var jsonOptions = context.HttpContext.RequestServices
+    .GetRequiredService<IOptions<JsonOptions>>().Value.JsonSerializerOptions;
+
 var input = new {
     Method = request.Method,
     Path = request.Path.Value,
@@ -164,19 +167,21 @@ var input = new {
         .OrderBy(kv => kv.Key)
         .ToDictionary(kv => kv.Key, kv => kv.Value)
 };
-var json = JsonSerializer.Serialize(input);
+var json = JsonSerializer.Serialize(input, jsonOptions);
 
 // 若有 ExcludeFields，遞迴過濾 JSON 後再計算 hash
 if (excludeFields.Length > 0)
 {
     var excluded = new HashSet<string>(excludeFields, StringComparer.OrdinalIgnoreCase);
     // 遞迴過濾含巢狀物件
-    json = JsonSerializer.Serialize(FilterJsonElement(JsonDocument.Parse(json).RootElement, excluded));
+    json = JsonSerializer.Serialize(FilterJsonElement(JsonDocument.Parse(json).RootElement, excluded), jsonOptions);
 }
 
 var hash = SHA256.HashData(Encoding.UTF8.GetBytes(json));
 return Convert.ToHexString(hash).ToLowerInvariant();
 ```
+
+`JsonSerializerOptions` 取自 ASP.NET Core 的 `IOptions<JsonOptions>`，與 Response Body 序列化使用同一份設定（camelCase、忽略 null、enum 轉字串等），確保 fingerprint 計算結果一致。
 
 ---
 
