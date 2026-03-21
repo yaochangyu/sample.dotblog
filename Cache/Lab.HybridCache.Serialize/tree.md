@@ -28,3 +28,4 @@ Lab.HybirdCache.Compress/
 | POST | `/benchmark/write/{id}` | 將單筆資料以兩種格式寫入 Redis |
 | GET  | `/benchmark/stats/{id}` | 取得單筆資料的 byte 大小比較 |
 | POST | `/benchmark/batch/{count}` | 批次寫入並回傳彙總統計 |
+| GET  | `/benchmark/storage` | 統計 msgpack/mempack 所有 key 在 Redis 中佔用的實際記憶體 |

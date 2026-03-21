@@ -11,6 +11,7 @@ namespace Lab.HybirdCache.Compress.Controllers;
 public class BenchmarkController(IConnectionMultiplexer redis) : ControllerBase
 {
     private readonly IDatabase _db = redis.GetDatabase();
+    private readonly IServer _server = redis.GetServer(redis.GetEndPoints()[0]);
 
     /// <summary>
     /// 將同一筆資料分別以 MessagePack 與 MemoryPack 序列化後寫入 Redis
@@ -66,6 +67,95 @@ public class BenchmarkController(IConnectionMultiplexer redis) : ControllerBase
             winner = smaller,
             diff_bytes = diff,
             winner_ratio = $"{ratio:F1}% of loser size"
+        });
+    }
+
+    /// <summary>
+    /// 統計 msgpack:* 與 mempack:* 所有 key 在 Redis 中佔用的實際記憶體
+    /// </summary>
+    [HttpGet("storage")]
+    public async Task<IActionResult> Storage()
+    {
+        var msgPackKeys = _server.KeysAsync(pattern: "msgpack:*");
+        var memPackKeys = _server.KeysAsync(pattern: "mempack:*");
+
+        var (msgPackCount, msgPackMemory, msgPackValue) = await SumStorageAsync(msgPackKeys);
+        var (memPackCount, memPackMemory, memPackValue) = await SumStorageAsync(memPackKeys);
+
+        return Ok(new
+        {
+            messagepack = new
+            {
+                key_count = msgPackCount,
+                value_bytes = msgPackValue,
+                value_kb = $"{msgPackValue / 1024.0:F2} KB",
+                redis_memory_bytes = msgPackMemory,
+                redis_memory_kb = $"{msgPackMemory / 1024.0:F2} KB"
+            },
+            memorypack = new
+            {
+                key_count = memPackCount,
+                value_bytes = memPackValue,
+                value_kb = $"{memPackValue / 1024.0:F2} KB",
+                redis_memory_bytes = memPackMemory,
+                redis_memory_kb = $"{memPackMemory / 1024.0:F2} KB"
+            },
+            by_value = new
+            {
+                winner = msgPackValue < memPackValue ? "MessagePack" : "MemoryPack",
+                saved_bytes = Math.Abs(msgPackValue - memPackValue)
+            },
+            by_redis_memory = new
+            {
+                winner = msgPackMemory < memPackMemory ? "MessagePack" : "MemoryPack",
+                saved_bytes = Math.Abs(msgPackMemory - memPackMemory)
+            }
+        });
+    }
+
+    private async Task<(int count, long memoryBytes, long valueBytes)> SumStorageAsync(IAsyncEnumerable<RedisKey> keys)
+    {
+        var count = 0;
+        long memoryBytes = 0;
+        long valueBytes = 0;
+        await foreach (var key in keys)
+        {
+            var memResult = await _db.ExecuteAsync("MEMORY", "USAGE", key.ToString(), "SAMPLES", "0");
+            if (memResult.Type != ResultType.None && !memResult.IsNull)
+                memoryBytes += (long)memResult;
+
+            valueBytes += await _db.StringLengthAsync(key);
+            count++;
+        }
+        return (count, memoryBytes, valueBytes);
+    }
+
+    /// <summary>
+    /// 純序列化速度比較（不寫 Redis），單位 ms
+    /// </summary>
+    [HttpGet("speed/{count:int}")]
+    public IActionResult Speed(int count)
+    {
+        var samples = Enumerable.Range(1, count).Select(ProductModel.CreateSample).ToList();
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        foreach (var p in samples) MessagePackSerializer.Serialize(p);
+        sw.Stop();
+        var msgPackMs = sw.Elapsed.TotalMilliseconds;
+
+        sw.Restart();
+        foreach (var p in samples) MemoryPackSerializer.Serialize(p);
+        sw.Stop();
+        var memPackMs = sw.Elapsed.TotalMilliseconds;
+
+        var faster = msgPackMs < memPackMs ? "MessagePack" : "MemoryPack";
+        return Ok(new
+        {
+            count,
+            messagepack_ms = $"{msgPackMs:F2}",
+            memorypack_ms = $"{memPackMs:F2}",
+            faster,
+            speedup = $"{Math.Max(msgPackMs, memPackMs) / Math.Min(msgPackMs, memPackMs):F2}x"
         });
     }
 
