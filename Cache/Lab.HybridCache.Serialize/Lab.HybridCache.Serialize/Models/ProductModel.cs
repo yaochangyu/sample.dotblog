@@ -1,7 +1,7 @@
-using MessagePack;
 using MemoryPack;
+using MessagePack;
 
-namespace Lab.HybirdCache.Compress.Models;
+namespace Lab.HybridCache.Serialize.Models;
 
 [MessagePackObject]
 [MemoryPackable]
