@@ -5,8 +5,7 @@ Lab.HybridCache.Serialize/
 ├── Lab.HybridCache.Serialize.slnx             # 方案檔
 ├── docker-compose.yml                          # Redis docker compose 設定
 ├── tree.md                                     # 專案資料夾結構
-├── redis-serialization-benchmark.plan.md       # 序列化格式比較報告（MessagePack/MemoryPack/LZ4）
-├── hybridcache-serializer-report.md            # HybridCache L2 序列化器比較報告（自動產生）
+├── benchmark-report.md                         # 序列化格式完整比較報告（環境、實作說明、分析、建議）
 └── Lab.HybridCache.Serialize/
     ├── Lab.HybridCache.Serialize.csproj        # 專案檔
     ├── Lab.HybridCache.Serialize.http          # HTTP 測試檔
@@ -21,9 +20,10 @@ Lab.HybridCache.Serialize/
     │   ├── MessagePackHybridCacheSerializer.cs # HybridCache L2 序列化器（MessagePack）
     │   └── MemoryPackHybridCacheSerializer.cs  # HybridCache L2 序列化器（MemoryPack）
     └── Controllers/
-        ├── BenchmarkController.cs              # 序列化比較端點
+        ├── BenchmarkController.cs              # 序列化比較端點（直接 Redis，含 LZ4）
         ├── HybridCacheController.cs            # HybridCache GetOrCreate / Evict 端點
-        └── HybridCacheBenchmarkController.cs   # HybridCache L2 序列化器比較端點（輸出 .md 報告）
+        ├── HybridCacheBenchmarkController.cs   # HybridCache L2 序列化器比較端點（輸出 hybridcache-serializer-report.md）
+        └── ReportController.cs                 # 三種組合完整 benchmark，輸出 benchmark-report.md
 ```
 
 ## API 端點
@@ -37,4 +37,5 @@ Lab.HybridCache.Serialize/
 | GET  | `/benchmark/storage` | 統計 4 種格式（含 LZ4）所有 key 在 Redis 中佔用的實際記憶體 |
 | GET  | `/hybridcache/{id}` | 以 HybridCache GetOrCreate 取得商品（L1 → L2 → factory） |
 | DELETE | `/hybridcache/{id}` | 移除指定 id 的 HybridCache 快取（L1 + L2） |
-| POST | `/HybridCacheBenchmark/run/{count}` | 執行 MessagePack vs MemoryPack L2 比較，輸出 hybridcache-serializer-report.md |
+| POST | `/HybridCacheBenchmark/run/{count}` | 執行 MessagePack vs MemoryPack L2 比較 |
+| POST | `/report/run/{count}` | 執行三種組合完整 benchmark，輸出 benchmark-report.md |
