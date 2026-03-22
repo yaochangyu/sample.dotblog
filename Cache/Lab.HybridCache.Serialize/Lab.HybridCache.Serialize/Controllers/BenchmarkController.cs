@@ -18,34 +18,10 @@ public class BenchmarkController(IConnectionMultiplexer redis) : ControllerBase
         MessagePackSerializerOptions.Standard.WithCompression(MessagePackCompression.Lz4Block);
 
     /// <summary>
-    /// 將同一筆資料分別以 MessagePack 與 MemoryPack 序列化後寫入 Redis
+    /// 將同一筆資料以 4 種格式（含 LZ4）寫入 Redis
     /// </summary>
     [HttpPost("write/{id:int}")]
     public async Task<IActionResult> Write(int id)
-    {
-        var product = ProductModel.CreateSample(id);
-
-        var msgPackBytes = MessagePackSerializer.Serialize(product);
-        var memPackBytes = MemoryPackSerializer.Serialize(product);
-
-        await Task.WhenAll(
-            _db.StringSetAsync($"msgpack:{id}", msgPackBytes),
-            _db.StringSetAsync($"mempack:{id}", memPackBytes)
-        );
-
-        return Ok(new
-        {
-            id,
-            messagepack_bytes = msgPackBytes.Length,
-            memorypack_bytes = memPackBytes.Length
-        });
-    }
-
-    /// <summary>
-    /// 將同一筆資料以 4 種格式（含 LZ4）寫入 Redis
-    /// </summary>
-    [HttpPost("write-compress/{id:int}")]
-    public async Task<IActionResult> WriteCompress(int id)
     {
         var product = ProductModel.CreateSample(id);
 
@@ -80,43 +56,10 @@ public class BenchmarkController(IConnectionMultiplexer redis) : ControllerBase
     }
 
     /// <summary>
-    /// 從 Redis 讀取兩種序列化的 byte 大小並比較
+    /// 從 Redis 讀取 4 種格式，比較壓縮前後的 byte 大小與壓縮率
     /// </summary>
     [HttpGet("stats/{id:int}")]
     public async Task<IActionResult> Stats(int id)
-    {
-        var msgPackKey = $"msgpack:{id}";
-        var memPackKey = $"mempack:{id}";
-
-        var msgPackValue = await _db.StringGetAsync(msgPackKey);
-        var memPackValue = await _db.StringGetAsync(memPackKey);
-
-        if (!msgPackValue.HasValue || !memPackValue.HasValue)
-            return NotFound(new { message = $"請先呼叫 POST /benchmark/write/{id}" });
-
-        var msgPackSize = ((byte[])msgPackValue!).Length;
-        var memPackSize = ((byte[])memPackValue!).Length;
-
-        var smaller = msgPackSize < memPackSize ? "MessagePack" : "MemoryPack";
-        var diff = Math.Abs(msgPackSize - memPackSize);
-        var ratio = (double)Math.Min(msgPackSize, memPackSize) / Math.Max(msgPackSize, memPackSize) * 100;
-
-        return Ok(new
-        {
-            id,
-            messagepack = new { key = msgPackKey, bytes = msgPackSize },
-            memorypack = new { key = memPackKey, bytes = memPackSize },
-            winner = smaller,
-            diff_bytes = diff,
-            winner_ratio = $"{ratio:F1}% of loser size"
-        });
-    }
-
-    /// <summary>
-    /// 從 Redis 讀取 4 種格式，比較壓縮前後的 byte 大小與壓縮率
-    /// </summary>
-    [HttpGet("stats-compress/{id:int}")]
-    public async Task<IActionResult> StatsCompress(int id)
     {
         var keys = new[]
         {
@@ -127,7 +70,7 @@ public class BenchmarkController(IConnectionMultiplexer redis) : ControllerBase
         var sizes = await Task.WhenAll(keys.Select(k => _db.StringLengthAsync(k)));
 
         if (sizes.Any(s => s == 0))
-            return NotFound(new { message = $"請先呼叫 POST /benchmark/write-compress/{id}" });
+            return NotFound(new { message = $"請先呼叫 POST /benchmark/write/{id}" });
 
         var msgPack = sizes[0];
         var msgPackLz4 = sizes[1];
@@ -229,39 +172,10 @@ public class BenchmarkController(IConnectionMultiplexer redis) : ControllerBase
     }
 
     /// <summary>
-    /// 純序列化速度比較（不寫 Redis），單位 ms
+    /// 4 種格式（含 LZ4）的序列化速度比較，單位 ms
     /// </summary>
     [HttpGet("speed/{count:int}")]
     public IActionResult Speed(int count)
-    {
-        var samples = Enumerable.Range(1, count).Select(ProductModel.CreateSample).ToList();
-
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        foreach (var p in samples) MessagePackSerializer.Serialize(p);
-        sw.Stop();
-        var msgPackMs = sw.Elapsed.TotalMilliseconds;
-
-        sw.Restart();
-        foreach (var p in samples) MemoryPackSerializer.Serialize(p);
-        sw.Stop();
-        var memPackMs = sw.Elapsed.TotalMilliseconds;
-
-        var faster = msgPackMs < memPackMs ? "MessagePack" : "MemoryPack";
-        return Ok(new
-        {
-            count,
-            messagepack_ms = $"{msgPackMs:F2}",
-            memorypack_ms = $"{memPackMs:F2}",
-            faster,
-            speedup = $"{Math.Max(msgPackMs, memPackMs) / Math.Min(msgPackMs, memPackMs):F2}x"
-        });
-    }
-
-    /// <summary>
-    /// 4 種格式（含 LZ4）的序列化速度比較，單位 ms
-    /// </summary>
-    [HttpGet("speed-compress/{count:int}")]
-    public IActionResult SpeedCompress(int count)
     {
         var samples = Enumerable.Range(1, count).Select(ProductModel.CreateSample).ToList();
         var sw = System.Diagnostics.Stopwatch.StartNew();
