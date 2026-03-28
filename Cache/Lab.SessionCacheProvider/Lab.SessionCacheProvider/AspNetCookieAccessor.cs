@@ -5,8 +5,6 @@ namespace Lab.SessionCacheProvider;
 
 public class AspNetCookieAccessor : ICookieAccessor
 {
-    private const string CookieKey = "SessionCacheId";
-
     private readonly HttpContextBase _httpContext;
 
     public AspNetCookieAccessor(HttpContextBase httpContext)
@@ -16,15 +14,15 @@ public class AspNetCookieAccessor : ICookieAccessor
 
     public string? GetSessionId()
     {
-        if (_httpContext.Items[CookieKey] is string cachedId)
+        if (_httpContext.Items[SessionCacheConstants.CookieKey] is string cachedId)
         {
             return cachedId;
         }
 
-        var cookie = _httpContext.Request.Cookies[CookieKey];
+        var cookie = _httpContext.Request.Cookies[SessionCacheConstants.CookieKey];
         if (cookie != null)
         {
-            _httpContext.Items[CookieKey] = cookie.Value;
+            _httpContext.Items[SessionCacheConstants.CookieKey] = cookie.Value;
             return cookie.Value;
         }
 
@@ -33,12 +31,12 @@ public class AspNetCookieAccessor : ICookieAccessor
 
     public void SetSessionId(string sessionId)
     {
-        _httpContext.Response.Cookies.Set(new HttpCookie(CookieKey, sessionId)
+        _httpContext.Response.Cookies.Set(new HttpCookie(SessionCacheConstants.CookieKey, sessionId)
         {
             HttpOnly = true,
             Path = "/"
         });
-        _httpContext.Items[CookieKey] = sessionId;
+        _httpContext.Items[SessionCacheConstants.CookieKey] = sessionId;
     }
 }
 #endif

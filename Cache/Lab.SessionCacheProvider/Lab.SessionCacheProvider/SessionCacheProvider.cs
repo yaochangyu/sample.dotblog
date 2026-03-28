@@ -6,11 +6,16 @@ public class SessionCacheProvider
 {
     private readonly HybridCache _cache;
     private readonly ICookieAccessor _cookieAccessor;
+    private readonly HybridCacheEntryOptions _entryOptions;
 
-    public SessionCacheProvider(HybridCache cache, ICookieAccessor cookieAccessor)
+    public SessionCacheProvider(
+        HybridCache cache,
+        ICookieAccessor cookieAccessor,
+        HybridCacheEntryOptions entryOptions)
     {
         _cache = cache;
         _cookieAccessor = cookieAccessor;
+        _entryOptions = entryOptions;
     }
 
     public SessionObject Session
@@ -18,7 +23,7 @@ public class SessionCacheProvider
         get
         {
             var sessionId = GetOrCreateSessionId();
-            return new SessionObject(_cache, sessionId);
+            return new SessionObject(_cache, sessionId, _entryOptions);
         }
     }
 

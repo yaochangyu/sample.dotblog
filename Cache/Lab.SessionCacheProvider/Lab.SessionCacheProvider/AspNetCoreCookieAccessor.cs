@@ -5,8 +5,6 @@ namespace Lab.SessionCacheProvider;
 
 public class AspNetCoreCookieAccessor : ICookieAccessor
 {
-    private const string CookieKey = "SessionCacheId";
-
     private readonly IHttpContextAccessor _httpContextAccessor;
 
     public AspNetCoreCookieAccessor(IHttpContextAccessor httpContextAccessor)
@@ -19,14 +17,14 @@ public class AspNetCoreCookieAccessor : ICookieAccessor
         var context = _httpContextAccessor.HttpContext
             ?? throw new InvalidOperationException("HttpContext 為 null，無法存取 Cookie。");
 
-        if (context.Items.TryGetValue(CookieKey, out var cachedId) && cachedId is string id)
+        if (context.Items.TryGetValue(SessionCacheConstants.CookieKey, out var cachedId) && cachedId is string id)
         {
             return id;
         }
 
-        if (context.Request.Cookies.TryGetValue(CookieKey, out var existingId))
+        if (context.Request.Cookies.TryGetValue(SessionCacheConstants.CookieKey, out var existingId))
         {
-            context.Items[CookieKey] = existingId;
+            context.Items[SessionCacheConstants.CookieKey] = existingId;
             return existingId;
         }
 
@@ -38,12 +36,12 @@ public class AspNetCoreCookieAccessor : ICookieAccessor
         var context = _httpContextAccessor.HttpContext
             ?? throw new InvalidOperationException("HttpContext 為 null，無法存取 Cookie。");
 
-        context.Response.Cookies.Append(CookieKey, sessionId, new CookieOptions
+        context.Response.Cookies.Append(SessionCacheConstants.CookieKey, sessionId, new CookieOptions
         {
             HttpOnly = true,
             Path = "/"
         });
-        context.Items[CookieKey] = sessionId;
+        context.Items[SessionCacheConstants.CookieKey] = sessionId;
     }
 }
 #endif
