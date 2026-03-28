@@ -10,14 +10,11 @@ public class SessionObject
     private readonly string _sessionId;
     private readonly HybridCacheEntryOptions _entryOptions;
 
-    public SessionObject(HybridCache cache, string sessionId, TimeSpan? slidingExpiration = null)
+    public SessionObject(HybridCache cache, string sessionId, HybridCacheEntryOptions entryOptions)
     {
         _cache = cache;
         _sessionId = sessionId;
-        _entryOptions = new HybridCacheEntryOptions
-        {
-            Expiration = slidingExpiration ?? TimeSpan.FromMinutes(20)
-        };
+        _entryOptions = entryOptions;
     }
 
     public object? this[string key]
