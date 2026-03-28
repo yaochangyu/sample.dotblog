@@ -1,0 +1,30 @@
+## .NET
+bin/
+obj/
+
+## User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docuser
+
+## VS Code
+.vscode/
+
+## Rider
+.idea/
+
+## NuGet
+*.nupkg
+**/[Pp]ackages/*
+
+## Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+## Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+TestResult.xml
