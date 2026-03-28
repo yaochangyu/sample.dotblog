@@ -1,4 +1,6 @@
 #if !NETFRAMEWORK
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,6 +24,13 @@ public static class SessionCacheProviderExtensions
         services.AddScoped<ICookieAccessor, AspNetCoreCookieAccessor>();
         services.AddScoped<SessionCacheProvider>();
         return services;
+    }
+
+    public static IApplicationBuilder UseSessionCache(this IApplicationBuilder app)
+    {
+        var accessor = app.ApplicationServices.GetRequiredService<IHttpContextAccessor>();
+        CacheSession.SetHttpContextAccessor(accessor);
+        return app;
     }
 }
 #endif

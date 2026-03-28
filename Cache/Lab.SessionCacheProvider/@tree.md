@@ -6,7 +6,8 @@ Lab.SessionCacheProvider/
 ├── @tree.md
 ├── archived/
 │   ├── session-cache-provider.plan.md
-│   └── bdd-test.plan.md
+│   ├── bdd-test.plan.md
+│   └── remove-httpcontext-current.plan.md
 ├── Lab.SessionCacheProvider/
 │   ├── Lab.SessionCacheProvider.csproj
 │   ├── ICookieAccessor.cs
@@ -14,15 +15,18 @@ Lab.SessionCacheProvider/
 │   ├── AspNetCoreCookieAccessor.cs
 │   ├── SessionObject.cs
 │   ├── SessionCacheProvider.cs
+│   ├── CacheSession.cs
 │   └── SessionCacheProviderExtensions.cs
 └── Lab.SessionCacheProvider.Tests/
     ├── Lab.SessionCacheProvider.Tests.csproj
     ├── Features/
     │   ├── SessionObject.feature
-    │   └── SessionCacheProvider.feature
+    │   ├── SessionCacheProvider.feature
+    │   └── CacheSession.feature
     ├── StepDefinitions/
     │   ├── SessionObjectStepDefinitions.cs
-    │   └── SessionCacheProviderStepDefinitions.cs
+    │   ├── SessionCacheProviderStepDefinitions.cs
+    │   └── CacheSessionStepDefinitions.cs
     └── Support/
         └── FakeCookieAccessor.cs
 ```
