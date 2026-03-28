@@ -22,11 +22,15 @@ Lab.SessionCacheProvider/
     ├── Features/
     │   ├── SessionObject.feature
     │   ├── SessionCacheProvider.feature
-    │   └── CacheSession.feature
+    │   ├── CacheSession.feature
+    │   └── TestServerIntegration.feature
     ├── StepDefinitions/
     │   ├── SessionObjectStepDefinitions.cs
     │   ├── SessionCacheProviderStepDefinitions.cs
-    │   └── CacheSessionStepDefinitions.cs
+    │   ├── CacheSessionStepDefinitions.cs
+    │   └── TestServerIntegrationStepDefinitions.cs
     └── Support/
-        └── FakeCookieAccessor.cs
+        ├── AssemblyInfo.cs
+        ├── FakeCookieAccessor.cs
+        └── TestServerFixture.cs
 ```
