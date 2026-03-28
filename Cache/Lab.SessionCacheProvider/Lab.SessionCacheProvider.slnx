@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Lab.SessionCacheProvider.Tests/Lab.SessionCacheProvider.Tests.csproj" />
+  <Project Path="Lab.SessionCacheProvider/Lab.SessionCacheProvider.csproj" />
+</Solution>
