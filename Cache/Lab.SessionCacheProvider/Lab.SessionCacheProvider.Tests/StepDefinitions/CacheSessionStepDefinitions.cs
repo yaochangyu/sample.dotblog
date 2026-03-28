@@ -12,8 +12,8 @@ public class CacheSessionStepDefinitions
 {
     private object? _result;
 
-    [Given(@"a configured CacheSession")]
-    public void GivenAConfiguredCacheSession()
+    [Given(@"已設定 CacheSession")]
+    public void Given已設定CacheSession()
     {
         var cookieAccessor = new FakeCookieAccessor();
 
@@ -39,29 +39,29 @@ public class CacheSessionStepDefinitions
         CacheSession.SetHttpContextAccessor(accessor);
     }
 
-    [When(@"I set ""(.*)"" for key ""(.*)"" via CacheSession\.Current")]
-    [Given(@"I set ""(.*)"" for key ""(.*)"" via CacheSession\.Current")]
-    public void WhenISetForKeyViaCacheSessionCurrent(string value, string key)
+    [When(@"透過 CacheSession\.Current 設定 key ""(.*)"" 的值為 ""(.*)""")]
+    [Given(@"透過 CacheSession\.Current 設定 key ""(.*)"" 的值為 ""(.*)""")]
+    public void When透過CacheSessionCurrent設定Key的值為(string key, string value)
     {
         CacheSession.Current[key] = value;
     }
 
-    [When(@"I remove the key ""(.*)"" via CacheSession\.Current")]
-    public void WhenIRemoveTheKeyViaCacheSessionCurrent(string key)
+    [When(@"透過 CacheSession\.Current 移除 key ""(.*)""")]
+    public void When透過CacheSessionCurrent移除Key(string key)
     {
         CacheSession.Current.Remove(key);
     }
 
-    [Then(@"the value for key ""(.*)"" via CacheSession\.Current should be ""(.*)""")]
-    public void ThenTheValueForKeyViaCacheSessionCurrentShouldBe(string key, string expected)
+    [Then(@"透過 CacheSession\.Current 取得 key ""(.*)"" 的值應為 ""(.*)""")]
+    public void Then透過CacheSessionCurrent取得Key的值應為(string key, string expected)
     {
         _result = CacheSession.Current[key];
         Assert.NotNull(_result);
         Assert.Equal(expected, _result!.ToString());
     }
 
-    [Then(@"the value for key ""(.*)"" via CacheSession\.Current should be null")]
-    public void ThenTheValueForKeyViaCacheSessionCurrentShouldBeNull(string key)
+    [Then(@"透過 CacheSession\.Current 取得 key ""(.*)"" 的值應為 null")]
+    public void Then透過CacheSessionCurrent取得Key的值應為Null(string key)
     {
         _result = CacheSession.Current[key];
         Assert.Null(_result);
