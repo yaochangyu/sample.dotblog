@@ -11,8 +11,8 @@ public class SessionObjectStepDefinitions
     private object? _result;
     private int _intResult;
 
-    [Given(@"a SessionObject instance")]
-    public void GivenASessionObjectInstance()
+    [Given(@"一個 SessionObject 實例")]
+    public void Given一個SessionObject實例()
     {
         var services = new ServiceCollection();
         services.AddHybridCache();
@@ -26,48 +26,48 @@ public class SessionObjectStepDefinitions
         _sessionObject = new SessionObject(cache, Guid.NewGuid().ToString("N"), entryOptions);
     }
 
-    [When(@"I set the value ""(.*)"" for key ""(.*)""")]
-    [Given(@"I set the value ""(.*)"" for key ""(.*)""")]
-    public void WhenISetTheValueForKey(string value, string key)
+    [When(@"設定 key ""(.*)"" 的值為 ""(.*)""")]
+    [Given(@"設定 key ""(.*)"" 的值為 ""(.*)""")]
+    public void When設定Key的值為(string key, string value)
     {
         _sessionObject[key] = value;
     }
 
-    [When(@"I set null for key ""(.*)""")]
-    public void WhenISetNullForKey(string key)
+    [When(@"設定 key ""(.*)"" 的值為 null")]
+    public void When設定Key的值為Null(string key)
     {
         _sessionObject[key] = null;
     }
 
-    [When(@"I remove the key ""(.*)""")]
-    public void WhenIRemoveTheKey(string key)
+    [When(@"移除 key ""(.*)""")]
+    public void When移除Key(string key)
     {
         _sessionObject.Remove(key);
     }
 
-    [When(@"I set the integer value (\d+) for key ""(.*)""")]
-    public void WhenISetTheIntegerValueForKey(int value, string key)
+    [When(@"設定 key ""(.*)"" 的整數值為 (\d+)")]
+    public void When設定Key的整數值為(string key, int value)
     {
         _sessionObject.Set(key, value);
     }
 
-    [Then(@"the value for key ""(.*)"" should be ""(.*)""")]
-    public void ThenTheValueForKeyShouldBe(string key, string expected)
+    [Then(@"key ""(.*)"" 的值應為 ""(.*)""")]
+    public void ThenKey的值應為(string key, string expected)
     {
         _result = _sessionObject[key];
         Assert.NotNull(_result);
         Assert.Equal(expected, _result!.ToString());
     }
 
-    [Then(@"the value for key ""(.*)"" should be null")]
-    public void ThenTheValueForKeyShouldBeNull(string key)
+    [Then(@"key ""(.*)"" 的值應為 null")]
+    public void ThenKey的值應為Null(string key)
     {
         _result = _sessionObject[key];
         Assert.Null(_result);
     }
 
-    [Then(@"the integer value for key ""(.*)"" should be (\d+)")]
-    public void ThenTheIntegerValueForKeyShouldBe(string key, int expected)
+    [Then(@"key ""(.*)"" 的整數值應為 (\d+)")]
+    public void ThenKey的整數值應為(string key, int expected)
     {
         _intResult = _sessionObject.Get<int>(key);
         Assert.Equal(expected, _intResult);
