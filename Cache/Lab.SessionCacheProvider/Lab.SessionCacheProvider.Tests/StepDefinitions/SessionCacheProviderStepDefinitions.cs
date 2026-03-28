@@ -21,7 +21,13 @@ public class SessionCacheProviderStepDefinitions
         var sp = services.BuildServiceProvider();
         var cache = sp.GetRequiredService<HybridCache>();
 
-        return new SessionCacheProvider(cache, _cookieAccessor);
+        var entryOptions = new HybridCacheEntryOptions
+        {
+            Expiration = TimeSpan.FromMinutes(20),
+            LocalCacheExpiration = TimeSpan.FromMinutes(5)
+        };
+
+        return new SessionCacheProvider(cache, _cookieAccessor, entryOptions);
     }
 
     [Given(@"an HTTP request without a session cookie")]

@@ -18,7 +18,12 @@ public class SessionObjectStepDefinitions
         services.AddHybridCache();
         var provider = services.BuildServiceProvider();
         var cache = provider.GetRequiredService<HybridCache>();
-        _sessionObject = new SessionObject(cache, Guid.NewGuid().ToString("N"));
+        var entryOptions = new HybridCacheEntryOptions
+        {
+            Expiration = TimeSpan.FromMinutes(20),
+            LocalCacheExpiration = TimeSpan.FromMinutes(20)
+        };
+        _sessionObject = new SessionObject(cache, Guid.NewGuid().ToString("N"), entryOptions);
     }
 
     [When(@"I set the value ""(.*)"" for key ""(.*)""")]
