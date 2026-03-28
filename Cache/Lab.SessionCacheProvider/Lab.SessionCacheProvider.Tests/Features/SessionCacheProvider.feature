@@ -1,21 +1,17 @@
 Feature: SessionCacheProvider
 
-    As a developer
-    I want SessionCacheProvider to manage session ID via cookies
-    So that I can use HybridCache as a session store without request queuing
+    Scenario: 無 Cookie 時自動建立新的 SessionId
+        Given 一個沒有 session cookie 的 HTTP 請求
+        When 存取 Session 屬性
+        Then 應建立新的 session ID cookie
+        And Session 屬性應回傳 SessionObject
 
-    Scenario: Create a new session ID when no cookie exists
-        Given an HTTP request without a session cookie
-        When I access the Session property
-        Then a new session ID cookie should be created
-        And the Session property should return a SessionObject
+    Scenario: 有 Cookie 時重用既有 SessionId
+        Given 一個帶有 session cookie "abc123" 的 HTTP 請求
+        When 存取 Session 屬性
+        Then session ID 應為 "abc123"
 
-    Scenario: Reuse existing session ID from cookie
-        Given an HTTP request with session cookie "abc123"
-        When I access the Session property
-        Then the session ID should be "abc123"
-
-    Scenario: Store and retrieve value through SessionCacheProvider
-        Given an HTTP request without a session cookie
-        When I set "Hello" for key "Greeting" through the Session property
-        Then the value for key "Greeting" through the Session property should be "Hello"
+    Scenario: 透過 SessionCacheProvider 存取值
+        Given 一個沒有 session cookie 的 HTTP 請求
+        When 透過 Session 屬性設定 key "Greeting" 的值為 "Hello"
+        Then 透過 Session 屬性取得 key "Greeting" 的值應為 "Hello"

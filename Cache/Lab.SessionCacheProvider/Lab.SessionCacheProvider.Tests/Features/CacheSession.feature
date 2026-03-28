@@ -1,20 +1,16 @@
 Feature: CacheSession
 
-    As a developer
-    I want to use CacheSession.Current like native Session
-    So that I can access session data with minimal code changes
+    Scenario: 透過 CacheSession.Current 設定與取得值
+        Given 已設定 CacheSession
+        When 透過 CacheSession.Current 設定 key "UserName" 的值為 "John"
+        Then 透過 CacheSession.Current 取得 key "UserName" 的值應為 "John"
 
-    Scenario: Set and get a value via CacheSession.Current
-        Given a configured CacheSession
-        When I set "John" for key "UserName" via CacheSession.Current
-        Then the value for key "UserName" via CacheSession.Current should be "John"
+    Scenario: 取得不存在的 key 回傳 null
+        Given 已設定 CacheSession
+        Then 透過 CacheSession.Current 取得 key "NonExisting" 的值應為 null
 
-    Scenario: Get a non-existing key returns null
-        Given a configured CacheSession
-        Then the value for key "NonExisting" via CacheSession.Current should be null
-
-    Scenario: Remove a value via CacheSession.Current
-        Given a configured CacheSession
-        And I set "John" for key "UserName" via CacheSession.Current
-        When I remove the key "UserName" via CacheSession.Current
-        Then the value for key "UserName" via CacheSession.Current should be null
+    Scenario: 透過 CacheSession.Current 移除值
+        Given 已設定 CacheSession
+        And 透過 CacheSession.Current 設定 key "UserName" 的值為 "John"
+        When 透過 CacheSession.Current 移除 key "UserName"
+        Then 透過 CacheSession.Current 取得 key "UserName" 的值應為 null
