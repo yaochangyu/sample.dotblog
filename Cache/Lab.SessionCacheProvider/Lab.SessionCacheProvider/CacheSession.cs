@@ -66,5 +66,10 @@ public static class CacheSession
     {
         _httpContextAccessor = accessor;
     }
+
+    internal static void ResetHttpContextAccessor()
+    {
+        _httpContextAccessor = null;
+    }
 #endif
 }
