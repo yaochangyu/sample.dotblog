@@ -8,6 +8,7 @@ public static class SessionCacheProviderExtensions
     public static IServiceCollection AddSessionCacheProvider(this IServiceCollection services)
     {
         services.AddHttpContextAccessor();
+        services.AddScoped<ICookieAccessor, AspNetCoreCookieAccessor>();
         services.AddScoped<SessionCacheProvider>();
         return services;
     }
