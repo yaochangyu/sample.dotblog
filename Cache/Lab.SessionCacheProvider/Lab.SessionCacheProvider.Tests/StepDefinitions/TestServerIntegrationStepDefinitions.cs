@@ -1,26 +1,30 @@
 using Lab.SessionCacheProvider;
 using Lab.SessionCacheProvider.Tests.Support;
+using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace Lab.SessionCacheProvider.Tests.StepDefinitions;
 
 [Binding]
 public class TestServerIntegrationStepDefinitions : IDisposable
 {
-    private TestServerFixture _fixture = null!;
+    private TestWebServer _fixture = null!;
+    private HttpClient _client = null!;
     private HttpResponseMessage _response = null!;
     private string? _sessionCookie;
 
     [Given(@"一個 TestServer 應用程式")]
     public void Given一個TestServer應用程式()
     {
-        _fixture = new TestServerFixture();
+        _fixture = new TestWebServer();
+        _client = _fixture.CreateClient(
+            new WebApplicationFactoryClientOptions { HandleCookies = false });
     }
 
     [When(@"發送 GET 請求到 ""(.*)""")]
     public void When發送GET請求到(string path)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, path);
-        _response = _fixture.Client.SendAsync(request).GetAwaiter().GetResult();
+        _response = _client.SendAsync(request).GetAwaiter().GetResult();
         CaptureSessionCookie();
     }
 
@@ -35,7 +39,7 @@ public class TestServerIntegrationStepDefinitions : IDisposable
                 { "value", value }
             })
         };
-        _response = _fixture.Client.SendAsync(request).GetAwaiter().GetResult();
+        _response = _client.SendAsync(request).GetAwaiter().GetResult();
         CaptureSessionCookie();
     }
 
@@ -45,14 +49,14 @@ public class TestServerIntegrationStepDefinitions : IDisposable
         Assert.NotNull(_sessionCookie);
         var request = new HttpRequestMessage(HttpMethod.Get, path);
         request.Headers.Add("Cookie", $"SessionCacheId={_sessionCookie}");
-        _response = _fixture.Client.SendAsync(request).GetAwaiter().GetResult();
+        _response = _client.SendAsync(request).GetAwaiter().GetResult();
     }
 
     [When(@"不帶 cookie 發送 GET 請求到 ""(.*)""")]
     public void When不帶Cookie發送GET請求到(string path)
     {
         var request = new HttpRequestMessage(HttpMethod.Get, path);
-        _response = _fixture.Client.SendAsync(request).GetAwaiter().GetResult();
+        _response = _client.SendAsync(request).GetAwaiter().GetResult();
     }
 
     [Then(@"Response 應包含 ""(.*)"" cookie")]
