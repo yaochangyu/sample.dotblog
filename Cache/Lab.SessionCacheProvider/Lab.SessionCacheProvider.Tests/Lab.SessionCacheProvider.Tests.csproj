@@ -46,6 +46,8 @@
     <Compile Remove="Support\AssemblyInfo.cs" />
     <None Remove="Features\CacheSession.feature" />
     <None Remove="Features\TestServerIntegration.feature" />
+    <ReqnrollFeatureFile Remove="Features\CacheSession.feature" />
+    <ReqnrollFeatureFile Remove="Features\TestServerIntegration.feature" />
   </ItemGroup>
 
 </Project>
