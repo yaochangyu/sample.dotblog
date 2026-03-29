@@ -10,13 +10,15 @@ public static class SessionCacheProviderExtensions
 {
     public static IServiceCollection AddSessionCacheProvider(
         this IServiceCollection services,
-        HybridCacheOptions? cacheOptions = null)
+        Action<HybridCacheEntryOptions>? setupAction = null)
     {
-        var entryOptions = cacheOptions?.DefaultEntryOptions ?? new HybridCacheEntryOptions
+        var entryOptions = new HybridCacheEntryOptions
         {
             Expiration = TimeSpan.FromMinutes(20),
             LocalCacheExpiration = TimeSpan.FromMinutes(5)
         };
+
+        setupAction?.Invoke(entryOptions);
 
         services.AddHttpContextAccessor();
         services.AddScoped<ICookieAccessor, AspNetCoreCookieAccessor>();
