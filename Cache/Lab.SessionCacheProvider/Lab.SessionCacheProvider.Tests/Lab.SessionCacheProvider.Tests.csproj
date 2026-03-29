@@ -1,13 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net48;net10.0</TargetFrameworks>
     <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
+    <SuppressTfmSupportBuildWarnings>true</SuppressTfmSupportBuildWarnings>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.5" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="NSubstitute" Version="5.3.0" />
     <PackageReference Include="Reqnroll.xUnit" Version="3.3.4" />
@@ -18,7 +19,8 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.5" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
@@ -30,4 +32,20 @@
     <Using Include="Reqnroll" />
     <Using Include="Xunit" />
   </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.4" />
+  </ItemGroup>
+
+  <!-- net48 排除 ASP.NET Core 專用的測試檔案 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Compile Remove="StepDefinitions\CacheSessionStepDefinitions.cs" />
+    <Compile Remove="StepDefinitions\TestServerIntegrationStepDefinitions.cs" />
+    <Compile Remove="Support\TestWebApp.cs" />
+    <Compile Remove="Support\TestWebServer.cs" />
+    <Compile Remove="Support\AssemblyInfo.cs" />
+    <None Remove="Features\CacheSession.feature" />
+    <None Remove="Features\TestServerIntegration.feature" />
+  </ItemGroup>
+
 </Project>
