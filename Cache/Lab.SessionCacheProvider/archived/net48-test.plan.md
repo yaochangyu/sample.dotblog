@@ -14,7 +14,8 @@
 
 - [x] **3. 排除 net48 不適用的測試檔案**
   - 為什麼：`TestServerIntegration.feature`、`CacheSession.feature` 及其 StepDefinitions 依賴 ASP.NET Core，net48 無法編譯
-  - 用 csproj 的 `Compile Remove` + `None Remove` 條件排除，或用 `#if` 條件編譯
+  - 用 csproj 的 `Compile Remove` + `ReqnrollFeatureFile Remove` 條件排除
+  - 注意：`<None Remove>` 無法阻止 Reqnroll source generator 處理 feature 檔案；Reqnroll 透過 `Reqnroll.Tools.MsBuild.Generation.props` 自動以 `<ReqnrollFeatureFile Include="**\*.feature">` 掃描所有 feature，必須明確加上 `<ReqnrollFeatureFile Remove>` 才能排除
 
 - [x] **4. 建置與執行測試**（net48 建置通過，執行需 Windows；net10.0 全數通過）
   - `dotnet build` 確認 net48 和 net10.0 都能編譯
