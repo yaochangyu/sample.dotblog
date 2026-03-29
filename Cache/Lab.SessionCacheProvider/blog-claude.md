@@ -480,10 +480,29 @@ public class TestWebServer : WebApplicationFactory<TestWebApp>
 
 ## 運行結果
 
-16 個測試全數通過：
+測試專案同樣採用 Multi-Target（`net48;net10.0`），net48 排除依賴 ASP.NET Core 的 feature 與 StepDefinitions，只執行 `SessionObject` 和 `SessionCacheProvider` 兩組單元測試；net10.0 執行全部 16 個測試。
 
 ```
-Passed!  - Failed: 0, Passed: 16, Skipped: 0, Total: 16
+Passed!  - Failed: 0, Passed:  9, Skipped: 0, Total:  9  (net48)
+Passed!  - Failed: 0, Passed: 16, Skipped: 0, Total: 16  (net10.0)
+```
+
+### net48 排除 feature 的注意事項
+
+Reqnroll 在 `Reqnroll.Tools.MsBuild.Generation.props` 中以 `<ReqnrollFeatureFile Include="**\*.feature">` 自動掃描所有 feature 檔案並產生對應的測試碼，因此單純使用 `<None Remove>` 是無效的，必須明確加上 `<ReqnrollFeatureFile Remove>`：
+
+```xml
+<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+  <Compile Remove="StepDefinitions\CacheSessionStepDefinitions.cs" />
+  <Compile Remove="StepDefinitions\TestServerIntegrationStepDefinitions.cs" />
+  <Compile Remove="Support\TestWebApp.cs" />
+  <Compile Remove="Support\TestWebServer.cs" />
+  <Compile Remove="Support\AssemblyInfo.cs" />
+  <None Remove="Features\CacheSession.feature" />
+  <None Remove="Features\TestServerIntegration.feature" />
+  <ReqnrollFeatureFile Remove="Features\CacheSession.feature" />
+  <ReqnrollFeatureFile Remove="Features\TestServerIntegration.feature" />
+</ItemGroup>
 ```
 
 ## 範例位置

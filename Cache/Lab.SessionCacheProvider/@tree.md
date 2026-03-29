@@ -7,7 +7,9 @@ Lab.SessionCacheProvider/
 ├── archived/
 │   ├── session-cache-provider.plan.md
 │   ├── bdd-test.plan.md
-│   └── remove-httpcontext-current.plan.md
+│   ├── remove-httpcontext-current.plan.md
+│   ├── cache-session-static.plan.md
+│   └── net48-test.plan.md
 ├── Lab.SessionCacheProvider/
 │   ├── Lab.SessionCacheProvider.csproj
 │   ├── ICookieAccessor.cs
@@ -32,5 +34,6 @@ Lab.SessionCacheProvider/
     └── Support/
         ├── AssemblyInfo.cs
         ├── FakeCookieAccessor.cs
-        └── TestServerFixture.cs
+        ├── TestWebApp.cs
+        └── TestWebServer.cs
 ```
