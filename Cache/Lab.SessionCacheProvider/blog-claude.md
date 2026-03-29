@@ -1,39 +1,33 @@
-# [ASP.NET] 用 HybridCache + Cookie 取代 Session，解決 Request 排隊與快取擊穿問題
+# [ASP.NET] 用 HybridCache + Cookie 取代 Session
 
-ASP.NET Framework 的 Session 預設使用排他鎖（Mutex），同一個使用者的 Request 會排隊等待，嚴重影響效能。而 ASP.NET Core 的 Session 雖然不會排隊，但底層是 `IDistributedCache`，不支援 `HybridCache`，每次存取都直接打 Redis，沒有 L1 記憶體快取，高流量時有快取擊穿的風險。
+ASP.NET Framework 的 Session 有排他鎖，同一個使用者的 Request 會排隊。ASP.NET Core 的 Session 不會排隊，但底層是 `IDistributedCache`，每次存取直接打 Redis，沒有 L1 記憶體快取，高流量有擊穿風險。
 
-這篇想要演練的是，用 `HybridCache` + `Cookie` 實作一個 `SessionCacheProvider`，讓開發者用起來跟原本的 `Session["key"]` 幾乎一樣，同時支援 ASP.NET Framework 4.8 和 ASP.NET Core (.NET 10)。
+這篇用 `HybridCache` + `Cookie` 實作 `SessionCacheProvider`，用起來跟 `Session["key"]` 一樣，同時支援 .NET Framework 4.8 和 .NET 10。
 
 ## 開發環境
 
 - Windows 11
-- .NET 10
-- .NET Framework 4.8
+- .NET 10 / .NET Framework 4.8
 - Microsoft.Extensions.Caching.Hybrid 10.4.0
-- Reqnroll (BDD)
-- xUnit
+- Reqnroll + xUnit (BDD)
 
 ## 設計概念
 
-核心想法很簡單：
-
-1. 用 **Cookie** 存 Session ID（一個 GUID）
-2. 用 **HybridCache** 存實際的 Session 資料，快取的 key 格式為 `session:{sessionId}:{key}`
-3. HybridCache 提供 **L1（記憶體）+ L2（Redis 等分散式快取）** 雙層快取，解決快取擊穿問題
-
-架構如下：
+- **Cookie** 存 Session ID（GUID）
+- **HybridCache** 存 Session 資料，key 格式 `session:{sessionId}:{key}`
+- HybridCache 提供 **L1 記憶體 + L2 分散式快取**，解決擊穿問題
 
 ```
 Browser Cookie (SessionCacheId=xxx)
         │
         ▼
-SessionCacheProvider（管理 Session ID 的建立與取得）
+SessionCacheProvider（建立/取得 Session ID）
         │
         ▼
-SessionObject（提供 this["key"] 索引器存取）
+SessionObject（this["key"] 索引器）
         │
         ▼
-HybridCache（L1 記憶體 + L2 分散式快取）
+HybridCache（L1 + L2）
 ```
 
 ## 專案結構
@@ -41,7 +35,6 @@ HybridCache（L1 記憶體 + L2 分散式快取）
 ```
 Lab.SessionCacheProvider/
 ├── Lab.SessionCacheProvider/
-│   ├── Lab.SessionCacheProvider.csproj
 │   ├── ICookieAccessor.cs
 │   ├── AspNetCookieAccessor.cs          // .NET Framework
 │   ├── AspNetCoreCookieAccessor.cs      // .NET Core
@@ -58,36 +51,29 @@ Lab.SessionCacheProvider/
     └── ...
 ```
 
-專案使用 Multi-Target，同時支援 `net48` 和 `net10.0`。
+Multi-Target，同時支援 `net48` 和 `net10.0`：
 
 ```xml
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>net48;net10.0</TargetFrameworks>
-    <Nullable>enable</Nullable>
-    <LangVersion>latest</LangVersion>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+<TargetFrameworks>net48;net10.0</TargetFrameworks>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.4.0" />
-  </ItemGroup>
+<ItemGroup>
+  <PackageReference Include="Microsoft.Extensions.Caching.Hybrid" Version="10.4.0" />
+</ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
-    <Reference Include="System.Web" />
-  </ItemGroup>
+<ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+  <Reference Include="System.Web" />
+</ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-</Project>
+<ItemGroup Condition="'$(TargetFramework)' == 'net10.0'">
+  <FrameworkReference Include="Microsoft.AspNetCore.App" />
+</ItemGroup>
 ```
 
 ## 實作
 
-### ICookieAccessor — 抽離平台差異
+### ICookieAccessor
 
-ASP.NET Framework 和 ASP.NET Core 的 Cookie 存取方式不同，用介面抽離出來，核心邏輯就不需要 `#if` 條件編譯。
+用介面抽離平台差異，核心邏輯不需要 `#if` 條件編譯。
 
 ```csharp
 public static class SessionCacheConstants
@@ -102,9 +88,9 @@ public interface ICookieAccessor
 }
 ```
 
-### AspNetCoreCookieAccessor — ASP.NET Core 的實作
+### AspNetCoreCookieAccessor
 
-透過 `IHttpContextAccessor` 存取 Cookie，並利用 `HttpContext.Items` 在同一個 Request 內快取 Session ID，避免重複讀取 Cookie。
+透過 `IHttpContextAccessor` 存取 Cookie，`HttpContext.Items` 在同一個 Request 內快取 Session ID。
 
 ```csharp
 public class AspNetCoreCookieAccessor : ICookieAccessor
@@ -151,11 +137,11 @@ public class AspNetCoreCookieAccessor : ICookieAccessor
 }
 ```
 
-NOTE：`HttpContext.Items` 的生命週期是單次 Request，用來避免同一個 Request 多次存取 `Session` 屬性時重複產生新的 GUID。
+NOTE：`HttpContext.Items` 的生命週期是單次 Request，避免多次存取 `Session` 屬性時重複產生 GUID。
 
-### AspNetCookieAccessor — ASP.NET Framework 的實作
+### AspNetCookieAccessor
 
-.NET Framework 這邊注入 `HttpContextBase`，不直接使用 `HttpContext.Current`，方便做單元測試。
+.NET Framework 注入 `HttpContextBase`，不直接用 `HttpContext.Current`，方便測試。
 
 ```csharp
 public class AspNetCookieAccessor : ICookieAccessor
@@ -196,9 +182,9 @@ public class AspNetCookieAccessor : ICookieAccessor
 }
 ```
 
-### SessionObject — 像 Session 一樣的索引器
+### SessionObject
 
-這是開發者實際操作的物件，提供 `this["key"]` 索引器，用起來跟原本的 `Session["key"]` 一樣。
+提供 `this["key"]` 索引器，用起來跟 `Session["key"]` 一樣。
 
 ```csharp
 public class SessionObject
@@ -252,9 +238,9 @@ public class SessionObject
 }
 ```
 
-### SessionCacheProvider — 管理 Session ID
+### SessionCacheProvider
 
-負責從 Cookie 取得或建立 Session ID，然後建立 `SessionObject`。這個類別不需要條件編譯，因為平台差異已經被 `ICookieAccessor` 抽離了。
+從 Cookie 取得或建立 Session ID，不需要條件編譯，平台差異由 `ICookieAccessor` 處理。
 
 ```csharp
 public class SessionCacheProvider
@@ -297,33 +283,30 @@ public class SessionCacheProvider
 }
 ```
 
-### CacheSession — 靜態便利類別
+### CacheSession
 
-為了讓開發者用起來跟 `Session` 一樣簡單，提供 `CacheSession.Current["key"]` 的靜態存取方式。
+靜態便利類別，提供 `CacheSession.Current["key"]`。
 
 **ASP.NET Core：**
 
 ```csharp
-// 設定值
 CacheSession.Current["UserName"] = "John";
-
-// 取得值
 var name = CacheSession.Current["UserName"];
 ```
 
 **ASP.NET Framework：**
 
 ```csharp
-// Application_Start 時初始化
+// Application_Start 初始化
 CacheSession.Initialize(cache, entryOptions);
 
 // 使用方式一樣
 CacheSession.Current["UserName"] = "John";
 ```
 
-### SessionCacheProviderExtensions — DI 擴充方法
+### SessionCacheProviderExtensions
 
-ASP.NET Core 的 DI 註冊，設計風格對齊 `AddHybridCache(Action<HybridCacheOptions>)`。
+DI 註冊，風格對齊 `AddHybridCache(Action<HybridCacheOptions>)`。
 
 ```csharp
 public static class SessionCacheProviderExtensions
@@ -357,12 +340,11 @@ public static class SessionCacheProviderExtensions
 }
 ```
 
-使用方式如下：
+使用方式：
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
 
-// 註冊 HybridCache
 builder.Services.AddHybridCache(options =>
 {
     options.DefaultEntryOptions = new HybridCacheEntryOptions
@@ -372,10 +354,10 @@ builder.Services.AddHybridCache(options =>
     };
 });
 
-// 註冊 SessionCacheProvider（使用預設值）
+// 使用預設值
 builder.Services.AddSessionCacheProvider();
 
-// 或自訂快取時間
+// 或自訂
 builder.Services.AddSessionCacheProvider(options =>
 {
     options.Expiration = TimeSpan.FromMinutes(30);
@@ -386,13 +368,13 @@ var app = builder.Build();
 app.UseSessionCache();
 ```
 
-NOTE：`Expiration` 是 L2 分散式快取的過期時間，`LocalCacheExpiration` 是 L1 記憶體快取的過期時間，兩者應該分開設定，L1 通常設比較短。
+NOTE：`Expiration` 是 L2（分散式快取）過期時間，`LocalCacheExpiration` 是 L1（記憶體）過期時間，L1 通常設比較短。
 
 ## BDD 測試
 
-使用 Reqnroll + xUnit 撰寫 BDD 測試案例，包含單元測試和 TestServer 整合測試。
+Reqnroll + xUnit，測試專案同樣 Multi-Target（`net48;net10.0`）。
 
-### SessionObject 單元測試
+### SessionObject
 
 ```gherkin
 Feature: SessionObject
@@ -432,7 +414,7 @@ Feature: SessionObject
 
 ### TestServer 整合測試
 
-使用 `WebApplicationFactory` 建立 TestServer，驗證完整的 HTTP 管線，包含 Cookie 寫入、跨 Request 取值、不同 Session 之間的隔離。
+用 `WebApplicationFactory` 建立 TestServer，驗證 Cookie 寫入、跨 Request 取值、Session 隔離。
 
 ```gherkin
 Feature: TestServer 整合測試
@@ -461,7 +443,7 @@ Feature: TestServer 整合測試
         Then Response 的內容應為 "zh-TW"
 ```
 
-TestServer 的 Fixture 使用 `WebApplicationFactory` 搭配 `TestWebApp`：
+TestServer Fixture：
 
 ```csharp
 public class TestWebServer : WebApplicationFactory<TestWebApp>
@@ -480,16 +462,16 @@ public class TestWebServer : WebApplicationFactory<TestWebApp>
 
 ## 運行結果
 
-測試專案同樣採用 Multi-Target（`net48;net10.0`），net48 排除依賴 ASP.NET Core 的 feature 與 StepDefinitions，只執行 `SessionObject` 和 `SessionCacheProvider` 兩組單元測試；net10.0 執行全部 16 個測試。
+net48 排除 ASP.NET Core 專用的 Feature，只跑 SessionObject 和 SessionCacheProvider：
 
 ```
 Passed!  - Failed: 0, Passed:  9, Skipped: 0, Total:  9  (net48)
 Passed!  - Failed: 0, Passed: 16, Skipped: 0, Total: 16  (net10.0)
 ```
 
-### net48 排除 feature 的注意事項
+### net48 排除 Feature 的注意事項
 
-Reqnroll 在 `Reqnroll.Tools.MsBuild.Generation.props` 中以 `<ReqnrollFeatureFile Include="**\*.feature">` 自動掃描所有 feature 檔案並產生對應的測試碼，因此單純使用 `<None Remove>` 是無效的，必須明確加上 `<ReqnrollFeatureFile Remove>`：
+Reqnroll 在 `Reqnroll.Tools.MsBuild.Generation.props` 以 `<ReqnrollFeatureFile Include="**\*.feature">` 自動掃描所有 feature 檔，單純 `<None Remove>` 無效，要加上 `<ReqnrollFeatureFile Remove>`：
 
 ```xml
 <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
