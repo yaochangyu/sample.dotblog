@@ -49,13 +49,14 @@ UserDevice: Id, UserId, FingerprintHash, DeviceName, UserAgent, IsVerified, Crea
 ## 實作步驟
 
 - [x] Step 1: 建立 ASP.NET Core 10 專案，加入 Npgsql.EF Core、Microsoft.Extensions.Caching.Hybrid、StackExchange.Redis、JWT、BCrypt 套件，建立 docker-compose.yml（PostgreSQL + Redis）
-- [ ] Step 2: 建立領域模型與 DbContext（含 Migration）
+- [x] Step 2: 建立領域模型與 DbContext（含 Migration）
 - [ ] Step 3: 實作帳號認證服務（IAuthService），OTP 讀寫改用 `HybridCache`（`GetOrCreateAsync` / `SetAsync` / `RemoveAsync`）
 - [ ] Step 4: 實作裝置指紋驗證 Middleware
 - [ ] Step 5: 實作 API Controllers
 - [ ] Step 6: 建立前端測試頁面（整合 FingerprintJS）
 - [ ] Step 7: Build 並驗證功能
 - [ ] Step 8: 更新 tree.md
+- [ ] Step 9: 建立 BDD 整合測試專案（SpecFlow），撰寫 Feature 涵蓋登入、新裝置 OTP 驗證、裝置指紋比對流程
 
 ## 注意事項
 - 密碼使用 BCrypt 雜湊
