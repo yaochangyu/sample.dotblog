@@ -132,6 +132,53 @@ task test
 - ✅ 使用不符的指紋存取受保護端點，回傳 403
 - ✅ 密碼錯誤，回傳 401
 
+## 裝置指紋取得方式
+
+### 前端：FingerprintJS
+
+```javascript
+const fp = await FingerprintJS.load();
+const result = await fp.get();
+const visitorId = result.visitorId; // 傳送至後端
+```
+
+FingerprintJS 在瀏覽器端收集多種訊號，組合雜湊產生 `visitorId`：
+
+| 類別 | 訊號來源 |
+|---|---|
+| 硬體 | CPU 核心數、螢幕解析度、GPU（WebGL）、記憶體大小 |
+| 瀏覽器 | User-Agent、語言設定、時區、Cookie 啟用狀態 |
+| 字型 | 系統安裝的字型清單 |
+| Canvas | 繪圖結果差異（不同硬體／驅動渲染略有不同） |
+| Audio | AudioContext 輸出特徵 |
+| 插件 | 瀏覽器已安裝的插件列表 |
+
+### 後端：SHA256 雜湊儲存
+
+前端傳來的 `visitorId`（明文）在後端**立即 SHA256 雜湊**後才存入資料庫，DB 只存 hash，不存原始值。
+
+```csharp
+// AuthService.cs
+private static string HashFingerprint(string fingerprint)
+{
+    var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(fingerprint));
+    return Convert.ToHexString(bytes).ToLowerInvariant();
+}
+```
+
+### Middleware 比對流程
+
+```
+請求 Header: X-Device-Fingerprint: {visitorId}
+                    ↓ SHA256
+JWT claim:   fingerprintHash: 3a7f2b...  ←→  DeviceFingerprintMiddleware 比對
+                    ↓ 相符 → 放行
+                    ↓ 不符 → 403 Forbidden
+```
+
+> **注意**：FingerprintJS 免費版穩定性約 40–60%，同裝置不同瀏覽器或無痕模式可能產生不同 ID。
+> 若需高精準度可改用 [FingerprintJS Pro](https://fingerprint.com)（號稱 99.5%）。
+
 ## HybridCache OTP 設計
 
 ```csharp
