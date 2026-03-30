@@ -50,6 +50,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<Lab.DeviceFingerprint.WebApi.Infrastructure.Middleware.DeviceFingerprintMiddleware>();
 app.MapControllers();
 
 app.Run();
