@@ -20,6 +20,7 @@ builder.Services.AddHybridCache();
 #pragma warning restore EXTEXP0018
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddSingleton<IOtpGenerator, RandomOtpGenerator>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
