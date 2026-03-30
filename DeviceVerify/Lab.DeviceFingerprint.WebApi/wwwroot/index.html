@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Device Fingerprint Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@4/dist/fp.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 0 16px; }
+    input, button { display: block; width: 100%; margin: 8px 0; padding: 8px; box-sizing: border-box; }
+    button { background: #0066cc; color: #fff; border: none; cursor: pointer; border-radius: 4px; }
+    button:hover { background: #0052a3; }
+    pre { background: #f4f4f4; padding: 12px; overflow: auto; border-radius: 4px; font-size: 13px; }
+    .section { border: 1px solid #ddd; padding: 16px; margin: 16px 0; border-radius: 8px; }
+    h2 { margin-top: 0; }
+    #otpSection { display: none; }
+  </style>
+</head>
+<body>
+  <h1>🔑 裝置指紋驗證 Demo</h1>
+
+  <div class="section">
+    <h2>裝置指紋</h2>
+    <p>Visitor ID：<strong id="visitorId">載入中...</strong></p>
+  </div>
+
+  <div class="section">
+    <h2>登入</h2>
+    <input type="text" id="username" placeholder="帳號" value="admin" />
+    <input type="password" id="password" placeholder="密碼" value="password123" />
+    <button onclick="login()">登入</button>
+  </div>
+
+  <div class="section" id="otpSection">
+    <h2>裝置驗證 OTP</h2>
+    <p>請查看 server log 取得 OTP</p>
+    <input type="text" id="otp" placeholder="輸入 6 位數 OTP" maxlength="6" />
+    <button onclick="verifyDevice()">驗證裝置</button>
+  </div>
+
+  <div class="section">
+    <h2>取得個人資料（需登入）</h2>
+    <button onclick="getProfile()">GET /api/me</button>
+  </div>
+
+  <div class="section">
+    <h2>回應</h2>
+    <pre id="output">（尚無結果）</pre>
+  </div>
+
+  <script>
+    let visitorId = '';
+    let pendingUserId = '';
+    let pendingFingerprintHash = '';
+    let token = localStorage.getItem('token') || '';
+
+    (async () => {
+      const fp = await FingerprintJS.load();
+      const result = await fp.get();
+      visitorId = result.visitorId;
+      document.getElementById('visitorId').textContent = visitorId;
+    })();
+
+    function show(data) {
+      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+    }
+
+    async function login() {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: document.getElementById('username').value,
+          password: document.getElementById('password').value,
+          fingerprint: visitorId,
+          deviceName: navigator.platform || 'Browser',
+        }),
+      });
+      const data = await res.json();
+      show(data);
+      if (data.token) {
+        token = data.token;
+        localStorage.setItem('token', token);
+        alert('登入成功！Token 已儲存。');
+      } else if (data.requireDeviceVerification) {
+        pendingUserId = data.userId;
+        pendingFingerprintHash = data.fingerprintHash;
+        document.getElementById('otpSection').style.display = 'block';
+      }
+    }
+
+    async function verifyDevice() {
+      const res = await fetch('/api/auth/verify-device', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: pendingUserId,
+          fingerprintHash: pendingFingerprintHash,
+          otp: document.getElementById('otp').value,
+          deviceName: navigator.platform || 'Browser',
+        }),
+      });
+      const data = await res.json();
+      show(data);
+      if (data.token) {
+        token = data.token;
+        localStorage.setItem('token', token);
+        document.getElementById('otpSection').style.display = 'none';
+        alert('裝置驗證成功！');
+      }
+    }
+
+    async function getProfile() {
+      if (!token) { alert('請先登入'); return; }
+      const res = await fetch('/api/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-Device-Fingerprint': visitorId,
+        },
+      });
+      const data = await res.json();
+      show(data);
+    }
+  </script>
+</body>
+</html>
