@@ -53,7 +53,7 @@ UserDevice: Id, UserId, FingerprintHash, DeviceName, UserAgent, IsVerified, Crea
 - [x] Step 3: 實作帳號認證服務（IAuthService），OTP 讀寫改用 `HybridCache`（`GetOrCreateAsync` / `SetAsync` / `RemoveAsync`）
 - [x] Step 4: 實作裝置指紋驗證 Middleware
 - [x] Step 5: 實作 API Controllers
-- [ ] Step 6: 建立前端測試頁面（整合 FingerprintJS）
+- [x] Step 6: 建立前端測試頁面（整合 FingerprintJS）
 - [ ] Step 7: Build 並驗證功能
 - [ ] Step 8: 更新 tree.md
 - [ ] Step 9: 建立 BDD 整合測試專案（SpecFlow），撰寫 Feature 涵蓋登入、新裝置 OTP 驗證、裝置指紋比對流程

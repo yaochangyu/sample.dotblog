@@ -48,6 +48,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<Lab.DeviceFingerprint.WebApi.Infrastructure.Middleware.DeviceFingerprintMiddleware>();
