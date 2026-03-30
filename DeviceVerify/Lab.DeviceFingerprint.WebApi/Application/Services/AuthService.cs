@@ -15,6 +15,7 @@ public class AuthService(
     AppDbContext db,
     HybridCache cache,
     IConfiguration config,
+    IOtpGenerator otpGenerator,
     ILogger<AuthService> logger) : IAuthService
 {
     private static string HashFingerprint(string fingerprint)
@@ -69,7 +70,7 @@ public class AuthService(
             return new LoginResponse(GenerateJwt(user, fingerprintHash), false, null, null);
         }
 
-        var otp = Random.Shared.Next(100000, 999999).ToString();
+        var otp = otpGenerator.Generate();
         var cacheKey = OtpCacheKey(user.Id, fingerprintHash);
 
         await cache.SetAsync(cacheKey, otp,
