@@ -1,46 +1,46 @@
-Feature: Device Fingerprint Authentication
-  As a user
-  I want to authenticate with device fingerprint verification
-  So that my account is protected from unauthorized devices
+Feature: 裝置指紋驗證
+  As a 使用者
+  I want to 透過裝置指紋進行身分驗證
+  So that 帳號受到保護，不允許未綁定的裝置登入
 
   Background:
-    Given a registered user "testuser" with password "password123"
+    Given 已建立帳號 "testuser" 密碼為 "password123"
 
-  Scenario: Login from a known verified device returns JWT token
-    Given the user has a verified device with fingerprint "device-abc-123"
-    When the user logs in with username "testuser" password "password123" and fingerprint "device-abc-123"
-    Then the response should contain a JWT token
-    And requireDeviceVerification should be false
+  Scenario: 從已知驗證裝置登入，直接回傳 JWT
+    Given 使用者已綁定指紋為 "device-abc-123" 的裝置
+    When 使用者以帳號 "testuser" 密碼 "password123" 指紋 "device-abc-123" 登入
+    Then 回應應包含 JWT token
+    And requireDeviceVerification 應為 false
 
-  Scenario: Login from a new device requires OTP verification
-    When the user logs in with username "testuser" password "password123" and fingerprint "new-device-xyz"
-    Then requireDeviceVerification should be true
-    And the response should contain userId and fingerprintHash
+  Scenario: 從新裝置登入，需要 OTP 驗證
+    When 使用者以帳號 "testuser" 密碼 "password123" 指紋 "new-device-xyz" 登入
+    Then requireDeviceVerification 應為 true
+    And 回應應包含 userId 與 fingerprintHash
 
-  Scenario: Verify new device with valid OTP binds device and returns JWT
-    Given the user logged in from new device with fingerprint "new-device-xyz"
-    And an OTP was generated for the device
-    When the user submits the correct OTP for device verification
-    Then the response should contain a JWT token
-    And the device should be marked as verified
+  Scenario: 以正確 OTP 驗證新裝置，綁定裝置並回傳 JWT
+    Given 使用者已從指紋 "new-device-xyz" 的新裝置登入
+    And 系統已產生 OTP
+    When 使用者提交正確的 OTP 進行裝置驗證
+    Then 回應應包含 JWT token
+    And 裝置應被標記為已驗證
 
-  Scenario: Verify device with invalid OTP returns 401
-    Given the user logged in from new device with fingerprint "new-device-xyz"
-    When the user submits the wrong OTP "000000" for device verification
-    Then the response status should be 401
+  Scenario: 提交錯誤 OTP，回傳 401
+    Given 使用者已從指紋 "new-device-xyz" 的新裝置登入
+    When 使用者提交錯誤 OTP "000000" 進行裝置驗證
+    Then 回應狀態碼應為 401
 
-  Scenario: Accessing protected endpoint with valid token and matching fingerprint succeeds
-    Given the user has a verified device with fingerprint "device-abc-123"
-    And the user is authenticated with fingerprint "device-abc-123"
-    When the user calls GET /api/me with the correct fingerprint header
-    Then the response status should be 200
+  Scenario: 使用正確 token 與符合指紋存取受保護端點，回傳 200
+    Given 使用者已綁定指紋為 "device-abc-123" 的裝置
+    And 使用者已以指紋 "device-abc-123" 完成認證
+    When 使用者以正確指紋標頭呼叫 GET /api/me
+    Then 回應狀態碼應為 200
 
-  Scenario: Accessing protected endpoint with mismatched fingerprint returns 403
-    Given the user has a verified device with fingerprint "device-abc-123"
-    And the user is authenticated with fingerprint "device-abc-123"
-    When the user calls GET /api/me with fingerprint header "wrong-device-999"
-    Then the response status should be 403
+  Scenario: 使用不符的指紋存取受保護端點，回傳 403
+    Given 使用者已綁定指紋為 "device-abc-123" 的裝置
+    And 使用者已以指紋 "device-abc-123" 完成認證
+    When 使用者以指紋標頭 "wrong-device-999" 呼叫 GET /api/me
+    Then 回應狀態碼應為 403
 
-  Scenario: Login with wrong password returns 401
-    When the user logs in with username "testuser" password "wrongpass" and fingerprint "device-abc-123"
-    Then the response status should be 401
+  Scenario: 密碼錯誤，回傳 401
+    When 使用者以帳號 "testuser" 密碼 "wrongpass" 指紋 "device-abc-123" 登入
+    Then 回應狀態碼應為 401
