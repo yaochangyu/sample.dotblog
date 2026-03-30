@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: device-fingerprint-postgres
+    environment:
+      POSTGRES_DB: devicefingerprint
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: device-fingerprint-redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:

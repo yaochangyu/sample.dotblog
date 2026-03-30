@@ -48,7 +48,7 @@ UserDevice: Id, UserId, FingerprintHash, DeviceName, UserAgent, IsVerified, Crea
 
 ## 實作步驟
 
-- [ ] Step 1: 建立 ASP.NET Core 10 專案，加入 Npgsql.EF Core、Microsoft.Extensions.Caching.Hybrid、StackExchange.Redis、JWT、BCrypt 套件，建立 docker-compose.yml（PostgreSQL + Redis）
+- [x] Step 1: 建立 ASP.NET Core 10 專案，加入 Npgsql.EF Core、Microsoft.Extensions.Caching.Hybrid、StackExchange.Redis、JWT、BCrypt 套件，建立 docker-compose.yml（PostgreSQL + Redis）
 - [ ] Step 2: 建立領域模型與 DbContext（含 Migration）
 - [ ] Step 3: 實作帳號認證服務（IAuthService），OTP 讀寫改用 `HybridCache`（`GetOrCreateAsync` / `SetAsync` / `RemoveAsync`）
 - [ ] Step 4: 實作裝置指紋驗證 Middleware
