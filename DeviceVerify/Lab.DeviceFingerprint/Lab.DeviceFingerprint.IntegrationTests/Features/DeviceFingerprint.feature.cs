@@ -17,22 +17,21 @@ namespace Lab.DeviceFingerprint.IntegrationTests.Features
     
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Reqnroll", "3.0.0.0")]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    public partial class DeviceFingerprintAuthenticationFeature : object, global::Xunit.IClassFixture<DeviceFingerprintAuthenticationFeature.FixtureData>, global::Xunit.IAsyncLifetime
+    public partial class 裝置指紋驗證Feature : object, global::Xunit.IClassFixture<裝置指紋驗證Feature.FixtureData>, global::Xunit.IAsyncLifetime
     {
         
         private global::Reqnroll.ITestRunner testRunner;
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "Device Fingerprint Authentication", "  As a user\n  I want to authenticate with device fingerprint verification\n  So th" +
-                "at my account is protected from unauthorized devices", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "裝置指紋驗證", "  As a 使用者\n  I want to 透過裝置指紋進行身分驗證\n  So that 帳號受到保護，不允許未綁定的裝置登入", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
         
         private global::Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         
 #line 1 "DeviceFingerprint.feature"
 #line hidden
         
-        public DeviceFingerprintAuthenticationFeature(DeviceFingerprintAuthenticationFeature.FixtureData fixtureData, global::Xunit.Abstractions.ITestOutputHelper testOutputHelper)
+        public 裝置指紋驗證Feature(裝置指紋驗證Feature.FixtureData fixtureData, global::Xunit.Abstractions.ITestOutputHelper testOutputHelper)
         {
             this._testOutputHelper = testOutputHelper;
         }
@@ -109,7 +108,7 @@ namespace Lab.DeviceFingerprint.IntegrationTests.Features
 #line 6
   #line hidden
 #line 7
-    await testRunner.GivenAsync("a registered user \"testuser\" with password \"password123\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+    await testRunner.GivenAsync("已建立帳號 \"testuser\" 密碼為 \"password123\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
         }
         
@@ -143,15 +142,15 @@ namespace Lab.DeviceFingerprint.IntegrationTests.Features
             await this.TestTearDownAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Login from a known verified device returns JWT token")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "Device Fingerprint Authentication")]
-        [global::Xunit.TraitAttribute("Description", "Login from a known verified device returns JWT token")]
-        public async global::System.Threading.Tasks.Task LoginFromAKnownVerifiedDeviceReturnsJWTToken()
+        [global::Xunit.SkippableFactAttribute(DisplayName="從已知驗證裝置登入，直接回傳 JWT")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "裝置指紋驗證")]
+        [global::Xunit.TraitAttribute("Description", "從已知驗證裝置登入，直接回傳 JWT")]
+        public async global::System.Threading.Tasks.Task 從已知驗證裝置登入直接回傳JWT()
         {
             string[] tagsOfScenario = ((string[])(null));
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "0";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Login from a known verified device returns JWT token", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("從已知驗證裝置登入，直接回傳 JWT", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
 #line 9
@@ -168,31 +167,30 @@ namespace Lab.DeviceFingerprint.IntegrationTests.Features
   await this.FeatureBackgroundAsync();
 #line hidden
 #line 10
-    await testRunner.GivenAsync("the user has a verified device with fingerprint \"device-abc-123\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+    await testRunner.GivenAsync("使用者已綁定指紋為 \"device-abc-123\" 的裝置", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
 #line 11
-    await testRunner.WhenAsync("the user logs in with username \"testuser\" password \"password123\" and fingerprint " +
-                        "\"device-abc-123\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("使用者以帳號 \"testuser\" 密碼 \"password123\" 指紋 \"device-abc-123\" 登入", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 12
-    await testRunner.ThenAsync("the response should contain a JWT token", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.ThenAsync("回應應包含 JWT token", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
 #line 13
-    await testRunner.AndAsync("requireDeviceVerification should be false", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("requireDeviceVerification 應為 false", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Login from a new device requires OTP verification")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "Device Fingerprint Authentication")]
-        [global::Xunit.TraitAttribute("Description", "Login from a new device requires OTP verification")]
-        public async global::System.Threading.Tasks.Task LoginFromANewDeviceRequiresOTPVerification()
+        [global::Xunit.SkippableFactAttribute(DisplayName="從新裝置登入，需要 OTP 驗證")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "裝置指紋驗證")]
+        [global::Xunit.TraitAttribute("Description", "從新裝置登入，需要 OTP 驗證")]
+        public async global::System.Threading.Tasks.Task 從新裝置登入需要OTP驗證()
         {
             string[] tagsOfScenario = ((string[])(null));
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "1";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Login from a new device requires OTP verification", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("從新裝置登入，需要 OTP 驗證", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
 #line 15
@@ -209,28 +207,27 @@ namespace Lab.DeviceFingerprint.IntegrationTests.Features
   await this.FeatureBackgroundAsync();
 #line hidden
 #line 16
-    await testRunner.WhenAsync("the user logs in with username \"testuser\" password \"password123\" and fingerprint " +
-                        "\"new-device-xyz\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("使用者以帳號 \"testuser\" 密碼 \"password123\" 指紋 \"new-device-xyz\" 登入", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 17
-    await testRunner.ThenAsync("requireDeviceVerification should be true", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.ThenAsync("requireDeviceVerification 應為 true", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
 #line 18
-    await testRunner.AndAsync("the response should contain userId and fingerprintHash", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("回應應包含 userId 與 fingerprintHash", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Verify new device with valid OTP binds device and returns JWT")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "Device Fingerprint Authentication")]
-        [global::Xunit.TraitAttribute("Description", "Verify new device with valid OTP binds device and returns JWT")]
-        public async global::System.Threading.Tasks.Task VerifyNewDeviceWithValidOTPBindsDeviceAndReturnsJWT()
+        [global::Xunit.SkippableFactAttribute(DisplayName="以正確 OTP 驗證新裝置，綁定裝置並回傳 JWT")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "裝置指紋驗證")]
+        [global::Xunit.TraitAttribute("Description", "以正確 OTP 驗證新裝置，綁定裝置並回傳 JWT")]
+        public async global::System.Threading.Tasks.Task 以正確OTP驗證新裝置綁定裝置並回傳JWT()
         {
             string[] tagsOfScenario = ((string[])(null));
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "2";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Verify new device with valid OTP binds device and returns JWT", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("以正確 OTP 驗證新裝置，綁定裝置並回傳 JWT", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
 #line 20
@@ -247,33 +244,33 @@ namespace Lab.DeviceFingerprint.IntegrationTests.Features
   await this.FeatureBackgroundAsync();
 #line hidden
 #line 21
-    await testRunner.GivenAsync("the user logged in from new device with fingerprint \"new-device-xyz\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+    await testRunner.GivenAsync("使用者已從指紋 \"new-device-xyz\" 的新裝置登入", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
 #line 22
-    await testRunner.AndAsync("an OTP was generated for the device", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("系統已產生 OTP", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 23
-    await testRunner.WhenAsync("the user submits the correct OTP for device verification", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("使用者提交正確的 OTP 進行裝置驗證", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 24
-    await testRunner.ThenAsync("the response should contain a JWT token", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.ThenAsync("回應應包含 JWT token", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
 #line 25
-    await testRunner.AndAsync("the device should be marked as verified", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("裝置應被標記為已驗證", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Verify device with invalid OTP returns 401")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "Device Fingerprint Authentication")]
-        [global::Xunit.TraitAttribute("Description", "Verify device with invalid OTP returns 401")]
-        public async global::System.Threading.Tasks.Task VerifyDeviceWithInvalidOTPReturns401()
+        [global::Xunit.SkippableFactAttribute(DisplayName="提交錯誤 OTP，回傳 401")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "裝置指紋驗證")]
+        [global::Xunit.TraitAttribute("Description", "提交錯誤 OTP，回傳 401")]
+        public async global::System.Threading.Tasks.Task 提交錯誤OTP回傳401()
         {
             string[] tagsOfScenario = ((string[])(null));
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "3";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Verify device with invalid OTP returns 401", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("提交錯誤 OTP，回傳 401", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
 #line 27
@@ -290,27 +287,27 @@ namespace Lab.DeviceFingerprint.IntegrationTests.Features
   await this.FeatureBackgroundAsync();
 #line hidden
 #line 28
-    await testRunner.GivenAsync("the user logged in from new device with fingerprint \"new-device-xyz\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+    await testRunner.GivenAsync("使用者已從指紋 \"new-device-xyz\" 的新裝置登入", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
 #line 29
-    await testRunner.WhenAsync("the user submits the wrong OTP \"000000\" for device verification", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("使用者提交錯誤 OTP \"000000\" 進行裝置驗證", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 30
-    await testRunner.ThenAsync("the response status should be 401", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.ThenAsync("回應狀態碼應為 401", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Accessing protected endpoint with valid token and matching fingerprint succeeds")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "Device Fingerprint Authentication")]
-        [global::Xunit.TraitAttribute("Description", "Accessing protected endpoint with valid token and matching fingerprint succeeds")]
-        public async global::System.Threading.Tasks.Task AccessingProtectedEndpointWithValidTokenAndMatchingFingerprintSucceeds()
+        [global::Xunit.SkippableFactAttribute(DisplayName="使用正確 token 與符合指紋存取受保護端點，回傳 200")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "裝置指紋驗證")]
+        [global::Xunit.TraitAttribute("Description", "使用正確 token 與符合指紋存取受保護端點，回傳 200")]
+        public async global::System.Threading.Tasks.Task 使用正確Token與符合指紋存取受保護端點回傳200()
         {
             string[] tagsOfScenario = ((string[])(null));
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "4";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Accessing protected endpoint with valid token and matching fingerprint succeeds", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("使用正確 token 與符合指紋存取受保護端點，回傳 200", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
 #line 32
@@ -327,30 +324,30 @@ namespace Lab.DeviceFingerprint.IntegrationTests.Features
   await this.FeatureBackgroundAsync();
 #line hidden
 #line 33
-    await testRunner.GivenAsync("the user has a verified device with fingerprint \"device-abc-123\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+    await testRunner.GivenAsync("使用者已綁定指紋為 \"device-abc-123\" 的裝置", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
 #line 34
-    await testRunner.AndAsync("the user is authenticated with fingerprint \"device-abc-123\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("使用者已以指紋 \"device-abc-123\" 完成認證", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 35
-    await testRunner.WhenAsync("the user calls GET /api/me with the correct fingerprint header", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("使用者以正確指紋標頭呼叫 GET /api/me", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 36
-    await testRunner.ThenAsync("the response status should be 200", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.ThenAsync("回應狀態碼應為 200", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Accessing protected endpoint with mismatched fingerprint returns 403")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "Device Fingerprint Authentication")]
-        [global::Xunit.TraitAttribute("Description", "Accessing protected endpoint with mismatched fingerprint returns 403")]
-        public async global::System.Threading.Tasks.Task AccessingProtectedEndpointWithMismatchedFingerprintReturns403()
+        [global::Xunit.SkippableFactAttribute(DisplayName="使用不符的指紋存取受保護端點，回傳 403")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "裝置指紋驗證")]
+        [global::Xunit.TraitAttribute("Description", "使用不符的指紋存取受保護端點，回傳 403")]
+        public async global::System.Threading.Tasks.Task 使用不符的指紋存取受保護端點回傳403()
         {
             string[] tagsOfScenario = ((string[])(null));
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "5";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Accessing protected endpoint with mismatched fingerprint returns 403", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("使用不符的指紋存取受保護端點，回傳 403", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
 #line 38
@@ -367,30 +364,30 @@ namespace Lab.DeviceFingerprint.IntegrationTests.Features
   await this.FeatureBackgroundAsync();
 #line hidden
 #line 39
-    await testRunner.GivenAsync("the user has a verified device with fingerprint \"device-abc-123\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
+    await testRunner.GivenAsync("使用者已綁定指紋為 \"device-abc-123\" 的裝置", ((string)(null)), ((global::Reqnroll.Table)(null)), "Given ");
 #line hidden
 #line 40
-    await testRunner.AndAsync("the user is authenticated with fingerprint \"device-abc-123\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("使用者已以指紋 \"device-abc-123\" 完成認證", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 41
-    await testRunner.WhenAsync("the user calls GET /api/me with fingerprint header \"wrong-device-999\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("使用者以指紋標頭 \"wrong-device-999\" 呼叫 GET /api/me", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 42
-    await testRunner.ThenAsync("the response status should be 403", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.ThenAsync("回應狀態碼應為 403", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="Login with wrong password returns 401")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "Device Fingerprint Authentication")]
-        [global::Xunit.TraitAttribute("Description", "Login with wrong password returns 401")]
-        public async global::System.Threading.Tasks.Task LoginWithWrongPasswordReturns401()
+        [global::Xunit.SkippableFactAttribute(DisplayName="密碼錯誤，回傳 401")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "裝置指紋驗證")]
+        [global::Xunit.TraitAttribute("Description", "密碼錯誤，回傳 401")]
+        public async global::System.Threading.Tasks.Task 密碼錯誤回傳401()
         {
             string[] tagsOfScenario = ((string[])(null));
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "6";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("Login with wrong password returns 401", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("密碼錯誤，回傳 401", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
 #line 44
@@ -407,11 +404,10 @@ namespace Lab.DeviceFingerprint.IntegrationTests.Features
   await this.FeatureBackgroundAsync();
 #line hidden
 #line 45
-    await testRunner.WhenAsync("the user logs in with username \"testuser\" password \"wrongpass\" and fingerprint \"d" +
-                        "evice-abc-123\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("使用者以帳號 \"testuser\" 密碼 \"wrongpass\" 指紋 \"device-abc-123\" 登入", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 46
-    await testRunner.ThenAsync("the response status should be 401", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
+    await testRunner.ThenAsync("回應狀態碼應為 401", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
             }
             await this.ScenarioCleanupAsync();
@@ -424,12 +420,12 @@ namespace Lab.DeviceFingerprint.IntegrationTests.Features
             
             async global::System.Threading.Tasks.Task global::Xunit.IAsyncLifetime.InitializeAsync()
             {
-                await DeviceFingerprintAuthenticationFeature.FeatureSetupAsync();
+                await 裝置指紋驗證Feature.FeatureSetupAsync();
             }
             
             async global::System.Threading.Tasks.Task global::Xunit.IAsyncLifetime.DisposeAsync()
             {
-                await DeviceFingerprintAuthenticationFeature.FeatureTearDownAsync();
+                await 裝置指紋驗證Feature.FeatureTearDownAsync();
             }
         }
     }

@@ -12,7 +12,7 @@ public class AuthStepDefinitions(ScenarioContext scenarioContext)
     private HttpResponseMessage _response = null!;
     private JsonElement _responseBody;
 
-    [Given("a registered user {string} with password {string}")]
+    [Given("已建立帳號 {string} 密碼為 {string}")]
     public async Task GivenARegisteredUser(string username, string password)
     {
         await _ctx.SeedUserAsync(username, password);
@@ -20,7 +20,7 @@ public class AuthStepDefinitions(ScenarioContext scenarioContext)
         scenarioContext["Password"] = password;
     }
 
-    [Given("the user has a verified device with fingerprint {string}")]
+    [Given("使用者已綁定指紋為 {string} 的裝置")]
     public async Task GivenVerifiedDevice(string fingerprint)
     {
         var username = scenarioContext["Username"].ToString()!;
@@ -28,7 +28,7 @@ public class AuthStepDefinitions(ScenarioContext scenarioContext)
         scenarioContext["KnownFingerprint"] = fingerprint;
     }
 
-    [When("the user logs in with username {string} password {string} and fingerprint {string}")]
+    [When("使用者以帳號 {string} 密碼 {string} 指紋 {string} 登入")]
     public async Task WhenLogin(string username, string password, string fingerprint)
     {
         _response = await _ctx.Client.PostAsJsonAsync("/api/auth/login", new
@@ -43,28 +43,28 @@ public class AuthStepDefinitions(ScenarioContext scenarioContext)
             _responseBody = JsonSerializer.Deserialize<JsonElement>(await _response.Content.ReadAsStringAsync());
     }
 
-    [Then("the response should contain a JWT token")]
+    [Then("回應應包含 JWT token")]
     public void ThenResponseHasToken()
     {
         Assert.True(_responseBody.TryGetProperty("token", out var token));
         Assert.False(string.IsNullOrEmpty(token.GetString()));
     }
 
-    [Then("requireDeviceVerification should be false")]
+    [Then("requireDeviceVerification 應為 false")]
     public void ThenNoVerificationRequired()
     {
         Assert.True(_responseBody.TryGetProperty("requireDeviceVerification", out var val));
         Assert.False(val.GetBoolean());
     }
 
-    [Then("requireDeviceVerification should be true")]
+    [Then("requireDeviceVerification 應為 true")]
     public void ThenVerificationRequired()
     {
         Assert.True(_responseBody.TryGetProperty("requireDeviceVerification", out var val));
         Assert.True(val.GetBoolean());
     }
 
-    [Then("the response should contain userId and fingerprintHash")]
+    [Then("回應應包含 userId 與 fingerprintHash")]
     public void ThenResponseHasUserIdAndHash()
     {
         Assert.True(_responseBody.TryGetProperty("userId", out var userId));
@@ -76,7 +76,7 @@ public class AuthStepDefinitions(ScenarioContext scenarioContext)
         scenarioContext["PendingFingerprintHash"] = hash.GetString()!;
     }
 
-    [Given("the user logged in from new device with fingerprint {string}")]
+    [Given("使用者已從指紋 {string} 的新裝置登入")]
     public async Task GivenNewDeviceLogin(string fingerprint)
     {
         var username = scenarioContext["Username"].ToString()!;
@@ -86,20 +86,20 @@ public class AuthStepDefinitions(ScenarioContext scenarioContext)
         ThenResponseHasUserIdAndHash();
     }
 
-    [Given("an OTP was generated for the device")]
+    [Given("系統已產生 OTP")]
     public void GivenOtpGenerated()
     {
         scenarioContext["OtpToUse"] = TestWebApplicationFactory.FixedOtp;
     }
 
-    [When("the user submits the correct OTP for device verification")]
+    [When("使用者提交正確的 OTP 進行裝置驗證")]
     public async Task WhenVerifyWithCorrectOtp()
     {
         var otp = scenarioContext["OtpToUse"].ToString()!;
         await SubmitOtp(otp);
     }
 
-    [When("the user submits the wrong OTP {string} for device verification")]
+    [When("使用者提交錯誤 OTP {string} 進行裝置驗證")]
     public async Task WhenVerifyWithWrongOtp(string otp)
     {
         var userId = scenarioContext["PendingUserId"].ToString()!;
@@ -131,19 +131,19 @@ public class AuthStepDefinitions(ScenarioContext scenarioContext)
             _responseBody = JsonSerializer.Deserialize<JsonElement>(await _response.Content.ReadAsStringAsync());
     }
 
-    [Then("the device should be marked as verified")]
+    [Then("裝置應被標記為已驗證")]
     public void ThenDeviceVerified()
     {
         Assert.Equal(System.Net.HttpStatusCode.OK, _response.StatusCode);
     }
 
-    [Then("the response status should be {int}")]
+    [Then("回應狀態碼應為 {int}")]
     public void ThenResponseStatus(int statusCode)
     {
         Assert.Equal(statusCode, (int)_response.StatusCode);
     }
 
-    [Given("the user is authenticated with fingerprint {string}")]
+    [Given("使用者已以指紋 {string} 完成認證")]
     public async Task GivenAuthenticated(string fingerprint)
     {
         var username = scenarioContext["Username"].ToString()!;
@@ -154,14 +154,14 @@ public class AuthStepDefinitions(ScenarioContext scenarioContext)
         scenarioContext["AuthFingerprint"] = fingerprint;
     }
 
-    [When(@"the user calls GET \/api\/me with the correct fingerprint header")]
+    [When(@"使用者以正確指紋標頭呼叫 GET \/api\/me")]
     public async Task WhenGetMeCorrectFingerprint()
     {
         var fingerprint = scenarioContext["AuthFingerprint"].ToString()!;
         await CallGetMe(fingerprint);
     }
 
-    [When(@"the user calls GET \/api\/me with fingerprint header {string}")]
+    [When(@"使用者以指紋標頭 {string} 呼叫 GET \/api\/me")]
     public async Task WhenGetMeWrongFingerprint(string fingerprint)
     {
         await CallGetMe(fingerprint);
