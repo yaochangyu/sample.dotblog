@@ -1,0 +1,86 @@
+version: "3"
+
+vars:
+  WEBAPI_DIR: Lab.DeviceFingerprint.WebApi
+  TEST_DIR: Lab.DeviceFingerprint.IntegrationTests
+  API_URL: http://localhost:5120
+
+tasks:
+  # ── 基礎設施 ──────────────────────────────────────────
+  infra:up:
+    desc: 啟動 PostgreSQL + Redis（docker compose）
+    dir: "{{.WEBAPI_DIR}}"
+    cmd: docker compose up -d
+
+  infra:down:
+    desc: 停止 PostgreSQL + Redis
+    dir: "{{.WEBAPI_DIR}}"
+    cmd: docker compose down
+
+  infra:logs:
+    desc: 查看 infra 容器 log
+    dir: "{{.WEBAPI_DIR}}"
+    cmd: docker compose logs -f
+
+  # ── 資料庫 ────────────────────────────────────────────
+  db:migrate:
+    desc: 執行 EF Core Migration
+    dir: "{{.WEBAPI_DIR}}"
+    cmd: dotnet ef database update
+
+  db:seed:
+    desc: 建立測試帳號（admin / password123）
+    cmd: |
+      curl -s -X POST {{.API_URL}}/api/dev/seed | python3 -m json.tool
+
+  # ── 建置 ──────────────────────────────────────────────
+  build:
+    desc: Build 所有專案
+    cmd: dotnet build Lab.DeviceFingerprint.sln
+
+  # ── API ───────────────────────────────────────────────
+  api:run:
+    desc: 啟動 WebAPI（http://localhost:5120）
+    dir: "{{.WEBAPI_DIR}}"
+    cmd: dotnet run --launch-profile http
+
+  api:watch:
+    desc: 啟動 WebAPI（hot reload）
+    dir: "{{.WEBAPI_DIR}}"
+    cmd: dotnet watch --launch-profile http
+
+  # ── 測試 ──────────────────────────────────────────────
+  test:
+    desc: 執行 BDD 整合測試
+    dir: "{{.TEST_DIR}}"
+    cmd: dotnet test --logger "console;verbosity=normal"
+
+  test:filter:
+    desc: 執行指定 Scenario（使用 NAME= 參數）
+    summary: |
+      範例：task test:filter NAME=密碼錯誤
+    dir: "{{.TEST_DIR}}"
+    cmd: dotnet test --logger "console;verbosity=normal" --filter "DisplayName~{{.NAME}}"
+    requires:
+      vars: [NAME]
+
+  # ── 完整前端測試流程 ───────────────────────────────────
+  dev:setup:
+    desc: 一鍵完成環境啟動、Migration、Seed
+    cmds:
+      - task: infra:up
+      - task: db:migrate
+      - task: db:seed
+
+  dev:start:
+    desc: 完整啟動（infra + API），開啟後瀏覽 http://localhost:5120
+    cmds:
+      - task: dev:setup
+      - task: api:run
+
+  dev:test:
+    desc: 完整測試流程（infra + migrate + seed + BDD 測試）
+    cmds:
+      - task: infra:up
+      - task: db:migrate
+      - task: test
