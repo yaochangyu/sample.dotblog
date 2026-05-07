@@ -22,7 +22,7 @@ stripH1Header: true
 
 SPA 身分驗證有個常見的陷阱：Token 存哪？存 `localStorage` 最方便，頁面重整也不會掉，但只要網站有一個 XSS 漏洞，攻擊者一行程式碼就能把 Token 帶走。存 Cookie 也不見得安全，沒設好一樣有風險。
 
-更早期的 OAuth 2.0 Implicit Flow 直接把 Token 放在 URL fragment 回傳，現在已不建議使用。目前的標準解法是 Authorization Code Flow + PKCE（Proof Key for Code Exchange），解決的是「授權碼被攔截後拿去換 Token」的問題。
+更早期的 OAuth 2.0 Implicit Flow 直接把 Token 放在 URL fragment 回傳，現在已不建議使用。目前的標準解法是 Authorization Code Flow（RFC 6749）+ PKCE（RFC 7636，Proof Key for Code Exchange），解決的是「授權碼被攔截後拿去換 Token」的問題。
 
 搭配 CSP（Content Security Policy）從瀏覽器端限制腳本來源，兩道防線合在一起，才算是比較完整的 SPA 安全架構。這篇文章用 ASP.NET Core Web API 自己實作授權伺服器，從頭走完整個 PKCE 流程，包含帳密驗證、Session Cookie 持久化、以及受保護的 API 端點。
 
@@ -40,7 +40,7 @@ SPA 身分驗證有個常見的陷阱：Token 存哪？存 `localStorage` 最方
 
 ---
 
-## PKCE 是什麼
+## PKCE 是什麼（RFC 7636）
 
 PKCE 的核心概念很簡單：前端在發起登入前，先在本地產生一組隨機字串，叫做 `code_verifier`。把它做 SHA-256 雜湊之後得到 `code_challenge`，這個雜湊值才送給授權伺服器。
 
@@ -124,7 +124,7 @@ NOTE：`code_verifier` 只存在記憶體（JavaScript 變數），**不要**寫
 
 * * *
 
-## CSP 是什麼，為什麼需要它
+## CSP 是什麼，為什麼需要它（W3C CSP Level 3）
 
 PKCE 防的是授權碼被攔截；但如果網站本身有 XSS 漏洞，攻擊者可以直接在你的網頁裡執行任意 JavaScript，包括讀取存在記憶體的 Token。
 
@@ -407,7 +407,7 @@ public IActionResult Get()
 }
 ```
 
-前端呼叫時把 Token 放進 header，如下：
+前端呼叫時把 Token 放進 header（Bearer Token 用法定義於 RFC 6750），如下：
 
 ```javascript
 const res = await fetch(`${AUTH_SERVER}/api/me`, {
@@ -516,3 +516,16 @@ sample.dotblog/Security/Lab.PKCE/
 - `https://localhost:7070/flow.html` — 流程圖
 
 若有謬誤，煩請告知，新手發帖請多包涵
+
+---
+
+## 參考規格
+
+| 規格 | 說明 |
+|------|------|
+| [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749) | The OAuth 2.0 Authorization Framework — Authorization Code Flow 核心規格 |
+| [RFC 7636](https://www.rfc-editor.org/rfc/rfc7636) | Proof Key for Code Exchange (PKCE) — 本篇核心，防止授權碼攔截攻擊 |
+| [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750) | The OAuth 2.0 Authorization Framework: Bearer Token Usage — `Authorization: Bearer` 用法規格 |
+| [RFC 9700](https://www.rfc-editor.org/rfc/rfc9700) | Best Current Practice for OAuth 2.0 Security（2025）— 強制要求所有客戶端使用 PKCE、嚴格驗證 redirect_uri |
+| [draft-ietf-oauth-browser-based-apps](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-browser-based-apps) | OAuth 2.0 for Browser-Based Applications — SPA 安全架構建議，涵蓋 Token 儲存策略與 CSP 防護 |
+| [W3C CSP Level 3](https://www.w3.org/TR/CSP3/) | Content Security Policy Level 3 — `script-src`、`connect-src` 等指令的規格來源 |
