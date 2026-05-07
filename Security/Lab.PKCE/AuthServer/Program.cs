@@ -12,8 +12,11 @@ builder.Services.AddSingleton<AccessTokenStore>();
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
-        // 本地 file:// 頁面的 origin 是 "null"，credentials: include 不能用 AllowAnyOrigin
-        policy.WithOrigins("null", "http://localhost", "http://127.0.0.1")
+        policy.WithOrigins(
+                "https://localhost:7070",
+                "https://127.0.0.1:7070",
+                "http://localhost:5283",
+                "http://127.0.0.1:5283")
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials());
@@ -21,9 +24,40 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+if (!app.Environment.IsDevelopment())
+    app.UseHsts();
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers["Permissions-Policy"] =
+        "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()";
+
+    var cspDisabled = context.Request.Path.Equals("/emulator.html", StringComparison.OrdinalIgnoreCase)
+                      && string.Equals(context.Request.Query["csp"], "off", StringComparison.OrdinalIgnoreCase);
+
+    if (!cspDisabled)
+    {
+        context.Response.Headers["Content-Security-Policy"] =
+            "default-src 'self'; " +
+            "script-src 'self' https://cdn.jsdelivr.net; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data:; " +
+            "connect-src 'self'; " +
+            "font-src 'self'; " +
+            "object-src 'none'; " +
+            "base-uri 'none'; " +
+            "frame-ancestors 'none'; " +
+            "form-action 'self'";
+    }
+
+    await next();
+});
+
+app.UseHttpsRedirection();
 app.UseCors();
-// 移除 HTTPS 重導，避免 fetch 遇到 HTTP→HTTPS redirect 時安全機制自動丟棄 Authorization header
-// app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.MapControllers();
 
