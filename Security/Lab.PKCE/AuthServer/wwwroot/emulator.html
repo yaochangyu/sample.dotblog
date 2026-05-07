@@ -50,9 +50,9 @@
             <button id="btnPkce">1. 產生 PKCE 密語</button>
             <div id="loginForm" class="login-form">
                 <label for="inputUsername">帳號</label>
-                <input type="text" id="inputUsername" placeholder="alice 或 bob" value="alice">
+                <input type="text" id="inputUsername" placeholder="alice 或 bob">
                 <label for="inputPassword">密碼</label>
-                <input type="password" id="inputPassword" placeholder="輸入密碼" value="password123">
+                <input type="password" id="inputPassword" placeholder="輸入密碼">
                 <div class="hint">測試帳號：alice / password123　或　bob / password456</div>
             </div>
             <button id="btnAuth" disabled>2. 登入並取得授權碼 (Code)</button>
@@ -225,6 +225,7 @@
             UI.setText('valToken', '-');
 
             document.getElementById('loginForm').classList.remove('visible');
+            document.getElementById('inputUsername').value = '';
             document.getElementById('inputPassword').value = '';
             document.getElementById('consoleLog').innerHTML = '';
 
