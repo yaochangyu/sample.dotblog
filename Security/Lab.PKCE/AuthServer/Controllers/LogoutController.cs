@@ -15,7 +15,13 @@ public class LogoutController(SessionStore sessions) : ControllerBase
         if (Request.Cookies.TryGetValue(SessionCookieName, out var sid))
         {
             sessions.Remove(sid!);
-            Response.Cookies.Delete(SessionCookieName);
+            Response.Cookies.Delete(SessionCookieName, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Path = "/"
+            });
         }
 
         return Ok(new { message = "已登出" });

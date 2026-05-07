@@ -16,6 +16,12 @@ public class AuthorizeController(
     [HttpPost]
     public IActionResult Post([FromBody] AuthorizeRequest request)
     {
+        if (string.IsNullOrWhiteSpace(request.ClientId) || string.IsNullOrWhiteSpace(request.RedirectUri))
+            return BadRequest("client_id 與 redirect_uri 不可為空");
+
+        if (!OAuthClientPolicy.IsValid(request.ClientId, request.RedirectUri, Request))
+            return BadRequest("client_id 或 redirect_uri 不合法");
+
         if (string.IsNullOrWhiteSpace(request.CodeChallenge))
             return BadRequest("code_challenge 不可為空");
 
@@ -42,13 +48,17 @@ public class AuthorizeController(
             Response.Cookies.Append(SessionCookieName, newSession.SessionId, new CookieOptions
             {
                 HttpOnly = true,
+                Secure = true,
                 SameSite = SameSiteMode.Strict,
-                Expires  = newSession.ExpiresAt
+                Expires  = newSession.ExpiresAt,
+                Path = "/"
             });
         }
 
         var code = store.Save(new AuthorizationCode
         {
+            ClientId            = request.ClientId,
+            RedirectUri         = request.RedirectUri,
             CodeChallenge       = request.CodeChallenge,
             CodeChallengeMethod = request.CodeChallengeMethod,
             Username            = username
@@ -77,7 +87,13 @@ public class AuthorizeController(
         {
             // 過期 Session 順手清掉
             if (session is not null) sessions.Remove(sid!);
-            Response.Cookies.Delete(SessionCookieName);
+            Response.Cookies.Delete(SessionCookieName, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Path = "/"
+            });
             session = null;
             return false;
         }

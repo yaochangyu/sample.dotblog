@@ -1,19 +1,19 @@
-using System.Security.Cryptography;
-using System.Text;
 using AuthServer.Models;
+using Microsoft.AspNetCore.Identity;
 
 namespace AuthServer.Services;
 
 public class UserStore
 {
     private readonly Dictionary<string, User> _users;
+    private readonly PasswordHasher<User> _passwordHasher = new();
 
     public UserStore()
     {
         _users = new Dictionary<string, User>(StringComparer.OrdinalIgnoreCase)
         {
-            ["alice"] = new User { Username = "alice", PasswordHash = Hash("password123") },
-            ["bob"]   = new User { Username = "bob",   PasswordHash = Hash("password456") },
+            ["alice"] = CreateUser("alice", "password123"),
+            ["bob"]   = CreateUser("bob", "password456"),
         };
     }
 
@@ -22,16 +22,14 @@ public class UserStore
         if (!_users.TryGetValue(username, out var user))
             return false;
 
-        // 固定時間比較，避免 timing attack
-        return CryptographicOperations.FixedTimeEquals(
-            Encoding.UTF8.GetBytes(user.PasswordHash),
-            Encoding.UTF8.GetBytes(Hash(password))
-        );
+        var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, password);
+        return result is PasswordVerificationResult.Success or PasswordVerificationResult.SuccessRehashNeeded;
     }
 
-    private static string Hash(string password)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(password));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
-    }
+    private User CreateUser(string username, string password)
+        => new()
+        {
+            Username = username,
+            PasswordHash = _passwordHasher.HashPassword(new User { Username = username }, password)
+        };
 }

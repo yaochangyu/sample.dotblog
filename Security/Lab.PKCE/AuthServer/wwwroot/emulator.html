@@ -33,6 +33,7 @@
         .login-form label { font-size: 0.85rem; font-weight: bold; display: block; margin-bottom: 2px; color: #374151; }
         .login-form input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 8px; font-size: 0.9rem; }
         .hint { font-size: 0.78rem; color: #6b7280; margin-bottom: 8px; }
+        .csp-status { font-size: 0.78rem; color: #92400e; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -41,12 +42,13 @@
         <div class="card">
             <h2>控制台</h2>
             <div class="toggle-container">
-                <span style="font-weight: bold;">🛡️ 模擬開啟 CSP 白名單防護</span>
+                <span style="font-weight: bold;">🛡️ 啟用真正的 CSP Header</span>
                 <label class="switch">
                     <input type="checkbox" id="cspToggle" checked>
                     <span class="slider"></span>
                 </label>
             </div>
+            <div class="csp-status" id="cspStatus"></div>
             <button id="btnPkce">1. 產生 PKCE 密語</button>
             <div id="loginForm" class="login-form">
                 <label for="inputUsername">帳號</label>
@@ -74,215 +76,6 @@
             <div class="console" id="consoleLog"></div>
         </div>
     </div>
-
-    <script>
-        const AUTH_SERVER = 'http://localhost:5283';
-        const state = { verifier: '', challenge: '', authCode: '', token: '', loggedInUser: '' };
-
-        const UI = {
-            log: (msg, type = '') => {
-                const el = document.getElementById('consoleLog');
-                const div = document.createElement('div');
-                div.textContent = `[${new Date().toLocaleTimeString('zh-TW', { hour12: false })}] ${msg}`;
-                if (type) div.className = `log-${type}`;
-                el.appendChild(div); el.scrollTop = el.scrollHeight;
-            },
-            setText: (id, text) => document.getElementById(id).textContent = text,
-            setBtn: (id, enabled) => document.getElementById(id).disabled = !enabled
-        };
-
-        function base64UrlEncode(array) {
-            return btoa(String.fromCharCode.apply(null, array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-        }
-
-        async function generatePkce() {
-            const array = new Uint8Array(32);
-            window.crypto.getRandomValues(array);
-            state.verifier = base64UrlEncode(array);
-            const hash = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(state.verifier));
-            state.challenge = base64UrlEncode(new Uint8Array(hash));
-        }
-
-        async function fetchAuthCode(username = '', password = '') {
-            const hasSession = !!state.loggedInUser;
-            const res = await fetch(`${AUTH_SERVER}/authorize`, {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password, codeChallenge: state.challenge, codeChallengeMethod: 'S256' })
-            });
-            if (!res.ok) throw new Error(await res.text());
-            const data = await res.json();
-            state.authCode = data.code;
-            state.loggedInUser = data.username;
-            UI.setText('valUser', state.loggedInUser);
-            UI.log(hasSession ? `Auth: Session 有效，免帳密核發 Code！` : `Auth: 身分驗證通過！`, 'warn');
-            UI.log(`Auth -> SPA: 回傳 Authorization Code: ${state.authCode}`);
-        }
-
-        async function fetchToken() {
-            const res = await fetch(`${AUTH_SERVER}/token`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    grantType: 'authorization_code',
-                    code: state.authCode,
-                    codeVerifier: state.verifier,
-                    clientId: 'spa',
-                    redirectUri: ''
-                })
-            });
-            if (!res.ok) throw new Error(await res.text());
-            const data = await res.json();
-            state.token = data.access_token;
-            UI.setText('valToken', '存於記憶體');
-            UI.log('Auth: 驗證 SHA256(Verifier) == Challenge... 成功！', 'warn');
-            UI.log(`Auth -> SPA: 核發 Access Token。已安全存放於記憶體。`, 'sys');
-        }
-
-        document.getElementById('btnPkce').onclick = async () => {
-            UI.log('SPA: 產生 PKCE Code Verifier 與 Challenge...', 'sys');
-            await generatePkce();
-            UI.setText('valVerifier', state.verifier.substring(0, 15) + '...');
-            UI.log(`已備妥密語。Challenge: ${state.challenge.substring(0, 20)}...`, 'sys');
-            UI.setBtn('btnPkce', false); UI.setBtn('btnAuth', true);
-
-            if (!state.loggedInUser)
-                document.getElementById('loginForm').classList.add('visible');
-            else
-                UI.log(`偵測到已登入 Session（${state.loggedInUser}），跳過帳密輸入。`, 'sys');
-        };
-
-        document.getElementById('btnAuth').onclick = async () => {
-            const hasSession = !!state.loggedInUser;
-            const username = hasSession ? '' : document.getElementById('inputUsername').value.trim();
-            const password = hasSession ? '' : document.getElementById('inputPassword').value;
-
-            if (!hasSession && (!username || !password)) {
-                UI.log('請輸入帳號與密碼', 'error'); return;
-            }
-
-            UI.log(hasSession
-                ? `SPA -> Auth: 攜帶 Session Cookie 與 code_challenge，請求 Authorization Code...`
-                : `SPA -> Auth: 送出帳號「${username}」與 code_challenge，請求 Authorization Code...`);
-
-            try {
-                await fetchAuthCode(username, password);
-                document.getElementById('loginForm').classList.remove('visible');
-                UI.setBtn('btnAuth', false); UI.setBtn('btnToken', true);
-                UI.setBtn('btnLogout', true);
-            } catch (err) {
-                UI.log(`錯誤：${err.message}`, 'error');
-            }
-        };
-
-        document.getElementById('btnToken').onclick = async () => {
-            UI.log('SPA -> Auth: 發送 Code 與 Verifier 交換 Token...');
-            try {
-                await fetchToken();
-                UI.setBtn('btnToken', false); UI.setBtn('btnMe', true); UI.setBtn('btnXss', true);
-            } catch (err) {
-                UI.log(`錯誤：${err.message}`, 'error');
-            }
-        };
-
-        document.getElementById('btnMe').onclick = async () => {
-            UI.log('SPA -> API: 攜帶 Bearer Token 呼叫 GET /api/me...');
-            try {
-                const res = await fetch(`${AUTH_SERVER}/api/me`, {
-                    headers: { 'Authorization': `Bearer ${state.token}` }
-                });
-                if (!res.ok) throw new Error(await res.text());
-                const data = await res.json();
-                UI.log(`API -> SPA: ${data.message}`, 'warn');
-                UI.log(`受保護資源存取成功。`, 'sys');
-            } catch (err) {
-                UI.log(`錯誤：${err.message}`, 'error');
-            }
-        };
-
-        document.getElementById('btnXss').onclick = () => {
-            const cspEnabled = document.getElementById('cspToggle').checked;
-            UI.log('--- 遭受 XSS 攻擊 ---', 'error');
-            UI.log('Hacker -> SPA: 嘗試載入惡意外部腳本 steal.js', 'error');
-            setTimeout(() => {
-                if (cspEnabled) {
-                    UI.log('SPA (CSP): ⛔ 阻擋執行！該網域不在白名單內。', 'warn');
-                    UI.log('防禦成功，記憶體中的 Token 安全無虞。', 'sys');
-                } else {
-                    UI.log('SPA: 惡意腳本成功執行！', 'error');
-                    UI.log(`Hacker: 已竊取記憶體資料 Token: ${state.token}`, 'error');
-                }
-            }, 800);
-        };
-
-        function resetClientState() {
-            state.verifier = ''; state.challenge = ''; state.authCode = '';
-            state.token = ''; state.loggedInUser = '';
-
-            UI.setText('valUser', '-');
-            UI.setText('valVerifier', '-');
-            UI.setText('valToken', '-');
-
-            document.getElementById('loginForm').classList.remove('visible');
-            document.getElementById('inputUsername').value = '';
-            document.getElementById('inputPassword').value = '';
-            document.getElementById('consoleLog').innerHTML = '';
-
-            UI.setBtn('btnPkce', true);
-            UI.setBtn('btnAuth', false);
-            UI.setBtn('btnToken', false);
-            UI.setBtn('btnMe', false);
-            UI.setBtn('btnXss', false);
-            UI.setBtn('btnLogout', false);
-        }
-
-        document.getElementById('btnLogout').onclick = async () => {
-            try {
-                await fetch(`${AUTH_SERVER}/logout`, { method: 'POST', credentials: 'include' });
-                resetClientState();
-                UI.log('Auth: Session 已移除，Cookie 已清除。', 'sys');
-                UI.log('請點擊「1. 產生 PKCE 密語」重新登入。', 'sys');
-            } catch (err) {
-                UI.log(`登出失敗：${err.message}`, 'error');
-            }
-        };
-
-
-        // 頁面載入時靜默檢查 Session Cookie，有效則自動完成 PKCE 換 Token
-        (async () => {
-            try {
-                const res = await fetch(`${AUTH_SERVER}/authorize/session`, { credentials: 'include' });
-                if (!res.ok) {
-                    UI.log(`系統就緒。AuthServer: ${AUTH_SERVER}`, 'sys');
-                    UI.log('請點擊「1. 產生 PKCE 密語」開始。', 'sys');
-                    return;
-                }
-
-                const { username } = await res.json();
-                state.loggedInUser = username;
-                UI.setText('valUser', username);
-                UI.log(`偵測到已登入 Session（${username}），靜默恢復 Token 中...`, 'warn');
-
-                await generatePkce();
-                UI.log('SPA: 自動產生新的 PKCE 密語...', 'sys');
-
-                await fetchAuthCode();
-                UI.log('SPA -> Auth: 以 Session Cookie 取得 Authorization Code...', 'sys');
-
-                await fetchToken();
-                UI.setBtn('btnPkce', false);
-                UI.setBtn('btnAuth', false);
-                UI.setBtn('btnToken', false);
-                UI.setBtn('btnLogout', true);
-                UI.setBtn('btnMe', true);
-                UI.setBtn('btnXss', true);
-                UI.log('Token 已恢復，可直接呼叫受保護 API。', 'sys');
-            } catch (err) {
-                UI.log(`系統就緒（Session 恢復失敗：${err.message}）`, 'sys');
-                UI.log('請點擊「1. 產生 PKCE 密語」開始。', 'sys');
-            }
-        })();
-    </script>
+    <script src="/emulator.js" defer></script>
 </body>
 </html>
