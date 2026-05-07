@@ -42,9 +42,10 @@ app.Use(async (context, next) =>
         // 刻意避免實作 nonce 以簡化示範。正式環境應改用 nonce 消除 CSS injection 風險。
         // [Lab] script-src 使用 'self' 允許同源所有 .js 檔；
         // 正式環境應改用 hash（'sha256-...'）或 nonce 精確鎖定允許的腳本。
+        // cdn.jsdelivr.net 供 flow.html 載入 Mermaid.js 使用
         context.Response.Headers["Content-Security-Policy"] =
             "default-src 'self'; " +
-            "script-src 'self'; " +
+            "script-src 'self' https://cdn.jsdelivr.net; " +
             "style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data:; " +
             "connect-src 'self'; " +
