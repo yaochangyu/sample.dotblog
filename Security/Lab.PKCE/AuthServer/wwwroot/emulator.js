@@ -11,6 +11,7 @@ const state = {
     lastCspViolation: null
 };
 
+// [Lab] 刻意暴露至 window，供 XSS 攻擊模擬讀取；正式環境不應將 state 掛到 window
 window.__labState = state;
 
 const UI = {
@@ -125,6 +126,9 @@ async function fetchToken() {
     UI.log(`Auth -> SPA: 核發 Access Token（${data.expires_in} 秒後到期）。`, 'sys');
 }
 
+// [Lab] 模擬限制：此函式本身在受信任的 emulator.js 內執行，邏輯上已有程式碼執行能力。
+// 示範的是「動態建立 inline script 時 CSP script-src 'self' 的攔截行為」，
+// 而非完整的 XSS 攻擊鏈（真實 XSS 是攻擊者注入的腳本在取得執行機會前就被阻擋）。
 async function runInlineXssAttack() {
     UI.log('--- 遭受 XSS 攻擊 ---', 'error');
     UI.log('Hacker -> SPA: 注入 inline <script> 嘗試竊取記憶體中的 Token', 'error');
