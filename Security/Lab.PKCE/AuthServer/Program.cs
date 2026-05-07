@@ -35,14 +35,16 @@ app.Use(async (context, next) =>
     context.Response.Headers["Permissions-Policy"] =
         "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()";
 
-    var cspDisabled = context.Request.Path.Equals("/emulator.html", StringComparison.OrdinalIgnoreCase)
-                      && string.Equals(context.Request.Query["csp"], "off", StringComparison.OrdinalIgnoreCase);
-
-    if (!cspDisabled)
+    // emulator.html 由 client 端透過 meta tag 動態管理 CSP，server 不介入
+    if (!context.Request.Path.Equals("/emulator.html", StringComparison.OrdinalIgnoreCase))
     {
+        // [Lab] style-src 保留 'unsafe-inline' 是因為 emulator.html 使用 <style> 標籤，
+        // 刻意避免實作 nonce 以簡化示範。正式環境應改用 nonce 消除 CSS injection 風險。
+        // [Lab] script-src 使用 'self' 允許同源所有 .js 檔；
+        // 正式環境應改用 hash（'sha256-...'）或 nonce 精確鎖定允許的腳本。
         context.Response.Headers["Content-Security-Policy"] =
             "default-src 'self'; " +
-            "script-src 'self' https://cdn.jsdelivr.net; " +
+            "script-src 'self'; " +
             "style-src 'self' 'unsafe-inline'; " +
             "img-src 'self' data:; " +
             "connect-src 'self'; " +
