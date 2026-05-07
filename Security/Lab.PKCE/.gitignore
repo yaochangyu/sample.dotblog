@@ -1,0 +1,11 @@
+# 編輯器暫存檔
+*.saved.bak
+*~
+
+# 封存的計畫檔
+.archive/
+
+# AuthServer 執行期產生的本地設定
+AuthServer/appsettings.*.json
+!AuthServer/appsettings.json
+!AuthServer/appsettings.Development.json
