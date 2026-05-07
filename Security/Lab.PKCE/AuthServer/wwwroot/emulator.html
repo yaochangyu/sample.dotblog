@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPA PKCE 與 CSP 安全模擬器</title>
+    <style>
+        :root {
+            --primary: #3b82f6; --success: #10b981; --danger: #ef4444;
+            --bg: #f3f4f6; --surface: #ffffff; --text: #1f2937; --border: #e5e7eb;
+        }
+        body { font-family: system-ui, -apple-system, sans-serif; background-color: var(--bg); color: var(--text); padding: 20px; line-height: 1.5; }
+        .container { max-width: 800px; margin: 0 auto; display: grid; gap: 20px; }
+        .card { background: var(--surface); padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        h1, h2, h3 { margin-top: 0; color: #111827; }
+        h2 { font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 15px; }
+        button { width: 100%; padding: 12px; margin-bottom: 10px; border: none; border-radius: 4px; background-color: var(--primary); color: white; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+        button:disabled { background-color: #9ca3af; cursor: not-allowed; }
+        button:hover:not(:disabled) { transform: translateY(-1px); }
+        .btn-danger { background-color: var(--danger); }
+        .state-box { background: var(--bg); padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85rem; word-break: break-all; margin-bottom: 15px; }
+        .toggle-container { display: flex; align-items: center; justify-content: space-between; background: #fffbeb; border: 1px solid #fde68a; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--success); }
+        input:checked + .slider:before { transform: translateX(20px); }
+        .console { background: #1e1e1e; color: #a7f3d0; padding: 15px; border-radius: 4px; font-family: monospace; height: 300px; overflow-y: auto; font-size: 0.85rem; }
+        .log-error { color: #fca5a5; } .log-warn { color: #fde047; } .log-sys { color: #9ca3af; }
+        .login-form { display: none; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 12px; margin-bottom: 10px; }
+        .login-form.visible { display: block; }
+        .login-form label { font-size: 0.85rem; font-weight: bold; display: block; margin-bottom: 2px; color: #374151; }
+        .login-form input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid var(--border); border-radius: 4px; margin-bottom: 8px; font-size: 0.9rem; }
+        .hint { font-size: 0.78rem; color: #6b7280; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SPA 安全架構模擬器 (PKCE + CSP)</h1>
+        <div class="card">
+            <h2>控制台</h2>
+            <div class="toggle-container">
+                <span style="font-weight: bold;">🛡️ 模擬開啟 CSP 白名單防護</span>
+                <label class="switch">
+                    <input type="checkbox" id="cspToggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <button id="btnPkce">1. 產生 PKCE 密語</button>
+            <div id="loginForm" class="login-form">
+                <label for="inputUsername">帳號</label>
+                <input type="text" id="inputUsername" placeholder="alice 或 bob" value="alice">
+                <label for="inputPassword">密碼</label>
+                <input type="password" id="inputPassword" placeholder="輸入密碼" value="password123">
+                <div class="hint">測試帳號：alice / password123　或　bob / password456</div>
+            </div>
+            <button id="btnAuth" disabled>2. 登入並取得授權碼 (Code)</button>
+            <button id="btnToken" disabled>3. 交換存取憑證 (Token)</button>
+            <button id="btnMe" disabled>4. 呼叫受保護 API（/api/me）</button>
+            <hr style="margin: 15px 0; border: 0; border-top: 1px solid var(--border);">
+            <button id="btnXss" class="btn-danger" disabled>😈 模擬 XSS 竊取 Token</button>
+
+            <h3 style="margin-top: 15px; font-size: 0.9rem;">記憶體狀態 (不存於 localStorage)</h3>
+            <div class="state-box">
+                <strong>登入身分：</strong> <span id="valUser" style="color:#7c3aed">-</span><br>
+                <strong>Verifier:</strong> <span id="valVerifier" style="color:var(--primary)">-</span><br>
+                <strong>Token:</strong> <span id="valToken" style="color:var(--success)">-</span>
+            </div>
+            <button id="btnLogout" class="btn-danger" style="margin-bottom:0;" disabled>登出</button>
+        </div>
+        <div class="card">
+            <h2>系統日誌</h2>
+            <div class="console" id="consoleLog"></div>
+        </div>
+    </div>
+
+    <script>
+        const AUTH_SERVER = 'http://localhost:5283';
+        const state = { verifier: '', challenge: '', authCode: '', token: '', loggedInUser: '' };
+
+        const UI = {
+            log: (msg, type = '') => {
+                const el = document.getElementById('consoleLog');
+                const div = document.createElement('div');
+                div.textContent = `[${new Date().toLocaleTimeString('zh-TW', { hour12: false })}] ${msg}`;
+                if (type) div.className = `log-${type}`;
+                el.appendChild(div); el.scrollTop = el.scrollHeight;
+            },
+            setText: (id, text) => document.getElementById(id).textContent = text,
+            setBtn: (id, enabled) => document.getElementById(id).disabled = !enabled
+        };
+
+        function base64UrlEncode(array) {
+            return btoa(String.fromCharCode.apply(null, array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        async function generatePkce() {
+            const array = new Uint8Array(32);
+            window.crypto.getRandomValues(array);
+            state.verifier = base64UrlEncode(array);
+            const hash = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(state.verifier));
+            state.challenge = base64UrlEncode(new Uint8Array(hash));
+        }
+
+        async function fetchAuthCode(username = '', password = '') {
+            const hasSession = !!state.loggedInUser;
+            const res = await fetch(`${AUTH_SERVER}/authorize`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, codeChallenge: state.challenge, codeChallengeMethod: 'S256' })
+            });
+            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json();
+            state.authCode = data.code;
+            state.loggedInUser = data.username;
+            UI.setText('valUser', state.loggedInUser);
+            UI.log(hasSession ? `Auth: Session 有效，免帳密核發 Code！` : `Auth: 身分驗證通過！`, 'warn');
+            UI.log(`Auth -> SPA: 回傳 Authorization Code: ${state.authCode}`);
+        }
+
+        async function fetchToken() {
+            const res = await fetch(`${AUTH_SERVER}/token`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    grantType: 'authorization_code',
+                    code: state.authCode,
+                    codeVerifier: state.verifier,
+                    clientId: 'spa',
+                    redirectUri: ''
+                })
+            });
+            if (!res.ok) throw new Error(await res.text());
+            const data = await res.json();
+            state.token = data.access_token;
+            UI.setText('valToken', '存於記憶體');
+            UI.log('Auth: 驗證 SHA256(Verifier) == Challenge... 成功！', 'warn');
+            UI.log(`Auth -> SPA: 核發 Access Token。已安全存放於記憶體。`, 'sys');
+        }
+
+        document.getElementById('btnPkce').onclick = async () => {
+            UI.log('SPA: 產生 PKCE Code Verifier 與 Challenge...', 'sys');
+            await generatePkce();
+            UI.setText('valVerifier', state.verifier.substring(0, 15) + '...');
+            UI.log(`已備妥密語。Challenge: ${state.challenge.substring(0, 20)}...`, 'sys');
+            UI.setBtn('btnPkce', false); UI.setBtn('btnAuth', true);
+
+            if (!state.loggedInUser)
+                document.getElementById('loginForm').classList.add('visible');
+            else
+                UI.log(`偵測到已登入 Session（${state.loggedInUser}），跳過帳密輸入。`, 'sys');
+        };
+
+        document.getElementById('btnAuth').onclick = async () => {
+            const hasSession = !!state.loggedInUser;
+            const username = hasSession ? '' : document.getElementById('inputUsername').value.trim();
+            const password = hasSession ? '' : document.getElementById('inputPassword').value;
+
+            if (!hasSession && (!username || !password)) {
+                UI.log('請輸入帳號與密碼', 'error'); return;
+            }
+
+            UI.log(hasSession
+                ? `SPA -> Auth: 攜帶 Session Cookie 與 code_challenge，請求 Authorization Code...`
+                : `SPA -> Auth: 送出帳號「${username}」與 code_challenge，請求 Authorization Code...`);
+
+            try {
+                await fetchAuthCode(username, password);
+                document.getElementById('loginForm').classList.remove('visible');
+                UI.setBtn('btnAuth', false); UI.setBtn('btnToken', true);
+                UI.setBtn('btnLogout', true);
+            } catch (err) {
+                UI.log(`錯誤：${err.message}`, 'error');
+            }
+        };
+
+        document.getElementById('btnToken').onclick = async () => {
+            UI.log('SPA -> Auth: 發送 Code 與 Verifier 交換 Token...');
+            try {
+                await fetchToken();
+                UI.setBtn('btnToken', false); UI.setBtn('btnMe', true); UI.setBtn('btnXss', true);
+            } catch (err) {
+                UI.log(`錯誤：${err.message}`, 'error');
+            }
+        };
+
+        document.getElementById('btnMe').onclick = async () => {
+            UI.log('SPA -> API: 攜帶 Bearer Token 呼叫 GET /api/me...');
+            try {
+                const res = await fetch(`${AUTH_SERVER}/api/me`, {
+                    headers: { 'Authorization': `Bearer ${state.token}` }
+                });
+                if (!res.ok) throw new Error(await res.text());
+                const data = await res.json();
+                UI.log(`API -> SPA: ${data.message}`, 'warn');
+                UI.log(`受保護資源存取成功。`, 'sys');
+            } catch (err) {
+                UI.log(`錯誤：${err.message}`, 'error');
+            }
+        };
+
+        document.getElementById('btnXss').onclick = () => {
+            const cspEnabled = document.getElementById('cspToggle').checked;
+            UI.log('--- 遭受 XSS 攻擊 ---', 'error');
+            UI.log('Hacker -> SPA: 嘗試載入惡意外部腳本 steal.js', 'error');
+            setTimeout(() => {
+                if (cspEnabled) {
+                    UI.log('SPA (CSP): ⛔ 阻擋執行！該網域不在白名單內。', 'warn');
+                    UI.log('防禦成功，記憶體中的 Token 安全無虞。', 'sys');
+                } else {
+                    UI.log('SPA: 惡意腳本成功執行！', 'error');
+                    UI.log(`Hacker: 已竊取記憶體資料 Token: ${state.token}`, 'error');
+                }
+            }, 800);
+        };
+
+        function resetClientState() {
+            state.verifier = ''; state.challenge = ''; state.authCode = '';
+            state.token = ''; state.loggedInUser = '';
+
+            UI.setText('valUser', '-');
+            UI.setText('valVerifier', '-');
+            UI.setText('valToken', '-');
+
+            document.getElementById('loginForm').classList.remove('visible');
+            document.getElementById('inputPassword').value = '';
+            document.getElementById('consoleLog').innerHTML = '';
+
+            UI.setBtn('btnPkce', true);
+            UI.setBtn('btnAuth', false);
+            UI.setBtn('btnToken', false);
+            UI.setBtn('btnMe', false);
+            UI.setBtn('btnXss', false);
+            UI.setBtn('btnLogout', false);
+        }
+
+        document.getElementById('btnLogout').onclick = async () => {
+            try {
+                await fetch(`${AUTH_SERVER}/logout`, { method: 'POST', credentials: 'include' });
+                resetClientState();
+                UI.log('Auth: Session 已移除，Cookie 已清除。', 'sys');
+                UI.log('請點擊「1. 產生 PKCE 密語」重新登入。', 'sys');
+            } catch (err) {
+                UI.log(`登出失敗：${err.message}`, 'error');
+            }
+        };
+
+
+        // 頁面載入時靜默檢查 Session Cookie，有效則自動完成 PKCE 換 Token
+        (async () => {
+            try {
+                const res = await fetch(`${AUTH_SERVER}/authorize/session`, { credentials: 'include' });
+                if (!res.ok) {
+                    UI.log(`系統就緒。AuthServer: ${AUTH_SERVER}`, 'sys');
+                    UI.log('請點擊「1. 產生 PKCE 密語」開始。', 'sys');
+                    return;
+                }
+
+                const { username } = await res.json();
+                state.loggedInUser = username;
+                UI.setText('valUser', username);
+                UI.log(`偵測到已登入 Session（${username}），靜默恢復 Token 中...`, 'warn');
+
+                await generatePkce();
+                UI.log('SPA: 自動產生新的 PKCE 密語...', 'sys');
+
+                await fetchAuthCode();
+                UI.log('SPA -> Auth: 以 Session Cookie 取得 Authorization Code...', 'sys');
+
+                await fetchToken();
+                UI.setBtn('btnPkce', false);
+                UI.setBtn('btnAuth', false);
+                UI.setBtn('btnToken', false);
+                UI.setBtn('btnLogout', true);
+                UI.setBtn('btnMe', true);
+                UI.setBtn('btnXss', true);
+                UI.log('Token 已恢復，可直接呼叫受保護 API。', 'sys');
+            } catch (err) {
+                UI.log(`系統就緒（Session 恢復失敗：${err.message}）`, 'sys');
+                UI.log('請點擊「1. 產生 PKCE 密語」開始。', 'sys');
+            }
+        })();
+    </script>
+</body>
+</html>
