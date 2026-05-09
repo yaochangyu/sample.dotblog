@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Caching.Hybrid;
 
-namespace Lab.HybridCache;
+namespace Lab.HybridCache.Avalanche;
 
 public class LayeredTtlCacheService(Microsoft.Extensions.Caching.Hybrid.HybridCache cache)
 {
