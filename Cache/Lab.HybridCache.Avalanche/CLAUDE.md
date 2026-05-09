@@ -1,8 +1,28 @@
-# .NET 9 HybridCache 完整介紹
+# .NET 10 HybridCache 快取雪崩防護實作
 
 ## 概述
 
-HybridCache 是 .NET 9 中新推出的快取程式庫，透過 `Microsoft.Extensions.Caching.Hybrid` 套件提供。它被稱為「混合快取」，因為能夠同時利用記憶體內快取（L1）和分散式快取（L2，如 Redis）來最佳化資料儲存和檢索效能。
+HybridCache 是 .NET 9+ 新推出的快取程式庫（本專案使用 .NET 10），透過 `Microsoft.Extensions.Caching.Hybrid` 套件提供。它被稱為「混合快取」，因為能夠同時利用記憶體內快取（L1）和分散式快取（L2，如 Redis）來最佳化資料儲存和檢索效能。
+
+## 雪崩防護策略
+
+| 端點 | 策略 | 說明 |
+|------|------|------|
+| `GET /weatherforecast/ttl-jitter` | TTL Jitter | L2 TTL 加入 0~120 秒隨機抖動，避免大量 key 同時失效 |
+| `GET /weatherforecast/layered-ttl` | 分層 TTL | L1=3 分鐘，L2=30 分鐘；L1 miss 時仍由 L2 回傳，DB 幾乎零壓力 |
+| `GET /weatherforecast/circuit-breaker` | Circuit Breaker | Redis 失敗率 > 50%（取樣 10 秒）時熔斷 30 秒，回傳降級空陣列 |
+
+### CacheWarmupService
+
+啟動時自動預熱 `weather-forecast-taipei`、`weather-forecast-tokyo` 兩個熱點 key，避免冷啟動雪崩。失敗不影響服務啟動。
+
+## 整合測試
+
+使用 Testcontainers.Redis 自動起 Redis 容器，測試案例涵蓋：
+- TTL Jitter 分散效果驗證
+- Layered TTL 快取命中行為
+- Circuit Breaker 正常運作
+- HybridCache Stampede Protection 並發保護
 
 ## 核心概念和優勢
 

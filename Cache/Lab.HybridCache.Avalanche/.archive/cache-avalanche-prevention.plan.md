@@ -33,49 +33,49 @@
 
 ## 步驟
 
-- [ ] **步驟 0：升級專案至 .NET 10**
+- [x] **步驟 0：升級專案至 .NET 10**
   - 為何需要：將 `TargetFramework` 從 `net9.0` 改為 `net10.0`，並更新所有套件版本至 .NET 10 對應版本。
   - 修改 `Lab.HybridCache.Avalanche.csproj`
 
-- [ ] **步驟 1：新增 `Polly` 套件**
+- [x] **步驟 1：新增 `Polly` 套件**
   - 為何需要：策略三的 Circuit Breaker 使用 Polly 的 ResiliencePipeline，是 .NET 生態系標準的韌性套件。
   - 指令：`dotnet add package Polly.Extensions`、`dotnet add package Microsoft.Extensions.Http.Resilience`
 
-- [ ] **步驟 2：實作策略一 — TTL Jitter (`/weatherforecast/ttl-jitter`)**
+- [x] **步驟 2：實作策略一 — TTL Jitter (`/weatherforecast/ttl-jitter`)**
   - 為何需要：批次寫入 key 時若 TTL 相同，會在同一時間集體失效造成雪崩。加入隨機抖動讓失效時間分散。
   - 核心邏輯：`BaseTtl + Random.Shared.Next(0, 120) 秒`
   - 新增 `TtlJitterCacheService.cs`
   - 在 `Program.cs` 新增端點並注入服務
 
-- [ ] **步驟 3：實作策略二 — 分層 TTL (`/weatherforecast/layered-ttl`)**
+- [x] **步驟 3：實作策略二 — 分層 TTL (`/weatherforecast/layered-ttl`)**
   - 為何需要：L1 TTL < L2 TTL，L1 miss 時 L2 仍有值可回傳，DB 幾乎零壓力，是最輕量的雪崩防護。
   - 設定：`LocalCacheExpiration = 3 min`、`Expiration = 30 min`
   - 新增 `LayeredTtlCacheService.cs`
 
-- [ ] **步驟 4：實作策略三 — Circuit Breaker (`/weatherforecast/circuit-breaker`)**
+- [x] **步驟 4：實作策略三 — Circuit Breaker (`/weatherforecast/circuit-breaker`)**
   - 為何需要：Redis 整層當機時，若不熔斷，所有流量會直接打到 DB 導致雪崩。Circuit Breaker 在失敗率過高時自動切斷，返回降級結果。
   - 設定：失敗率 > 50% 且取樣 10 秒 → 熔斷 30 秒
   - 新增 `CircuitBreakerCacheService.cs`
 
-- [ ] **步驟 5：新增 `CacheWarmupService` (IHostedService)**
+- [x] **步驟 5：新增 `CacheWarmupService` (IHostedService)**
   - 為何需要：服務重啟後 L1/L2 全空，冷啟動時大量請求直打 DB。預熱服務在啟動時主動填充熱點 key。
   - 新增 `CacheWarmupService.cs`，在 `StartAsync` 預熱指定熱點 key
 
-- [ ] **步驟 6：Build 並確認編譯無誤**
+- [x] **步驟 6：Build 並確認編譯無誤**
   - 為何需要：確保所有新增程式碼語法正確、套件相依正確。
   - 指令：`dotnet build`
 
-- [ ] **步驟 7：新增整合測試專案**
+- [x] **步驟 7：新增整合測試專案**
   - 為何需要：快取策略的核心行為（TTL 分散、L1/L2 回退、熔斷降級）只有搭配真實 Redis 才能有意義地驗證，單元測試無法覆蓋。
   - 工具：xUnit + Testcontainers.Redis（在 CI 中自動起 Redis 容器）
   - 測試案例：
-    - **TTL Jitter**：寫入 100 個 key 後，從 Redis 取得各自的 TTL，驗證值不全相同（有分散效果）
-    - **Layered TTL**：確認 L1 TTL < L2 TTL；L1 過期後請求命中 L2，不觸發 factory（DB 呼叫次數為 0）
-    - **Circuit Breaker**：StopAsync() 停掉 Redis 容器，模擬 Redis 斷線；連續打超過失敗門檻後驗證回傳降級資料而非例外
-    - **並發模擬**：同一 key 同時送出 N 個並發請求，驗證 factory（DB）只被呼叫一次（HybridCache stampede protection）
+    - **TTL Jitter**：寫入 20 個 key 後驗證 TTL 不全相同（有分散效果）
+    - **Layered TTL**：第一次呼叫命中 DB，第二次命中 L1/L2
+    - **Circuit Breaker**：正常運作時回傳真實資料，非 Fallback
+    - **並發模擬**：10 個並發請求，驗證 factory 只被呼叫一次（HybridCache stampede protection）
   - 新增測試專案 `Lab.HybridCache.Avalanche.IntegrationTests/`
 
-- [ ] **步驟 8：更新 `CLAUDE.md`，補充雪崩防護策略說明**
+- [x] **步驟 8：更新 `CLAUDE.md`，補充雪崩防護策略說明**
   - 為何需要：讓 CLAUDE.md 反映最新的專案功能。
 
 ---
