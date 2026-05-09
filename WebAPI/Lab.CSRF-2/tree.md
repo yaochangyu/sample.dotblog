@@ -5,14 +5,22 @@ Lab.CSRF-2/
 ├── Lab.CSRF2.slnx                                   # Solution 擴充檔
 ├── README.md                                         # 專案說明文件 ⭐NEW
 ├── web-api-protect-plan.md                          # 實作計畫文件
+├── .archive/                                        # 已完成計畫封存
+│   ├── blog-token-source-plan.md                    # blog token 來源補充計畫
+│   ├── sequence-diagram-plan.md                     # blog 循序圖補充計畫
+│   ├── testing-results-markdown-table-plan.md      # 測試結果 Markdown table 計畫
+│   ├── security-mechanisms-markdown-table-plan.md  # 防護機制 Markdown table 計畫
+│   └── docs-sync-plan.md                            # 文件與專案現況同步計畫
 ├── spec.md                                           # 規格文件
 ├── tree.md                                           # 專案結構說明 (本檔案)
 │
 ├── tests/                                            # 測試資料夾
 │   └── security/                                    # 安全測試
-│       ├── INDEX.md                                 # 測試索引與導覽
 │       ├── SECURITY-MECHANISMS.md                   # 安全機制說明
 │       ├── security-test-plan.md                    # 測試計畫
+│       ├── output/                                  # 歷史測試輸出樣本
+│       │   ├── security-test-report-claude.md       # 歷史測試輸出報告
+│       │   └── security-test-report-copilot.md      # 歷史測試輸出報告
 │       ├── package.json                             # Playwright 套件設定
 │       ├── playwright.config.js                     # Playwright 設定
 │       └── scripts/                                 # 測試腳本
@@ -32,7 +40,10 @@ Lab.CSRF-2/
 │           ├── test-06-ua-mismatch.ps1              # User-Agent 不一致測試 (PowerShell)
 │           ├── test-07-rate-limiting.sh             # 速率限制測試 (Bash)
 │           ├── test-07-rate-limiting.ps1            # 速率限制測試 (PowerShell)
-│           ├── test-05-4-missing-user-agent.ps1     # 無 User-Agent 測試 (PowerShell) ⭐NEW
+│           ├── test-05-4-missing-user-agent.ps1     # 無 User-Agent 測試 (PowerShell)
+│           ├── test-08-browser-normal.spec.js       # 瀏覽器正常流程測試
+│           ├── test-09-browser-usage-limit.spec.js  # 瀏覽器使用次數限制測試
+│           ├── test-10-cross-page.spec.js           # 跨頁面驗證測試
 │           ├── test-11-direct-attack.sh             # 直接攻擊測試 (Bash)
 │           ├── test-11-direct-attack.ps1            # 直接攻擊測試 (PowerShell)
 │           ├── test-12-replay-attack.sh             # 重放攻擊測試 (Bash)
@@ -85,19 +96,24 @@ Lab.CSRF-2/
 ### 測試資源
 - **wwwroot/test.html** - 瀏覽器測試頁面，提供互動式測試介面
 - **wwwroot/api-protected-test.html** - API 受保護端點測試頁面
-- **tests/security/scripts/** - 完整測試腳本集 (Bash + PowerShell)
+- **tests/security/scripts/** - 完整測試腳本集 (Bash + PowerShell + Playwright)
   - run-all-tests.sh/ps1 - 執行所有測試
-  - test-01~07, 11~12 - 個別測試案例
-  - test-05-4-missing-user-agent.ps1 - 無 User-Agent 測試 ⭐NEW
+  - test-01~07, 11~12 - CLI 測試案例
+  - test-08~10 - 瀏覽器整合測試
+  - test-05-4-missing-user-agent.ps1 - 無 User-Agent 測試
 
 ### 文件
 - **README.md** - 完整專案說明與使用指南
 - **web-api-protect-plan.md** - 詳細實作計畫與步驟
+- **.archive/blog-token-source-plan.md** - 已完成的 blog token 來源補充計畫
+- **.archive/sequence-diagram-plan.md** - 已完成的 blog 循序圖補充計畫
+- **.archive/testing-results-markdown-table-plan.md** - 已完成的測試結果 Markdown table 計畫
+- **.archive/security-mechanisms-markdown-table-plan.md** - 已完成的防護機制 Markdown table 計畫
+- **.archive/docs-sync-plan.md** - 已完成的文件與專案現況同步計畫
 - **spec.md** - 技術規格文件
 - **tree.md** - 專案結構說明 (本檔案)
-- **tests/security/INDEX.md** - 測試索引與導覽
 - **tests/security/SECURITY-MECHANISMS.md** - 安全機制完整說明
-- **tests/security/security-test-plan.md** - 完整測試計畫 (12 個測試案例)
+- **tests/security/security-test-plan.md** - 完整測試計畫 (13 個測試案例)
 
 ## 技術架構
 
@@ -168,7 +184,7 @@ Lab.CSRF-2/
 7. TokenProvider → 更新使用次數或刪除 Token
 8. ValidateTokenAttribute → 驗證通過/失敗
 9. ProtectedController → 處理請求 (驗證通過時)
-10. Client ← 200 OK 或 401 Unauthorized
+10. Client ← 200 OK / 401 Unauthorized / 403 Forbidden
 
 ## 更新日期
 2026-01-12
@@ -182,6 +198,6 @@ Lab.CSRF-2/
 - ✅ 完整安全測試套件 (tests/security/)
 - ✅ 13 個測試案例（新增測試 5.4），涵蓋所有安全機制
 - ✅ Bash + PowerShell 雙版本測試腳本
-- ✅ 完整文件導覽系統 (INDEX.md)
+- ✅ 文件結構與測試資源已整理
 - ✅ 多層防護機制 (8 層驗證)
 - ✅ User-Agent 黑名單、速率限制、Token 綁定

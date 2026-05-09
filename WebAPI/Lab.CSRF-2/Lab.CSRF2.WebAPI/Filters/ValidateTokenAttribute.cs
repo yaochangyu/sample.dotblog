@@ -10,9 +10,7 @@ public class ValidateTokenAttribute : ActionFilterAttribute
     private static readonly string[] AllowedOrigins = new[]
     {
         "http://localhost:5073",
-        "https://localhost:5073",
-        "http://localhost:7001",
-        "https://localhost:7001"
+        "https://localhost:7026"
     };
 
     // 爬蟲 User-Agent 黑名單
