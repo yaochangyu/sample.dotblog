@@ -1,4 +1,4 @@
-namespace Lab.HybridCache;
+namespace Lab.HybridCache.Avalanche;
 
 public class WeatherForecast
 {

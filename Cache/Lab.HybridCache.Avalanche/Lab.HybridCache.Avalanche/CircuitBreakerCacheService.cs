@@ -1,8 +1,6 @@
 using Microsoft.Extensions.Caching.Hybrid;
-using Polly;
-using Polly.CircuitBreaker;
 
-namespace Lab.HybridCache;
+namespace Lab.HybridCache.Avalanche;
 
 public class CircuitBreakerCacheService(Microsoft.Extensions.Caching.Hybrid.HybridCache cache)
 {

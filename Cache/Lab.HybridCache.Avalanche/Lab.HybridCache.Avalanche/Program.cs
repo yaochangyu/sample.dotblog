@@ -1,7 +1,6 @@
 using Microsoft.Extensions.Caching.Hybrid;
-using Lab.HybridCache;
 
-namespace Lab.HybridCache;
+namespace Lab.HybridCache.Avalanche;
 
 public class Program
 {
