@@ -1,7 +1,7 @@
 ---
 title: '[Security] SPA 如何用 PKCE + CSP 防止 Token 被竊'
 featuredImageUrl: https://dotblogsfile.blob.core.windows.net/user/余小章/63cf238d-2c94-4ece-a91e-6499c70d9057/1778312542.png.png
-abstract: <p>SPA 做身分驗證，一定要面對一個問題：**Token 要存在哪？** Authorization Code Flow + PKCE（RFC 7636）是目前的標準做法，解決的是「授權碼在傳輸途中被攔截後，攻擊者拿去換 Token」的問題。搭配 CSP（Content Security Policy）從瀏覽器端限制腳本來源，這兩道防線合在一起，才算是比較完整的 SPA 安全架構。 這篇文章用 ASP.NET Core Web API 自己實作授權伺服器，從頭走完整個 PKCE 流程，包含帳密驗證、Session Cookie 持久化，以及受保護的 API 端點。</p>
+abstract: <p>SPA 做身分驗證，一定要面對一個問題：**Token 要存在哪？** Authorization Code Flow + PKCE（RFC 7636）是目前的標準做法，解決的是「授權碼在傳輸途中被攔截後，攻擊者拿去換 Token」的問題。搭配 CSP（Content Security Policy）從瀏覽器端限制腳本來源，這兩道防線合在一起，才算是比較完整的 SPA 安全架構。 這篇文章用 ASP.NET Core Web API 自己實作授權伺服器，從頭走完整個 PKCE 流程，包含帳密驗證、Session Cookie 持久化，以及受保護的 API 端點。</p><figure class="image"><img style="aspect-ratio:2048/1117;" src="https://dotblogsfile.blob.core.windows.net/user/余小章/63cf238d-2c94-4ece-a91e-6499c70d9057/1778322472.jpg.jpg" width="2048" height="1117"></figure>
 keywords: PKCE,Proof Key for Code Exchange,Security
 categories: Security
 weblogName: My Blog
