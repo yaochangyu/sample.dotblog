@@ -35,8 +35,12 @@ app.Use(async (context, next) =>
     context.Response.Headers["Permissions-Policy"] =
         "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()";
 
-    // emulator.html 由 client 端透過 meta tag 動態管理 CSP，server 不介入
-    if (!context.Request.Path.Equals("/emulator.html", StringComparison.OrdinalIgnoreCase))
+    // emulator.html?csp=off → 不送 CSP，示範無防護的 XSS 風險
+    // emulator.html（預設）→ 送 CSP，示範 inline script 被攔截
+    var isEmulator = context.Request.Path.Equals("/emulator.html", StringComparison.OrdinalIgnoreCase);
+    var cspOff = isEmulator && context.Request.Query["csp"] == "off";
+
+    if (!cspOff)
     {
         // [Lab] style-src 保留 'unsafe-inline' 是因為 emulator.html 使用 <style> 標籤，
         // 刻意避免實作 nonce 以簡化示範。正式環境應改用 nonce 消除 CSS injection 風險。
