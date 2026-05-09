@@ -65,7 +65,17 @@
   - 為何需要：確保所有新增程式碼語法正確、套件相依正確。
   - 指令：`dotnet build`
 
-- [ ] **步驟 7：更新 `CLAUDE.md`，補充雪崩防護策略說明**
+- [ ] **步驟 7：新增整合測試專案**
+  - 為何需要：快取策略的核心行為（TTL 分散、L1/L2 回退、熔斷降級）只有搭配真實 Redis 才能有意義地驗證，單元測試無法覆蓋。
+  - 工具：xUnit + Testcontainers.Redis（在 CI 中自動起 Redis 容器）
+  - 測試案例：
+    - **TTL Jitter**：寫入 100 個 key 後，從 Redis 取得各自的 TTL，驗證值不全相同（有分散效果）
+    - **Layered TTL**：確認 L1 TTL < L2 TTL；L1 過期後請求命中 L2，不觸發 factory（DB 呼叫次數為 0）
+    - **Circuit Breaker**：StopAsync() 停掉 Redis 容器，模擬 Redis 斷線；連續打超過失敗門檻後驗證回傳降級資料而非例外
+    - **並發模擬**：同一 key 同時送出 N 個並發請求，驗證 factory（DB）只被呼叫一次（HybridCache stampede protection）
+  - 新增測試專案 `Lab.HybridCache.Avalanche.IntegrationTests/`
+
+- [ ] **步驟 8：更新 `CLAUDE.md`，補充雪崩防護策略說明**
   - 為何需要：讓 CLAUDE.md 反映最新的專案功能。
 
 ---
