@@ -6,6 +6,7 @@
 
 #### Token 生成 (`GET /api/token`)
 - **位置**: Response Header (`X-CSRF-Token`)
+- **回應本文**: JSON `{ message, token }`
 - **格式**: GUID (例: `a1b2c3d4-e5f6-7890-abcd-ef1234567890`)
 - **參數**:
   - `maxUsage`: 最大使用次數（預設 1 次）
@@ -48,9 +49,7 @@
 #### 白名單機制
 只允許來自以下來源的請求:
 - `http://localhost:5073`
-- `https://localhost:5073`
-- `http://localhost:7001`
-- `https://localhost:7001`
+- `https://localhost:7026`
 
 #### 驗證邏輯
 - 檢查 Referer Header 是否在白名單中
@@ -268,5 +267,5 @@ A: 開發環境使用 IMemoryCache（記憶體），生產環境建議使用 Red
 
 ✅ **防護機制**
 - ✅ 多層防護（8 層驗證）
-- ✅ 全面測試（12 個測試案例）
+- ✅ 全面測試（13 個測試案例）
 - ✅ 自動化驗證（27 個測試腳本）

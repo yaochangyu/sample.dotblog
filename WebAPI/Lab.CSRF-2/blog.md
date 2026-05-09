@@ -1,20 +1,30 @@
-# ASP.NET Core Web API 多層防護機制實作
+---
+title: 在 ASP.NET Core 實作保護可匿名存取的 Web API
+abstract: <p>開發公開 API 時，<strong>防範惡意濫用</strong>是不可或缺的一環。本文將探討如何運用 ASP.NET Core 建構安全防護機制，為允許匿名存取的 Web API 提供堅實保障。</p><figure class="image"><img style="aspect-ratio:1024/1024;" src="https://dotblogsfile.blob.core.windows.net/user/余小章/d63770b7-cda7-4120-96a4-79780fc7cce4/1768232619.png.png" width="1024" height="1024"></figure>
+keywords: ASP.NET Core,ASP.NET Core Web API,CSRF
+categories: CSRF
+weblogName: My Blog
+postId: d63770b7-cda7-4120-96a4-79780fc7cce4
+postDate: 2026-01-10T18:16:19.0000000
+postStatus: 
+dontInferFeaturedImage: false
+stripH1Header: true
+---
+# 在 ASP.NET Core 實作保護可匿名存取的 Web API
 
-在開發公開 API 時，防止濫用和攻擊是必須考慮的問題。本文介紹如何使用 ASP.NET Core 實作多層次的安全防護機制，保護可匿名存取的 Web API。
+## **開發環境**
 
-## 開發環境
+* Windows 11 Pro
+* .NET 10.0
+* ASP.NET Core Web API
+* Playwright \(瀏覽器測試\)
+* PowerShell / Bash \(測試腳本\)
 
-- Windows 11 Pro
-- .NET 8.0
-- ASP.NET Core Web API
-- Playwright (瀏覽器測試)
-- PowerShell / Bash (測試腳本)
-
-## 防護機制有哪些？
+## **防護機制有哪些？**
 
 本系統實作了 8 層防護機制：
 
-```
+```plaintext
 第 1 層: 速率限制
    ↓
 第 2 層: User-Agent 黑名單驗證
@@ -34,8 +44,8 @@
 ✅ 請求通過，執行業務邏輯
 ```
 
-| 攻擊類型 | 防護機制 | HTTP 狀態碼 |
-|---------|---------|-----------|
+| **攻擊類型** | **防護機制** | **HTTP 狀態碼** |
+| --- | --- | --- |
 | 無 Token 直接攻擊 | Token 必須驗證 | 401 |
 | 無效/偽造 Token | Token 伺服器端驗證 | 401 |
 | Token 過期 | 時間限制驗證 | 401 |
@@ -45,15 +55,15 @@
 | 爬蟲/Bot 攻擊 | User-Agent 黑名單 | 403 |
 | 暴力破解 | 速率限制 | 429 |
 
-## 怎麼做防護？
+## **怎麼做防護？**
 
-### Server Side 配置
+### **Server Side 配置**
 
-#### 1. 速率限制
+#### **1. 速率限制**
 
 使用 ASP.NET Core 內建的 Rate Limiting 中介軟體，限制 API 呼叫頻率。
 
-```csharp
+```cs
 builder.Services.AddRateLimiter(options =>
 {
     // API 端點速率限制: 10 秒內最多 10 次請求
@@ -76,18 +86,18 @@ builder.Services.AddRateLimiter(options =>
 });
 ```
 
-#### 2. CORS 白名單
+#### **2. CORS 白名單**
 
 限制允許存取的來源，防止跨域攻擊。
 
-```csharp
+```cs
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
         policy.WithOrigins(
                 "http://localhost:5073",
-                "https://localhost:5073"
+                "https://localhost:7026"
               )
               .AllowAnyMethod()
               .AllowAnyHeader()
@@ -97,11 +107,11 @@ builder.Services.AddCors(options =>
 });
 ```
 
-#### 3. Token 提供者
+#### **3. Token 提供者**
 
 使用 IMemoryCache 儲存 Token 資訊，綁定 User-Agent 和 IP 地址。
 
-```csharp
+```cs
 public class TokenProvider : ITokenProvider
 {
     private readonly IMemoryCache _cache;
@@ -131,11 +141,62 @@ public class TokenProvider : ITokenProvider
 }
 ```
 
-#### 4. Token 驗證過濾器
+#### **4. Token 發放端點**
+
+前端不是自己產生 Token，而是先呼叫 `/api/token` 向後端申請。後端收到請求後，會根據目前的 `User-Agent` 與 IP 位址建立 Token，並把 Token 放在 Response Header 的 `X-CSRF-Token` 回傳給前端。
+
+```cs
+[ApiController]
+[Route("api/[controller]")]
+public class TokenController : ControllerBase
+{
+    private readonly ITokenProvider _tokenProvider;
+
+    public TokenController(ITokenProvider tokenProvider)
+    {
+        _tokenProvider = tokenProvider;
+    }
+
+    [HttpGet]
+    [EnableRateLimiting("token")]
+    public IActionResult GetToken([FromQuery] int maxUsage = 1, [FromQuery] int expirationMinutes = 5)
+    {
+        var userAgent = Request.Headers["User-Agent"].ToString();
+        
+        if (string.IsNullOrWhiteSpace(userAgent))
+        {
+            return BadRequest(new { error = "User-Agent header is required" });
+        }
+
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        var token = _tokenProvider.GenerateToken(
+            maxUsage,
+            expirationMinutes,
+            userAgent,
+            ipAddress);
+
+        Response.Headers["X-CSRF-Token"] = token;
+
+        return Ok(new
+        {
+            message = "Token generated successfully",
+            token
+        });
+    }
+}
+```
+
+這裡的重點有兩個：
+
+1. Token 必須由後端產生，前端只能申請，不能自己計算或偽造。
+2. Token 放在 `Response Header: X-CSRF-Token`，前端拿到後再放到下一次 Request Header 使用。
+
+#### **5. Token 驗證過濾器**
 
 使用 ActionFilter 實作多層次驗證邏輯。
 
-```csharp
+```cs
 public class ValidateTokenAttribute : ActionFilterAttribute
 {
     // 爬蟲 User-Agent 黑名單
@@ -192,16 +253,16 @@ public class ValidateTokenAttribute : ActionFilterAttribute
 }
 ```
 
-### Client Side 配置
+### **Client Side 配置**
 
-#### 瀏覽器端使用方式
+#### **瀏覽器端使用方式**
 
 前端透過兩個步驟來存取受保護的 API：
 
 1. **取得 Token**：呼叫 `/api/token` 取得 Token，Token 會放在 Response Header 的 `X-CSRF-Token` 欄位。
 2. **使用 Token**：將 Token 放在 Request Header 的 `X-CSRF-Token` 欄位，呼叫受保護的 API。
 
-```javascript
+```cs
 // 步驟 1: 取得 Token
 async function getToken() {
     const response = await fetch('/api/token?maxUsage=1&expirationMinutes=5');
@@ -223,7 +284,23 @@ async function callProtectedApi(token, data) {
 }
 ```
 
-## 前端到後端互動流程
+## **前端到後端互動流程**
+
+前端到後端的互動流程如下：
+
+1. 瀏覽器先呼叫 `GET /api/token` 申請 Token。
+2. 後端建立 Token，並把 Token 與 `User-Agent`、有效時間、可使用次數等資訊一起存到快取。
+3. 後端透過 Response Header `X-CSRF-Token` 把 Token 回傳給前端。
+4. 前端呼叫受保護的 API 時，將 Token 放在 Request Header `X-CSRF-Token`。
+5. 後端在 `ValidateTokenAttribute`中驗證：
+    * User-Agent 是否合法
+    * Referer/Origin 是否可信
+    * Token 是否存在
+    * Token 是否有效
+    * Token 是否過期
+    * Token 使用次數是否超過限制
+    * User-Agent 是否與申請 Token 時一致
+6. 驗證通過後，才執行真正的業務邏輯。
 
 ```mermaid
 sequenceDiagram
@@ -232,30 +309,27 @@ sequenceDiagram
     participant Cache as Memory Cache
 
     Browser->>API: GET /api/token
-    API->>API: 檢查速率限制
-    API->>Cache: 產生並儲存 Token<br/>(綁定 User-Agent + IP)
+    API->>API: 檢查 token 端點速率限制
+    API->>Cache: 產生並儲存 Token<br/>(綁定 User-Agent + IP + 到期時間)
     API->>Browser: Response Header: X-CSRF-Token
-    
+
     Browser->>API: POST /api/protected<br/>Header: X-CSRF-Token
-    API->>API: 1. 速率限制
-    API->>API: 2. User-Agent 黑名單
-    API->>API: 3. Referer/Origin 白名單
-    API->>Cache: 4. 驗證 Token 存在
-    API->>Cache: 5. 驗證 Token 有效性
-    API->>Cache: 6. 驗證 Token 未過期
-    API->>Cache: 7. 驗證使用次數
-    API->>API: 8. 驗證 User-Agent 一致
-    API->>Cache: 遞增使用次數
-    API->>Browser: HTTP 200 + 回應資料
+    API->>API: ValidateTokenAttribute 驗證 User-Agent
+    API->>API: 驗證 Referer/Origin
+    API->>Cache: 驗證 Token 存在、有效、未過期
+    API->>Cache: 更新使用次數
+    API->>Browser: 200 OK / 401 Unauthorized / 403 Forbidden
 ```
+<figure class="image"><img style="aspect-ratio:1420/1248;" src="https://dotblogsfile.blob.core.windows.net/user/余小章/d63770b7-cda7-4120-96a4-79780fc7cce4/1778317793.png.png" width="1420" height="1248"></figure>
+這樣的設計可以把 Token 的生命週期控制在伺服器端，避免前端自行產生或偽造 Token。
 
-## 做了那些實驗
+## **做了那些實驗**
 
-### 實驗一：正常流程測試
+### **實驗一：正常流程測試**
 
 **目的**：驗證正常使用者可以正常存取 API。
 
-```bash
+```cs
 # 1. 取得 Token
 TOKEN=$(curl -s -X GET "http://localhost:5073/api/token" \
   -H "User-Agent: Mozilla/5.0" \
@@ -271,11 +345,11 @@ curl -X POST "http://localhost:5073/api/protected" \
 
 **結果**：HTTP 200，API 正常回應。
 
-### 實驗二：重放攻擊測試
+### **實驗二：重放攻擊測試**
 
 **目的**：驗證 Token 使用次數限制，防止 Token 被重複使用。
 
-```bash
+```cs
 # 取得 Token (maxUsage=1)
 TOKEN=$(curl -s -X GET "http://localhost:5073/api/token?maxUsage=1" \
   -H "User-Agent: Mozilla/5.0" \
@@ -294,13 +368,13 @@ curl -X POST "http://localhost:5073/api/protected" \
   -d '{"Data":"second"}'
 ```
 
-**結果**：第一次 HTTP 200，第二次 HTTP 401 (Invalid or expired token)。
+**結果**：第一次 HTTP 200，第二次 HTTP 401 \(Invalid or expired token\)。
 
-### 實驗三：User-Agent 綁定測試
+### **實驗三：User-Agent 綁定測試**
 
 **目的**：驗證 Token 綁定 User-Agent，防止 Token 被盜用到其他客戶端。
 
-```bash
+```cs
 # 使用 User-Agent "BrowserA" 取得 Token
 TOKEN=$(curl -s -X GET "http://localhost:5073/api/token" \
   -H "User-Agent: BrowserA" \
@@ -313,13 +387,13 @@ curl -X POST "http://localhost:5073/api/protected" \
   -d '{"Data":"test"}'
 ```
 
-**結果**：HTTP 401 (Invalid or expired token)。
+**結果**：HTTP 401 \(Invalid or expired token\)。
 
-### 實驗四：速率限制測試
+### **實驗四：速率限制測試**
 
 **目的**：驗證速率限制機制，防止暴力破解。
 
-```bash
+```cs
 # 快速請求 6 次 Token
 for i in {1..6}; do
   curl -X GET "http://localhost:5073/api/token" \
@@ -328,26 +402,28 @@ for i in {1..6}; do
 done
 ```
 
-**結果**：前 5 次 HTTP 200，第 6 次 HTTP 429 (Too Many Requests)。
+**結果**：前 5 次 HTTP 200，第 6 次 HTTP 429 \(Too Many Requests\)。
 
-### 實驗五：爬蟲攻擊測試
+### **實驗五：爬蟲攻擊測試**
 
 **目的**：驗證 User-Agent 黑名單機制，拒絕爬蟲工具。
 
-```bash
-# 使用 curl 的預設 User-Agent
-curl -X GET "http://localhost:5073/api/token"
+```cs
+# 使用 curl 的預設 User-Agent 直接攻擊 Protected API
+curl -X POST "http://localhost:5073/api/protected" \
+  -H "Content-Type: application/json" \
+  -d '{"Data":"attack"}'
 ```
 
-**結果**：HTTP 403 (Forbidden User-Agent)。
+**結果**：HTTP 403 \(Forbidden User-Agent\)。
 
-### 實驗六：瀏覽器整合測試
+### **實驗六：瀏覽器整合測試**
 
 **目的**：驗證瀏覽器環境下的完整流程。
 
 使用 Playwright 模擬瀏覽器操作：
 
-```javascript
+```cs
 test('瀏覽器正常流程', async ({ page }) => {
   await page.goto('http://localhost:5073/test.html');
   
@@ -369,65 +445,62 @@ test('瀏覽器正常流程', async ({ page }) => {
 
 **結果**：前 3 次成功，第 4 次失敗，符合預期。
 
-## 測試結果
+## **測試結果**
 
-執行 18 個測試案例，涵蓋 Token 基本功能、安全防護、瀏覽器整合、攻擊模擬。
-
-| 測試項目 | 測試數量 | 通過 |
-|---------|---------|------|
+執行 13 個測試案例，涵蓋 Token 基本功能、安全防護與瀏覽器整合測試。
+| **測試項目** | **測試數量** | **通過** |
+| --- | --- | --- |
 | Token 基本功能 | 3 | 3 ✅ |
 | 安全防護驗證 | 7 | 7 ✅ |
-| 瀏覽器整合測試 | 6 | 6 ✅ |
-| 攻擊模擬測試 | 2 | 2 ✅ |
-| **總計** | **18** | **18 ✅** |
+| 瀏覽器整合測試 | 3 | 3 ✅ |
+| **總計** | **13** | **13 ✅** |
 
 成功率：**100%**
 
-## 生產環境建議
+## **生產環境建議**
 
-### 必須啟用的設定
+### **必須啟用的設定**
 
 1. **HTTPS 強制**
-   ```csharp
-   app.UseHttpsRedirection();
-   app.UseHsts();
-   ```
 
+    ```cs
+    app.UseHttpsRedirection();
+    app.UseHsts();
+    ```
 2. **IP 地址綁定**
-   ```csharp
-   // 在 TokenProvider.ValidateToken 中取消註解
-   if (!string.IsNullOrEmpty(tokenData.IpAddress) && 
-       tokenData.IpAddress != ipAddress)
-   {
-       return false;
-   }
-   ```
 
+    ```cs
+    // 在 TokenProvider.ValidateToken 中取消註解
+    if (!string.IsNullOrEmpty(tokenData.IpAddress) && 
+        tokenData.IpAddress != ipAddress)
+    {
+        return false;
+    }
+    ```
 3. **使用 Redis**
-   ```csharp
-   // 替換 IMemoryCache 為 Redis
-   services.AddStackExchangeRedisCache(options =>
-   {
-       options.Configuration = "localhost:6379";
-   });
-   ```
 
+    ```cs
+    // 替換 IMemoryCache 為 Redis
+    services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = "localhost:6379";
+    });
+    ```
 4. **日誌監控**
-   ```csharp
-   logger.LogWarning("Security Event: TokenValidationFailed", new {
-       UserAgent = userAgent,
-       IpAddress = ipAddress,
-       Timestamp = DateTime.UtcNow
-   });
-   ```
 
-## 範例位置
+    ```cs
+    logger.LogWarning("Security Event: TokenValidationFailed", new {
+        UserAgent = userAgent,
+        IpAddress = ipAddress,
+        Timestamp = DateTime.UtcNow
+    });
+    ```
+
+## **範例位置**
 
 [sample.dotblog/WebAPI/Lab.CSRF-2](https://github.com/yaochangyu/sample.dotblog/tree/master/WebAPI/Lab.CSRF-2)
 
-若有謬誤，煩請告知，新手發帖請多包涵
+## **參考資料**
 
-## 參考資料
-
-- [ASP.NET Core Rate Limiting](https://learn.microsoft.com/en-us/aspnet/core/performance/rate-limit)
-- [Cross-Site Request Forgery (CSRF) Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)
+* [ASP.NET Core Rate Limiting](https://learn.microsoft.com/en-us/aspnet/core/performance/rate-limit)
+* [Cross-Site Request Forgery \(CSRF\) Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html)

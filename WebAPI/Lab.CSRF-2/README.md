@@ -14,12 +14,12 @@
 
 | 機制 | 說明 |
 |------|------|
-| Token 驗證 | 產生唯一 Token,每次請求必須攜帶 |
-| 時效控制 | Token 10 分鐘後自動失效 |
-| 使用次數限制 | 單一 Token 可配置使用次數 (預設 3 次) |
+| Token 驗證 | 後端產生唯一 Token,每次請求必須攜帶 |
+| 時效控制 | Token 預設 5 分鐘後自動失效 |
+| 使用次數限制 | 單一 Token 可配置使用次數 (預設 1 次) |
 | User-Agent 綁定 | Token 綁定產生時的 User-Agent |
 | User-Agent 黑名單 | 封鎖常見爬蟲與攻擊工具 |
-| 速率限制 | 5 秒內最多 10 次請求 (同一 IP) |
+| 速率限制 | API 10 秒內最多 10 次,Token 1 分鐘內最多 5 次 |
 | 強制 User-Agent | 產生 Token 時必須提供 User-Agent |
 
 ## 專案結構
@@ -88,7 +88,7 @@ dotnet restore
 dotnet run
 ```
 
-預設會在 `http://localhost:5000` 啟動服務。
+預設會在 `http://localhost:5073` 啟動服務，HTTPS 為 `https://localhost:7026`。
 
 ### API 端點
 
@@ -101,20 +101,22 @@ dotnet run
 
 ```powershell
 # 1. 取得 Token
-$headers = curl -i http://localhost:5000/api/token -H "User-Agent: MyClient/1.0"
+$headers = curl -i http://localhost:5073/api/token -H "User-Agent: MyClient/1.0"
 $token = ($headers | Select-String "x-csrf-token: (.+)").Matches.Groups[1].Value.Trim()
 
 # 2. 使用 Token 呼叫受保護端點
-curl http://localhost:5000/api/protected `
+curl http://localhost:5073/api/protected `
   -X POST `
+  -H "Content-Type: application/json" `
   -H "X-CSRF-Token: $token" `
-  -H "User-Agent: MyClient/1.0"
+  -H "User-Agent: MyClient/1.0" `
+  -d "{""data"":""hello""}"
 ```
 
 ### 測試方式 2: 使用瀏覽器
 
 1. 啟動 Web API 服務 (`dotnet run`)
-2. 開啟瀏覽器,前往 `http://localhost:5000/test.html`
+2. 開啟瀏覽器,前往 `http://localhost:5073/test.html`
 3. 點擊「取得 Token」按鈕
 4. 點擊「呼叫受保護 API」按鈕
 
@@ -162,9 +164,9 @@ npx playwright install
 **Playwright 測試 (瀏覽器)**
 ```powershell
 npm test                                    # 執行所有瀏覽器測試
-npx playwright test test-08-browser-normal.spec.js      # 正常流程
-npx playwright test test-09-browser-usage-limit.spec.js # 使用次數限制
-npx playwright test test-10-cross-page.spec.js          # 跨頁面驗證
+npx playwright test scripts/test-08-browser-normal.spec.js      # 正常流程
+npx playwright test scripts/test-09-browser-usage-limit.spec.js # 使用次數限制
+npx playwright test scripts/test-10-cross-page.spec.js          # 跨頁面驗證
 ```
 
 ### 測試報告
@@ -181,13 +183,13 @@ npm run test:report
 | 編號 | 測試名稱 | 工具 | 驗證項目 |
 |------|----------|------|----------|
 | 01 | 正常流程 | cURL | Token 產生與驗證成功 |
-| 02 | Token 過期 | cURL | 10 分鐘後 Token 自動失效 |
-| 03 | 使用次數限制 | cURL | Token 使用 3 次後失效 |
+| 02 | Token 過期 | cURL | 可透過 `expirationMinutes` 驗證過期後失效 |
+| 03 | 使用次數限制 | cURL | Token 使用達 `maxUsage` 後失效 |
 | 04 | 缺少 Token | cURL | 未攜帶 Token 回傳 401 |
 | 05 | 無效 Token | cURL | 錯誤 Token 回傳 401 |
 | 05-4 | 缺少 User-Agent | cURL | 產生 Token 時未提供 User-Agent 回傳 400 |
 | 06 | User-Agent 不一致 | cURL | Token 綁定 User-Agent 驗證 |
-| 07 | 速率限制 | cURL | 5 秒內超過 10 次請求被阻擋 |
+| 07 | 速率限制 | cURL | 1 分鐘內超過 5 次 Token 請求被阻擋 |
 | 08 | 瀏覽器正常流程 | Playwright | 瀏覽器環境 Token 驗證 |
 | 09 | 瀏覽器使用次數 | Playwright | 瀏覽器 Token 使用次數限制 |
 | 10 | 跨頁面驗證 | Playwright | 跨頁面 Token 共用 |
