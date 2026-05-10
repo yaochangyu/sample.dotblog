@@ -1,0 +1,11 @@
+[project]
+name = "lab-qdrant"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    "fastembed>=0.8.0",
+    "qdrant-client>=1.17.1",
+    "requests>=2.33.1",
+]

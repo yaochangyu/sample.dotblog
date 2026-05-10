@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# uv
+.venv/
+.python-version
+
+# 輸出資料
+output/
+
+# graphify 快取
+graphify-out/cache/
