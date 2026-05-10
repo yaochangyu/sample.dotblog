@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Caching.Hybrid;
+using Polly;
+using Polly.CircuitBreaker;
 
 namespace Lab.HybridCache.Avalanche;
 
