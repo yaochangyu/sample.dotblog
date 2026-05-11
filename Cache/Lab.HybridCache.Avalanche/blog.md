@@ -1,8 +1,8 @@
 ---
 title: '[.NET 10] HybridCache 快取雪崩防護三策略實作'
 abstract: '系統重啟之後，所有快取全空，大量請求同時打到 DB，DB 直接噴掉了啦!!! 這就是快取雪崩（Cache Avalanche）的經典場景。 本文用 .NET 10 的 HybridCache 示範三種防護策略：TTL Jitter、分層 TTL、Circuit Breaker，並搭配整合測試驗證行為。 '
-keywords: ''
-categories: ''
+keywords: Cache,HybridCache
+categories: Cache
 weblogName: My Blog
 postId: 1c71829f-77ca-418d-99b0-e09d14a079a6
 postDate: 2026-05-10T22:11:54.9289390+08:00
@@ -117,7 +117,7 @@ builder.Services.AddHostedService<CacheWarmupService>();
 
 `TtlJitterCacheService.cs` — 每次 `GetAsync()` 都會先重新計算隨機 Jitter，再動態建立 `HybridCacheEntryOptions`。這樣每次寫入快取時的 TTL 都不同，不會在 DI 階段就被固定住：
 
-```csharp
+```cs
 public async Task<(WeatherForecast[] Data, string Source, TimeSpan L2Ttl)> GetAsync(
     string key, CancellationToken ct = default)
 {
@@ -493,8 +493,7 @@ public async Task StampedeProtection_ConcurrentRequests_FactoryShouldBeCalledOnc
 
 - TTL Jitter 與 分層 TTL 不需要額外套件，改幾行參數就搞定，是最值得直接套用的防護手段。
 - Circuit Breaker 要搭 Polly，設定上要留意 `MinimumThroughput`，不然低流量時一兩次失敗就熔斷了，反而造成問題。
-- HybridCache 的 Stampede Protection 是內建的，不需要自己用 `lock` 或 `SemaphoreSlim` 管，這是 HybridCache 比 `IMemoryCache` 好用的地方之一。
-- Testcontainers.Redis 在 CI 環境下非常方便，不需要另外維護 Redis 測試環境。
+- HybridCache 的 Stampede Protection 是內建的，不需要自己用 `lock` 或 `SemaphoreSlim`，也提供了 L1/L2 分層快取機制。
 
 ---
 
