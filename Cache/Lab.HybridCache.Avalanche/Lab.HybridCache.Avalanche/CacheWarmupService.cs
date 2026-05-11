@@ -18,7 +18,6 @@ public class CacheWarmupService(
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         foreach (var key in HotKeys)
-        {
             try
             {
                 await cache.GetOrCreateAsync(
@@ -40,8 +39,10 @@ public class CacheWarmupService(
             {
                 logger.LogWarning(ex, "[Warmup] 預熱 key={Key} 失敗，跳過", key);
             }
-        }
     }
 
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
 }

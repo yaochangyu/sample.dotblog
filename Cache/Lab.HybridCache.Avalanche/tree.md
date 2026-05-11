@@ -2,8 +2,12 @@
 
 ```
 Lab.HybridCache.Avalanche/
-├── cache-avalanche-prevention.plan.md
+├── .archive/
+│   ├── blog-warmup-note.plan.md
+│   ├── blog-update.plan.md
+│   └── cache-avalanche-prevention.plan.md
 ├── CLAUDE.md
+├── blog.md
 ├── docker-compose.yml
 ├── tree.md
 ├── Lab.HybridCache.Avalanche.sln

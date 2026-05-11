@@ -63,11 +63,12 @@ Lab.HybridCache.Avalanche/
 
 ## 套件安裝
 
-安裝 HybridCache、Redis 支援與 Polly：
+安裝 HybridCache、Redis 支援與韌性套件：
 
 ```bash
 dotnet add package Microsoft.Extensions.Caching.Hybrid
 dotnet add package Microsoft.Extensions.Caching.StackExchangeRedis
+dotnet add package Microsoft.Extensions.Http.Resilience
 dotnet add package Polly.Extensions
 ```
 
@@ -114,15 +115,15 @@ builder.Services.AddHostedService<CacheWarmupService>();
 
 ### 實作
 
-`TtlJitterCacheService.cs` — 每次 GetOrCreateAsync 前計算隨機 Jitter，L2 TTL = 10 分鐘 + 0~120 秒隨機，L1 TTL = 1 分鐘 + 0~30 秒隨機：
+`TtlJitterCacheService.cs` — 每次 `GetAsync()` 都會先重新計算隨機 Jitter，再動態建立 `HybridCacheEntryOptions`。這樣每次寫入快取時的 TTL 都不同，不會在 DI 階段就被固定住：
 
 ```csharp
 public async Task<(WeatherForecast[] Data, string Source, TimeSpan L2Ttl)> GetAsync(
     string key, CancellationToken ct = default)
 {
-    TimeSpan jitter = TimeSpan.FromSeconds(Random.Shared.Next(0, 120));
-    TimeSpan l2Ttl  = TimeSpan.FromMinutes(10) + jitter;
-    TimeSpan l1Ttl  = TimeSpan.FromMinutes(1) + TimeSpan.FromSeconds(Random.Shared.Next(0, 30));
+    var jitter = TimeSpan.FromSeconds(Random.Shared.Next(0, 120));
+    var l2Ttl = TimeSpan.FromMinutes(10) + jitter;
+    var l1Ttl = TimeSpan.FromMinutes(1) + TimeSpan.FromSeconds(Random.Shared.Next(0, 30));
 
     var options = new HybridCacheEntryOptions
     {
@@ -130,15 +131,21 @@ public async Task<(WeatherForecast[] Data, string Source, TimeSpan L2Ttl)> GetAs
         LocalCacheExpiration = l1Ttl
     };
 
-    string source = "L1/L2";
+    var source = "L1/L2";
     var data = await cache.GetOrCreateAsync(
         key,
         async token =>
         {
             source = "DB";
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] [TTL Jitter] 從 DB 載入，key={key}，L2 TTL={l2Ttl.TotalSeconds:F0}s");
+            Console.WriteLine(
+                $"[{DateTime.Now:HH:mm:ss.fff}] [TTL Jitter] 從 DB 載入資料，key={key}，L2 TTL={l2Ttl.TotalSeconds:F0}s");
             await Task.Delay(5, token);
-            return GenerateForecasts();
+            return Enumerable.Range(1, 5).Select(i => new WeatherForecast
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(i)),
+                TemperatureC = Random.Shared.Next(-20, 55),
+                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+            }).ToArray();
         },
         options,
         cancellationToken: ct);
@@ -181,9 +188,14 @@ public async Task<(WeatherForecast[] Data, string Source)> GetAsync(
         async token =>
         {
             source = "DB";
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] [Layered TTL] 從 DB 載入，key={key}，L1=3m，L2=30m");
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] [Layered TTL] 從 DB 載入資料，key={key}，L1=3m，L2=30m");
             await Task.Delay(5, token);
-            return GenerateForecasts();
+            return Enumerable.Range(1, 5).Select(i => new WeatherForecast
+            {
+                Date = DateOnly.FromDateTime(DateTime.Now.AddDays(i)),
+                TemperatureC = Random.Shared.Next(-20, 55),
+                Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+            }).ToArray();
         },
         Options,
         cancellationToken: ct);
@@ -244,9 +256,14 @@ public async Task<(WeatherForecast[]? Data, string Source, bool IsFallback)> Get
             result = await cache.GetOrCreateAsync(key, async innerToken =>
             {
                 source = "DB";
-                Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] [Circuit Breaker] 從 DB 載入，key={key}");
+                Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] [Circuit Breaker] 從 DB 載入資料，key={key}");
                 await Task.Delay(5, innerToken);
-                return GenerateForecasts();
+                return Enumerable.Range(1, 5).Select(i => new WeatherForecast
+                {
+                    Date = DateOnly.FromDateTime(DateTime.Now.AddDays(i)),
+                    TemperatureC = Random.Shared.Next(-20, 55),
+                    Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+                }).ToArray();
             }, Options, cancellationToken: token);
         }, ct);
 
@@ -275,6 +292,11 @@ public class CacheWarmupService(
     Microsoft.Extensions.Caching.Hybrid.HybridCache cache,
     ILogger<CacheWarmupService> logger) : IHostedService
 {
+    private static readonly string[] Summaries =
+    [
+        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+    ];
+
     private static readonly string[] HotKeys =
     [
         "weather-forecast-taipei",
@@ -291,7 +313,12 @@ public class CacheWarmupService(
                 {
                     Console.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] [Warmup] 預熱 key={key}");
                     await Task.Delay(5, ct);
-                    return GenerateForecasts();
+                    return Enumerable.Range(1, 5).Select(i => new WeatherForecast
+                    {
+                        Date = DateOnly.FromDateTime(DateTime.Now.AddDays(i)),
+                        TemperatureC = Random.Shared.Next(-20, 55),
+                        Summary = Summaries[Random.Shared.Next(Summaries.Length)]
+                    }).ToArray();
                 }, cancellationToken: cancellationToken);
             }
             catch (Exception ex)
@@ -304,6 +331,18 @@ public class CacheWarmupService(
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 }
 ```
+
+這個預熱點不是每次 request 都會觸發，而是在應用程式啟動時由 `IHostedService.StartAsync()` 呼叫一次。典型情境像是重新部署、手動重啟、容器重建、IIS/App Service 回收，或是程式 crash 後被平台重新拉起來。
+
+不過，有 HybridCache 不代表一定要做預熱。HybridCache 已經能處理同一個 key 的並發擊穿；預熱則是額外處理「剛啟動時 L1/L2 都是空的」這個冷啟動窗口。所以如果流量平穩、資料源撐得住第一波穿透，其實可以不做。
+
+真正需要預熱的，通常不是把所有重要 key 全部掃過一遍，而是只挑少量 **hot keys**。優先順序通常是：
+
+1. 重啟後最先被打到的 key
+2. 命中率高的熱門 key
+3. 重建成本高、查詢慢的 key
+
+預熱名單應該小而精；其餘資料交給自然流量慢慢建立即可，不然反而會把啟動時間拉長，甚至在啟動瞬間自己製造一波壓力。
 
 ---
 

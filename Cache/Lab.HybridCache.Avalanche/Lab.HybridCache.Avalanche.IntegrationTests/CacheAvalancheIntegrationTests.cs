@@ -1,11 +1,6 @@
-using DotNet.Testcontainers.Builders;
-using Lab.HybridCache;
-using Microsoft.Extensions.Caching.Hybrid;
-using Microsoft.Extensions.Caching.StackExchangeRedis;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Testcontainers.Redis;
-using Xunit;
 
 namespace Lab.HybridCache.Avalanche.IntegrationTests;
 
@@ -42,7 +37,7 @@ public class CacheAvalancheIntegrationTests : IAsyncLifetime
         var svc = _sp.GetRequiredService<TtlJitterCacheService>();
 
         var ttls = new HashSet<int>();
-        for (int i = 0; i < 20; i++)
+        for (var i = 0; i < 20; i++)
         {
             var key = $"jitter-test-{i}";
             var (_, _, l2Ttl) = await svc.GetAsync(key);
@@ -90,7 +85,7 @@ public class CacheAvalancheIntegrationTests : IAsyncLifetime
     public async Task StampedeProtection_ConcurrentRequests_FactoryShouldBeCalledOnce()
     {
         var cache = _sp.GetRequiredService<Microsoft.Extensions.Caching.Hybrid.HybridCache>();
-        int factoryCallCount = 0;
+        var factoryCallCount = 0;
         var key = $"stampede-test-{Guid.NewGuid():N}";
 
         var tasks = Enumerable.Range(0, 10).Select(_ =>
