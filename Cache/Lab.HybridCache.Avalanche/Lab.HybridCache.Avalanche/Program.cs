@@ -35,10 +35,7 @@ public class Program
 
         var app = builder.Build();
 
-        if (app.Environment.IsDevelopment())
-        {
-            app.MapOpenApi();
-        }
+        if (app.Environment.IsDevelopment()) app.MapOpenApi();
 
         app.UseHttpsRedirection();
         app.UseAuthorization();
@@ -68,8 +65,8 @@ public class Program
                 async (Microsoft.Extensions.Caching.Hybrid.HybridCache hybridCache) =>
                 {
                     var forecast = await hybridCache.GetOrCreateAsync(
-                        key: "weather-forecast",
-                        factory: async cancellationToken =>
+                        "weather-forecast",
+                        async cancellationToken =>
                         {
                             await Task.Delay(TimeSpan.FromMicroseconds(2), cancellationToken);
                             Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] 從資料來源生成天氣預報資料");

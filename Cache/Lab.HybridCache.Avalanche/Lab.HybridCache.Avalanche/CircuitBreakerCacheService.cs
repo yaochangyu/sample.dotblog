@@ -43,7 +43,7 @@ public class CircuitBreakerCacheService(Microsoft.Extensions.Caching.Hybrid.Hybr
         try
         {
             WeatherForecast[]? result = null;
-            string source = "L1/L2";
+            var source = "L1/L2";
 
             await _pipeline.ExecuteAsync(async token =>
             {

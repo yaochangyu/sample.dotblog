@@ -11,14 +11,14 @@ public class LayeredTtlCacheService(Microsoft.Extensions.Caching.Hybrid.HybridCa
 
     private static readonly HybridCacheEntryOptions Options = new()
     {
-        Expiration = TimeSpan.FromMinutes(30),        // L2 TTL
+        Expiration = TimeSpan.FromMinutes(30), // L2 TTL
         LocalCacheExpiration = TimeSpan.FromMinutes(3) // L1 TTL < L2 TTL
     };
 
     public async Task<(WeatherForecast[] Data, string Source)> GetAsync(
         string key, CancellationToken ct = default)
     {
-        string source = "L1/L2";
+        var source = "L1/L2";
         var data = await cache.GetOrCreateAsync(
             key,
             async token =>
