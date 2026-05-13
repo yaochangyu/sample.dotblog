@@ -1,6 +1,7 @@
 # Project Tree
 
 - `.gitignore`
+- `README.md`
 - `blog.md`
 - `.archive/`
 - `.archive/enrich-1111-jobs.plan.md`
