@@ -6,6 +6,8 @@
 - `.archive/`
 - `.archive/enrich-1111-jobs.plan.md`
 - `.archive/import-1111-jobs-to-qdrant.plan.md`
+- `.archive/polish-blog-content.plan.md`
+- `.archive/switch-embedding-model.plan.md`
 - `1111_jobs_page3_top100.json`
 - `1111_jobs_page3_top100.enriched.json`
 - `docker-compose.yml`

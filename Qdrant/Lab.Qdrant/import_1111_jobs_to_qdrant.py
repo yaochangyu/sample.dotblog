@@ -20,7 +20,7 @@ from qdrant_client.models import (
 
 
 DEFAULT_COLLECTION_NAME = "jobs_1111_page1_top100"
-DEFAULT_EMBEDDING_MODEL = "intfloat/multilingual-e5-small"
+DEFAULT_EMBEDDING_MODEL = "intfloat/multilingual-e5-large"
 DEFAULT_QDRANT_URL = "http://localhost:6333"
 
 
