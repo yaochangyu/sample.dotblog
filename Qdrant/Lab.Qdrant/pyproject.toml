@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "beautifulsoup4>=4.14.3",
     "fastembed>=0.8.0",
+    "kagglehub>=1.0.1",
     "qdrant-client>=1.17.1",
     "requests>=2.33.1",
 ]

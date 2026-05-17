@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import argparse
+import ast
+import csv
+import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -7,6 +10,7 @@ from pathlib import Path
 from typing import Iterable
 
 from fastembed import TextEmbedding
+import kagglehub
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
@@ -19,14 +23,16 @@ from qdrant_client.models import (
 )
 
 
-DEFAULT_COLLECTION_NAME = "jobs_1111_page1_top100"
+DEFAULT_COLLECTION_NAME = "jobs_104_taiwan"
 DEFAULT_EMBEDDING_MODEL = "intfloat/multilingual-e5-large"
 DEFAULT_QDRANT_URL = "http://localhost:6333"
+DEFAULT_KAGGLE_DATASET = "sunny9999/taiwan-104-career-jd"
+DEFAULT_KAGGLE_FILENAME = "career job description.csv"
 
 
 @dataclass(frozen=True)
 class PreparedJob:
-    id: int
+    id: int | str
     text: str
     payload: dict
 
@@ -50,7 +56,21 @@ def parse_salary_range(salary_text: str) -> tuple[int | None, int | None]:
     return min(numbers), max(numbers)
 
 
-def build_embedding_text(job: dict) -> str:
+def split_labels(value: str | None) -> list[str]:
+    if not value:
+        return []
+    stripped = value.strip()
+    if stripped.startswith("[") and stripped.endswith("]"):
+        try:
+            parsed = ast.literal_eval(stripped)
+        except (SyntaxError, ValueError):
+            parsed = None
+        if isinstance(parsed, (list, tuple)):
+            return [str(item).strip() for item in parsed if str(item).strip()]
+    return [item.strip() for item in re.split(r"[、,/，|]", value) if item.strip()]
+
+
+def build_embedding_text_from_1111(job: dict) -> str:
     require = job.get("require", {})
     job_page = job.get("jobPage", {})
     enum_meaning = job.get("enumMeaning", {})
@@ -82,7 +102,45 @@ def build_embedding_text(job: dict) -> str:
     return "\n".join(lines)
 
 
-def build_payload(job: dict) -> dict:
+def build_embedding_text_from_kaggle(job: dict) -> str:
+    sections = [
+        ("職缺類別", job.get("職缺類別")),
+        ("職位類別", job.get("職位類別")),
+        ("職位", job.get("職位")),
+        ("縣市", job.get("縣市")),
+        ("地區", job.get("地區")),
+        ("公司名稱", job.get("公司名稱")),
+        ("職缺名稱", job.get("職缺名稱")),
+        ("工作內容", job.get("工作內容")),
+        ("職務類別", join_values(split_labels(job.get("職務類別")))),
+        ("工作待遇", job.get("工作待遇")),
+        ("工作性質", join_values(split_labels(job.get("工作性質")))),
+        ("上班地點", job.get("上班地點")),
+        ("管理責任", job.get("管理責任")),
+        ("上班時段", job.get("上班時段")),
+        ("需求人數", job.get("需求人數")),
+        ("工作經歷", job.get("工作經歷")),
+        ("學歷要求", job.get("學歷要求")),
+        ("科系要求", job.get("科系要求")),
+        ("擅長工具", join_values(split_labels(job.get("擅長工具")))),
+        ("工作技能", job.get("工作技能")),
+        ("其他條件", job.get("其他條件")),
+        ("公司標籤", join_values(split_labels(job.get("公司標籤")))),
+    ]
+
+    lines = [f"{label}：{value}" for label, value in sections if value]
+    return "\n".join(lines)
+
+
+def build_embedding_text(job: dict) -> str:
+    if "jobId" in job:
+        return build_embedding_text_from_1111(job)
+    if "職缺名稱" in job:
+        return build_embedding_text_from_kaggle(job)
+    raise ValueError("Unsupported job format.")
+
+
+def build_payload_from_1111(job: dict) -> dict:
     require = job.get("require", {})
     job_page = job.get("jobPage", {})
     enum_meaning = job.get("enumMeaning", {})
@@ -117,7 +175,86 @@ def build_payload(job: dict) -> dict:
     }
 
 
-def prepare_jobs(input_path: Path) -> list[PreparedJob]:
+def build_kaggle_job_id(job: dict, row_number: int) -> int:
+    raw = "|".join(
+        [
+            job.get("公司名稱", ""),
+            job.get("職缺名稱", ""),
+            job.get("上班地點", ""),
+            str(row_number),
+        ]
+    )
+    digest = hashlib.sha1(raw.encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big") & ((1 << 63) - 1)
+
+
+def build_payload_from_kaggle(job: dict) -> dict:
+    salary_min, salary_max = parse_salary_range(job.get("工作待遇", ""))
+
+    return {
+        "job_category": job.get("職缺類別"),
+        "position_category": job.get("職位類別"),
+        "position": job.get("職位"),
+        "company_name": job.get("公司名稱"),
+        "title": job.get("職缺名稱"),
+        "description": job.get("工作內容"),
+        "industry": job.get("職缺類別"),
+        "work_city": job.get("縣市"),
+        "work_district": job.get("地區"),
+        "salary_text": job.get("工作待遇"),
+        "salary_min": salary_min,
+        "salary_max": salary_max,
+        "job_url": None,
+        "role_labels": split_labels(job.get("職務類別")),
+        "job_type_labels": split_labels(job.get("工作性質")),
+        "experience_text": job.get("工作經歷"),
+        "education_labels": split_labels(job.get("學歷要求")),
+        "education_text": job.get("學歷要求"),
+        "major_text": job.get("科系要求"),
+        "driving_license_labels": [],
+        "work_time_text": job.get("上班時段"),
+        "vacation_text": None,
+        "recruit_count": None,
+        "recruit_count_text": job.get("需求人數"),
+        "welcome_identity_labels": [],
+        "computer_skill_labels": split_labels(job.get("擅長工具")),
+        "document_text": build_embedding_text(job),
+        "job_location": job.get("上班地點"),
+        "management_responsibility": job.get("管理責任"),
+        "demand_supply_ratio": job.get("供需人數"),
+        "skills_text": job.get("工作技能"),
+        "other_conditions": job.get("其他條件"),
+        "capital_amount": job.get("資本額"),
+        "employee_count": job.get("員工人數"),
+        "company_tags": split_labels(job.get("公司標籤")),
+    }
+
+
+def build_payload(job: dict) -> dict:
+    if "jobId" in job:
+        return build_payload_from_1111(job)
+    if "職缺名稱" in job:
+        return build_payload_from_kaggle(job)
+    raise ValueError("Unsupported job format.")
+
+
+def download_kaggle_dataset(
+    dataset_name: str = DEFAULT_KAGGLE_DATASET,
+    filename: str = DEFAULT_KAGGLE_FILENAME,
+) -> Path:
+    dataset_dir = Path(kagglehub.dataset_download(dataset_name))
+    dataset_path = dataset_dir / filename
+    if dataset_path.exists():
+        return dataset_path
+
+    csv_files = sorted(dataset_dir.glob("*.csv"))
+    if csv_files:
+        return csv_files[0]
+
+    raise FileNotFoundError(f"No CSV file found in dataset: {dataset_name}")
+
+
+def prepare_jobs_from_json(input_path: Path) -> list[PreparedJob]:
     payload = json.loads(input_path.read_text(encoding="utf-8"))
     jobs = payload["jobs"]
     prepared: list[PreparedJob] = []
@@ -132,6 +269,38 @@ def prepare_jobs(input_path: Path) -> list[PreparedJob]:
         )
 
     return prepared
+
+
+def prepare_jobs_from_csv(input_path: Path) -> list[PreparedJob]:
+    prepared: list[PreparedJob] = []
+
+    with input_path.open("r", encoding="utf-8-sig", newline="") as file:
+        reader = csv.DictReader(file)
+        for row_number, row in enumerate(reader, start=1):
+            job_id = build_kaggle_job_id(row, row_number)
+            payload = build_payload(row)
+            payload["job_id"] = job_id
+            prepared.append(
+                PreparedJob(
+                    id=job_id,
+                    text=build_embedding_text(row),
+                    payload=payload,
+                )
+            )
+
+    return prepared
+
+
+def prepare_jobs(
+    input_path: Path | None = None,
+    dataset_name: str = DEFAULT_KAGGLE_DATASET,
+) -> list[PreparedJob]:
+    resolved_input = input_path or download_kaggle_dataset(dataset_name=dataset_name)
+    if resolved_input.suffix.lower() == ".json":
+        return prepare_jobs_from_json(resolved_input)
+    if resolved_input.suffix.lower() == ".csv":
+        return prepare_jobs_from_csv(resolved_input)
+    raise ValueError(f"Unsupported input format: {resolved_input.suffix}")
 
 
 def get_embedding_model(model_name: str) -> TextEmbedding:
@@ -179,13 +348,14 @@ def ensure_collection(
 
 def import_jobs(
     *,
-    input_path: Path,
+    input_path: Path | None,
+    dataset_name: str,
     qdrant_url: str,
     collection_name: str,
     model_name: str,
     recreate: bool = False,
 ) -> dict:
-    prepared_jobs = prepare_jobs(input_path)
+    prepared_jobs = prepare_jobs(input_path, dataset_name)
     model = get_embedding_model(model_name)
     vectors = list(model.embed([job.text for job in prepared_jobs]))
     vector_size = len(vectors[0]) if vectors else get_vector_size(model_name)
@@ -209,11 +379,12 @@ def import_jobs(
 
 def verify_import(
     *,
-    input_path: Path,
+    input_path: Path | None,
+    dataset_name: str,
     qdrant_url: str,
     collection_name: str,
 ) -> dict:
-    prepared_jobs = prepare_jobs(input_path)
+    prepared_jobs = prepare_jobs(input_path, dataset_name)
     client = QdrantClient(url=qdrant_url)
     count_result = client.count(collection_name=collection_name, exact=True)
     sample_id = prepared_jobs[0].id
@@ -274,11 +445,12 @@ def search_jobs(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Import 1111 jobs into Qdrant.")
+    parser = argparse.ArgumentParser(description="Import job datasets into Qdrant.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     common = argparse.ArgumentParser(add_help=False)
-    common.add_argument("--input", type=Path, default=Path("output/1111_jobs_page1_top100.enriched.json"))
+    common.add_argument("--input", type=Path)
+    common.add_argument("--dataset", default=DEFAULT_KAGGLE_DATASET)
     common.add_argument("--qdrant-url", default=DEFAULT_QDRANT_URL)
     common.add_argument("--collection", default=DEFAULT_COLLECTION_NAME)
     common.add_argument("--model", default=DEFAULT_EMBEDDING_MODEL)
@@ -301,7 +473,7 @@ def main() -> None:
     args = parse_args()
 
     if args.command == "prepare":
-        prepared = prepare_jobs(args.input)
+        prepared = prepare_jobs(args.input, args.dataset)
         print(json.dumps(
             {
                 "count": len(prepared),
@@ -319,6 +491,7 @@ def main() -> None:
     if args.command == "import":
         result = import_jobs(
             input_path=args.input,
+            dataset_name=args.dataset,
             qdrant_url=args.qdrant_url,
             collection_name=args.collection,
             model_name=args.model,
@@ -330,6 +503,7 @@ def main() -> None:
     if args.command == "verify":
         result = verify_import(
             input_path=args.input,
+            dataset_name=args.dataset,
             qdrant_url=args.qdrant_url,
             collection_name=args.collection,
         )
