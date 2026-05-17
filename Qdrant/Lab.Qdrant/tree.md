@@ -15,8 +15,8 @@
 - `graphify-out/`
 - `graphify-out/GRAPH_REPORT.md`
 - `graphify-out/graph.json`
-- `import_1111_jobs_to_qdrant.py`
-- `import_1111_jobs_to_qdrant.ipynb`
+- `import_104_jobs_to_qdrant.py`
+- `qdrant_104_jobs_workbench.ipynb`
 - `pyproject.toml`
-- `test_import_1111_jobs_to_qdrant.py`
+- `test_import_104_jobs_to_qdrant.py`
 - `tree.md`
