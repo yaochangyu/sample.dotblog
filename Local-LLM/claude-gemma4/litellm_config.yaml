@@ -1,0 +1,12 @@
+model_list:
+  - model_name: gemma4-opt
+    litellm_params:
+      model: ollama_chat/gemma4-opt
+      api_base: http://localhost:11435
+      extra_body:
+        think: false
+        options:
+          num_ctx: 16384
+
+litellm_settings:
+  drop_params: true
