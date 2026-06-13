@@ -1,3 +1,4 @@
 FROM gemma4:e4b
-PARAMETER num_ctx 16384
+PARAMETER num_ctx 32768
 PARAMETER temperature 0.0
+PARAMETER repeat_penalty 1.15

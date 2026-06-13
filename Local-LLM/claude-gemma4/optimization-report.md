@@ -1,4 +1,4 @@
-# Claude + Gemma4 本地端優化配置報告
+# Claude Code + Gemma4 本地端優化配置報告
 
 **日期**：2026-06-13  
 **硬體**：RTX 4060 Laptop 8 GB VRAM / 32 核 CPU / 48 GB RAM  
@@ -6,14 +6,15 @@
 
 ---
 
-## 最終配置
+## 最終配置（已驗證可正常運作）
 
 ### Modelfile（`~/projects/Local-LLM/Modelfile`）
 
 ```dockerfile
 FROM gemma4:e4b
-PARAMETER num_ctx 16384
+PARAMETER num_ctx 32768
 PARAMETER temperature 0.0
+PARAMETER repeat_penalty 1.15
 ```
 
 ### litellm_config.yaml（`~/projects/Local-LLM/litellm_config.yaml`）
@@ -27,81 +28,109 @@ model_list:
       extra_body:
         think: false
         options:
-          num_ctx: 16384
+          num_ctx: 32768
 
 litellm_settings:
   drop_params: true
+```
+
+### empty-mcp.json（`~/projects/Local-LLM/empty-mcp.json`）
+
+```json
+{"mcpServers":{}}
 ```
 
 ---
 
 ## 使用方式
 
-### 步驟一：啟動本地環境
+### 一鍵啟動（推薦）
 
 ```bash
 cd ~/projects/Local-LLM
+./run-claude.sh
+```
+
+### 手動啟動
+
+```bash
+# 步驟一：啟動本地環境
+cd ~/projects/Local-LLM
 ./start-optimized-env.sh
+
+# 步驟二：啟動 Claude Code（停用 MCP servers）
+env ANTHROPIC_BASE_URL="http://localhost:4000" \
+    ANTHROPIC_API_KEY="local-bypass" \
+    claude --model gemma4-opt \
+    --mcp-config ~/projects/Local-LLM/empty-mcp.json \
+    --strict-mcp-config
 ```
 
-### 步驟二：啟動 Claude Code 串接本地 gemma4
+---
 
-```bash
-export ANTHROPIC_BASE_URL="http://localhost:4000"
-export ANTHROPIC_API_KEY="local-bypass"
-claude --model gemma4-opt
-```
+## 核心問題診斷：為什麼需要 32K context？
 
-或一行執行：
+Claude Code 啟動時，每次 API 請求都會夾帶所有 tool schemas：
 
-```bash
-ANTHROPIC_BASE_URL="http://localhost:4000" ANTHROPIC_API_KEY="local-bypass" claude --model gemma4-opt
-```
+| 來源 | 數量 | 估算 tokens |
+|------|------|-------------|
+| Built-in tools（Bash、Read、Edit 等） | 28 個 | **23,037 tokens** |
+| System prompt（CLAUDE.md + memory） | — | 1,777 tokens |
+| Messages（初始上下文） | 2 turn | 4,423 tokens |
+| **總輸入 estimate** | | **~29,238 tokens** |
+| MCP tools（GitHub、Gmail、Context7 等） | +31 個 | +~25,000 tokens（停用） |
 
-### 步驟三：確認服務正常（可選）
-
-```bash
-# 確認 Ollama 模型已載入
-curl -s http://localhost:11435/api/ps | python3 -m json.tool
-
-# 確認 LiteLLM 可接受請求
-curl -s http://localhost:4000/v1/messages \
-  -H "Content-Type: application/json" \
-  -H "x-api-key: local-bypass" \
-  -H "anthropic-version: 2023-06-01" \
-  -d '{"model":"gemma4-opt","max_tokens":50,"messages":[{"role":"user","content":"hi"}]}'
-```
+**→ 若不停用 MCP：總輸入 ~54K tokens，遠超任何本地模型容量**  
+**→ 停用 MCP 後：~29K tokens，num_ctx=32768 可容納**
 
 ---
 
 ## 優化前後比較
 
-| 指標 | 優化前 | 優化後 |
-|------|--------|--------|
-| 生成速度（Ollama） | 16.72 tok/s | **60.18 tok/s**（+260%） |
-| Prefill 速度 | 94.37 tok/s | **119.96 tok/s**（+27%） |
-| LiteLLM 端到端 | 14.52 tok/s | **53.3 tok/s**（+267%） |
-| thinking block | 有（佔 43% token） | **無** |
-| num_ctx | 8192 | **16384** |
-| 模型 VRAM 佔用 | 3.3 GB | **2.9 GB** |
+| 指標 | 初始狀態 | 最終優化 |
+|------|---------|---------|
+| 模型 | gemma4:e4b (8K ctx) | gemma4:e4b (32K ctx) |
+| MCP servers | 啟用（59 tools / ~54K tokens） | **停用（28 tools / ~29K tokens）** |
+| 生成速度 | 16.72 tok/s | **61.4 tok/s** |
+| VRAM 用量 | 3.3 GB | **4.2 GB（含 32K KV cache）** |
+| thinking block | 有（+43% tokens） | **無（think: false）** |
+| repeat_penalty | 無 | **1.15（防重複迴圈）** |
+| 實際可運作 | ✗ 重複迴圈 / 截斷 | **✓ 正常回應** |
 
 ---
 
-## 優化項目說明
+## 各配置項說明
 
-| 項目 | 設定 | 說明 |
-|------|------|------|
-| 模型選擇 | `gemma4:e4b` | MoE 架構，8 GB VRAM 硬體最佳選擇；12B dense 模型會因 VRAM 不足觸發 CPU 卸載（實測 312 秒/次） |
-| `num_ctx` | 16384 | 原 8192 對 Claude Code 的 system prompt 偏小；16384 VRAM 仍可容納 |
-| `think: false` | extra_body | gemma4 原生 thinking 模式，透過 LiteLLM extra_body 關閉 |
-| `drop_params: true` | litellm_settings | 過濾 Claude Code 傳入的 Anthropic 專屬參數（如 `reasoning_effort`），避免 400 錯誤 |
-| `temperature: 0.0` | Modelfile | 工具呼叫任務使用確定性輸出，減少 token 浪費 |
-| Flash Attention | `OLLAMA_FLASH_ATTENTION=1` | start-optimized-env.sh 已設定，降低 VRAM 佔用並加速 prefill |
+| 項目 | 設定值 | 原因 |
+|------|--------|------|
+| 模型 | `gemma4:e4b` | MoE 架構，8 GB VRAM 最佳選擇。12B dense 模型 + 32K KV cache = OOM |
+| `num_ctx` | `32768` | Claude Code 28 built-in tools 本身就佔 ~23K tokens；低於 32K 必失敗 |
+| `repeat_penalty` | `1.15` | 必要。無此設定會觸發「您 I I I」重複迴圈 |
+| `temperature` | `0.0` | 工具呼叫任務使用確定性輸出 |
+| `think: false` | extra_body | 關閉 gemma4 原生 thinking，節省 ~43% tokens |
+| `drop_params: true` | litellm_settings | 過濾 Anthropic 專屬參數（如 `reasoning_effort`），避免 400 錯誤 |
+| `--strict-mcp-config` | claude 參數 | 配合 empty-mcp.json，停用所有 MCP servers，tool 數 59 → 28 |
+| `OLLAMA_FLASH_ATTENTION=1` | env var | 降低 KV cache VRAM 佔用，加速 prefill |
 
 ---
 
-## 注意事項
+## 已知限制
 
-- `gemma4:12b` 在此硬體（8 GB VRAM）**不建議使用**，模型本身 7.6 GB + KV Cache 超出 VRAM，觸發 CPU 卸載後推論速度極慢。
-- `num_ctx` 不宜再調高；32768 已導致 12B 模型 CPU 卸載，e4b 在 16384 仍需監控 VRAM。
-- LiteLLM 重啟後需約 8 秒啟動時間，才能接受請求。
+- **對話長度有限**：初始請求 ~29K tokens，num_ctx=32768 僅剩 ~3.5K tokens 給回應；隨對話增長，context 很快滿溢。
+- **無 MCP tools**：停用後無法使用 GitHub、Gmail、Context7 等工具；是 8 GB VRAM 的硬體限制。
+- **12B 模型在此硬體不可行**：12b-qat (5.4 GB) + 32K KV cache (~3.5 GB) > 8 GB VRAM，會觸發 CPU offload（312 秒/次）。
+- **gemma4:12b Q3 量化版**：亦已實測，CPU offload 問題相同，不建議。
+
+---
+
+## 失敗記錄（避免重踏）
+
+| 嘗試 | 失敗原因 |
+|------|---------|
+| `gemma4:12b` dense | VRAM 不足，CPU offload → 312 秒/次 |
+| `gemma4:12b-it-qat` + 32K | 5.4 GB model + 3.5 GB KV > 8 GB |
+| `num_ctx=8192` + 任何模型 | 29K token input 遠超 8K，截斷後重複迴圈 |
+| `--mcp-config '{}'` | 字串格式無效，MCP 仍載入（需用檔案路徑） |
+| Modelfile `PARAMETER think false` | 無效 Modelfile 參數，需用 litellm extra_body |
+| 移除 `repeat_penalty` | 觸發「您 I I I」重複迴圈 |
+| `num_predict` 設定 | 覆蓋 API max_tokens，輸出截斷 |
