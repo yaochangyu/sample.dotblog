@@ -6,6 +6,7 @@
 │   ├── claude-gemma4-best-practices.plan.md
 │   ├── claude-gemma4-native-experiment.plan.md
 │   ├── claude-gemma4-setup.plan.md
+│   ├── GitCommitPush.plan.md
 │   ├── gemma4-optimization-outline.md
 │   ├── html-slides-gemma4.plan.md
 │   ├── install_html_slides_skill.plan.md
@@ -17,7 +18,6 @@
 │   ├── StopSlopBlog.plan.md
 │   └── UpdateReadme.plan.md
 ├── @tree.md
-├── GitCommitPush.plan.md
 ├── README.md
 ├── blog.md
 ├── claude-gemma4-best-practices.md
