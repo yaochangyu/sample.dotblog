@@ -1,10 +1,17 @@
+---
+title: '在 8GB VRAM 筆電讓 Claude Code 串接 Gemma 4 E4B：Ollama + LiteLLM 完整踩坑紀錄'
+abstract: "<p>最近 Google 釋出了 Gemma 4 系列，其中 <code>gemma4:e4b</code> 是專為本機與一般電腦設計的版本，4.5B 有效參數，理論上筆電可以跑。我想說趁這個機會，把 Claude Code 的推論後端換成地端，省點 API token，結果跑得很累 XDD。最後發現「跑得起來」跟「能正常工作」是兩件完全不同的事。這篇就是把整個踩坑過程記下來，包含架構設計、VRAM 預算計算、為什麼一定要加 LiteLLM、以及 Claude Code 的 token 結構分析。</p>"
+keywords: Gemma4,Local Model,Claude Code,On-Prem,LiteLLM
+categories: Local Model
+weblogName: 余小章 @ 大內殿堂
+postId: a89d1373-a7d8-45fb-9a31-011f6d565469
+postDate: 2026-06-14T19:45:23.0000000
+postStatus: publish
+dontInferFeaturedImage: false
+stripH1Header: true
+---
+
 # [本地 AI] 在 8GB VRAM 筆電讓 Claude Code 串接 Gemma 4 E4B：Ollama + LiteLLM 完整踩坑紀錄
-
-最近 Google 釋出了 Gemma 4 系列，其中 `gemma4:e4b` 是專為邊緣裝置設計的版本，4.5B 有效參數，理論上筆電可以跑。
-
-我想說趁這個機會，把 Claude Code 的推論後端換成本地端，省點 API token XDD
-
-結果發現「跑得起來」跟「能正常工作」是兩件完全不同的事。這篇就是把整個踩坑過程記下來，包含架構設計、VRAM 預算計算、為什麼一定要加 LiteLLM、以及 Claude Code 的 token 結構分析。
 
 ---
 
@@ -393,7 +400,7 @@ env ANTHROPIC_BASE_URL="http://localhost:4000" \
 
 ## 實測結果
 
-| 指標 | 數據 |
+| 指標 | 資料 |
 |------|------|
 | VRAM 佔用 | 4.2 GB（穩定，無 CPU Offload） |
 | 生成速度 | **61.4 tok/s** |
@@ -401,9 +408,9 @@ env ANTHROPIC_BASE_URL="http://localhost:4000" \
 | repeat_penalty 效果 | 無重複迴圈，輸出正常收斂 |
 | think block 關閉後 | token 消耗降低約 43% |
 
-和幾種配置的對比：
+與幾種設定的對比：
 
-| 配置 | VRAM | 速度 | 可用 |
+| 設定 | VRAM | 速度 | 可用 |
 |------|------|------|------|
 | gemma4:e4b + 8K ctx | 3.3 GB | 62 tok/s | ✗ tool schemas 截斷 |
 | gemma4:12b + 32K ctx | >8 GB（CPU offload） | 8 tok/s | ✗ 等到天荒地老 |
@@ -447,8 +454,8 @@ env ANTHROPIC_BASE_URL="http://localhost:4000" \
 
 ## 已知限制
 
-- **對話長度有限**：初始請求就吃掉 ~29K，32K context 只剩 ~3.5K 給回應；隨對話增長，context 很快滿溢，建議短對話、高頻啟動新 session
-- **無 MCP tools**：GitHub、Gmail、Context7 等全停了，這是 8 GB VRAM 的硬體限制，不是 bug
+- **對話長度有限**：初始請求就吃掉 ~29K，32K context 只剩 ~3.5K 給回應；隨對話增長，context 很快滿溢，建議保持短對話，並經常啟動新對話（session）
+- **無 MCP tools**：GitHub、Gmail、Context7 等全停了，這是 8 GB VRAM 的硬體限制，而非錯誤（bug）
 - **12B 在這台跑不動**：5.4 GB 模型 + 3.5 GB KV cache > 8 GB，CPU Offload 的速度沒法用
 
 ---
@@ -459,7 +466,3 @@ env ANTHROPIC_BASE_URL="http://localhost:4000" \
 - LiteLLM 的 `drop_params: true` 是整個方案的關鍵；沒有它，Anthropic 的 Beta 標頭會讓 Ollama 一直 400。
 - `repeat_penalty 1.15` 跟 `temperature 0.0` 對工具呼叫的穩定度影響非常大，不要省。
 - 速度上 61 tok/s 其實蠻夠用的，比 Claude API 慢一點，但可以本地跑沒有延遲費。
-
----
-
-若有謬誤,煩請告知,新手發帖請多包涵

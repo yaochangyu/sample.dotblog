@@ -9,13 +9,17 @@
 │   ├── gemma4-optimization-outline.md
 │   ├── html-slides-gemma4.plan.md
 │   ├── install_html_slides_skill.plan.md
+│   ├── MoveCaptureProxy.plan.md
 │   ├── ollama_optimization.plan.md
 │   ├── ollama_optimization_steps_review_fix.plan.md
-│   └── optimization-report.md
+│   ├── optimization-report.md
+│   ├── RefineBlogEdgeDevice.plan.md
+│   ├── StopSlopBlog.plan.md
+│   └── UpdateReadme.plan.md
 ├── @tree.md
+├── GitCommitPush.plan.md
 ├── README.md
 ├── blog.md
-├── capture_proxy.py
 ├── claude-gemma4-best-practices.md
 ├── gemma4_best_practices_experiment_report.md
 ├── gemma4-optimization-slides.html
@@ -23,6 +27,7 @@
 ├── ollama_optimization_steps.md
 └── script/
     ├── Modelfile
+    ├── capture_proxy.py
     ├── empty-mcp.json
     ├── install.sh
     ├── litellm_config.yaml
