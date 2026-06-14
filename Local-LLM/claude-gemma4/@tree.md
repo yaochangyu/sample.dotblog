@@ -6,14 +6,26 @@
 │   ├── claude-gemma4-best-practices.plan.md
 │   ├── claude-gemma4-native-experiment.plan.md
 │   ├── claude-gemma4-setup.plan.md
+│   ├── GetLatestBlogPost.plan.md
+│   ├── GitCommitPush.plan.md
 │   ├── gemma4-optimization-outline.md
 │   ├── html-slides-gemma4.plan.md
 │   ├── install_html_slides_skill.plan.md
+│   ├── InstallMetablogSkill.plan.md
+│   ├── MoveCaptureProxy.plan.md
 │   ├── ollama_optimization.plan.md
 │   ├── ollama_optimization_steps_review_fix.plan.md
-│   └── optimization-report.md
+│   ├── optimization-report.md
+│   ├── PublishBlog.plan.md
+│   ├── RefineBlogEdgeDevice.plan.md
+│   ├── StopSlopBlog.plan.md
+│   └── UpdateReadme.plan.md
+├── .issues/
+│   ├── InstallMetablogSkill.issues.md
+│   └── PublishBlog.issues.md
 ├── @tree.md
 ├── README.md
+├── RestoreBlogPlans.plan.md
 ├── blog.md
 ├── claude-gemma4-best-practices.md
 ├── gemma4_best_practices_experiment_report.md
