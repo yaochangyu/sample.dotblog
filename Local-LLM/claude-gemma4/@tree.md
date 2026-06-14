@@ -13,7 +13,6 @@
 │   ├── ollama_optimization_steps_review_fix.plan.md
 │   └── optimization-report.md
 ├── @tree.md
-├── CleanLogsAndIssues.plan.md
 ├── README.md
 ├── blog.md
 ├── claude-gemma4-best-practices.md
