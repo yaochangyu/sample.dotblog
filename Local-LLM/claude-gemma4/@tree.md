@@ -25,7 +25,6 @@
 │   └── PublishBlog.issues.md
 ├── @tree.md
 ├── README.md
-├── RestoreBlogPlans.plan.md
 ├── blog.md
 ├── claude-gemma4-best-practices.md
 ├── gemma4_best_practices_experiment_report.md
