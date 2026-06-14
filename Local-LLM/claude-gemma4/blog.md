@@ -17,13 +17,13 @@ stripH1Header: true
 
 ## 開發環境
 
-- OS：Windows 11 / Ubuntu（WSL2）
+- OS：Windows 11 / Ubuntu 24.04.3 LTS（WSL2）
 - GPU：NVIDIA RTX 4060 Laptop 8 GB VRAM
 - RAM：48 GB
-- CUDA：12.5（驅動 556.29）
-- Ollama：latest（v0.30.8+）
-- LiteLLM：latest（`litellm[proxy]`）
-- Claude Code：latest
+- CUDA：13.2（驅動 595.95）
+- Ollama：0.20.2
+- LiteLLM：1.81.10（`litellm[proxy]`）
+- Claude Code：2.1.177
 - Model：`gemma4:e4b`（基底）→ `gemma4-opt`（自訂）
 
 ---
@@ -62,9 +62,25 @@ ollama --version
 ollama run gemma4:e4b
 ```
 
-拉完後在終端機跟它說幾句確認正常，按 `Ctrl+D` 離開。
+拉完後先單獨確認 LLM 能正常回應，在提示符號輸入一句話測試：
 
-到這裡看起來一切美好，然後你興沖沖地啟動 Claude Code，然後就噴掉了啦!!!
+```
+>>> 請介紹自己
+```
+
+看到模型正常輸出後按 `Ctrl+D` 離開。
+
+**❌ 坑：直接把 Claude Code 指向 Ollama**
+
+到這裡看起來一切美好，接著直接 Claude Code 串到 Ollama：
+
+```bash
+export ANTHROPIC_BASE_URL="http://localhost:11434"
+export ANTHROPIC_API_KEY="ollama"
+claude --model gemma4:e4b
+```
+
+然後就噴掉了啦!!!
 
 ---
 
@@ -163,10 +179,6 @@ guiApplications=false
 ```
 
 設定後在 PowerShell 執行 `wsl --shutdown` 重啟 WSL2。
-
-**NVIDIA 控制面板**
-
-進入「管理 3D 設定」，將「CUDA - 系統記憶體後備原則」改為「偏好系統記憶體不後備」，防止 CUDA 偷偷把 VRAM 溢出部分丟到系統 RAM。
 
 ---
 
@@ -466,3 +478,4 @@ env ANTHROPIC_BASE_URL="http://localhost:4000" \
 - LiteLLM 的 `drop_params: true` 是整個方案的關鍵；沒有它，Anthropic 的 Beta 標頭會讓 Ollama 一直 400。
 - `repeat_penalty 1.15` 跟 `temperature 0.0` 對工具呼叫的穩定度影響非常大，不要省。
 - 速度上 61 tok/s 其實蠻夠用的，比 Claude API 慢一點，但可以本地跑沒有延遲費。
+- 調用工具（gws cli）沒有成功過。

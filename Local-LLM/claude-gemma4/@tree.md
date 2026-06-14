@@ -6,6 +6,7 @@
 │   ├── claude-gemma4-best-practices.plan.md
 │   ├── claude-gemma4-native-experiment.plan.md
 │   ├── claude-gemma4-setup.plan.md
+│   ├── GenerateBlogImages.plan.md
 │   ├── GetLatestBlogPost.plan.md
 │   ├── GitCommitPush.plan.md
 │   ├── gemma4-optimization-outline.md
@@ -30,6 +31,11 @@
 ├── claude-gemma4-best-practices.md
 ├── gemma4_best_practices_experiment_report.md
 ├── gemma4-optimization-slides.html
+├── images/
+│   ├── claymation_gemma_claude.jpg
+│   ├── cyberpunk_gemma_claude.jpg
+│   ├── pixel_art_gemma_claude.jpg
+│   └── vector_gemma_claude.jpg
 ├── install-gemma4-e4b-and-connect-claude-code.md
 ├── ollama_optimization_steps.md
 └── script/
