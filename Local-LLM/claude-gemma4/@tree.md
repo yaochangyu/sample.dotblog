@@ -13,15 +13,19 @@
 │   ├── ollama_optimization_steps_review_fix.plan.md
 │   └── optimization-report.md
 ├── @tree.md
-├── Modelfile
 ├── README.md
+├── blog.md
 ├── capture_proxy.py
 ├── claude-gemma4-best-practices.md
-├── empty-mcp.json
 ├── gemma4_best_practices_experiment_report.md
 ├── gemma4-optimization-slides.html
-├── litellm_config.yaml
+├── install-gemma4-e4b-and-connect-claude-code.md
 ├── ollama_optimization_steps.md
-├── run-claude.sh
-└── start-optimized-env.sh
+└── script/
+    ├── Modelfile
+    ├── empty-mcp.json
+    ├── install.sh
+    ├── litellm_config.yaml
+    ├── run-claude.sh
+    └── start-optimized-env.sh
 ```

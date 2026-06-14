@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>地端 Gemma 4 + Claude Code 極致優化與避坑指南</title>
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --text-primary: #111827;
+      --text-secondary: #64748b;
+      --accent: #2563eb;
+      --accent-dim: rgba(37, 99, 235, 0.10);
+      --surface: #f8fafc;
+      --border: #dbe3ef;
+      --on-accent: #ffffff;
+      --code-bg: #101828;
+      --code-text: #f8fafc;
+      --font-title: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      --font-body: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      --slide-padding: clamp(1.5rem, 5vw, 4rem);
+      --content-gap: clamp(1rem, 2vw, 1.8rem);
+      --shadow: 0 18px 48px rgba(15, 23, 42, 0.10);
+    }
+
+    body.style-dark {
+      --bg-primary: #0a0a0c;
+      --text-primary: #ffffff;
+      --text-secondary: #a1a1aa;
+      --accent: #facc15; /* 明黃 */
+      --accent-dim: rgba(250, 204, 21, 0.12);
+      --surface: #18181b;
+      --border: #27272a;
+      --on-accent: #09090b;
+      --code-bg: #09090b;
+      --code-text: #e4e4e7;
+      --shadow: 0 20px 56px rgba(0, 0, 0, 0.5);
+    }
+
+    * { box-sizing: border-box; }
+    html { height: 100%; }
+    body {
+      height: 100%;
+      margin: 0;
+      font-family: var(--font-body);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow: hidden;
+    }
+
+    /* 捲動容器 */
+    .deck {
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      scroll-behavior: smooth;
+      scrollbar-width: none;
+    }
+    .deck::-webkit-scrollbar { display: none; }
+
+    /* 傳統左右橫向換頁 */
+    body.layout-horizontal .deck {
+      display: flex;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+    }
+
+    /* 上下垂直捲動 */
+    body.layout-vertical .deck {
+      display: block;
+      overflow-x: hidden;
+      overflow-y: auto;
+      scroll-snap-type: y mandatory;
+    }
+
+    .slide {
+      flex: 0 0 100vw;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      scroll-snap-align: start;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      padding: var(--slide-padding);
+      background: var(--bg-primary);
+    }
+
+    .slide-inner {
+      width: min(1200px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: var(--content-gap);
+    }
+
+    h1, h2, h3, p, ul, ol, blockquote { margin: 0; }
+    h1, h2, h3 { font-family: var(--font-title); letter-spacing: -0.02em; }
+    h1 {
+      max-width: 20ch;
+      font-size: clamp(2.2rem, 5vw, 4.2rem);
+      line-height: 1.1;
+      font-weight: 900;
+    }
+    h2 {
+      max-width: 25ch;
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      line-height: 1.15;
+      font-weight: 800;
+    }
+    h3 {
+      font-size: clamp(1.1rem, 2vw, 1.45rem);
+      line-height: 1.25;
+      font-weight: 700;
+    }
+    p, li {
+      font-size: clamp(0.95rem, 1.4vw, 1.15rem);
+      line-height: 1.55;
+      color: var(--text-secondary);
+    }
+
+    .eyebrow {
+      font-size: clamp(.8rem, 1vw, .95rem);
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .lead { max-width: 55ch; font-size: clamp(1.05rem, 1.6vw, 1.3rem); line-height: 1.6; }
+    .accent { color: var(--accent); }
+
+    .cols {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: clamp(1.5rem, 4vw, 3rem);
+      align-items: center;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(.8rem, 1.5vw, 1.2rem);
+    }
+    .grid.grid-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .card,
+    .panel,
+    .prompt-box,
+    .rubric-cell {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .card,
+    .panel,
+    .prompt-box {
+      padding: clamp(1rem, 2vw, 1.5rem);
+    }
+
+    .card {
+      display: grid;
+      gap: .5rem;
+    }
+
+    .card .num,
+    .agenda-num {
+      width: 2.4rem;
+      height: 2.4rem;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--on-accent);
+      font-weight: 800;
+      font-size: 1.1rem;
+    }
+
+    .agenda-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1rem;
+      width: 100%;
+    }
+    .agenda-item {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: start;
+      gap: 1rem;
+      padding: 1.2rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    .agenda-item h3 {
+      margin-bottom: 0.35rem;
+    }
+
+    .task-grid {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: clamp(1rem, 2vw, 1.8rem);
+      align-items: stretch;
+    }
+    .task-list {
+      display: grid;
+      gap: .8rem;
+    }
+    .task-row {
+      display: grid;
+      grid-template-columns: 5.5rem 1fr;
+      gap: 0.8rem;
+      align-items: start;
+      padding-bottom: .8rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .task-row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .task-label {
+      color: var(--accent);
+      font-weight: 800;
+      font-size: clamp(.85rem, 1vw, .95rem);
+    }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .compare-grid .panel {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 1.2rem;
+    }
+    .stat-card {
+      padding: clamp(1.2rem, 2vw, 1.8rem);
+      border-left: 4px solid var(--accent);
+      background: var(--surface);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+    .stat-num {
+      display: block;
+      font-size: clamp(2.8rem, 6vw, 4.5rem);
+      line-height: .95;
+      font-weight: 900;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+    }
+
+    .comparison-table {
+      display: grid;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .comparison-row {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 1.2fr;
+    }
+    .comparison-row > * {
+      padding: 0.9rem 1.2rem;
+      border-bottom: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
+    .comparison-row > *:last-child { border-right: 0; }
+    .comparison-row:last-child > * { border-bottom: 0; }
+    .comparison-head { font-weight: 800; color: var(--text-primary); background: rgba(255, 255, 255, 0.02); }
+    .winner { background: var(--accent-dim); border-left: 2px solid var(--accent); }
+
+    .code-card {
+      padding: clamp(0.8rem, 1.5vw, 1.2rem);
+      border-radius: 8px;
+      background: var(--code-bg);
+      color: var(--code-text);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow-x: auto;
+    }
+    .code-card pre {
+      margin: 0;
+      white-space: pre;
+      font-size: clamp(0.8rem, 1.1vw, 0.95rem);
+      line-height: 1.45;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .before-after {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+    }
+    .before-after .panel {
+      display: grid;
+      gap: .75rem;
+    }
+    .before-after .panel.winner-panel {
+      border: 1.5px solid var(--accent);
+      background: rgba(250, 204, 21, 0.02);
+    }
+    .change-note {
+      padding: .65rem .9rem;
+      border-radius: 8px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: clamp(0.9rem, 1.2vw, 1rem);
+    }
+
+    .workflow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: .8rem;
+      align-items: stretch;
+    }
+    .workflow.cols-5 {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+    .workflow .card {
+      box-shadow: none;
+    }
+    .workflow .card.input-output-card {
+      border: 1px dashed var(--accent);
+      background: rgba(250, 204, 21, 0.02);
+    }
+
+    .progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: var(--progress, 0%);
+      height: 4px;
+      background: var(--accent);
+      z-index: 20;
+      transition: width .25s ease;
+    }
+
+    .nav-dots {
+      position: fixed;
+      right: 1.2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: grid;
+      gap: .6rem;
+      z-index: 20;
+    }
+    .nav-dots button {
+      width: .5rem;
+      height: .5rem;
+      border: 0;
+      border-radius: 50%;
+      padding: 0;
+      background: var(--text-secondary);
+      opacity: .3;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-dots button.active {
+      background: var(--accent);
+      opacity: 1;
+      transform: scale(1.3);
+    }
+
+    /* 說明快捷鍵的提示框 */
+    .keyboard-tip {
+      position: fixed;
+      left: 1.5rem;
+      bottom: 1.5rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      opacity: 0.5;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity .5s cubic-bezier(.16, 1, .3, 1),
+                  transform .5s cubic-bezier(.16, 1, .3, 1),
+                  filter .5s ease;
+    }
+    .reveal.from-left { transform: translateX(-18px); }
+    .reveal.from-right { transform: translateX(18px); }
+    .reveal.from-blur { transform: none; filter: blur(6px); }
+    .slide.visible .reveal {
+      opacity: 1;
+      transform: none;
+      filter: none;
+    }
+    .stagger > * {
+      opacity: 0;
+      transform: translateY(12px);
+      transition: opacity .5s cubic-bezier(.16, 1, .3, 1),
+                  transform .5s cubic-bezier(.16, 1, .3, 1);
+    }
+    .slide.visible .stagger > * { opacity: 1; transform: none; }
+    .slide.visible .stagger > *:nth-child(1) { transition-delay: .04s; }
+    .slide.visible .stagger > *:nth-child(2) { transition-delay: .1s; }
+    .slide.visible .stagger > *:nth-child(3) { transition-delay: .16s; }
+    .slide.visible .stagger > *:nth-child(4) { transition-delay: .22s; }
+    .slide.visible .stagger > *:nth-child(5) { transition-delay: .28s; }
+
+    @media (max-width: 960px) {
+      .cols,
+      .task-grid,
+      .compare-grid,
+      .workflow.cols-5,
+      .workflow,
+      .stats,
+      .comparison-row,
+      .before-after,
+      .agenda-list,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .nav-dots, .keyboard-tip { display: none; }
+      .task-row { grid-template-columns: 1fr; gap: .25rem; }
+    }
+
+    @media (max-height: 620px) {
+      :root { --slide-padding: clamp(1rem, 3vw, 2rem); }
+      .nav-dots, .keyboard-tip { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .reveal,
+      .stagger > * {
+        opacity: 1;
+        transform: none;
+        filter: none;
+      }
+    }
+  </style>
+</head>
+<body class="style-dark layout-horizontal">
+  <div class="progress" aria-hidden="true"></div>
+  <div class="keyboard-tip">按 Space/→ 下一頁，← 上一頁，鍵盤 V 切換軸向</div>
+
+  <main class="deck">
+
+    <!-- 1. Cover -->
+    <section class="slide cover" data-note="封面：指出今日任務是在 8GB VRAM 下將 Claude Code 串接地端 Gemma 4，並達到全 GPU 速度。">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">Agentic DX 實踐</p>
+        <h1 class="reveal from-blur">地端 Gemma 4 + Claude Code<br><span class="accent">極致優化與避坑指南</span></h1>
+        <p class="lead reveal">8GB VRAM 的極限生存戰：如何將初始 29K tokens 塞入地端模型，免顯卡升級實現 61.4 tok/s 原生推論速度。</p>
+      </div>
+    </section>
+
+    <!-- 2. Stat -->
+    <section class="slide" data-note="Stat：VRAM 的黃金法則。只要有任何模型權重或 KV cache 溢出到 CPU RAM，速度會瞬間暴跌九成。">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">硬體邊界</p>
+        <h2 class="reveal">8GB VRAM 的殘酷邊界與黃金法則</h2>
+        <div class="stats stagger">
+          <div class="stat-card">
+            <span class="stat-num">6.5 GB</span>
+            <h3>可用 VRAM 空間</h3>
+            <p>扣除 WSL2 核心與系統桌面 UI 後，這是實際能給 AI 計算的顯示記憶體極限。</p>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num">1.5 GB</span>
+            <h3>8K 上下文 KV Cache</h3>
+            <p>當上下文長度設為 8192 時，預留給對話快取的記憶體用量。隨 Context 放大成正比暴增。</p>
+          </div>
+          <div class="stat-card">
+            <span class="stat-num">-90%</span>
+            <h3>CPU 混合推論跌幅</h3>
+            <p>當顯存不足觸發 Ollama 的 CPU offload 時，推論速度會從 25 tokens/s 暴跌至 2 tokens/s。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Comparison -->
+    <section class="slide" data-note="Comparison：介紹 Ollama 推論引擎與 LiteLLM 代理的定位分工。Ollama 負責計算，LiteLLM 負責與 Claude Code 相容與參數防禦。">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">架構角色</p>
+        <h2 class="reveal">Ollama 與 LiteLLM：心臟與防禦盾牌</h2>
+        <div class="comparison-table reveal">
+          <div class="comparison-row comparison-head">
+            <span>比較維度</span>
+            <span>Ollama (推論引擎)</span>
+            <span class="winner">LiteLLM (API 閘道代理)</span>
+          </div>
+          <div class="comparison-row">
+            <span>核心職責</span>
+            <span>載入模型權重，執行 GPU/CUDA 運算並輸出 Token。</span>
+            <span class="winner">格式轉譯與參數防護，不參與核心模型推理。</span>
+          </div>
+          <div class="comparison-row">
+            <span>Claude Code 相容性</span>
+            <span>有限相容。對 Anthropic Beta 專屬參數容易報錯。</span>
+            <span class="winner">完美相容。翻譯 Messages 格式並自動過濾參數。</span>
+          </div>
+          <div class="comparison-row">
+            <span>參數與視窗控制</span>
+            <span>較弱。需靜態寫死於 Modelfile 設定。</span>
+            <span class="winner">極佳。可直接在 yaml 設定檔覆寫與過濾請求。</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Activity (教學版型：活動) -->
+    <section class="slide" data-note="Activity：引導聽眾計算並意識到 Claude Code 啟動時發送的大量內建工具造成之 token 負擔。">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">現場診斷</p>
+        <h2 class="reveal">為什麼啟動 Claude Code 就直接崩潰？</h2>
+        <div class="task-grid">
+          <div class="panel task-list reveal from-left">
+            <div class="task-row">
+              <span class="task-label">現場情境</span>
+              <p>在剛建立的專案下，嘗試啟動 Claude Code CLI 進行第一次簡單的 Bug 詢問。</p>
+            </div>
+            <div class="task-row">
+              <span class="task-label">分析任務</span>
+              <p>計算與估算此時 Claude Code CLI 發送給後端 API 的初始 Token 數量。</p>
+            </div>
+            <div class="task-row">
+              <span class="task-label">事實揭示</span>
+              <p>28 個內建 tools (Bash, Edit 等) schemas 佔用 23,037 tokens，加上 system prompt，初始輸入高達 <strong>29,238 tokens</strong>。</p>
+            </div>
+          </div>
+          <div class="panel reveal from-right">
+            <h3>現場討論</h3>
+            <p>1. 如果後端 Ollama 模型預設上下文（num_ctx）為 4096 或 8192，會發生什麼事？</p>
+            <p style="margin-top:0.8rem; color:var(--accent); font-weight:800;">→ 答：由於初始輸入大於上下文容量，API 將直接崩潰、截斷或引發無限重複輸出迴圈！</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. Code -->
+    <section class="slide" data-note="Code：展示 Modelfile 和 litellm_config.yaml 的核心配置。這套配置已驗證，可穩定跑 32K context 並防止迴圈。">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">核心配置</p>
+        <h2 class="reveal">硬核設定：防迴圈與 32K 上下文配置</h2>
+        <div class="cols stagger">
+          <div>
+            <h3 style="margin-bottom: 0.5rem;" class="accent">1. Modelfile 配置</h3>
+            <div class="code-card">
+              <pre><code>FROM gemma4:e4b
+# 手動強制擴展上下文至 32k
+PARAMETER num_ctx 32768
+# 設定確定性輸出以確保 Tool Calling 格式
+PARAMETER temperature 0.0
+# 關鍵：防止模型在長上下文下陷入重複詞彙
+PARAMETER repeat_penalty 1.15</code></pre>
+            </div>
+          </div>
+          <div>
+            <h3 style="margin-bottom: 0.5rem;" class="accent">2. litellm_config.yaml 配置</h3>
+            <div class="code-card">
+              <pre><code>model_list:
+  - model_name: gemma4-opt
+    litellm_params:
+      model: ollama_chat/gemma4-opt
+      api_base: http://localhost:11435
+      extra_body:
+        think: false # 關閉原生思考，省43% tokens
+litellm_settings:
+  drop_params: true # 過濾不相容 API 參數</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. Workflow (教學版型：工作流) -->
+    <section class="slide" data-note="Workflow：如何透過停用外部 MCP 工具將 token 數減少一半，使 8GB VRAM 模型能夠裝下。">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">優化工作流</p>
+        <h2 class="reveal">停用 MCP 瘦身術：將 Tool 數從 59 降到 28</h2>
+        <div class="workflow cols-5 stagger">
+          <div class="card input-output-card">
+            <span class="num">IN</span>
+            <h3>預設狀態</h3>
+            <p>59 個 tools<br><strong>~54,000 tokens</strong><br>超出 32K 顯存極限</p>
+          </div>
+          <div class="card">
+            <span class="num">1</span>
+            <h3>建立空設定</h3>
+            <p>新增 <code>empty-mcp.json</code>，宣告空物件：<br><code>{"mcpServers":{}}</code></p>
+          </div>
+          <div class="card">
+            <span class="num">2</span>
+            <h3>指定設定檔</h3>
+            <p>啟動時加上參數：<br><code>--mcp-config empty-mcp.json</code></p>
+          </div>
+          <div class="card">
+            <span class="num">3</span>
+            <h3>啟用嚴格模式</h3>
+            <p>追加防禦引數：<br><code>--strict-mcp-config</code></p>
+          </div>
+          <div class="card input-output-card">
+            <span class="num">OUT</span>
+            <h3>精簡成果</h3>
+            <p>28 個內建 tools<br><strong>~29,238 tokens</strong><br>順利塞入 32K 空間</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. Before/After (教學版型：對比) -->
+    <section class="slide" data-note="Before/After：對比軟體優化前後的效能數據。顯示在不花一毛錢升級硬體的情況下，純軟體設定的威力。">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">效能實測</p>
+        <h2 class="reveal">優化前後的效能躍進</h2>
+        <div class="before-after">
+          <div class="panel reveal from-left">
+            <h3>未最佳化 (Unoptimized)</h3>
+            <p><strong>模型：</strong> gemma4:e4b (預設 8K 上下文)</p>
+            <p><strong>MCP 工具集：</strong> 啟用 (59 tools / 54K tokens)</p>
+            <p><strong>狀態：</strong> ✗ 初始輸入即截斷，發生嚴重重複輸出迴圈</p>
+            <p><strong>結果：</strong> 服務停擺，推論無效</p>
+          </div>
+          <div class="panel winner-panel reveal from-right">
+            <h3><span class="accent">✓ 最佳化實測 (Optimized)</span></h3>
+            <p><strong>模型：</strong> gemma4:e4b (32K 上下文 + repeat_penalty)</p>
+            <p><strong>MCP 工具集：</strong> 停用 (28 tools / 29K tokens)</p>
+            <p><strong>狀態：</strong> ✓ 正常回應，工具調用與格式輸出極精準</p>
+            <p><strong>原生速度：</strong> <span class="accent" style="font-weight:900;">61.4 tokens/second</span></p>
+          </div>
+        </div>
+        <p class="change-note reveal">實測結論：透過停用 MCP 繞過 token 上限，搭配 repeat_penalty 與關閉 thinking，成功釋放全 GPU 原生算力。</p>
+      </div>
+    </section>
+
+    <!-- 8. Feature Grid -->
+    <section class="slide" data-note="Feature Grid：四大避坑指引，總結部署地端 Agentic 最容易踩到的四個大坑。">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">避坑指南</p>
+        <h2 class="reveal">技術落地：四大踩坑回顧與對策</h2>
+        <div class="grid stagger">
+          <div class="card">
+            <h3>1. 模型架構量化坑</h3>
+            <p>8GB 顯示記憶體下，<code>gemma4:e4b</code> 是唯一選擇。切勿使用 12B dense 模型加 32K KV Cache，這將直接導致 CUDA out of memory (OOM)。</p>
+          </div>
+          <div class="card">
+            <h3>2. 參數報錯(400)坑</h3>
+            <p>Claude Code 會主動發送 <code>reasoning_effort</code>。LiteLLM 必須配置 <code>drop_params: true</code> 過濾掉不相容參數，避免 API 傳回 400 Bad Request。</p>
+          </div>
+          <div class="card">
+            <h3>3. 長對話重複輸出坑</h3>
+            <p>Gemma4 在大 context 下容易發生「您 I I I」死迴圈。必須在 Modelfile 中指定 <code>PARAMETER repeat_penalty 1.15</code> 進行懲罰壓制。</p>
+          </div>
+          <div class="card">
+            <h3>4. 原生思考相容坑</h3>
+            <p>為避免 gemma4 原生 thinking block 消耗額外 43% token 並造成解析錯誤，應在 LiteLLM 層加入 <code>think: false</code> 停用思考推理輸出。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9. Closing -->
+    <section class="slide closing" data-note="結尾：指出地端 Agent 仍有其限制（對話空間有限），但對單檔除錯與 review 具有極佳實用價值。">
+      <div class="slide-inner">
+        <p class="eyebrow reveal">邊界與未來</p>
+        <h1 class="reveal from-blur">工具是輔助，<br><span class="accent">判斷仍在你身上</span></h1>
+        <p class="lead reveal">32K 上下文在 prefill 耗盡後，對話增長空間受限。地端最適合「局部 Bug 修正、單檔案 Code Review、語法解釋與 API 實驗」。</p>
+        <p class="reveal" style="margin-top: 1rem; font-weight:700;">
+          💡 專案內已備妥 <code style="color:var(--accent);">start-optimized-env.sh</code> 腳本，即刻一鍵啟動您的地端實驗！
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    class SlideDeck {
+      constructor() {
+        this.body = document.body;
+        this.initLayout();
+        this.slides = Array.from(document.querySelectorAll('.slide'));
+        this.progress = document.querySelector('.progress');
+        this.current = 0;
+        this.createDots();
+        this.bindKeys();
+        this.observe();
+        this.update();
+      }
+
+      initLayout() {
+        // 網址參數可覆寫預設模式；否則沿用 <body> 上的 class，再退回橫向。
+        const param = new URLSearchParams(location.search).get('layout');
+        if (param === 'vertical' || param === 'horizontal') {
+          this.setLayout(param);
+        } else if (!this.body.classList.contains('layout-vertical')) {
+          this.setLayout('horizontal');
+        }
+      }
+
+      setLayout(mode) {
+        this.body.classList.toggle('layout-vertical', mode === 'vertical');
+        this.body.classList.toggle('layout-horizontal', mode !== 'vertical');
+      }
+
+      toggleLayout() {
+        const next = this.body.classList.contains('layout-vertical') ? 'horizontal' : 'vertical';
+        this.setLayout(next);
+        // 軸向改變後，等版面重排再瞬間對齊目前頁面。
+        requestAnimationFrame(() => this.goTo(this.current, true));
+      }
+
+      createDots() {
+        this.nav = document.createElement('nav');
+        this.nav.className = 'nav-dots';
+        this.nav.setAttribute('aria-label', '簡報頁面導覽');
+        this.dots = this.slides.map((_, index) => {
+          const dot = document.createElement('button');
+          dot.type = 'button';
+          dot.setAttribute('aria-label', `前往第 ${index + 1} 頁`);
+          dot.addEventListener('click', () => this.goTo(index));
+          this.nav.appendChild(dot);
+          return dot;
+        });
+        document.body.appendChild(this.nav);
+      }
+
+      bindKeys() {
+        document.addEventListener('keydown', (event) => {
+          if (['ArrowRight', 'ArrowDown', ' '].includes(event.key)) {
+            event.preventDefault();
+            this.goTo(this.current + 1);
+          }
+          if (['ArrowLeft', 'ArrowUp'].includes(event.key)) {
+            event.preventDefault();
+            this.goTo(this.current - 1);
+          }
+          if (event.key === 'v' || event.key === 'V') {
+            this.toggleLayout();
+          }
+        });
+      }
+
+      observe() {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            entry.target.classList.toggle('visible', entry.isIntersecting);
+            if (entry.isIntersecting) {
+              this.current = this.slides.indexOf(entry.target);
+              this.update();
+            }
+          });
+        }, { threshold: 0.55 });
+        this.slides.forEach((slide) => observer.observe(slide));
+      }
+
+      goTo(index, instant = false) {
+        if (index < 0 || index >= this.slides.length) return;
+        this.current = index;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        this.slides[index].scrollIntoView({
+          behavior: (instant || reduceMotion) ? 'auto' : 'smooth',
+          block: 'start',
+          inline: 'start',
+        });
+        this.update();
+      }
+
+      update() {
+        const pct = ((this.current + 1) / this.slides.length) * 100;
+        this.progress.style.setProperty('--progress', `${pct}%`);
+        this.dots.forEach((dot, index) => {
+          dot.classList.toggle('active', index === this.current);
+        });
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => new SlideDeck());
+  </script>
+</body>
+</html>
