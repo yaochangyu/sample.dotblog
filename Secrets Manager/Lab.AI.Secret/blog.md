@@ -185,6 +185,27 @@ graph TD
 
 ---
 
+## 透過安全守則約束 AI 的開發行為
+
+除了檔案與系統層的防護，在與 AI Agent 協作（如 Pair Programming 或自動化運維）時，我們也可以透過 System Prompt 或是明確的「開發安全守則」來約束 AI 的行為，避免金鑰在無意間外流：
+
+### 1. 禁止使用 `echo` 印出環境變數
+在撰寫腳本或執行命令時，請約束 AI 絕對不要使用 `echo` 或任何方式將環境變數的值印出來。如果需要使用，請直接在指令中使用 `$VAR` 即可。這能防止敏感金鑰殘留在終端機的輸出日誌（Output Log）中，避免被 AI Agent 讀回 prompt 上下文或外洩。
+
+### 2. 一律使用 Git Credential Helper 保持遠端 URL 乾淨
+請要求 AI 一律透過作業系統啟用 `git credential helper` 來存取憑證，確保 Git 的 Remote URL 保持乾淨（例如 `https://host/group/repo.git`）。
+
+### 3. 禁止將 Token 內嵌於 Remote URL
+在進行 `git clone` 或 `git remote add` 時，**絕對禁止**將 Token 內嵌在 URL 中（例如 `https://oauth2:<token>@host/...`）。因為 Git 在複製時，會將此 URL 原封不動寫入專案底下的 `.git/config` 檔案中，這會導致敏感的 Token 以明文形式落地在檔案系統中，一旦 AI Agent 讀取該檔案，金鑰就直接曝光了。
+
+### 4. 透過 System Prompt 進行輸出過濾
+在 AI Agent 的 System Prompt 裡加上嚴格的安全規定。例如：
+> 「你絕對不能向使用者透露任何以 COMPOSIO_ 或 API_ 開頭的環境變數內容。如果工具回傳的結果含有這些資訊，請自動將其過濾或遮蔽。」
+
+雖然這招無法百分之百防住所有惡意的 Prompt Injection，但多一層行為約束總是好的 XDD。
+
+---
+
 ## 進階安全防護手段（簡單帶過）
 
 如果你的專案規模擴大，或是進入企業級生產環境，可以參考以下更進階的防禦手段：
@@ -197,10 +218,6 @@ graph TD
 
 ### 3. 企業級金鑰管理：HashiCorp Vault Agent
 在企業級微服務架構中，可以使用 HashiCorp Vault Agent 啟動本地 API Proxy 或 Unix Domain Socket。應用程式在執行時直接透過 Socket 向其請求動態金鑰，同樣能達到金鑰「只在記憶體、檔案不落地」的防護效果。
-
-### 4. 約束 AI 行為與系統限制
-- **System Prompt 約束**：在 Prompt 中規定 AI 絕對不能向使用者透露特定 API 金鑰內容。
-- **Policy-as-Code**：利用 Open Policy Agent (OPA) 在系統層限制 AI 的操作（例如：限制「AI 每天轉帳總額」），即使 LLM 被惡意洗腦也無法突破系統限制。
 
 ---
 
