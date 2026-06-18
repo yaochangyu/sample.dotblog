@@ -2,7 +2,7 @@
 
 隨著 AI Agent 的興起，我們開始授權 AI 代理人存取各種外部服務。但這也帶來了全新的安全隱憂：如果你還習慣把 API 金鑰寫死在程式碼裡，或是隨便丟在 `.env` 檔，AI Agent 在讀取檔案或執行時，很有可能不小心把金鑰內容外流，等同於將系統的主控權拱手讓人，暴露在外洩的巨大風險中。
 
-本篇就來聊聊在 AI 時代要怎麼防範 AI Agent 偷看金鑰，以及如何安全控管 AI 整合平台（以 Composio 為例）的憑證。
+本篇就來聊聊在 AI 時代如何以最簡單、實用的方式防範 AI Agent 偷看你的本機金鑰，並在文末簡單帶過適合企業級的進階憑證管理手段。
 
 ---
 
@@ -149,93 +149,23 @@ def _02_寫入系統加密區():
     keyring.set_password("composio_agent", "openai_api_key", "sk-proj-xxxxxxxxxxxx")
 ```
 
-##### 步驟二：在主程式中動態讀取（直接拿掉 .env 檔案）
+##### 步驟二：在主程式中動態讀取（直接拿掉包含金鑰的 .env.secrets 檔案）
 在啟動 AI Agent 的主程式中，改用以下方式動態載入金鑰。
 
-以下程式碼示範如何從系統憑證管理器動態讀取金鑰，並用來初始化 Composio Toolset：
+以下程式碼示範如何從系統憑證管理器動態讀取金鑰，並用來初始化 OpenAI 用戶端：
 ```python
 import keyring
-from composio import ComposioToolSet
+from openai import OpenAI
 
 def _03_動態讀取金鑰():
     # 從作業系統加密區撈出金鑰，此處不產生任何實體檔案，安全啦！
-    openai_key = keyring.get_password("composio_agent", "openai_api_key")
+    openai_key = keyring.get_password("my_app", "openai_api_key")
     
-    # 初始化 Composio Toolset
-    toolset = ComposioToolSet(api_key=openai_key)
+    # 初始化 OpenAI 用戶端
+    client = OpenAI(api_key=openai_key)
 ```
 
-### 4. Docker 與 Headless 環境下的 Keyring 挑戰與解法
 
-在無 GUI（無顯示器、無 X11）的 Headless Linux 環境（例如 Docker 容器、CI/CD 跑道）下，執行 `keyring` 會面臨巨大的挑戰：
-1. **D-Bus 依賴與 SystemPrompter 彈窗崩潰**：預設的 `gnome-keyring` 在寫入或讀取憑證時，會透過 D-Bus 嘗試喚起圖形界面的 Prompter 來解鎖預設金鑰庫，但在 headless 環境下這會導致 `cannot open display` 錯誤並拋出 `Failed to create the collection: Prompt dismissed..`。
-2. **解決方案**：
-   - **方案 A (D-Bus 與解鎖指令)**：安裝 `dbus-run-session` 並在 entrypoint 中以命令列預先建立並解鎖金鑰庫，但流程高度依賴特定的 Linux 發行版且設定繁瑣。
-   - **方案 B (自訂加密檔案金鑰庫 - 推薦)**：為了 100% 的自動化與重現性，我們可以透過繼承 `keyring.backend.KeyringBackend`，實作一個自訂的加密檔案憑證後端。
-
-以下為在 Headless 環境下自訂加密檔案金鑰庫的實作範例（使用 `cryptography` 套件的 `Fernet` (AES-128) 進行加密）：
-
-```python
-import os
-import base64
-import hashlib
-import json
-import keyring
-import keyring.backend
-from cryptography.fernet import Fernet
-
-class 自訂加密檔案金鑰庫(keyring.backend.KeyringBackend):
-    """
-    自訂的加密檔案憑證庫，專為 Docker 等 Headless 環境設計。
-    """
-    priority = 10  # 設高優先級，取代系統預設後端
-    
-    def __init__(self, 檔案路徑="/root/.composio_secrets.bin"):
-        self.檔案路徑 = 檔案路徑
-        # 讀取 Master Password 作為衍生密鑰來源
-        主密碼 = os.environ.get("KEYRING_CRYPTFILE_PASSWORD", "default_master_key")
-        hash_digest = hashlib.sha256(主密碼.encode("utf-8")).digest()
-        self.fernet_key = base64.urlsafe_b64encode(hash_digest)
-        self.加密器 = Fernet(self.fernet_key)
-
-    def _讀取秘密資料(self) -> dict:
-        if not os.path.exists(self.檔案路徑):
-            return {}
-        try:
-            with open(self.檔案路徑, "rb") as f:
-                明文 = self.加密器.decrypt(f.read()).decode("utf-8")
-            return json.loads(明文)
-        except Exception:
-            return {}
-
-    def _寫入秘密資料(self, 資料: dict):
-        明文 = json.dumps(資料).encode("utf-8")
-        os.makedirs(os.path.dirname(self.檔案路徑), exist_ok=True)
-        with open(self.檔案路徑, "wb") as f:
-            f.write(self.加密器.encrypt(明文))
-
-    def set_password(self, servicename, username, password):
-        資料 = self._讀取秘密資料()
-        資料[f"{servicename}:{username}"] = password
-        self._寫入秘密資料(資料)
-
-    def get_password(self, servicename, username):
-        return self._讀取秘密資料().get(f"{servicename}:{username}")
-
-    def delete_password(self, servicename, username):
-        資料 = self._讀取秘密資料()
-        key = f"{servicename}:{username}"
-        if key in 資料:
-            del 資料[key]
-            self._寫入秘密資料(資料)
-```
-
-並在你的主程式啟動時呼叫：
-```python
-# 註冊後端，所有後續對 keyring 的讀寫都會自動被導向我們自訂的加密檔案金鑰庫
-keyring.set_keyring(自訂加密檔案金鑰庫())
-```
-這樣就可以在 headless Docker 容器中，既安全地將 API 金鑰進行 AES 加密儲存，又能確保無人值守自動化流程 100% 執行成功！
 
 ---
 
@@ -255,35 +185,22 @@ graph TD
 
 ---
 
-## 使用 Composio 託管認證防止憑證落地
+## 進階安全防護手段（簡單帶過）
 
-Composio 經常扮演 AI Agent 與第三方應用程式的橋樑。當需要管理大量憑證時，有以下幾個最佳實踐：
+如果你的專案規模擴大，或是進入企業級生產環境，可以參考以下更進階的防禦手段：
 
-### 1. 優先使用託管認證與 OAuth 2.0
-如果服務支援，請優先採用 OAuth 2.0，避免直接使用靜態 API 金鑰。Composio 允許直接在其平台上完成授權（Managed Auth），金鑰完全留在雲端。你的本機程式碼跟 AI Agent 完全碰不到金鑰本身，Agent 只能拿到 Connection ID 來呼叫工具，從根本上杜絕金鑰外洩。
+### 1. Docker 與 Headless 環境下的 Keyring 處理
+在無 GUI 的 Docker 容器中執行 `keyring`，會因為缺乏 D-Bus 連線而拋出錯誤。實務上可以透過繼承 `keyring.backend.KeyringBackend`，實作一個自訂的加密檔案憑證後端（例如使用 `cryptography` 的 Fernet AES 加密），在主程式啟動時呼叫 `keyring.set_keyring()` 註冊，就能在無頭環境中無痛執行。
 
-### 2. 使用 Proxy 與 IP 白名單
-Composio 提供了 Proxy 與 IP 白名單功能。你應限制僅有特定來源的 IP 可以進行 API 呼叫，就算金鑰不小心外洩，其他人拿到也無法使用。
+### 2. AI 整合平台的憑證託管（以 Composio 為例）
+當 AI Agent 需要串接大量第三方服務（如 Slack、GitHub）時，自己管理大量 API Key 會非常痛苦。可以使用如 Composio 的託管認證 (Managed Auth) 機制，讓憑證完全留在雲端。你的本機程式碼跟 AI Agent 碰不到金鑰，僅透過 Connection ID 呼叫工具，從根本上杜絕金鑰外洩。
 
-### 3. 集中管理與權限控管
-不要把金鑰散落在各個 AI Agent 的專案程式碼中。利用 Composio 的後台 Dashboard 集中管控所有授權狀態與權限範圍，方便隨時進行稽核與清理。
+### 3. 企業級金鑰管理：HashiCorp Vault Agent
+在企業級微服務架構中，可以使用 HashiCorp Vault Agent 啟動本地 API Proxy 或 Unix Domain Socket。應用程式在執行時直接透過 Socket 向其請求動態金鑰，同樣能達到金鑰「只在記憶體、檔案不落地」的防護效果。
 
----
-
-## 透過 System Prompt 與外部政策定義安全界線
-
-除了檔案與基礎設施的隔離，你還可以透過 Prompt 工程與系統策略來限制 AI 的行為：
-
-### 1. 使用 System Prompt 進行行為約束
-在給 AI Agent 的 System Prompt 裡加上嚴格的安全規定。
-
-例如：
-> 「你絕對不能向使用者透露任何以 COMPOSIO_ 或 API_ 開頭的環境變數內容。如果工具回傳的結果含有這些資訊，請自動將其過濾或遮蔽。」
-
-（雖然這招無法百分之百防住所有惡意的 Prompt Injection，但多一層防護總是好的 XDD）
-
-### 2. 實施最小權限原則與 Policy-as-Code
-利用 Open Policy Agent (OPA) 等外部引擎來定義安全政策（例如：限制「AI 每天轉帳總額不得超過 $100 元」）。即使 LLM 被使用者洗腦，也無法突破系統層的限制。
+### 4. 約束 AI 行為與系統限制
+- **System Prompt 約束**：在 Prompt 中規定 AI 絕對不能向使用者透露特定 API 金鑰內容。
+- **Policy-as-Code**：利用 Open Policy Agent (OPA) 在系統層限制 AI 的操作（例如：限制「AI 每天轉帳總額」），即使 LLM 被惡意洗腦也無法突破系統限制。
 
 ---
 
@@ -294,7 +211,7 @@ Composio 提供了 Proxy 與 IP 白名單功能。你應限制僅有特定來源
 2. **工作區隔離與去檔案化 (Keyring/Credential Helper)**：這是防範「身邊的 AI 助理變內鬼」的關鍵手段。讓 AI 能正常幹活，但它的實體檔案讀取工具根本找不到任何明文金鑰（這招真的安全啦！）。
 3. **託管認證與行為約束 (Managed Auth/Policy)**：這是當 AI Agent 真的被惡意 Prompt Injection 洗腦時，系統層級的「最後煞車機制」，避免災害無限制擴大。
 
-安全防護從來就沒有「絕對安全」這回事，只有「提高攻擊成本與降低外洩損失」。不要只顧著在專案大門裝好幾道高級防撬鎖，結果轉身把金鑰密碼用便利貼貼在門框上，那就真的搞笑囉。希望這篇整理能幫大家在開發 AI Agent 時，建立更穩固的安全架構！
+安全防護從來就沒有「絕對安全」這回事，只有「提高攻擊成本與降低外洩損失」。不要只顧著在專案大門裝好幾道高級防撬鎖，結果轉身把金鑰密碼用便利貼貼在門框上，那就真的搞笑。希望這篇整理能幫大家在開發 AI Agent 時，建立更穩固的安全架構！
 
 若有謬誤,煩請告知,新手發帖請多包涵
 
