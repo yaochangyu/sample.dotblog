@@ -33,7 +33,7 @@ stripH1Header: true
 
 以下是公開設定檔案 `.env`（可提交至 Repository）的設定範例：
 
-```
+```env
 # .env (version controlled)
 DEBUG=true
 DATABASE_HOST=localhost
@@ -42,7 +42,7 @@ API_ENDPOINT=https://api.example.com
 
 以下是機敏金鑰檔案 `.env.secrets`（絕對不可提交，需加入 .gitignore）的設定範例：
 
-```
+```env
 # .env.secrets (NOT version controlled)
 DATABASE_PASSWORD=actual-password
 COMPOSIO_API_KEY=actual-api-key
@@ -50,7 +50,7 @@ COMPOSIO_API_KEY=actual-api-key
 
 以下是你的 `.gitignore` 設定範例，確保敏感檔案不會意外流出：
 
-```
+```gitignore
 # 記得要把敏感檔案排除喔
 .env.secrets
 .env.local
@@ -60,7 +60,7 @@ COMPOSIO_API_KEY=actual-api-key
 
 以下 Python 程式碼示範如何依優先順序載入設定，並以系統環境變數（`os.environ`）為最高優先：
 
-```
+```python
 import os
 from dotenv import dotenv_values
 
@@ -111,7 +111,7 @@ def _01_載入並合併金鑰設定():
 
 以下指令示範如何將自訂的金鑰寫入 `~/.bashrc`、重新載入設定使其生效，並使用該變數發送 `curl` 請求：
 
-```
+```bash
 # 1. 將環境變數寫入 ~/.bashrc 檔案尾端
 echo 'export FIGMA_TOKEN="ffigd_your_token"' >> ~/.bashrc
 
@@ -193,7 +193,7 @@ curl -H "X-Figma-Token: $FIGMA_TOKEN" \
 
 以下程式碼示範如何使用 Python 將 OpenAI 的 API 金鑰寫入系統的憑證加密儲存區：
 
-```
+```python
 import keyring
 
 def _02_寫入系統加密區():
@@ -207,7 +207,7 @@ def _02_寫入系統加密區():
 
 以下程式碼示範如何從系統憑證管理器動態讀取金鑰，並用來初始化 OpenAI 用戶端：
 
-```
+```python
 import keyring
 from openai import OpenAI
 
@@ -225,7 +225,7 @@ def _03_動態讀取金鑰():
 
 以下 C# 程式碼示範如何使用 DataProtection 將 OpenAI 金鑰加密存檔，並在執行時動態載入：
 
-```
+```csharp
 using System;
 using System.IO;
 using Microsoft.AspNetCore.DataProtection;
@@ -270,7 +270,7 @@ public class 程式
 
 導入 Credential Helper 後，你的專案安全架構會呈現如下圖所示：
 
-```
+```mermaid
 graph TD
     A["專案資料夾 (只有純程式碼，AI Agent 隨便讀也拿不到金鑰)"]
     A -->|執行主程式| B["後端 Python"]
