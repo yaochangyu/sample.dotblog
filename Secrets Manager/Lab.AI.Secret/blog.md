@@ -1,3 +1,15 @@
+---
+title: '[Security] AI Agent 時代的數位鑰匙防護：如何安全管理你的 API 金鑰與授權憑證'
+abstract: <p>隨著 AI Agent 的興起，我們開始授權 AI 代理人存取各種外部服務。但這也帶來了全新的安全隱憂：如果你還習慣把 API 金鑰寫死在程式碼裡，或是隨便丟在 <code>.env</code> 檔，AI Agent 在讀取檔案或執行時，很有可能不小心把金鑰內容外流，等同於將系統的主控權拱手讓人，暴露在外洩的巨大風險中。</p>
+keywords: 
+categories: 
+weblogName: 余小章 @ 大內殿堂
+postId: abbb537b-b0fb-45e4-bc93-90730eec10dc
+postDate: 2026-06-18T23:48:44.0000000
+postStatus: 
+dontInferFeaturedImage: false
+stripH1Header: true
+---
 # [Security] AI Agent 時代的數位鑰匙防護：如何安全管理你的 API 金鑰與授權憑證
 
 隨著 AI Agent 的興起，我們開始授權 AI 代理人存取各種外部服務。但這也帶來了全新的安全隱憂：如果你還習慣把 API 金鑰寫死在程式碼裡，或是隨便丟在 `.env` 檔，AI Agent 在讀取檔案或執行時，很有可能不小心把金鑰內容外流，等同於將系統的主控權拱手讓人，暴露在外洩的巨大風險中。
