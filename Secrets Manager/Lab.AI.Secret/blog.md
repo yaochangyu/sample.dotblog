@@ -82,23 +82,23 @@ def _01_載入並合併金鑰設定():
     }
     return config
 ```
-> 💡 **.NET Core 對標方案：User Secrets 機密管理器**
-> 
-> 在 .NET Core / .NET 開發環境中，微軟官方內建了 **Secret Manager (機密管理器)** 服務。它會將敏感設定儲存在**專案目錄之外**的使用者設定檔夾中（Windows 位於 `%APPDATA%\Microsoft\UserSecrets\<UserSecretsId>\secrets.json`；Linux/WSL/macOS 則位於 `~/.microsoft/usersecrets/<UserSecretsId>\secrets.json`）。
-> 
-> 以下指令示範如何在本機開發專案中啟用並設定 User Secrets：  
-> ```bash
-> 
-> ## 1. 在專案目錄下初始化 User Secrets (會在 .csproj 產生 UserSecretsId)
-> 
-> dotnet user-secrets init
-> 
-> ## 2. 設定敏感的 API 金鑰
-> 
-> dotnet user-secrets set "OpenAI:ApiKey" "sk-proj-xxxxxxxxxxxx"  
-> ```  
-> 這樣一來，所有敏感設定都完全脫離了專案目錄，AI Agent 翻遍專案資料夾也讀不到它，完美防範金鑰外洩。
-> 
+ 💡 **.NET Core 對標方案：User Secrets 機密管理器**
+ 
+ 在 .NET Core / .NET 開發環境中，微軟官方內建了 **Secret Manager (機密管理器)** 服務。它會將敏感設定儲存在**專案目錄之外**的使用者設定檔夾中（Windows 位於 `%APPDATA%\Microsoft\UserSecrets\<UserSecretsId>\secrets.json`；Linux/WSL/macOS 則位於 `~/.microsoft/usersecrets/<UserSecretsId>\secrets.json`）。
+
+ 以下指令示範如何在本機開發專案中啟用並設定 User Secrets：  
+ ```bash
+ 
+ ## 1. 在專案目錄下初始化 User Secrets (會在 .csproj 產生 UserSecretsId)
+ 
+ dotnet user-secrets init
+ 
+ ## 2. 設定敏感的 API 金鑰
+ 
+ dotnet user-secrets set "OpenAI:ApiKey" "sk-proj-xxxxxxxxxxxx"  
+ ```  
+ 這樣一來，所有敏感設定都完全脫離了專案目錄，AI Agent 翻遍專案資料夾也讀不到它，完美防範金鑰外洩。
+ 
 > ⚠️ **此做法的安全風險與局限性**
 > - **依然是明文落地**：無論是 `.env.secrets` 還是 `User Secrets` 的 `secrets.json`，檔案內部的金鑰都是以**純文字明文**形式存放在硬碟中，並未經過加密保護。
 > - **無法防範高權限 AI 窺探**：雖然我們把設定檔排除或移出了專案目錄，但如果 AI Agent 執行時被給予了高權限（如讀取使用者家目錄、或是全硬碟讀取權限），它依然能輕易掃描並電子郵件/網路外洩這些明文設定檔。

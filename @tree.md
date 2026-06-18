@@ -81,6 +81,9 @@
     - `ai_key_minimal.jpg` - 特色圖片：簡約 3D 風格
     - `ai_key_cute.jpg` - 特色圖片：可愛插畫風格
     - `ai_key_abstract.jpg` - 特色圖片：雙重曝光抽象風格
+    - `.archive/` - 封存計畫目錄
+      - `publish_blog.plan.md` - 發布文章至點部落計畫檔
+      - `push_to_github.plan.md` - 推送至 GitHub 計畫檔
 - `Security/` - 安全防護相關 Lab
   - `Lab.AI.Secret/` - 機敏資料保護相關 Lab
     - `ProtectSecretInAIAgent.md` - AI Agent 時代保護機敏金鑰文章草案
