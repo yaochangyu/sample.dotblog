@@ -104,6 +104,15 @@ curl -H "X-Figma-Token: $FIGMA_TOKEN" \
   "https://api.figma.com/v1/files/{fileKey}"
 ```
 
+> ⚠️ **安全警告：寫入 `~/.bashrc` 的潛在風險**
+> 
+> 雖然將環境變數寫入 `~/.bashrc` 可以避免金鑰檔案留在「專案資料夾」中，但這在安全實務上依然存在顯著風險：
+> 1. **明文落地**：`~/.bashrc` 是一個純文字設定檔。金鑰依然以明文形式存放在硬碟中，沒有經過加密。
+> 2. **AI Agent 窺探風險**：許多 AI Agent 擁有執行 Shell 指令或讀取系統設定檔的權限。AI 可以輕易透過 `cat ~/.bashrc` 讀取，或在命令列執行時直接讀取系統環境變數來竊取金鑰。
+> 3. **環境變數污染**：寫入 `~/.bashrc` 後，該環境變數將對系統中所有執行程式公開，這違反了「最小權限原則」。
+> 
+> 因此，這僅是一個**過渡期的便利做法**。若要徹底防範明文落地與 AI 窺探，強烈建議閱讀下文，改用 **Keyring (Credential Helper)** 或 **.NET DataProtection** 等去檔案化、加密安全區的手段！
+
 ### 4. 生產環境改用 Secrets Manager 服務
 部署到生產環境時，請拋棄實體 `.env` 檔案。你應該改用 AWS Secrets Manager、Azure Key Vault 或 HashiCorp Vault 這類專業的金鑰管理服務來統一儲存，安全度直接升級。
 
