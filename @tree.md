@@ -1,0 +1,106 @@
+# Project Directory Structure
+
+- `.dockerignore`
+- `.gitattributes`
+- `.gitignore`
+- `@tree.md` - 專案結構定義檔
+- `LICENSE`
+- `README.md`
+- `remove_co_authored_by.plan.md` - 移除 Commit Message 中 Co-authored-by 的計畫檔案
+- `AI SDD/` - AI 系統設計與開發相關目錄
+- `AI.SDD/` - AI 系統設計與開發相關目錄
+- `AOP/` - 剖面導向程式設計相關 Lab
+- `AWS/` - AWS 相關 Lab
+- `AppMetrics/` - AppMetrics 相關 Lab
+- `Args/` - 參數解析相關 Lab
+- `AspNetCore/` - ASP.NET Core 相關 Lab
+- `Autofac/` - Autofac 依賴注入相關 Lab
+- `Benchmark/` - 基準測試相關 Lab
+- `CEF/` - Chromium Embedded Framework 相關 Lab
+- `Cache/` - 快取機制相關 Lab
+- `Cert/` - 憑證管理相關 Lab
+- `ClickOnce/` - ClickOnce 部署相關 Lab
+- `CodeCoverage/` - 程式碼覆蓋率相關 Lab
+- `Configuration/` - 設定管理相關 Lab
+- `Coravel/` - Coravel 工作排程相關 Lab
+- `Crypto/` - 加密演算法相關 Lab
+- `DI/` - 依賴注入相關 Lab
+- `DeviceVerify/` - 裝置驗證相關 Lab
+- `Docker/` - Docker 容器化相關 Lab
+- `Docusaurus/` - Docusaurus 靜態網站相關 Lab
+- `DynamoDB/` - DynamoDB 相關 Lab
+- `Error Handler/` - 錯誤處理相關 Lab
+- `Event Bus/` - 事件匯流排相關 Lab
+- `Excel/` - Excel 操作相關 Lab
+- `Exception/` - 例外狀況處理相關 Lab
+- `ExpressionTree/` - 表達式樹相關 Lab
+- `Feature Toggle/` - 功能切換相關 Lab
+- `File/` - 檔案操作相關 Lab
+- `Gitlab/` - GitLab 相關 Lab
+- `Graceful Shutdown/` - 優雅關閉相關 Lab
+- `Hangfire/` - Hangfire 背景工作相關 Lab
+- `Health Check/` - 健康檢查相關 Lab
+- `Host/` - 泛型主機相關 Lab
+- `Http Client/` - HTTP 用戶端相關 Lab
+- `Image/` - 圖片處理相關 Lab
+- `Jetbrains HttpClient/` - Jetbrains HTTP 用戶端相關 Lab
+- `Json/` - JSON 處理相關 Lab
+- `Lab.AspNetPassParameter/` - ASP.NET 傳參相關 Lab
+- `Lab.NoMagicNumeric/` - Magic Number 重構相關 Lab
+- `LibLog/` - LibLog 記錄相關 Lab
+- `Line/` - LINE 整合相關 Lab
+- `Local-LLM/` - 本地大語言模型相關 Lab
+- `Log/` - 記錄機制相關 Lab
+- `MVC5/` - ASP.NET MVC 5 相關 Lab
+- `MVVM/` - MVVM 模式相關 Lab
+- `ModelValidation/` - 模型驗證相關 Lab
+- `MongoDB/` - MongoDB 相關 Lab
+- `Nancy/` - Nancy 框架相關 Lab
+- `Nginx/` - Nginx 設定相關 Lab
+- `Notification Area Icon/` - 系統工作列圖示相關 Lab
+- `Nuget/` - NuGet 套件相關 Lab
+- `ODBC/` - ODBC 連線相關 Lab
+- `ORM/` - ORM 相關 Lab
+- `OWIN/` - OWIN 相關 Lab
+- `OpenDesign/` - 開放設計相關 Lab
+- `OpenTelemetry/` - OpenTelemetry 相關 Lab
+- `Paging/` - 分頁處理相關 Lab
+- `Prometheus/` - Prometheus 監控相關 Lab
+- `Property Change Tracking/` - 屬性變更追蹤相關 Lab
+- `Qdrant/` - Qdrant 向量資料庫相關 Lab
+- `Quartz/` - Quartz 排程相關 Lab
+- `RabbitMQ/` - RabbitMQ 訊息佇列相關 Lab
+- `Rate Limit/` - 頻率限制相關 Lab
+- `Redis/` - Redis 快取與資料庫相關 Lab
+- `Remoting/` - .NET Remoting 相關 Lab
+- `Retry/` - 重試機制相關 Lab
+- `Secrets Manager/` - 秘密金鑰管理相關 Lab
+  - `Lab.AI.Secret/` - 機敏資料保護相關 Lab
+    - `blog.md` - AI Agent 時代保護機敏金鑰部落格文章 (已潤稿)
+    - `ProtectSecretInAIAgent.md` - AI Agent 時代保護機敏金鑰文章草案
+    - `Composio_Secure_AI_Infrastructure_Guide.md` - Composio 安全 AI 代理人架帶指南整理
+    - `Context7_Best_Practices.md` - Context7 獲取最新 API 文件最佳實踐整理
+    - `Context7_Dotenv_Security_Best_Practices.md` - 用 Context7 查詢 dotenv 的金鑰防護最佳實踐整理
+    - `Reddit_CSharp_API_Keys_Best_Practices.md` - Reddit r/csharp 機敏金鑰防護最佳實踐整理
+- `Security/` - 安全防護相關 Lab
+  - `Lab.AI.Secret/` - 機敏資料保護相關 Lab
+    - `ProtectSecretInAIAgent.md` - AI Agent 時代保護機敏金鑰文章草案
+    - `.archive/` - 封存計畫目錄
+      - `ProtectSecretInAIAgent.plan.md` - AI Agent 時代保護機敏金鑰計畫檔
+- `Shnapshot/` - 快照相關 Lab
+- `SignalR/` - SignalR 即時通訊相關 Lab
+- `Sort/` - 排序演算法相關 Lab
+- `StructLog/` - 結構化記錄相關 Lab
+- `TFS/` - TFS 相關 Lab
+- `TPL` - 工作平行程式庫相關 Lab
+- `Template` - 範本相關 Lab
+- `Test` - 測試相關 Lab
+- `Trace` - 追蹤機制相關 Lab
+- `TypeScript` - TypeScript 相關 Lab
+- `WebAPI` - Web API 相關 Lab
+- `WinForm.ModelValidation` - WinForm 模型驗證相關 Lab
+- `WinService` - Windows 服務相關 Lab
+- `Xml` - XML 處理相關 Lab
+- `i18N` - 國際化與在地化相關 Lab
+- `tolgee` - Tolgee 整合相關 Lab
+- `專案範本` - 專案範本相關目錄
