@@ -77,11 +77,10 @@
 - `Secrets Manager/` - 秘密金鑰管理相關 Lab
   - `Lab.AI.Secret/` - 機敏資料保護相關 Lab
     - `blog.md` - AI Agent 時代保護機敏金鑰部落格文章 (已潤稿)
-    - `ProtectSecretInAIAgent.md` - AI Agent 時代保護機敏金鑰文章草案
-    - `Composio_Secure_AI_Infrastructure_Guide.md` - Composio 安全 AI 代理人架帶指南整理
-    - `Context7_Best_Practices.md` - Context7 獲取最新 API 文件最佳實踐整理
-    - `Context7_Dotenv_Security_Best_Practices.md` - 用 Context7 查詢 dotenv 的金鑰防護最佳實踐整理
-    - `Reddit_CSharp_API_Keys_Best_Practices.md` - Reddit r/csharp 機敏金鑰防護最佳實踐整理
+    - `ai_key_cyberpunk.jpg` - 特色圖片：賽博龐克風格
+    - `ai_key_minimal.jpg` - 特色圖片：簡約 3D 風格
+    - `ai_key_cute.jpg` - 特色圖片：可愛插畫風格
+    - `ai_key_abstract.jpg` - 特色圖片：雙重曝光抽象風格
 - `Security/` - 安全防護相關 Lab
   - `Lab.AI.Secret/` - 機敏資料保護相關 Lab
     - `ProtectSecretInAIAgent.md` - AI Agent 時代保護機敏金鑰文章草案
