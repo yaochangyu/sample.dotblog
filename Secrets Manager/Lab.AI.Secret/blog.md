@@ -70,6 +70,20 @@ def _01_載入並合併金鑰設定():
     return config
 ```
 
+> 💡 **.NET Core 對標方案：User Secrets 機密管理器**
+> 
+> 在 .NET Core / .NET 開發環境中，微軟官方內建了 **Secret Manager (機密管理器)** 服務。它會將敏感設定儲存在**專案目錄之外**的使用者設定檔夾中（Windows 位於 `%APPDATA%\Microsoft\UserSecrets\<UserSecretsId>\secrets.json`；Linux/WSL/macOS 則位於 `~/.microsoft/usersecrets/<UserSecretsId>\secrets.json`）。
+> 
+> 以下指令示範如何在本機開發專案中啟用並設定 User Secrets：
+> ```bash
+> # 1. 在專案目錄下初始化 User Secrets (會在 .csproj 產生 UserSecretsId)
+> dotnet user-secrets init
+> 
+> # 2. 設定敏感的 API 金鑰
+> dotnet user-secrets set "OpenAI:ApiKey" "sk-proj-xxxxxxxxxxxx"
+> ```
+> 這樣一來，所有敏感設定都完全脫離了專案目錄，AI Agent 翻遍專案資料夾也讀不到它，完美防範金鑰外洩。
+
 ### 3. 在本機作業系統層級設定持久化環境變數
 
 在上面的 Python 範例中，我們提到會優先以作業系統的環境變數（`os.environ`）為最高優先。在 Linux 或 WSL2 開發環境下，如果你希望金鑰能夠持久化，每次開啟終端機時都自動載入，可以將其寫入 `~/.bashrc` 檔案中。
@@ -165,7 +179,43 @@ def _03_動態讀取金鑰():
     client = OpenAI(api_key=openai_key)
 ```
 
+### 4. 在 .NET Core 專案中實作 Data Protection 防護
 
+如果你的開發環境是在 WSL 或 Headless Linux 等無 GUI 容器中，因為缺乏 D-Bus 桌面環境，Python 的 `keyring` 預設會因為無法解鎖系統 Keychain 而拋出錯誤。在 .NET Core 中，我們可以使用內建的 **`Microsoft.AspNetCore.DataProtection`** 來解決這個問題。它會自動利用作業系統的安全密鑰（WSL 下為當前 Linux 使用者帳戶密鑰）對金鑰進行 AES 加密，只有當前執行程式的作業系統使用者才能解密，不需要任何圖形介面彈窗。
+
+以下 C# 程式碼示範如何使用 DataProtection 將 OpenAI 金鑰加密存檔，並在執行時動態載入：
+```csharp
+using System;
+using System.IO;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection;
+
+public class 程式
+{
+    public static void _04_執行DataProtection防護範例()
+    {
+        // 1. 初始化 DataProtection 服務容器
+        var 服務容器 = new ServiceCollection();
+        服務容器.AddDataProtection();
+        var 服務提供者 = 服務容器.BuildServiceProvider();
+
+        // 2. 取得保護器（Purpose 字串用來隔離不同的加密用途）
+        var 保護器 = 服務提供者.GetDataProtector("WSL.AIAgent.Secrets");
+
+        // 3. 加密金鑰並存檔 (AI Agent 隨便讀也解不開)
+        string 明文金鑰 = "sk-proj-xxxxxxxxxxxx";
+        string 加密金鑰 = 保護器.Protect(明文金鑰);
+        
+        string 儲存路徑 = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "secrets.bin");
+        File.WriteAllText(儲存路徑, 加密金鑰);
+
+        // 4. 動態讀取並還原金鑰 (只在記憶體中，不產生實體明文檔案)
+        string 讀取密文 = File.ReadAllText(儲存路徑);
+        string 還原金鑰 = 保護器.Unprotect(讀取密文);
+    }
+}
+```
+這樣一來，金鑰雖然落了地，但檔案內容是安全的二進位密文，AI Agent 就算用讀檔工具讀到了 `secrets.bin` 也只會讀到一堆亂碼，安全防護同樣點滿！
 
 ---
 
@@ -229,8 +279,3 @@ graph TD
 3. **託管認證與行為約束 (Managed Auth/Policy)**：這是當 AI Agent 真的被惡意 Prompt Injection 洗腦時，系統層級的「最後煞車機制」，避免災害無限制擴大。
 
 安全防護從來就沒有「絕對安全」這回事，只有「提高攻擊成本與降低外洩損失」。不要只顧著在專案大門裝好幾道高級防撬鎖，結果轉身把金鑰密碼用便利貼貼在門框上，那就真的搞笑。希望這篇整理能幫大家在開發 AI Agent 時，建立更穩固的安全架構！
-
-若有謬誤,煩請告知,新手發帖請多包涵
-
-Microsoft MVP Award 2010~2017 C# 第四季
-Microsoft MVP Award 2018~2022 .NET
