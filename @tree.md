@@ -84,6 +84,8 @@
     - `.archive/` - 封存計畫目錄
       - `publish_blog.plan.md` - 發布文章至點部落計畫檔
       - `push_to_github.plan.md` - 推送至 GitHub 計畫檔
+      - `get_blog.plan.md` - 從點部落取 blog.md 新版計畫檔
+      - `push_blog_update.plan.md` - 推送 blog.md 更新至 GitHub 計畫檔
 - `Security/` - 安全防護相關 Lab
   - `Lab.AI.Secret/` - 機敏資料保護相關 Lab
     - `ProtectSecretInAIAgent.md` - AI Agent 時代保護機敏金鑰文章草案

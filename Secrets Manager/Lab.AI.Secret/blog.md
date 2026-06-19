@@ -13,11 +13,12 @@ stripH1Header: true
 # [Security] AI Agent 時代的數位鑰匙防護：如何安全管理你的 API 金鑰與授權憑證
 
 ## 開發環境
+
 - **作業系統 (OS)**: Windows 11 / WSL2 (Ubuntu)
 - **Secrets Manager 服務**: AWS Secrets Manager / Azure Key Vault
-- **語言與套件**: 
-  - Python 3.10+ (python-dotenv / keyring)
-  - .NET Core 10.0+ (Microsoft.AspNetCore.DataProtection / User Secrets)
+- **語言與套件**:
+- Python 3.10+ (python-dotenv / keyring)
+- .NET Core 10.0+ (Microsoft.AspNetCore.DataProtection / User Secrets)
 
 ---
 
@@ -33,7 +34,7 @@ stripH1Header: true
 
 以下是公開設定檔案 `.env`（可提交至 Repository）的設定範例：
 
-```env
+```
 # .env (version controlled)
 DEBUG=true
 DATABASE_HOST=localhost
@@ -42,7 +43,7 @@ API_ENDPOINT=https://api.example.com
 
 以下是機敏金鑰檔案 `.env.secrets`（絕對不可提交，需加入 .gitignore）的設定範例：
 
-```env
+```
 # .env.secrets (NOT version controlled)
 DATABASE_PASSWORD=actual-password
 COMPOSIO_API_KEY=actual-api-key
@@ -50,7 +51,7 @@ COMPOSIO_API_KEY=actual-api-key
 
 以下是你的 `.gitignore` 設定範例，確保敏感檔案不會意外流出：
 
-```gitignore
+```
 # 記得要把敏感檔案排除喔
 .env.secrets
 .env.local
@@ -60,7 +61,7 @@ COMPOSIO_API_KEY=actual-api-key
 
 以下 Python 程式碼示範如何依優先順序載入設定，並以系統環境變數（`os.environ`）為最高優先：
 
-```python
+```
 import os
 from dotenv import dotenv_values
 
@@ -82,25 +83,24 @@ def _01_載入並合併金鑰設定():
     }
     return config
 ```
- 💡 **.NET Core 對標方案：User Secrets 機密管理器**
- 
- 在 .NET Core / .NET 開發環境中，微軟官方內建了 **Secret Manager (機密管理器)** 服務。它會將敏感設定儲存在**專案目錄之外**的使用者設定檔夾中（Windows 位於 `%APPDATA%\Microsoft\UserSecrets\<UserSecretsId>\secrets.json`；Linux/WSL/macOS 則位於 `~/.microsoft/usersecrets/<UserSecretsId>\secrets.json`）。
 
- 以下指令示範如何在本機開發專案中啟用並設定 User Secrets：  
- ```bash
- 
- ## 1. 在專案目錄下初始化 User Secrets (會在 .csproj 產生 UserSecretsId)
- 
- dotnet user-secrets init
- 
- ## 2. 設定敏感的 API 金鑰
- 
- dotnet user-secrets set "OpenAI:ApiKey" "sk-proj-xxxxxxxxxxxx"  
- ```  
- 這樣一來，所有敏感設定都完全脫離了專案目錄，AI Agent 翻遍專案資料夾也讀不到它，完美防範金鑰外洩。
- 
-> ⚠️ **此做法的安全風險與局限性**
-> - **依然是明文落地**：無論是 `.env.secrets` 還是 `User Secrets` 的 `secrets.json`，檔案內部的金鑰都是以**純文字明文**形式存放在硬碟中，並未經過加密保護。
+💡 **.NET Core 對標方案：User Secrets 機密管理器**
+
+在 .NET Core / .NET 開發環境中，微軟官方內建了 **Secret Manager (機密管理器)** 服務。它會將敏感設定儲存在**專案目錄之外**的使用者設定檔夾中（Windows 位於 `%APPDATA%\Microsoft\UserSecrets\<UserSecretsId>\secrets.json`；Linux/WSL/macOS 則位於 `~/.microsoft/usersecrets/<UserSecretsId>\secrets.json`）。
+
+以下指令示範如何在本機開發專案中啟用並設定 User Secrets：
+
+```
+## 1. 在專案目錄下初始化 User Secrets (會在 .csproj 產生 UserSecretsId)
+dotnet user-secrets init
+## 2. 設定敏感的 API 金鑰
+dotnet user-secrets set "OpenAI:ApiKey" "sk-proj-xxxxxxxxxxxx"
+```
+
+這樣一來，所有敏感設定都完全脫離了專案目錄，AI Agent 翻遍專案資料夾也讀不到它，完美防範金鑰外洩，除非它越獄。
+
+> ⚠️ **此做法的安全風險與局限性**  
+> - **依然是明文落地**：無論是 `.env.secrets` 還是 `User Secrets` 的 `secrets.json`，檔案內部的金鑰都是以**純文字明文**形式存放在硬碟中，並未經過加密保護。  
 > - **無法防範高權限 AI 窺探**：雖然我們把設定檔排除或移出了專案目錄，但如果 AI Agent 執行時被給予了高權限（如讀取使用者家目錄、或是全硬碟讀取權限），它依然能輕易掃描並電子郵件/網路外洩這些明文設定檔。
 
 ### 3. 在本機作業系統層級設定持久化環境變數
@@ -109,7 +109,7 @@ def _01_載入並合併金鑰設定():
 
 以下指令示範如何將自訂的金鑰寫入 `~/.bashrc`、重新載入設定使其生效，並使用該變數發送 `curl` 請求：
 
-```bash
+```
 # 1. 將環境變數寫入 ~/.bashrc 檔案尾端
 echo 'export FIGMA_TOKEN="ffigd_your_token"' >> ~/.bashrc
 
@@ -191,7 +191,7 @@ curl -H "X-Figma-Token: $FIGMA_TOKEN" \
 
 以下程式碼示範如何使用 Python 將 OpenAI 的 API 金鑰寫入系統的憑證加密儲存區：
 
-```python
+```
 import keyring
 
 def _02_寫入系統加密區():
@@ -205,7 +205,7 @@ def _02_寫入系統加密區():
 
 以下程式碼示範如何從系統憑證管理器動態讀取金鑰，並用來初始化 OpenAI 用戶端：
 
-```python
+```
 import keyring
 from openai import OpenAI
 
@@ -223,7 +223,7 @@ def _03_動態讀取金鑰():
 
 以下 C# 程式碼示範如何使用 DataProtection 將 OpenAI 金鑰加密存檔，並在執行時動態載入：
 
-```csharp
+```
 using System;
 using System.IO;
 using Microsoft.AspNetCore.DataProtection;
@@ -268,7 +268,7 @@ public class 程式
 
 導入 Credential Helper 後，你的專案安全架構會呈現如下圖所示：
 
-```mermaid
+```
 graph TD
     A["專案資料夾 (只有純程式碼，AI Agent 隨便讀也拿不到金鑰)"]
     A -->|執行主程式| B["後端 Python"]
@@ -323,10 +323,10 @@ graph TD
 本篇文章特別使用 AI 繪圖模型，針對「AI Agent 金鑰安全防護」這個主題，產出了四種不同視覺風格的部落格特色首圖（比例為 `16:9`），提供不同的視覺選擇：
 
 | 1. 賽博龐克風格 (Cyberpunk) | 2. 簡約 3D 風格 (Minimalist 3D) |
-| :---: | :---: |
-| ![賽博龐克風格](ai_key_cyberpunk.jpg) | ![簡約 3D 風格](ai_key_minimal.jpg) |
+| --- | --- |
+| 賽博龐克風格 | 簡約 3D 風格 |
 | **3. 可愛插畫風格 (Cute Illustration)** | **4. 雙重曝光抽象風格 (Double Exposure / Abstract)** |
-| ![可愛插畫風格](ai_key_cute.jpg) | ![雙重曝光抽象風格](ai_key_abstract.jpg) |
+| 可愛插畫風格 | 雙重曝光抽象風格 |
 
 ---
 
