@@ -4,9 +4,12 @@
 - `.gitattributes`
 - `.gitignore`
 - `@tree.md` - 專案結構定義檔
+- `.issues/` - 問題紀錄目錄
+  - `remove_co_authored_by.issues.md` - 移除 Commit Message 中 Co-authored-by 問題紀錄檔
 - `LICENSE`
 - `README.md`
-- `remove_co_authored_by.plan.md` - 移除 Commit Message 中 Co-authored-by 的計畫檔案
+- `.archive/` - 封存計畫目錄
+  - `remove_co_authored_by.plan.md` - 移除 Commit Message 中 Co-authored-by 的計畫檔案
 - `AI SDD/` - AI 系統設計與開發相關目錄
 - `AI.SDD/` - AI 系統設計與開發相關目錄
 - `AOP/` - 剖面導向程式設計相關 Lab
