@@ -21,8 +21,6 @@ stripH1Header: true
 - OS：Windows 11 + WSL2 Ubuntu 22.04
 - Node.js：24（透過 nvm）
 - pnpm：10.33.2（透過 corepack 自動選用）
-- Python：3.11+（管理腳本用）
-- uv：任意版本
 
 ---
 
@@ -36,6 +34,16 @@ Open Design 跑起來有兩個 process：
 | **web** | 3000 | Next.js 前端，使用者操作介面 |
 
 兩個都要同時跑，daemon 先起來，web 才能正常運作。
+
+Daemon 是整個系統的核心，Web 前端只是 UI，所有實際工作都在 daemon 這側：
+
+- **AI 呼叫**：把 prompt 轉發給 Claude Code / OpenAI / Gemini 等，回傳結果給前端
+- **CLI 整合**：偵測 PATH 上的 `claude`、`cursor` 等工具，讓 Open Design 能驅動它們
+- **Plugin 執行**：管理 261 個 Plugin 的安裝與呼叫
+- **檔案系統操作**：選擇工作目錄、讀寫檔案
+- **Settings 管理**：API Key、執行模式等設定
+
+前端沒有 daemon 就是個空殼。
 
 ---
 
@@ -51,9 +59,6 @@ nvm use 24
 
 # 啟用 corepack（pnpm 透過它自動選版本）
 corepack enable
-
-# 安裝 uv（管理腳本用）
-curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # 安裝 zenity（WSL2 限定，選擇工作目錄功能需要）
 sudo apt install -y zenity
@@ -127,6 +132,17 @@ PORT=3000 OD_PORT=7456 pnpm --filter @open-design/web dev
 ## 用 Python 腳本統一管理
 
 每次要開兩個終端機、記環境變數、等待順序，太麻煩了。寫了一支 `od-cli.py` 統一管理，用 `uv run` 執行，自動處理依賴（`psutil`），支援 Windows / WSL2 / Linux。
+
+### 前置需求
+
+```bash
+# Python 3.11+（系統通常已內建，確認一下）
+python3 --version
+
+# 安裝 uv
+curl -LsSf https://astral.sh/uv/install.sh | sh   # Linux/WSL
+# winget install astral-sh.uv                      # Windows
+```
 
 ### 安裝
 
