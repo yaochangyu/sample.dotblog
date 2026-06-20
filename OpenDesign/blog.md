@@ -220,21 +220,21 @@ AI：
 詢問我更多的問題、方向
 ```
 
-![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781945066.png.png)
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781967298.png.png)
 
 完成之後，出現一個 html 的頁面，這時候就可以點選右邊的工具
 
 - 編輯 html
 
-![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781945531.png.png)
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781967325.png.png)
 
 - 窗選某一個區塊跟 AI 互動
 
-![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781945582.png.png)
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781967342.png.png)
 
 - 選擇某一個區塊跟 AI 互動
 
-![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781945738.png.png)
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781967358.png.png)
 
 ---
 
