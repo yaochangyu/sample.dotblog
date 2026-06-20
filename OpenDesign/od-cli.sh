@@ -1,43 +1,28 @@
 #!/usr/bin/env bash
-# Open Design - 統一管理入口：Dev 模式啟停 + Docker AI CLI 容器
-#
-# 這支腳本同時管兩種完全不同的執行環境，使用前請先確認你要的是哪一種：
-#   - Dev 模式（start/stop）：在 host 直接跑 Open Design 本身（daemon + web）。
-#   - AI CLI 模式（build/shell/run）：每次都用 `docker run --rm` 跑一次性容器，
-#     離開即自動清除（憑證存在 named volume，不需要常駐容器）。
+# Open Design - 統一管理入口
 #
 # 用法：
-#   ./od-cli.sh start                          背景啟動 Dev 模式（daemon + web，已啟動則略過）
-#   ./od-cli.sh stop                           關閉 Dev 模式（daemon + web）
-#   ./od-cli.sh build                          建置 AI CLI image
-#   ./od-cli.sh shell                          一次性容器，互動式 bash（離開即自動清除）
-#   ./od-cli.sh run <claude|copilot|codex|agy> 一次性容器，執行指定 CLI（離開即自動清除）
+#   ./od-cli.sh start    背景啟動 daemon + web（已啟動則略過）
+#   ./od-cli.sh stop     關閉 daemon + web
+#   ./od-cli.sh update   git pull 取最新版 + 視情況重裝依賴 + rebuild daemon
 set -euo pipefail
 
-# ── Dev 模式設定 ──────────────────────────────────────────────────────────
+# ── 設定 ──────────────────────────────────────────────────────────────────
 DAEMON_PORT=7456
 WEB_PORT=3000
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="${SCRIPT_DIR}/open-design"
 
-# ── AI CLI 模式設定 ───────────────────────────────────────────────────────
-IMAGE="open-design-ai-cli:dev"
-VALID_CLIS="claude copilot codex agy"
-
 usage() {
   cat <<EOF
 用法：
-  $0 start                            背景啟動 Dev 模式（daemon + web，已啟動則略過）
-  $0 stop                             關閉 Dev 模式（daemon + web）
-  $0 build                            建置 AI CLI image
-  $0 shell                            一次性容器，互動式 bash（離開即自動清除）
-  $0 run <claude|copilot|codex|agy>   一次性容器，執行指定 CLI（離開即自動清除）
+  $0 start    背景啟動 daemon + web（已啟動則略過）
+  $0 stop     關閉 daemon + web
+  $0 update   git pull 取最新版 + 視情況重裝依賴 + rebuild daemon
 EOF
 }
 
-# ════════════════════════════════════════════════════════════════════════
-# Dev 模式：host 直接啟動 Open Design（daemon + web）
-# ════════════════════════════════════════════════════════════════════════
+# ── 共用工具 ──────────────────────────────────────────────────────────────
 
 daemon_is_running() {
   curl -sf "http://localhost:${DAEMON_PORT}/api/health" 2>/dev/null \
@@ -61,50 +46,45 @@ port_pid() {
   printf '%s' "$pid"
 }
 
-start_dev() {
-  # ── 載入 nvm（nvm 內部有 unbound variable，暫時關閉 -u）──────────────────
+load_nvm() {
   export NVM_DIR="$HOME/.nvm"
   if [ ! -s "$NVM_DIR/nvm.sh" ]; then
     echo "ERROR: nvm 未安裝，請先執行 nvm 安裝腳本。" >&2
     exit 1
   fi
+  # nvm 內部有 unbound variable，暫時關閉 -u
   set +u
   source "$NVM_DIR/nvm.sh"
+  nvm use 24 --silent
+  set -u
+}
+
+# ════════════════════════════════════════════════════════════════════════
+# start：背景啟動 daemon + web
+# ════════════════════════════════════════════════════════════════════════
+
+start_cmd() {
+  load_nvm
 
   if [ ! -d "$REPO_DIR" ]; then
-    echo "ERROR: repo 不存在：${REPO_DIR}" >&2
+    echo "ERROR: repo 不存在：${REPO_DIR}，請先 clone 並執行 pnpm install。" >&2
     exit 1
   fi
 
   cd "$REPO_DIR"
 
-  nvm use 24 --silent
-  set -u
-
-  # ── 更新 repo ────────────────────────────────────────────────────────────
-  echo "Pulling latest changes..."
-  git pull
-
-  # 若 lockfile 有異動，重新安裝依賴
-  if git diff HEAD@{1} --name-only 2>/dev/null | grep -q "pnpm-lock.yaml"; then
-    echo "pnpm-lock.yaml changed, running pnpm install..."
-    pnpm install
-  fi
-
-  # ── 確認 daemon 是否已在執行 ─────────────────────────────────────────────
+  # ── daemon ──────────────────────────────────────────────────────────────
   if daemon_is_running; then
     echo "Daemon already running on port ${DAEMON_PORT}"
   else
     echo "Starting daemon on port ${DAEMON_PORT}..."
 
-    # 直接背景執行 node，取得真正的 node PID（不透過 nohup wrapper）
-    # OD_WEB_PORT 告訴 daemon 信任來自 Next.js dev server 的請求（否則回傳 403）
+    # OD_WEB_PORT 告訴 daemon 信任來自 Next.js dev server（port 3000）的請求（否則回傳 403）
     OD_WEB_PORT="${WEB_PORT}" node apps/daemon/dist/cli.js --port "${DAEMON_PORT}" --no-open \
       > /tmp/od-daemon.log 2>&1 &
     DAEMON_PID=$!
     echo "Daemon PID: ${DAEMON_PID}"
 
-    # 等待 daemon 就緒（最多 30 秒，plugin 初始化需要時間）
     READY=0
     for i in $(seq 1 30); do
       if daemon_is_running; then
@@ -130,11 +110,10 @@ start_dev() {
 
   echo ""
 
-  # ── 確認 web 是否已在執行 ────────────────────────────────────────────────
+  # ── web ─────────────────────────────────────────────────────────────────
   if web_is_running; then
     echo "Web already running on port ${WEB_PORT}"
   else
-    # 確保 port 未被其他程式佔用
     if ss -tlnp | grep -q ":${WEB_PORT}"; then
       echo "Port ${WEB_PORT} is in use by another process, killing it..."
       fuser -k "${WEB_PORT}/tcp" 2>/dev/null || true
@@ -143,8 +122,6 @@ start_dev() {
 
     echo "Starting web on port ${WEB_PORT}..."
 
-    # 跟 daemon 一樣背景執行（不再用前景 pnpm dev 佔住終端機），
-    # 才能讓 'od-cli.sh start' 執行完直接返回，並讓 stop 之後能反查 port 關閉它。
     PORT=${WEB_PORT} OD_PORT=${DAEMON_PORT} pnpm --filter @open-design/web dev \
       > /tmp/od-web.log 2>&1 &
     WEB_PID=$!
@@ -178,7 +155,11 @@ start_dev() {
   echo "用 '$0 stop' 可關閉 daemon + web。"
 }
 
-stop_dev() {
+# ════════════════════════════════════════════════════════════════════════
+# stop：關閉 daemon + web
+# ════════════════════════════════════════════════════════════════════════
+
+stop_cmd() {
   local any_stopped=0
 
   for pair in "daemon:${DAEMON_PORT}" "web:${WEB_PORT}"; do
@@ -200,57 +181,56 @@ stop_dev() {
 }
 
 # ════════════════════════════════════════════════════════════════════════
-# AI CLI 模式：一次性 Docker 容器（每次 docker run --rm，不常駐）
+# update：git pull + pnpm install（lockfile 有變）+ rebuild daemon
 # ════════════════════════════════════════════════════════════════════════
 
-ensure_image() {
-  if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
-    echo "錯誤：image ${IMAGE} 不存在，請先執行：$0 build" >&2
+update_cmd() {
+  load_nvm
+
+  if [ ! -d "$REPO_DIR" ]; then
+    echo "ERROR: repo 不存在：${REPO_DIR}" >&2
     exit 1
   fi
+
+  # ── 1. 更新 od-cli.sh 所在的 repo（sample.dotblog）──────────────────────
+  WRAPPER_GIT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")"
+  if [ -n "$WRAPPER_GIT_ROOT" ]; then
+    echo "Pulling wrapper repo (${WRAPPER_GIT_ROOT})..."
+    git -C "$WRAPPER_GIT_ROOT" pull
+  fi
+
+  # ── 2. 更新 open-design 原始碼 ───────────────────────────────────────────
+  echo ""
+  echo "Pulling open-design..."
+  cd "$REPO_DIR"
+  # 記錄 pull 前的 lockfile blob hash，pull 後比對決定是否重裝依賴
+  LOCK_BEFORE="$(git rev-parse HEAD:pnpm-lock.yaml 2>/dev/null || echo "")"
+  git pull
+  LOCK_AFTER="$(git rev-parse HEAD:pnpm-lock.yaml 2>/dev/null || echo "")"
+
+  if [ "$LOCK_BEFORE" != "$LOCK_AFTER" ]; then
+    echo "pnpm-lock.yaml changed, running pnpm install..."
+    # postinstall 會自動 rebuild 所有內部套件（含 daemon）
+    pnpm install
+  else
+    echo "Rebuilding daemon..."
+    pnpm --filter @open-design/daemon build
+  fi
+
+  echo ""
+  echo "Update complete. 執行 '$0 start' 啟動。"
 }
 
-# codex 的 OAuth callback server 只綁定容器內 127.0.0.1，單純 -p 轉送連不到，
-# 改用 host 網路讓 loopback 直通（僅支援 Linux/WSL2）。
-# 見 .issues/docker-ai-cli.issues.md Issue 5、Issue 6。
-run_ephemeral() {
-  ensure_image
-  docker run --rm -it \
-    --network host \
-    -v open-design-claude-config:/home/vscode/.claude \
-    -v open-design-copilot-config:/home/vscode/.copilot \
-    -v open-design-codex-config:/home/vscode/.codex \
-    -v open-design-antigravity-config:/home/vscode/.gemini/antigravity-cli \
-    -v open-design-antigravity-keyring:/home/vscode/.local/share/keyrings \
-    "$IMAGE" \
-    bash -lc "${*:-bash}"
-}
+# ════════════════════════════════════════════════════════════════════════
+# 入口
+# ════════════════════════════════════════════════════════════════════════
 
 cmd="${1:-}"
-[ $# -gt 0 ] && shift
 
 case "$cmd" in
-  start)
-    start_dev
-    ;;
-  stop)
-    stop_dev
-    ;;
-  build)
-    docker build -t "$IMAGE" -f "$SCRIPT_DIR/.devcontainer/Dockerfile" "$SCRIPT_DIR/.devcontainer"
-    ;;
-  shell)
-    run_ephemeral
-    ;;
-  run)
-    target="${1:-}"
-    if [ -z "$target" ]; then
-      echo "錯誤：請指定要執行的 CLI（${VALID_CLIS}）" >&2
-      usage
-      exit 1
-    fi
-    run_ephemeral "$@"
-    ;;
+  start)  start_cmd ;;
+  stop)   stop_cmd ;;
+  update) update_cmd ;;
   *)
     usage
     exit 1
