@@ -1,6 +1,6 @@
-# Open Design 安裝手冊（WSL2 Dev 模式）
+# Open Design 安裝手冊
 
-> 適用環境：Windows WSL2 / Linux  
+> 適用環境：Windows / WSL2 / Linux  
 > Node 24 + pnpm 10.33.2 + Claude Code CLI
 
 ---
@@ -8,11 +8,11 @@
 ## 目錄結構
 
 ```
-OpenDesign/            ← 這個資料夾（od-cli.sh 所在位置）
+OpenDesign/            ← 這個資料夾（od-cli.py 所在位置）
 └── open-design/       ← open-design 原始碼（需另外 clone）
 ```
 
-`od-cli.sh` 會在自己所在目錄底下找 `open-design/` 子資料夾。
+`od-cli.py` 會在自己所在目錄底下找 `open-design/` 子資料夾。
 
 ---
 
@@ -20,6 +20,8 @@ OpenDesign/            ← 這個資料夾（od-cli.sh 所在位置）
 
 | 工具 | 版本 | 安裝指令 |
 |------|------|----------|
+| Python | ≥3.11 | 系統內建或 [python.org](https://python.org) |
+| uv | 任意 | `curl -LsSf https://astral.sh/uv/install.sh \| sh`（Linux/WSL）或 `winget install astral-sh.uv`（Windows） |
 | Node.js | ~24 | `nvm install 24` |
 | pnpm | 10.33.2（透過 corepack 自動選用） | `corepack enable` |
 | Claude Code | 任意版本 | `curl -fsSL https://claude.ai/install.sh \| bash` |
@@ -31,7 +33,7 @@ OpenDesign/            ← 這個資料夾（od-cli.sh 所在位置）
 
 ### Step 1 — Clone repo
 
-在 `od-cli.sh` 所在目錄執行：
+在 `od-cli.py` 所在目錄執行：
 
 ```bash
 git clone https://github.com/nexu-io/open-design open-design
@@ -86,7 +88,7 @@ Done in 8m 32.7s using pnpm v10.33.2
 ### 啟動
 
 ```bash
-./od-cli.sh start
+uv run od-cli.py start
 ```
 
 啟動後開啟瀏覽器：**http://localhost:3000**。daemon 跟 web 都背景啟動，指令執行完會直接返回終端機。
@@ -94,15 +96,21 @@ Done in 8m 32.7s using pnpm v10.33.2
 ### 停止
 
 ```bash
-./od-cli.sh stop
+uv run od-cli.py stop
 ```
 
 用 port 反查 PID，關閉 daemon（7456）+ web（3000）。
 
+### 查看狀態
+
+```bash
+uv run od-cli.py status
+```
+
 ### 取得最新版本
 
 ```bash
-./od-cli.sh update
+uv run od-cli.py update
 ```
 
 執行 `git pull` 取最新版，若 `pnpm-lock.yaml` 有異動則自動重裝依賴（postinstall 會一併 rebuild 所有內部套件）；若 lockfile 沒變則只 rebuild daemon。完成後執行 `start` 啟動。
@@ -111,7 +119,7 @@ Done in 8m 32.7s using pnpm v10.33.2
 
 ## 手動啟動步驟
 
-若 `od-cli.sh start` 失敗，依序執行以下指令：
+若 `uv run od-cli.py start` 失敗，依序執行以下指令：
 
 ### 1. 切換 Node 版本
 
@@ -182,10 +190,10 @@ daemon did not expose status in time
 ## 停止服務
 
 ```bash
-./od-cli.sh stop
+uv run od-cli.py stop
 ```
 
-若 `od-cli.sh stop` 失敗，可手動反查並關閉：
+若 `uv run od-cli.py stop` 失敗，可手動反查並關閉：
 
 ```bash
 ss -tlnp | grep -E ':(7456|3000)\s'   # 找出佔用該 port 的 PID

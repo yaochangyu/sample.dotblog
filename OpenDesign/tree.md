@@ -15,6 +15,6 @@ OpenDesign/
 │   └── od-cli.issues.md            # od-cli.sh 合併過程中的 set -e/pipefail bug 紀錄（2 個 issue）
 ├── INSTALL.md                      # 安裝手冊（一次性安裝 + 日常 start/stop/update 指令）
 ├── README.md                       # 專案總覽：快速指令、指向 INSTALL.md / tree.md
-├── od-cli.sh                       # 統一入口：start / stop / update
+├── od-cli.py                       # 統一入口：start / stop / update / status / version / help（跨平台，uv run）
 └── tree.md                         # 專案資料夾結構（本檔案）
 ```
