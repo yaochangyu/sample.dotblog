@@ -26,6 +26,7 @@ OpenDesign/            ← 這個資料夾（od-cli.py 所在位置）
 | pnpm | 10.33.2（透過 corepack 自動選用） | `corepack enable` |
 | Claude Code | 任意版本 | `curl -fsSL https://claude.ai/install.sh \| bash` |
 | git | 任意 | 系統內建 |
+| zenity | 任意（**WSL2 限定**） | `sudo apt install -y zenity`（選擇工作目錄功能需要） |
 
 ---
 
@@ -184,6 +185,7 @@ daemon did not expose status in time
 | Settings 測試 CLI 出現 **Daemon responded with 403** | 啟動 daemon 未設定 `OD_WEB_PORT`，daemon 拒絕來自 Next.js（port 3000）的請求 | 啟動 daemon 時加上 `OD_WEB_PORT=3000` |
 | `pnpm tools-dev run web` 失敗 | WSL2 IPC socket 逾時 | 改用手動分別啟動 daemon + web |
 | `node-pty` build 警告 | pnpm 安全機制攔截，非核心功能 | 忽略 |
+| **選擇工作目錄**點了沒反應（WSL2） | daemon 在 Linux 平台呼叫 `zenity` 開資料夾選擇器，WSL2 預設未安裝 | `sudo apt install -y zenity` |
 
 ---
 

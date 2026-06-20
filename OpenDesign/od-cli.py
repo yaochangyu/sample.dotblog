@@ -66,6 +66,17 @@ def load_nvm():
         os.environ["PATH"] = f"{node_bin}:{os.environ.get('PATH', '')}"
 
 
+def check_zenity():
+    """Linux/WSL2 上確認 zenity 已安裝，否則警告「選擇工作目錄」功能無法使用"""
+    if IS_WINDOWS:
+        return
+    if shutil.which("zenity"):
+        return
+    print("⚠️  警告：zenity 未安裝，Open Design 的「選擇工作目錄」功能將無法使用。")
+    print("   修復：sudo apt install -y zenity")
+    print()
+
+
 def get_port_pid(port: int) -> int | None:
     import psutil
     for conn in psutil.net_connections(kind="tcp"):
@@ -131,6 +142,7 @@ def wait_ready(check_fn, proc: subprocess.Popen, name: str, log_path: Path, time
 
 def start_cmd():
     load_nvm()
+    check_zenity()
 
     if not REPO_DIR.exists():
         print(f"ERROR: repo 不存在：{REPO_DIR}，請先 clone 並執行 pnpm install。", file=sys.stderr)
