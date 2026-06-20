@@ -1,26 +1,23 @@
 ---
-title: '[Open Design] 在 WSL2 / Linux 本地跑起 Open Design，並用 Python 腳本統一管理'
-abstract: <p>Open Design 是開源的 Claude Design 替代方案，支援 100+ 技能、150 個設計系統、261 個 Plugin，可在本地桌面執行。這篇記錄在 WSL2 上從 clone 到跑起來的完整過程，以及踩到的坑。</p>
-keywords: OpenDesign,Python,uv,WSL2,Claude,AI設計工具
-categories: Python
+title: '[Open Design] 在 WSL2 / Linux 本地環境啟動 Open Design'
+abstract: <p><a target="_blank" rel="noopener noreferrer" href="https://github.com/nexu-io/open-design">Open Design</a> 是開源的 Claude Design 替代方案，支援 100+ 技能、150 個設計系統、261 個 Plugin，可以串接 Claude Code、Cursor、Copilot 等 21 種 Coding Agent，可直接使用本機環境的授權配置，也支援自備 API Key（BYOK）。這篇記錄在 WSL2 上從 clone 到跑起來的完整過程，以及踩到的坑。</p><figure class="image"><img style="aspect-ratio:1376/768;" src="https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781965423.jpg.jpg" width="1376" height="768"></figure>
+keywords: Open Design
+categories: Open Design
 weblogName: 余小章 @ 大內殿堂
 postId: 0b6cbf33-82ec-4db1-849f-f61e26c58a25
-postDate: 2026-06-20T14:00:49.0000000
-postStatus: publish
+postDate: 2026-06-20T06:00:53.0000000
+postStatus: 
 dontInferFeaturedImage: false
 stripH1Header: true
 ---
-# [Open Design] 在 WSL2 / Linux 本地跑起 Open Design，並用 Python 腳本統一管理
-
-[Open Design](https://github.com/nexu-io/open-design) 是開源的 Claude Design 替代方案，支援 100+ 技能、150 個設計系統、261 個 Plugin，可以串接 Claude Code、Cursor、Copilot 等 21 種 Coding Agent，也支援自備 API Key（BYOK）。這篇記錄在 WSL2 上從 clone 到跑起來的完整過程，以及踩到的坑。
-
----
+# [Open Design] 在 WSL2 / Linux 本地環境啟動 Open Design
 
 ## 開發環境
 
-- OS：Windows 11 + WSL2 Ubuntu 22.04
+- OS：Windows 11 + WSL2 Ubuntu 24.04
 - Node.js：24（透過 nvm）
 - pnpm：10.33.2（透過 corepack 自動選用）
+- open-design：https://github.com/nexu-io/open-design
 
 ---
 
@@ -29,13 +26,13 @@ stripH1Header: true
 Open Design 跑起來有兩個 process：
 
 | Process | Port | 說明 |
-|---------|------|------|
+| --- | --- | --- |
 | **daemon** | 7456 | 後端核心，處理 AI 呼叫、Plugin、CLI 整合 |
 | **web** | 3000 | Next.js 前端，使用者操作介面 |
 
 兩個都要同時跑，daemon 先起來，web 才能正常運作。
 
-Daemon 是整個系統的核心，Web 前端只是 UI，所有實際工作都在 daemon 這側：
+Daemon 是整個系統的核心，Web 前端只是 UI，所有實際工作都在 daemon：
 
 - **AI 呼叫**：把 prompt 轉發給 Claude Code / OpenAI / Gemini 等，回傳結果給前端
 - **CLI 整合**：偵測 PATH 上的 `claude`、`cursor` 等工具，讓 Open Design 能驅動它們
@@ -47,9 +44,9 @@ Daemon 是整個系統的核心，Web 前端只是 UI，所有實際工作都在
 
 ---
 
-## 前置需求
+## 安裝前置需求
 
-```bash
+```
 # 安裝 nvm
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 
@@ -70,14 +67,14 @@ sudo apt install -y zenity
 
 ### 1. Clone 原始碼
 
-```bash
+```
 git clone https://github.com/nexu-io/open-design open-design
 cd open-design
 ```
 
 ### 2. 安裝依賴
 
-```bash
+```
 pnpm install
 ```
 
@@ -97,7 +94,7 @@ Done in 8m 32.7s using pnpm v10.33.2
 
 ---
 
-## 為什麼不直接用 `pnpm tools-dev run web`？
+### 為什麼不直接用 `pnpm tools-dev run web`？
 
 官方開發模式是透過 `tools-dev` 同時啟動 daemon + web，兩者用 POSIX Unix Domain Socket（IPC）通訊。WSL2 環境下這個 socket 建立常常超時：
 
@@ -109,11 +106,11 @@ daemon did not expose status in time
 
 ---
 
-## 手動啟動（確認環境用）
+## 手動啟動
 
 先確認可以手動跑起來：
 
-```bash
+```
 # 終端機 1：啟動 daemon
 cd open-design
 OD_WEB_PORT=3000 node apps/daemon/dist/cli.js --port 7456 --no-open
@@ -127,6 +124,8 @@ PORT=3000 OD_PORT=7456 pnpm --filter @open-design/web dev
 
 開啟 **http://localhost:3000** 看到介面就成功了。
 
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781944343.png.png)
+
 ---
 
 ## 用 Python 腳本統一管理
@@ -135,7 +134,7 @@ PORT=3000 OD_PORT=7456 pnpm --filter @open-design/web dev
 
 ### 前置需求
 
-```bash
+```
 # Python 3.11+（系統通常已內建，確認一下）
 python3 --version
 
@@ -152,7 +151,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # Linux/WSL
 
 啟動 daemon + web（背景執行，等待 health check 通過後返回）：
 
-```bash
+```
 uv run od-cli.py start
 ```
 
@@ -170,7 +169,7 @@ Open: http://localhost:3000
 
 查看服務狀態（PID、uptime、記憶體、health check）：
 
-```bash
+```
 uv run od-cli.py status
 ```
 
@@ -185,25 +184,67 @@ daemon health: {"ok":true,"version":"0.11.0"}
 
 停止：
 
-```bash
+```
 uv run od-cli.py stop
 ```
 
 取得最新版（git pull + 視情況重裝依賴 + rebuild daemon）：
 
-```bash
+```
 uv run od-cli.py update
 ```
 
 ---
 
-## 踩坑：選擇工作目錄點了沒反應
+## 選擇模型
+
+服務啟動後，執行 http://localhost:3000
+
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781964864.png.png)
+
+選擇本機 CLI，選擇重新掃描，他就會讀取本機的 cli 設定
+
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781964896.png.png)
+
+選擇好模型，就可以開始產生 UI
+
+```
+我：
+我要設計一個 event-bus 的非同步平台介面
+```
+
+NOTE：這是很粗糙的需求描述
+
+```
+AI：
+詢問我更多的問題、方向
+```
+
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781945066.png.png)
+
+完成之後，出現一個 html 的頁面，這時候就可以點選右邊的工具
+
+- 編輯 html
+
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781945531.png.png)
+
+- 窗選某一個區塊跟 AI 互動
+
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781945582.png.png)
+
+- 選擇某一個區塊跟 AI 互動
+
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781945738.png.png)
+
+---
+
+## 射茶包：選擇工作目錄點了沒反應
 
 Open Design 介面左側有個「選擇工作目錄」，可以讓 daemon 知道 Claude Code 要操作哪個資料夾。在 WSL2 上點下去完全沒反應，不跳視窗、不報錯，就這樣。
 
 第一步先直接打 daemon API 確認：
 
-```bash
+```
 curl -X POST http://localhost:7456/api/dialog/open-folder
 # {"path":null}
 ```
@@ -218,14 +259,14 @@ platform === 'linux' → execFile('zenity', ['--file-selection', '--directory', 
 
 WSL2 的 `process.platform` 是 `linux`，所以走 zenity 分支。確認一下：
 
-```bash
+```
 zenity --version
 # zenity: command not found
 ```
 
 裝起來就解了：
 
-```bash
+```
 sudo apt install -y zenity
 ```
 
@@ -236,16 +277,63 @@ sudo apt install -y zenity
 ## 已知問題
 
 | 問題 | 原因 | 解法 |
-|------|------|------|
+| --- | --- | --- |
 | 選擇工作目錄點了沒反應（WSL2） | daemon 呼叫 `zenity` 開資料夾選擇器，WSL2 預設未安裝 | `sudo apt install -y zenity` |
 | Settings 測試 CLI 出現 Daemon responded with 403 | daemon 啟動未設定 `OD_WEB_PORT` | 用 `od-cli.py start`（已自動帶入） |
 | `pnpm tools-dev run web` 超時 | WSL2 IPC socket 不穩定 | 改用 `od-cli.py start` |
 
 ---
 
-完整代碼位置: https://github.com/yaochangyu/sample.dotblog/tree/master/OpenDesign
+## Open Design UI 實作範例
 
-若有謬誤,煩請告知,新手發帖請多包涵
+這裡我用 event-bus 的案例來示範。
 
-Microsoft MVP Award 2010~2017 C# 第四季
-Microsoft MVP Award 2018~2022 .NET
+- Model：選 Claude，執行的效果還不錯；相同的提示詞，antigravify 就看看就好。
+
+我：
+
+```
+建立 MQ Platform/Event-Bus 集中管理平台，需要用以下功能
+- 用 rabbit 實現
+- 用 pub/sub api 建立 task
+- 可管理 task 配置
+    - 管理 queue
+    - 配置 callback，callback 使用 API
+    - 配置 SLO，callback 花費時間，多久時間沒有完成，狀態設定 timeout
+    - 支援三種類型，event、task、scheduler，每一個類型都可以是
+        - event：通知訂閱者
+        - task：回呼 api
+        - scheduler(延遲執行 task)：指定時間，回呼 api
+- pub api，
+    - 建立 task，task 有區分立即執行和延遲執行。
+    - 建立 event，event 再根據有哪些訂閱者，執行 task。
+- register api，
+    - 訂閱事件
+- callback api 必須要能回報，啟動時間、結束時間，以及任何錯誤訊息
+
+你會怎麼設計
+```
+
+AI 問我幾個問題，我回答後
+
+```
+[form answers — discovery] - 目標平台: 響應式網頁（支援平板與手機） 
+[value: responsive-web] - 視覺風格: Modern Minimal（Linear / Vercel 風格，乾淨精緻） 
+[value: modern-minimal] - 要包含哪些畫面？: Dashboard 總覽（Queue 狀態、訊息量、SLO 健康度）
+[value: dashboard], Task 管理（建立 / 編輯 Task，callback、SLO 設定）
+[value: task-management], Event 管理（訂閱者列表、pub 紀錄） 
+[value: event-management], Scheduler 管理（排程任務、延遲執行紀錄）
+[value: scheduler], Queue 管理（Queue 列表、死信佇列） 
+[value: queue-management], Callback 執行紀錄（啟動時間、結束時間、錯誤訊息） 
+[value: callback-logs] - 品牌設定: (skipped) - 其他限制或補充說明: (skipped)
+```
+
+過了將近 20min 就產出了基本的頁面，稍微執行了一下，感覺還可以
+
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/0b6cbf33-82ec-4db1-849f-f61e26c58a25/1781966425.png.png)
+
+---
+
+## 完整代碼位置
+
+https://github.com/yaochangyu/sample.dotblog/tree/master/OpenDesign
