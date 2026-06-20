@@ -5,6 +5,7 @@ import csv
 import hashlib
 import json
 import re
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -35,6 +36,12 @@ class PreparedJob:
     id: int | str
     text: str
     payload: dict
+
+
+@dataclass(frozen=True)
+class InteractiveSearchCommand:
+    kind: str
+    value: str | int | None = None
 
 
 def join_values(values: Iterable[str] | None) -> str:
@@ -311,6 +318,12 @@ def get_vector_size(model_name: str) -> int:
     return int(TextEmbedding.get_embedding_size(model_name))
 
 
+def build_query_filter(city: str | None) -> Filter | None:
+    if not city:
+        return None
+    return Filter(must=[FieldCondition(key="work_city", match=MatchValue(value=city))])
+
+
 def ensure_collection(
     client: QdrantClient,
     collection_name: str,
@@ -416,13 +429,27 @@ def search_jobs(
 ) -> list[dict]:
     client = QdrantClient(url=qdrant_url)
     model = get_embedding_model(model_name)
-    query_vector = list(model.query_embed(query))[0].tolist()
+    return search_jobs_with_client(
+        client=client,
+        model=model,
+        collection_name=collection_name,
+        query=query,
+        city=city,
+        limit=limit,
+    )
 
-    query_filter = None
-    if city:
-        query_filter = Filter(
-            must=[FieldCondition(key="work_city", match=MatchValue(value=city))]
-        )
+
+def search_jobs_with_client(
+    *,
+    client: QdrantClient,
+    model: TextEmbedding,
+    collection_name: str,
+    query: str,
+    city: str | None = None,
+    limit: int = 5,
+) -> list[dict]:
+    query_vector = list(model.query_embed(query))[0].tolist()
+    query_filter = build_query_filter(city)
 
     results = client.query_points(
         collection_name=collection_name,
@@ -442,6 +469,102 @@ def search_jobs(
         }
         for point in results.points
     ]
+
+
+def parse_interactive_search_input(raw_input: str) -> InteractiveSearchCommand:
+    stripped = raw_input.strip()
+    if not stripped:
+        return InteractiveSearchCommand(kind="empty")
+    if stripped in {":quit", ":exit"}:
+        return InteractiveSearchCommand(kind="quit")
+    if stripped == ":show":
+        return InteractiveSearchCommand(kind="show")
+    if stripped == ":clear-city":
+        return InteractiveSearchCommand(kind="clear-city")
+    if stripped.startswith(":city "):
+        city = stripped.removeprefix(":city ").strip()
+        if not city:
+            raise ValueError("city command requires a value")
+        return InteractiveSearchCommand(kind="set-city", value=city)
+    if stripped.startswith(":limit "):
+        value = stripped.removeprefix(":limit ").strip()
+        limit = int(value)
+        if limit <= 0:
+            raise ValueError("limit must be greater than 0")
+        return InteractiveSearchCommand(kind="set-limit", value=limit)
+    if stripped.startswith(":"):
+        raise ValueError(f"unsupported command: {stripped}")
+    return InteractiveSearchCommand(kind="query", value=stripped)
+
+
+def interactive_search(
+    *,
+    qdrant_url: str,
+    collection_name: str,
+    model_name: str,
+    city: str | None = None,
+    limit: int = 5,
+) -> None:
+    client = QdrantClient(url=qdrant_url)
+    model = get_embedding_model(model_name)
+    collections = {item.name for item in client.get_collections().collections}
+    if collection_name not in collections:
+        raise ValueError(f"Collection not found: {collection_name}")
+
+    count_result = client.count(collection_name=collection_name, exact=True)
+    if count_result.count == 0:
+        raise ValueError(f"Collection is empty: {collection_name}")
+
+    current_city = city
+    current_limit = limit
+
+    print(f"Interactive search ready: collection={collection_name}, count={count_result.count}")
+    print("Commands: :city <縣市>, :clear-city, :limit <N>, :show, :quit")
+
+    while True:
+        prompt_city = current_city or "-"
+        try:
+            raw_input = input(f"query(city={prompt_city}, limit={current_limit})> ")
+        except EOFError:
+            print("exit")
+            return
+        except KeyboardInterrupt:
+            print("\nexit")
+            return
+
+        command = parse_interactive_search_input(raw_input)
+        if command.kind == "empty":
+            continue
+        if command.kind == "quit":
+            print("bye")
+            return
+        if command.kind == "show":
+            print(json.dumps({"city": current_city, "limit": current_limit}, ensure_ascii=False))
+            continue
+        if command.kind == "clear-city":
+            current_city = None
+            print("city filter cleared")
+            continue
+        if command.kind == "set-city":
+            current_city = str(command.value)
+            print(f"city filter set to: {current_city}")
+            continue
+        if command.kind == "set-limit":
+            current_limit = int(command.value)
+            print(f"limit set to: {current_limit}")
+            continue
+
+        start_time = time.perf_counter()
+        results = search_jobs_with_client(
+            client=client,
+            model=model,
+            collection_name=collection_name,
+            query=str(command.value),
+            city=current_city,
+            limit=current_limit,
+        )
+        elapsed_ms = (time.perf_counter() - start_time) * 1000
+        print(json.dumps({"elapsed_ms": round(elapsed_ms, 2), "results": results}, ensure_ascii=False, indent=2))
 
 
 def parse_args() -> argparse.Namespace:
@@ -464,6 +587,10 @@ def parse_args() -> argparse.Namespace:
     search_parser.add_argument("--query", required=True)
     search_parser.add_argument("--city")
     search_parser.add_argument("--limit", type=int, default=5)
+
+    interactive_search_parser = subparsers.add_parser("interactive-search", parents=[common])
+    interactive_search_parser.add_argument("--city")
+    interactive_search_parser.add_argument("--limit", type=int, default=5)
 
     subparsers.add_parser("prepare", parents=[common])
     return parser.parse_args()
@@ -520,6 +647,16 @@ def main() -> None:
             limit=args.limit,
         )
         print(json.dumps(results, ensure_ascii=False, indent=2))
+        return
+
+    if args.command == "interactive-search":
+        interactive_search(
+            qdrant_url=args.qdrant_url,
+            collection_name=args.collection,
+            model_name=args.model,
+            city=args.city,
+            limit=args.limit,
+        )
 
 
 if __name__ == "__main__":

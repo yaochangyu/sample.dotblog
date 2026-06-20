@@ -1,0 +1,26 @@
+{
+  "kind": "critique-panel",
+  "score": 4,
+  "axes": {
+    "clarity": {
+      "score": 4,
+      "notes": "每頁單一焦點：Dashboard 是 metric card → chart → table，Task 是 tab filter → table + modal，Callback 是 summary → tab filter → expandable log。入口 index.html 的 6 個 module card 一眼掌握平台範圍。"
+    },
+    "hierarchy": {
+      "score": 4,
+      "notes": "Topbar 固定主動作（新增），tab bar 過濾，table 呈現資料，modal 聚焦編輯。Pill 狀態標籤在表格中提供次要視覺錨點。數值用 mono tabular-nums 讓數字欄更易掃視。"
+    },
+    "typography": {
+      "score": 4,
+      "notes": "系統字體堆疊，IDs/timestamp/metrics 全用 JetBrains Mono/IBM Plex Mono，letter-spacing -0.02em 用於標題，-0.03em 用於大數字。無 Inter/Roboto 作為 display 字體。"
+    },
+    "motion": {
+      "score": 3,
+      "notes": "Sidebar slide-in、modal fade+translateY、展開行的 chevron rotate 均有 CSS transition。無 JS 動畫，但互動回饋足夠。可加強：tab panel 切換時的 fade。"
+    },
+    "brand": {
+      "score": 4,
+      "notes": "Modern Minimal 方向執行一致：oklch blue accent 僅出現在主 CTA 和 active nav，hairline border 1px，無 shadow，status 三色（green/amber/red）功能性使用。背景 oklch(99% 0.002 240) 而非暖米色。"
+    }
+  }
+}

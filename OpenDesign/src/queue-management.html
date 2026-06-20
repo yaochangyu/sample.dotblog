@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Queue 管理 — MQ Platform</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:oklch(99% 0.002 240);--surface:oklch(100% 0 0);
+  --fg:oklch(18% 0.012 250);--muted:oklch(54% 0.012 250);
+  --border:oklch(92% 0.005 250);--accent:oklch(58% 0.18 255);
+  --accent-bg:oklch(97% 0.008 255);
+  --success:oklch(56% 0.17 145);--success-bg:oklch(97% 0.035 145);
+  --warning:oklch(60% 0.14 75);--warning-bg:oklch(97% 0.035 75);
+  --danger:oklch(52% 0.20 25);--danger-bg:oklch(97% 0.035 25);
+  --sidebar-w:220px;--topbar-h:56px;--r:6px;
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;
+  --mono:'JetBrains Mono','IBM Plex Mono',ui-monospace,Menlo,monospace
+}
+body{font-family:var(--font);background:var(--bg);color:var(--fg);font-size:14px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+.sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;overflow-y:auto}
+.sidebar-brand{height:var(--topbar-h);display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.brand-mark{width:28px;height:28px;background:var(--fg);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--surface);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:-0.5px;flex-shrink:0}
+.brand-name{font-size:13.5px;font-weight:600;letter-spacing:-0.02em}
+.nav-section{padding:8px 0;flex:1}
+.nav-list{list-style:none}
+.nav-item{position:relative}
+.nav-item a{display:flex;align-items:center;gap:9px;padding:7px 16px;color:var(--muted);text-decoration:none;font-size:13px;transition:color .1s,background .1s}
+.nav-item a:hover{color:var(--fg);background:var(--bg)}
+.nav-item.active a{color:var(--fg);font-weight:500;background:var(--bg)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:2.5px;height:18px;background:var(--accent);border-radius:0 2px 2px 0}
+.nav-icon{width:15px;height:15px;flex-shrink:0;opacity:.65}
+.nav-item.active .nav-icon,.nav-item a:hover .nav-icon{opacity:1}
+.sidebar-footer{border-top:1px solid var(--border);padding:12px 16px;flex-shrink:0}
+.sidebar-footer-row{display:flex;align-items:center;justify-content:space-between;font-size:10.5px;font-family:var(--mono);color:var(--muted);line-height:1.8}
+.status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.status-dot.ok{background:var(--success)}.status-dot.warn{background:var(--warning)}
+.sidebar-veil{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:99}
+.main{margin-left:var(--sidebar-w);min-height:100vh;display:flex;flex-direction:column}
+.topbar{height:var(--topbar-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;justify-content:space-between;position:sticky;top:0;z-index:50;gap:12px}
+.topbar-left{display:flex;align-items:center;gap:10px;flex:1}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.menu-btn{display:none;background:none;border:none;cursor:pointer;padding:6px;color:var(--fg);border-radius:var(--r)}
+.page-title{font-size:14.5px;font-weight:600;letter-spacing:-0.02em}
+.content{padding:24px;flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .1s;font-family:var(--font);line-height:1;text-decoration:none;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-primary:hover{opacity:.87}
+.btn-secondary{background:var(--surface);color:var(--fg);border-color:var(--border)}.btn-secondary:hover{background:var(--bg)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid transparent;cursor:pointer;font-family:var(--font);font-size:13px;padding:6px 10px;border-radius:var(--r)}.btn-ghost:hover{color:var(--fg);background:var(--bg)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:500;font-family:var(--mono);white-space:nowrap}
+.pill-success{background:var(--success-bg);color:var(--success)}.pill-warning{background:var(--warning-bg);color:var(--warning)}.pill-danger{background:var(--danger-bg);color:var(--danger)}.pill-accent{background:var(--accent-bg);color:var(--accent)}.pill-neutral{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.card-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-title{font-size:13px;font-weight:600;letter-spacing:-0.01em}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:9px 16px;font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono);border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg)}
+thead th.r{text-align:right}
+tbody tr{border-bottom:1px solid var(--border);transition:background .08s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:oklch(98.5% 0.002 240)}
+td{padding:10px 16px;vertical-align:middle}
+td.mono{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+td.mono strong{color:var(--fg)}
+td.r{text-align:right}
+
+/* Bar indicator */
+.bar-cell{display:flex;align-items:center;gap:8px}
+.bar-wrap{flex:1;min-width:60px;max-width:100px;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.bar-fill{height:5px;border-radius:3px}
+
+/* Section divider */
+.section-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-family:var(--mono);margin:24px 0 12px}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);backdrop-filter:blur(3px);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity .15s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:10px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 56px rgba(0,0,0,.1);transform:translateY(10px);transition:transform .15s}
+.overlay.open .modal{transform:translateY(0)}
+.modal-hd{padding:18px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:14.5px;font-weight:600;letter-spacing:-0.02em}
+.modal-bd{padding:20px 24px}
+.modal-ft{padding:16px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12px;font-weight:500;color:var(--fg);margin-bottom:5px}
+.form-input,.form-select{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);background:var(--surface);color:var(--fg);outline:none;transition:border-color .1s}
+.form-input:focus,.form-select:focus{border-color:var(--accent)}
+.form-input::placeholder{color:var(--muted)}
+.form-hint{font-size:11px;color:var(--muted);margin-top:4px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);transition:transform .22s ease}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-veil.open{display:block}
+  .main{margin-left:0}
+  .menu-btn{display:flex}
+  .form-row{grid-template-columns:1fr}
+  .content{padding:16px}
+  .topbar{padding:0 16px}
+}
+</style>
+</head>
+<body>
+<div class="sidebar-veil" id="sideVeil"></div>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-mark">MQ</div>
+    <span class="brand-name">MQ Platform</span>
+  </div>
+  <div class="nav-section">
+    <ul class="nav-list">
+      <li class="nav-item"><a href="index.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>總覽</a></li>
+      <li class="nav-item"><a href="dashboard.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,11 5,7 8,9 11,4 15,7"/><rect x="1" y="1" width="14" height="14" rx="1.5"/></svg>Dashboard</a></li>
+      <li class="nav-item"><a href="task-management.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M4 6h8M4 9.5h5"/></svg>Task 管理</a></li>
+      <li class="nav-item"><a href="event-management.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a5 5 0 015 5v3l1 2H2l1-2V7a5 5 0 015-5z"/><path d="M6.5 13.5a1.5 1.5 0 003 0"/></svg>Event 管理</a></li>
+      <li class="nav-item"><a href="scheduler.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2.5 2"/></svg>Scheduler</a></li>
+      <li class="nav-item active"><a href="queue-management.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5l6-3 6 3-6 3-6-3z"/><path d="M2 9l6 3 6-3"/><line x1="2" y1="5" x2="2" y2="9"/><line x1="14" y1="5" x2="14" y2="9"/></svg>Queue 管理</a></li>
+      <li class="nav-item"><a href="callback-logs.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M4 7l3 2.5-3 2.5M9 12h3"/></svg>Callback 紀錄</a></li>
+    </ul>
+  </div>
+  <div class="sidebar-footer">
+    <div class="sidebar-footer-row"><span><span class="status-dot ok"></span>RabbitMQ</span><span>3.13.7</span></div>
+    <div class="sidebar-footer-row"><span style="color:var(--success)">● 連線正常</span><span>amqp://localhost</span></div>
+  </div>
+</nav>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="menu-btn" id="menuBtn" aria-label="開啟選單"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg></button>
+      <span class="page-title">Queue 管理</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-secondary btn-sm" onclick="location.reload()">重新整理</button>
+      <button class="btn btn-primary btn-sm" onclick="openModal()">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
+        新增 Queue
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+    <!-- Main queues -->
+    <div class="card" style="margin-bottom:0">
+      <div class="card-header">
+        <span class="card-title">Queue 列表</span>
+        <span style="font-size:11.5px;font-family:var(--mono);color:var(--muted)">共 12 個 Queue · 10 正常 · 2 警告</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Queue 名稱</th>
+              <th class="r">Ready</th>
+              <th class="r">Unacked</th>
+              <th class="r">Total</th>
+              <th>消費者</th>
+              <th>使用率</th>
+              <th>DLQ</th>
+              <th>狀態</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono"><strong>platform.orders</strong></td>
+              <td class="mono r">1,243</td>
+              <td class="mono r">12</td>
+              <td class="mono r">1,255</td>
+              <td class="mono">4 / 4</td>
+              <td>
+                <div class="bar-cell">
+                  <div class="bar-wrap"><div class="bar-fill" style="width:52%;background:var(--success)"></div></div>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">52%</span>
+                </div>
+              </td>
+              <td class="mono" style="color:var(--muted)">0</td>
+              <td><span class="pill pill-success">正常</span></td>
+              <td><button class="btn btn-ghost btn-sm">設定</button></td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>platform.webhooks</strong></td>
+              <td class="mono r">1,891</td>
+              <td class="mono r">45</td>
+              <td class="mono r">1,936</td>
+              <td class="mono">6 / 6</td>
+              <td>
+                <div class="bar-cell">
+                  <div class="bar-wrap"><div class="bar-fill" style="width:81%;background:var(--warning)"></div></div>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--warning)">81%</span>
+                </div>
+              </td>
+              <td class="mono" style="color:var(--danger)">3</td>
+              <td><span class="pill pill-warning">警告</span></td>
+              <td><button class="btn btn-ghost btn-sm">設定</button></td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>platform.reports</strong></td>
+              <td class="mono r">234</td>
+              <td class="mono r">89</td>
+              <td class="mono r">323</td>
+              <td class="mono">1 / 2</td>
+              <td>
+                <div class="bar-cell">
+                  <div class="bar-wrap"><div class="bar-fill" style="width:78%;background:var(--warning)"></div></div>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--warning)">78%</span>
+                </div>
+              </td>
+              <td class="mono" style="color:var(--danger)">1</td>
+              <td><span class="pill pill-warning">警告</span></td>
+              <td><button class="btn btn-ghost btn-sm">設定</button></td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>platform.notifications</strong></td>
+              <td class="mono r">428</td>
+              <td class="mono r">3</td>
+              <td class="mono r">431</td>
+              <td class="mono">2 / 2</td>
+              <td>
+                <div class="bar-cell">
+                  <div class="bar-wrap"><div class="bar-fill" style="width:43%;background:var(--success)"></div></div>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">43%</span>
+                </div>
+              </td>
+              <td class="mono" style="color:var(--muted)">0</td>
+              <td><span class="pill pill-success">正常</span></td>
+              <td><button class="btn btn-ghost btn-sm">設定</button></td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>platform.emails</strong></td>
+              <td class="mono r">87</td>
+              <td class="mono r">0</td>
+              <td class="mono r">87</td>
+              <td class="mono">1 / 1</td>
+              <td>
+                <div class="bar-cell">
+                  <div class="bar-wrap"><div class="bar-fill" style="width:18%;background:var(--success)"></div></div>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">18%</span>
+                </div>
+              </td>
+              <td class="mono" style="color:var(--muted)">0</td>
+              <td><span class="pill pill-success">正常</span></td>
+              <td><button class="btn btn-ghost btn-sm">設定</button></td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>platform.payments</strong></td>
+              <td class="mono r">312</td>
+              <td class="mono r">8</td>
+              <td class="mono r">320</td>
+              <td class="mono">3 / 3</td>
+              <td>
+                <div class="bar-cell">
+                  <div class="bar-wrap"><div class="bar-fill" style="width:32%;background:var(--success)"></div></div>
+                  <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">32%</span>
+                </div>
+              </td>
+              <td class="mono" style="color:var(--muted)">0</td>
+              <td><span class="pill pill-success">正常</span></td>
+              <td><button class="btn btn-ghost btn-sm">設定</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DLQ section -->
+    <div class="section-title">死信佇列（Dead Letter Queue）</div>
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">DLQ 訊息</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="pill pill-danger">4 則待處理</span>
+          <button class="btn btn-secondary btn-sm">全部重送</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>來源 Queue</th>
+              <th>訊息 ID</th>
+              <th>死亡原因</th>
+              <th>進入 DLQ 時間</th>
+              <th>重試次數</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">platform.webhooks</td>
+              <td class="mono"><strong>msg-a9f3c2</strong></td>
+              <td style="font-size:12.5px;color:var(--danger)">callback_timeout</td>
+              <td class="mono">06-20 09:08:41</td>
+              <td class="mono">3/3</td>
+              <td><button class="btn btn-ghost btn-sm">重送</button></td>
+            </tr>
+            <tr>
+              <td class="mono">platform.webhooks</td>
+              <td class="mono"><strong>msg-b7e1d4</strong></td>
+              <td style="font-size:12.5px;color:var(--danger)">callback_timeout</td>
+              <td class="mono">06-20 08:55:17</td>
+              <td class="mono">3/3</td>
+              <td><button class="btn btn-ghost btn-sm">重送</button></td>
+            </tr>
+            <tr>
+              <td class="mono">platform.webhooks</td>
+              <td class="mono"><strong>msg-c4a8e9</strong></td>
+              <td style="font-size:12.5px;color:var(--danger)">http_503</td>
+              <td class="mono">06-20 08:32:09</td>
+              <td class="mono">3/3</td>
+              <td><button class="btn btn-ghost btn-sm">重送</button></td>
+            </tr>
+            <tr>
+              <td class="mono">platform.reports</td>
+              <td class="mono"><strong>msg-d2f6b1</strong></td>
+              <td style="font-size:12.5px;color:var(--danger)">http_429</td>
+              <td class="mono">06-19 22:10:44</td>
+              <td class="mono">3/3</td>
+              <td><button class="btn btn-ghost btn-sm">重送</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Queue Modal -->
+<div class="overlay" id="queueOverlay">
+  <div class="modal">
+    <div class="modal-hd">
+      <span class="modal-title">新增 Queue</span>
+      <button style="background:none;border:none;cursor:pointer;color:var(--muted);padding:4px" onclick="closeModal()"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg></button>
+    </div>
+    <div class="modal-bd">
+      <div class="form-group">
+        <label class="form-label">Queue 名稱</label>
+        <input class="form-input" type="text" placeholder="例如：platform.new-feature" style="font-family:var(--mono)">
+        <div class="form-hint">建議格式：platform.{功能名稱}，使用小寫與點號</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">最大訊息數</label>
+          <input class="form-input" type="number" placeholder="10000">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">訊息 TTL（毫秒）</label>
+          <input class="form-input" type="number" placeholder="86400000">
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:16px">
+        <label class="form-label">DLQ 綁定</label>
+        <select class="form-select">
+          <option value="">不啟用 DLQ</option>
+          <option>platform.dlq</option>
+          <option>新建 DLQ</option>
+        </select>
+        <div class="form-hint">死信訊息將自動轉入 DLQ</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">最大重試次數</label>
+          <input class="form-input" type="number" placeholder="3">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">Durable</label>
+          <select class="form-select">
+            <option>是（持久化）</option>
+            <option>否</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="closeModal()">建立 Queue</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var sidebar=document.getElementById('sidebar');
+  var veil=document.getElementById('sideVeil');
+  var menuBtn=document.getElementById('menuBtn');
+  function openS(){sidebar.classList.add('open');veil.classList.add('open')}
+  function closeS(){sidebar.classList.remove('open');veil.classList.remove('open')}
+  menuBtn&&menuBtn.addEventListener('click',function(){sidebar.classList.contains('open')?closeS():openS()});
+  veil&&veil.addEventListener('click',closeS);
+
+  var overlay=document.getElementById('queueOverlay');
+  window.openModal=function(){overlay.classList.add('open')};
+  window.closeModal=function(){overlay.classList.remove('open')};
+  overlay&&overlay.addEventListener('click',function(e){if(e.target===overlay)closeModal()});
+})();
+</script>
+</body>
+</html>

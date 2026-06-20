@@ -3,7 +3,8 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from qdrant_client import QdrantClient
 
@@ -14,9 +15,12 @@ from import_104_jobs_to_qdrant import (
     DEFAULT_QDRANT_URL,
     build_embedding_text,
     build_payload,
+    build_query_filter,
     download_kaggle_dataset,
+    parse_interactive_search_input,
     prepare_jobs,
     search_jobs,
+    search_jobs_with_client,
     verify_import,
 )
 
@@ -152,6 +156,64 @@ class TransformTests(unittest.TestCase):
             resolved = download_kaggle_dataset(DEFAULT_KAGGLE_DATASET)
 
         self.assertEqual(resolved, csv_path)
+
+    def test_build_query_filter_returns_none_without_city(self) -> None:
+        self.assertIsNone(build_query_filter(None))
+
+    def test_build_query_filter_returns_filter_with_city(self) -> None:
+        query_filter = build_query_filter("臺北市")
+        self.assertIsNotNone(query_filter)
+        self.assertEqual(query_filter.must[0].key, "work_city")
+        self.assertEqual(query_filter.must[0].match.value, "臺北市")
+
+    def test_parse_interactive_search_input_parses_commands(self) -> None:
+        self.assertEqual(parse_interactive_search_input(":quit").kind, "quit")
+        self.assertEqual(parse_interactive_search_input(":show").kind, "show")
+        self.assertEqual(parse_interactive_search_input(":clear-city").kind, "clear-city")
+        self.assertEqual(parse_interactive_search_input(":city 臺北市").value, "臺北市")
+        self.assertEqual(parse_interactive_search_input(":limit 7").value, 7)
+        self.assertEqual(parse_interactive_search_input("軟體工程師 台北").kind, "query")
+
+    def test_parse_interactive_search_input_rejects_bad_command(self) -> None:
+        with self.assertRaises(ValueError):
+            parse_interactive_search_input(":unknown")
+
+        with self.assertRaises(ValueError):
+            parse_interactive_search_input(":limit 0")
+
+    def test_search_jobs_with_client_reuses_supplied_model_and_client(self) -> None:
+        fake_model = Mock()
+        fake_vector = Mock()
+        fake_vector.tolist.return_value = [0.1, 0.2, 0.3]
+        fake_model.query_embed.return_value = iter([fake_vector])
+
+        fake_client = Mock()
+        fake_client.query_points.return_value = SimpleNamespace(
+            points=[
+                SimpleNamespace(
+                    id=123,
+                    score=0.99,
+                    payload={
+                        "title": "資料工程師",
+                        "company_name": "測試科技",
+                        "work_city": "臺北市",
+                    },
+                )
+            ]
+        )
+
+        results = search_jobs_with_client(
+            client=fake_client,
+            model=fake_model,
+            collection_name="jobs_104_smoke",
+            query="資料工程師 台北",
+            city="臺北市",
+            limit=3,
+        )
+
+        fake_model.query_embed.assert_called_once_with("資料工程師 台北")
+        fake_client.query_points.assert_called_once()
+        self.assertEqual(results[0]["title"], "資料工程師")
 
 
 @unittest.skipUnless(os.getenv("RUN_QDRANT_INTEGRATION") == "1", "integration test disabled")

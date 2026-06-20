@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MQ Platform — 集中管理平台</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:oklch(99% 0.002 240);--surface:oklch(100% 0 0);
+  --fg:oklch(18% 0.012 250);--muted:oklch(54% 0.012 250);
+  --border:oklch(92% 0.005 250);--accent:oklch(58% 0.18 255);
+  --accent-bg:oklch(97% 0.008 255);
+  --success:oklch(56% 0.17 145);--success-bg:oklch(97% 0.035 145);
+  --warning:oklch(60% 0.14 75);--warning-bg:oklch(97% 0.035 75);
+  --danger:oklch(52% 0.20 25);--danger-bg:oklch(97% 0.035 25);
+  --sidebar-w:220px;--topbar-h:56px;--r:6px;
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;
+  --mono:'JetBrains Mono','IBM Plex Mono',ui-monospace,Menlo,monospace
+}
+body{font-family:var(--font);background:var(--bg);color:var(--fg);font-size:14px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+.sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;overflow-y:auto}
+.sidebar-brand{height:var(--topbar-h);display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.brand-mark{width:28px;height:28px;background:var(--fg);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--surface);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:-0.5px;flex-shrink:0}
+.brand-name{font-size:13.5px;font-weight:600;letter-spacing:-0.02em}
+.nav-section{padding:8px 0;flex:1}
+.nav-list{list-style:none}
+.nav-item{position:relative}
+.nav-item a{display:flex;align-items:center;gap:9px;padding:7px 16px;color:var(--muted);text-decoration:none;font-size:13px;transition:color .1s,background .1s}
+.nav-item a:hover{color:var(--fg);background:var(--bg)}
+.nav-item.active a{color:var(--fg);font-weight:500;background:var(--bg)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:2.5px;height:18px;background:var(--accent);border-radius:0 2px 2px 0}
+.nav-icon{width:15px;height:15px;flex-shrink:0;opacity:.65}
+.nav-item.active .nav-icon,.nav-item a:hover .nav-icon{opacity:1}
+.sidebar-footer{border-top:1px solid var(--border);padding:12px 16px;flex-shrink:0}
+.sidebar-footer-row{display:flex;align-items:center;justify-content:space-between;font-size:10.5px;font-family:var(--mono);color:var(--muted);line-height:1.8}
+.status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.status-dot.ok{background:var(--success)}.status-dot.warn{background:var(--warning)}.status-dot.err{background:var(--danger)}
+.sidebar-veil{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:99}
+.main{margin-left:var(--sidebar-w);min-height:100vh;display:flex;flex-direction:column}
+.topbar{height:var(--topbar-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;justify-content:space-between;position:sticky;top:0;z-index:50;gap:12px}
+.topbar-left{display:flex;align-items:center;gap:10px;flex:1}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.menu-btn{display:none;background:none;border:none;cursor:pointer;padding:6px;color:var(--fg);border-radius:var(--r)}
+.menu-btn:hover{background:var(--bg)}
+.page-title{font-size:14.5px;font-weight:600;letter-spacing:-0.02em}
+.content{padding:24px;flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .1s;font-family:var(--font);line-height:1;text-decoration:none;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-primary:hover{opacity:.87}
+.btn-secondary{background:var(--surface);color:var(--fg);border-color:var(--border)}.btn-secondary:hover{background:var(--bg)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:500;font-family:var(--mono);white-space:nowrap}
+.pill-success{background:var(--success-bg);color:var(--success)}.pill-warning{background:var(--warning-bg);color:var(--warning)}.pill-danger{background:var(--danger-bg);color:var(--danger)}.pill-accent{background:var(--accent-bg);color:var(--accent)}.pill-neutral{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+
+/* Home-specific */
+.home-hero{margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.home-hero-title{font-size:20px;font-weight:700;letter-spacing:-0.03em;margin-bottom:6px}
+.home-hero-sub{font-size:13px;color:var(--muted);line-height:1.6;max-width:560px}
+.status-banner{display:flex;align-items:center;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:28px}
+.status-item{display:flex;align-items:center;gap:8px;padding:10px 20px;font-size:11.5px;font-family:var(--mono);color:var(--muted);border-right:1px solid var(--border)}
+.status-item:last-child{border-right:none}
+.status-item strong{color:var(--fg);font-weight:600}
+.module-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:32px}
+.module-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px;text-decoration:none;color:inherit;transition:border-color .12s,box-shadow .12s;display:block}
+.module-card:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg)}
+.module-card-inner{display:flex;flex-direction:column;height:100%}
+.module-icon{width:36px;height:36px;border-radius:8px;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--fg);margin-bottom:14px;flex-shrink:0}
+.module-name{font-size:13.5px;font-weight:600;letter-spacing:-0.01em;margin-bottom:5px}
+.module-desc{font-size:12.5px;color:var(--muted);line-height:1.55;margin-bottom:14px;flex:1}
+.module-link{font-size:12px;font-weight:500;color:var(--accent);display:flex;align-items:center;gap:4px}
+.module-link svg{transition:transform .1s}
+.module-card:hover .module-link svg{transform:translateX(3px)}
+.section-title{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-family:var(--mono);margin-bottom:12px}
+.api-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.api-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px}
+.api-method{font-size:10px;font-weight:700;font-family:var(--mono);padding:2px 6px;border-radius:3px;margin-bottom:8px;display:inline-block}
+.api-method.post{background:var(--accent-bg);color:var(--accent)}
+.api-path{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--fg);margin-bottom:4px}
+.api-desc{font-size:12px;color:var(--muted);line-height:1.5}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);transition:transform .22s ease}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-veil.open{display:block}
+  .main{margin-left:0}
+  .menu-btn{display:flex}
+  .module-grid{grid-template-columns:repeat(2,1fr)}
+  .api-grid{grid-template-columns:1fr}
+  .status-banner{flex-wrap:wrap}
+  .content{padding:16px}
+  .topbar{padding:0 16px}
+}
+@media(max-width:480px){.module-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="sidebar-veil" id="sideVeil"></div>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-mark">MQ</div>
+    <span class="brand-name">MQ Platform</span>
+  </div>
+  <div class="nav-section">
+    <ul class="nav-list">
+      <li class="nav-item active">
+        <a href="index.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+          總覽
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="dashboard.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,11 5,7 8,9 11,4 15,7"/><rect x="1" y="1" width="14" height="14" rx="1.5"/></svg>
+          Dashboard
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="task-management.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M4 6h8M4 9.5h5"/></svg>
+          Task 管理
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="event-management.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a5 5 0 015 5v3l1 2H2l1-2V7a5 5 0 015-5z"/><path d="M6.5 13.5a1.5 1.5 0 003 0"/></svg>
+          Event 管理
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="scheduler.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2.5 2"/></svg>
+          Scheduler
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="queue-management.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5l6-3 6 3-6 3-6-3z"/><path d="M2 9l6 3 6-3"/><line x1="2" y1="5" x2="2" y2="9"/><line x1="14" y1="5" x2="14" y2="9"/></svg>
+          Queue 管理
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="callback-logs.html">
+          <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M4 7l3 2.5-3 2.5M9 12h3"/></svg>
+          Callback 紀錄
+        </a>
+      </li>
+    </ul>
+  </div>
+  <div class="sidebar-footer">
+    <div class="sidebar-footer-row">
+      <span><span class="status-dot ok"></span>RabbitMQ</span>
+      <span>3.13.7</span>
+    </div>
+    <div class="sidebar-footer-row">
+      <span style="color:var(--success)">● 連線正常</span>
+      <span>amqp://localhost</span>
+    </div>
+  </div>
+</nav>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="menu-btn" id="menuBtn" aria-label="開啟選單">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg>
+      </button>
+      <span class="page-title">平台總覽</span>
+    </div>
+    <div class="topbar-right">
+      <span class="pill pill-success">系統正常</span>
+      <a href="dashboard.html" class="btn btn-primary btn-sm">前往 Dashboard</a>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="home-hero">
+      <div class="home-hero-title">MQ Platform</div>
+      <div class="home-hero-sub">以 RabbitMQ 為基礎的集中化訊息佇列管理平台，整合 Event 通知、Task 回呼與 Scheduler 排程，提供統一的 pub/sub API 與 SLO 監控介面。</div>
+    </div>
+
+    <div class="status-banner">
+      <div class="status-item">
+        <span class="status-dot ok"></span>
+        <span>RabbitMQ <strong>3.13.7</strong></span>
+      </div>
+      <div class="status-item">
+        <span>Queue 數量 <strong>12</strong></span>
+      </div>
+      <div class="status-item">
+        <span>活躍 Task <strong>847</strong></span>
+      </div>
+      <div class="status-item">
+        <span>SLO 健康度 <strong style="color:var(--success)">98.3%</strong></span>
+      </div>
+      <div class="status-item">
+        <span>待處理 Callback <strong>3</strong></span>
+      </div>
+    </div>
+
+    <div class="section-title">功能模組</div>
+    <div class="module-grid">
+
+      <a href="dashboard.html" class="module-card">
+        <div class="module-card-inner">
+          <div class="module-icon">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,11 5,7 8,9 11,4 15,7"/><rect x="1" y="1" width="14" height="14" rx="1.5"/></svg>
+          </div>
+          <div class="module-name">Dashboard 總覽</div>
+          <div class="module-desc">即時監控 Queue 健康狀態、訊息吞吐量與 SLO 達成率，掌握平台整體運行情況。</div>
+          <div class="module-link">
+            進入 Dashboard
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h8M6 2l4 4-4 4"/></svg>
+          </div>
+        </div>
+      </a>
+
+      <a href="task-management.html" class="module-card">
+        <div class="module-card-inner">
+          <div class="module-icon">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M4 6h8M4 9.5h5"/></svg>
+          </div>
+          <div class="module-name">Task 管理</div>
+          <div class="module-desc">建立與管理 Event、Task、Scheduler 三種類型的任務，配置 Callback URL 與 SLO timeout。</div>
+          <div class="module-link">
+            管理 Task
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h8M6 2l4 4-4 4"/></svg>
+          </div>
+        </div>
+      </a>
+
+      <a href="event-management.html" class="module-card">
+        <div class="module-card-inner">
+          <div class="module-icon">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a5 5 0 015 5v3l1 2H2l1-2V7a5 5 0 015-5z"/><path d="M6.5 13.5a1.5 1.5 0 003 0"/></svg>
+          </div>
+          <div class="module-name">Event 管理</div>
+          <div class="module-desc">管理事件訂閱者、查看 pub 發布紀錄，以及 Register API 訂閱事件的設定介面。</div>
+          <div class="module-link">
+            管理 Event
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h8M6 2l4 4-4 4"/></svg>
+          </div>
+        </div>
+      </a>
+
+      <a href="scheduler.html" class="module-card">
+        <div class="module-card-inner">
+          <div class="module-icon">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2.5 2"/></svg>
+          </div>
+          <div class="module-name">Scheduler</div>
+          <div class="module-desc">排程延遲執行任務，設定指定時間回呼 API，支援一次性與 Cron 週期性排程。</div>
+          <div class="module-link">
+            管理排程
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h8M6 2l4 4-4 4"/></svg>
+          </div>
+        </div>
+      </a>
+
+      <a href="queue-management.html" class="module-card">
+        <div class="module-card-inner">
+          <div class="module-icon">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5l6-3 6 3-6 3-6-3z"/><path d="M2 9l6 3 6-3"/><line x1="2" y1="5" x2="2" y2="9"/><line x1="14" y1="5" x2="14" y2="9"/></svg>
+          </div>
+          <div class="module-name">Queue 管理</div>
+          <div class="module-desc">監控 Queue 訊息量、Unacked 數、消費者連線，以及死信佇列（DLQ）的管理。</div>
+          <div class="module-link">
+            管理 Queue
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h8M6 2l4 4-4 4"/></svg>
+          </div>
+        </div>
+      </a>
+
+      <a href="callback-logs.html" class="module-card">
+        <div class="module-card-inner">
+          <div class="module-icon">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M4 7l3 2.5-3 2.5M9 12h3"/></svg>
+          </div>
+          <div class="module-name">Callback 執行紀錄</div>
+          <div class="module-desc">查看每次 Callback 的啟動時間、結束時間、耗時，以及任何錯誤訊息的詳細日誌。</div>
+          <div class="module-link">
+            查看紀錄
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h8M6 2l4 4-4 4"/></svg>
+          </div>
+        </div>
+      </a>
+
+    </div>
+
+    <div class="section-title" style="margin-bottom:12px">核心 API</div>
+    <div class="api-grid">
+      <div class="api-card">
+        <div class="api-method post">POST</div>
+        <div class="api-path">/pub/task</div>
+        <div class="api-desc">建立 Task，支援立即執行（immediate）與延遲執行（delayed），回呼指定的 Callback API。</div>
+      </div>
+      <div class="api-card">
+        <div class="api-method post">POST</div>
+        <div class="api-path">/pub/event</div>
+        <div class="api-desc">發布 Event，系統根據訂閱者清單自動派發 Task，執行對應的 Callback。</div>
+      </div>
+      <div class="api-card">
+        <div class="api-method post">POST</div>
+        <div class="api-path">/register</div>
+        <div class="api-desc">訂閱 Event，將 Subscriber 端點與事件名稱綁定，後續 pub 時自動觸發。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var sidebar=document.getElementById('sidebar');
+  var veil=document.getElementById('sideVeil');
+  var menuBtn=document.getElementById('menuBtn');
+  function open(){sidebar.classList.add('open');veil.classList.add('open')}
+  function close(){sidebar.classList.remove('open');veil.classList.remove('open')}
+  menuBtn&&menuBtn.addEventListener('click',function(){sidebar.classList.contains('open')?close():open()});
+  veil&&veil.addEventListener('click',close);
+})();
+</script>
+</body>
+</html>

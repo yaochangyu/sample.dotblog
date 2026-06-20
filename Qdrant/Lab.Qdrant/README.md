@@ -67,12 +67,28 @@ uv run import_104_jobs_to_qdrant.py search --query "會計 全職 台北"
 uv run import_104_jobs_to_qdrant.py search --query "軟體工程師" --city "台北市" --limit 10
 ```
 
+### 7. 常駐互動查詢
+
+```bash
+uv run import_104_jobs_to_qdrant.py interactive-search --collection jobs_104_taiwan
+```
+
+進入後可直接連續輸入 query，不會每次都重建 `TextEmbedding`。
+
+可用指令：
+
+- `:city 臺北市`：設定城市過濾
+- `:clear-city`：清掉城市過濾
+- `:limit 10`：調整回傳筆數
+- `:show`：顯示目前查詢設定
+- `:quit`：離開互動模式
+
 ## 腳本說明
 
 | 腳本 | 說明 |
 |------|------|
 | `collect_1111_jobs.py` | 呼叫 1111 API 取清單，再爬每筆詳情頁補齊欄位，輸出 enriched JSON |
-| `import_104_jobs_to_qdrant.py` | 下載 Kaggle 104 資料集（或讀自訂輸入）→ 產生 vector → 匯入 Qdrant，支援 import / verify / search / prepare |
+| `import_104_jobs_to_qdrant.py` | 下載 Kaggle 104 資料集（或讀自訂輸入）→ 產生 vector → 匯入 Qdrant，支援 import / verify / search / interactive-search / prepare |
 | `qdrant_104_jobs_workbench.ipynb` | Jupyter 工作台，直接引用 `import_104_jobs_to_qdrant.py` 的函式 |
 | `test_import_104_jobs_to_qdrant.py` | 單元測試 + 整合測試 |
 

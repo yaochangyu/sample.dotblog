@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scheduler — MQ Platform</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:oklch(99% 0.002 240);--surface:oklch(100% 0 0);
+  --fg:oklch(18% 0.012 250);--muted:oklch(54% 0.012 250);
+  --border:oklch(92% 0.005 250);--accent:oklch(58% 0.18 255);
+  --accent-bg:oklch(97% 0.008 255);
+  --success:oklch(56% 0.17 145);--success-bg:oklch(97% 0.035 145);
+  --warning:oklch(60% 0.14 75);--warning-bg:oklch(97% 0.035 75);
+  --danger:oklch(52% 0.20 25);--danger-bg:oklch(97% 0.035 25);
+  --sched:oklch(97% 0.03 290);--sched-fg:oklch(50% 0.18 290);
+  --sidebar-w:220px;--topbar-h:56px;--r:6px;
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif;
+  --mono:'JetBrains Mono','IBM Plex Mono',ui-monospace,Menlo,monospace
+}
+body{font-family:var(--font);background:var(--bg);color:var(--fg);font-size:14px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+.sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:100;overflow-y:auto}
+.sidebar-brand{height:var(--topbar-h);display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--border);flex-shrink:0}
+.brand-mark{width:28px;height:28px;background:var(--fg);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--surface);font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:-0.5px;flex-shrink:0}
+.brand-name{font-size:13.5px;font-weight:600;letter-spacing:-0.02em}
+.nav-section{padding:8px 0;flex:1}
+.nav-list{list-style:none}
+.nav-item{position:relative}
+.nav-item a{display:flex;align-items:center;gap:9px;padding:7px 16px;color:var(--muted);text-decoration:none;font-size:13px;transition:color .1s,background .1s}
+.nav-item a:hover{color:var(--fg);background:var(--bg)}
+.nav-item.active a{color:var(--fg);font-weight:500;background:var(--bg)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:2.5px;height:18px;background:var(--accent);border-radius:0 2px 2px 0}
+.nav-icon{width:15px;height:15px;flex-shrink:0;opacity:.65}
+.nav-item.active .nav-icon,.nav-item a:hover .nav-icon{opacity:1}
+.sidebar-footer{border-top:1px solid var(--border);padding:12px 16px;flex-shrink:0}
+.sidebar-footer-row{display:flex;align-items:center;justify-content:space-between;font-size:10.5px;font-family:var(--mono);color:var(--muted);line-height:1.8}
+.status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.status-dot.ok{background:var(--success)}.status-dot.warn{background:var(--warning)}
+.sidebar-veil{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:99}
+.main{margin-left:var(--sidebar-w);min-height:100vh;display:flex;flex-direction:column}
+.topbar{height:var(--topbar-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;justify-content:space-between;position:sticky;top:0;z-index:50;gap:12px}
+.topbar-left{display:flex;align-items:center;gap:10px;flex:1}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.menu-btn{display:none;background:none;border:none;cursor:pointer;padding:6px;color:var(--fg);border-radius:var(--r)}
+.page-title{font-size:14.5px;font-weight:600;letter-spacing:-0.02em}
+.content{padding:24px;flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:all .1s;font-family:var(--font);line-height:1;text-decoration:none;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-primary:hover{opacity:.87}
+.btn-secondary{background:var(--surface);color:var(--fg);border-color:var(--border)}.btn-secondary:hover{background:var(--bg)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid transparent;cursor:pointer;font-family:var(--font);font-size:13px;padding:6px 10px;border-radius:var(--r)}.btn-ghost:hover{color:var(--fg);background:var(--bg)}
+.btn-sm{padding:4px 10px;font-size:12px}
+.pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:500;font-family:var(--mono);white-space:nowrap}
+.pill-success{background:var(--success-bg);color:var(--success)}.pill-warning{background:var(--warning-bg);color:var(--warning)}.pill-danger{background:var(--danger-bg);color:var(--danger)}.pill-accent{background:var(--accent-bg);color:var(--accent)}.pill-neutral{background:var(--bg);color:var(--muted);border:1px solid var(--border)}.pill-sched{background:var(--sched);color:var(--sched-fg)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.card-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.card-title{font-size:13px;font-weight:600;letter-spacing:-0.01em}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:9px 16px;font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:var(--mono);border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg)}
+tbody tr{border-bottom:1px solid var(--border);transition:background .08s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:oklch(98.5% 0.002 240)}
+td{padding:10px 16px;vertical-align:middle}
+td.mono{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+td.mono strong{color:var(--fg)}
+
+/* Metric summary */
+.summary-row{display:flex;gap:12px;margin-bottom:20px}
+.summary-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px}
+.summary-label{font-size:10.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-family:var(--mono);margin-bottom:6px}
+.summary-value{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums;font-family:var(--mono);letter-spacing:-0.02em;line-height:1}
+.summary-sub{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:4px}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:180px}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.search-input{width:100%;padding:7px 12px 7px 34px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);background:var(--surface);color:var(--fg);outline:none}
+.search-input:focus{border-color:var(--accent)}
+.search-input::placeholder{color:var(--muted)}
+.filter-select{padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);background:var(--surface);color:var(--fg);outline:none;cursor:pointer}
+
+/* Cron badge */
+.cron-badge{font-family:var(--mono);font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--muted)}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);backdrop-filter:blur(3px);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity .15s}
+.overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:10px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 56px rgba(0,0,0,.1);transform:translateY(10px);transition:transform .15s}
+.overlay.open .modal{transform:translateY(0)}
+.modal-hd{padding:18px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:14.5px;font-weight:600;letter-spacing:-0.02em}
+.modal-bd{padding:20px 24px}
+.modal-ft{padding:16px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:8px}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12px;font-weight:500;color:var(--fg);margin-bottom:5px}
+.form-input,.form-select,.form-textarea{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;font-family:var(--font);background:var(--surface);color:var(--fg);outline:none;transition:border-color .1s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent)}
+.form-input::placeholder,.form-textarea::placeholder{color:var(--muted)}
+.form-hint{font-size:11px;color:var(--muted);margin-top:4px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);transition:transform .22s ease}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-veil.open{display:block}
+  .main{margin-left:0}
+  .menu-btn{display:flex}
+  .summary-row{flex-wrap:wrap}
+  .summary-card{min-width:calc(50% - 6px)}
+  .form-row{grid-template-columns:1fr}
+  .content{padding:16px}
+  .topbar{padding:0 16px}
+}
+</style>
+</head>
+<body>
+<div class="sidebar-veil" id="sideVeil"></div>
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-mark">MQ</div>
+    <span class="brand-name">MQ Platform</span>
+  </div>
+  <div class="nav-section">
+    <ul class="nav-list">
+      <li class="nav-item"><a href="index.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>總覽</a></li>
+      <li class="nav-item"><a href="dashboard.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="1,11 5,7 8,9 11,4 15,7"/><rect x="1" y="1" width="14" height="14" rx="1.5"/></svg>Dashboard</a></li>
+      <li class="nav-item"><a href="task-management.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M4 6h8M4 9.5h5"/></svg>Task 管理</a></li>
+      <li class="nav-item"><a href="event-management.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a5 5 0 015 5v3l1 2H2l1-2V7a5 5 0 015-5z"/><path d="M6.5 13.5a1.5 1.5 0 003 0"/></svg>Event 管理</a></li>
+      <li class="nav-item active"><a href="scheduler.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2.5 2"/></svg>Scheduler</a></li>
+      <li class="nav-item"><a href="queue-management.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5l6-3 6 3-6 3-6-3z"/><path d="M2 9l6 3 6-3"/><line x1="2" y1="5" x2="2" y2="9"/><line x1="14" y1="5" x2="14" y2="9"/></svg>Queue 管理</a></li>
+      <li class="nav-item"><a href="callback-logs.html"><svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="2" width="14" height="12" rx="1.5"/><path d="M4 7l3 2.5-3 2.5M9 12h3"/></svg>Callback 紀錄</a></li>
+    </ul>
+  </div>
+  <div class="sidebar-footer">
+    <div class="sidebar-footer-row"><span><span class="status-dot ok"></span>RabbitMQ</span><span>3.13.7</span></div>
+    <div class="sidebar-footer-row"><span style="color:var(--success)">● 連線正常</span><span>amqp://localhost</span></div>
+  </div>
+</nav>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <button class="menu-btn" id="menuBtn" aria-label="開啟選單"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="5" x2="16" y2="5"/><line x1="2" y1="9" x2="16" y2="9"/><line x1="2" y1="13" x2="16" y2="13"/></svg></button>
+      <span class="page-title">Scheduler</span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-primary" onclick="openModal()">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="1" x2="7" y2="13"/><line x1="1" y1="7" x2="13" y2="7"/></svg>
+        新增排程
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+    <div class="summary-row">
+      <div class="summary-card">
+        <div class="summary-label">排程總數</div>
+        <div class="summary-value">117</div>
+        <div class="summary-sub">98 啟用 · 19 停用</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">今日執行</div>
+        <div class="summary-value">84</div>
+        <div class="summary-sub">成功 81 · 失敗 3</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">待執行（1h 內）</div>
+        <div class="summary-value" style="color:var(--accent)">12</div>
+        <div class="summary-sub">最近：每日報表 09:30</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">平均延遲</div>
+        <div class="summary-value">2.4s</div>
+        <div class="summary-sub">目標 &lt; 5s</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4"/><line x1="9" y1="9" x2="13" y2="13"/></svg>
+        <input class="search-input" type="text" placeholder="搜尋排程名稱…">
+      </div>
+      <select class="filter-select">
+        <option>全部類型</option>
+        <option>一次性</option>
+        <option>週期性 (Cron)</option>
+      </select>
+      <select class="filter-select">
+        <option>全部狀態</option>
+        <option>等待中</option>
+        <option>執行中</option>
+        <option>已完成</option>
+        <option>失敗</option>
+        <option>停用</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>排程 ID</th>
+              <th>名稱</th>
+              <th>類型</th>
+              <th>排程設定</th>
+              <th>Callback URL</th>
+              <th>上次執行</th>
+              <th>下次執行</th>
+              <th>狀態</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono"><strong>SC-0117</strong></td>
+              <td style="font-weight:500">每日報表產生</td>
+              <td><span class="pill pill-sched">週期性</span></td>
+              <td><span class="cron-badge">0 9 * * *</span></td>
+              <td class="mono">/api/reports/gen</td>
+              <td class="mono">06-20 09:00:02</td>
+              <td class="mono" style="color:var(--accent)">06-21 09:00:00</td>
+              <td><span class="pill pill-success">啟用</span></td>
+              <td><button class="btn btn-ghost btn-sm">編輯</button></td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>SC-0116</strong></td>
+              <td style="font-weight:500">推播定時發送</td>
+              <td><span class="pill pill-sched">週期性</span></td>
+              <td><span class="cron-badge">0 18 * * *</span></td>
+              <td class="mono">/api/push/batch</td>
+              <td class="mono">06-19 18:00:01</td>
+              <td class="mono" style="color:var(--accent)">06-20 18:00:00</td>
+              <td><span class="pill pill-success">啟用</span></td>
+              <td><button class="btn btn-ghost btn-sm">編輯</button></td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>SC-0115</strong></td>
+              <td style="font-weight:500">優惠碼過期通知</td>
+              <td><span class="pill pill-accent">一次性</span></td>
+              <td class="mono" style="font-size:11.5px">2026-06-25 12:00</td>
+              <td class="mono">/api/email/promo-expire</td>
+              <td class="mono">—</td>
+              <td class="mono" style="color:var(--accent)">06-25 12:00:00</td>
+              <td><span class="pill pill-success">等待中</span></td>
+              <td><button class="btn btn-ghost btn-sm">編輯</button></td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>SC-0114</strong></td>
+              <td style="font-weight:500">庫存健康巡檢</td>
+              <td><span class="pill pill-sched">週期性</span></td>
+              <td><span class="cron-badge">*/30 * * * *</span></td>
+              <td class="mono">/api/inventory/check</td>
+              <td class="mono">06-20 09:00:05</td>
+              <td class="mono" style="color:var(--accent)">06-20 09:30:00</td>
+              <td><span class="pill pill-accent">執行中</span></td>
+              <td><button class="btn btn-ghost btn-sm">編輯</button></td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>SC-0112</strong></td>
+              <td style="font-weight:500">每週帳單結算</td>
+              <td><span class="pill pill-sched">週期性</span></td>
+              <td><span class="cron-badge">0 0 * * 1</span></td>
+              <td class="mono">/api/billing/weekly</td>
+              <td class="mono">06-17 00:00:03</td>
+              <td class="mono">06-24 00:00:00</td>
+              <td><span class="pill pill-success">啟用</span></td>
+              <td><button class="btn btn-ghost btn-sm">編輯</button></td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>SC-0108</strong></td>
+              <td style="font-weight:500">清理過期 Token</td>
+              <td><span class="pill pill-sched">週期性</span></td>
+              <td><span class="cron-badge">0 3 * * *</span></td>
+              <td class="mono">/api/auth/cleanup</td>
+              <td class="mono">06-20 03:00:12</td>
+              <td class="mono">06-21 03:00:00</td>
+              <td><span class="pill pill-danger">失敗</span></td>
+              <td><button class="btn btn-ghost btn-sm">編輯</button></td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>SC-0101</strong></td>
+              <td style="font-weight:500">季度報告封存</td>
+              <td><span class="pill pill-sched">週期性</span></td>
+              <td><span class="cron-badge">0 0 1 */3 *</span></td>
+              <td class="mono">/api/reports/archive</td>
+              <td class="mono">04-01 00:00:01</td>
+              <td class="mono">07-01 00:00:00</td>
+              <td><span class="pill pill-neutral">停用</span></td>
+              <td><button class="btn btn-ghost btn-sm">編輯</button></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Scheduler Modal -->
+<div class="overlay" id="schedOverlay">
+  <div class="modal">
+    <div class="modal-hd">
+      <span class="modal-title">新增排程</span>
+      <button style="background:none;border:none;cursor:pointer;color:var(--muted);padding:4px" onclick="closeModal()"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/></svg></button>
+    </div>
+    <div class="modal-bd">
+      <div class="form-group">
+        <label class="form-label">排程名稱</label>
+        <input class="form-input" type="text" placeholder="例如：每日報表產生">
+      </div>
+      <div class="form-group">
+        <label class="form-label">執行類型</label>
+        <select class="form-select" id="schedType" onchange="toggleSchedType()">
+          <option value="cron">週期性（Cron 表達式）</option>
+          <option value="once">一次性（指定時間點）</option>
+        </select>
+      </div>
+      <div class="form-group" id="cronGroup">
+        <label class="form-label">Cron 表達式</label>
+        <input class="form-input" type="text" placeholder="0 9 * * *" style="font-family:var(--mono)">
+        <div class="form-hint">例：<code style="font-family:var(--mono)">0 9 * * *</code> = 每日 09:00</div>
+      </div>
+      <div class="form-group" id="onceGroup" style="display:none">
+        <label class="form-label">執行時間</label>
+        <input class="form-input" type="datetime-local">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Callback URL</label>
+        <input class="form-input" type="url" placeholder="https://your-service.internal/api/scheduled-task">
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">目標 Queue</label>
+          <select class="form-select">
+            <option>platform.orders</option>
+            <option>platform.reports</option>
+            <option>platform.notifications</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+          <label class="form-label">SLO Timeout（秒）</label>
+          <input class="form-input" type="number" placeholder="120">
+        </div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="closeModal()">建立排程</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var sidebar=document.getElementById('sidebar');
+  var veil=document.getElementById('sideVeil');
+  var menuBtn=document.getElementById('menuBtn');
+  function openS(){sidebar.classList.add('open');veil.classList.add('open')}
+  function closeS(){sidebar.classList.remove('open');veil.classList.remove('open')}
+  menuBtn&&menuBtn.addEventListener('click',function(){sidebar.classList.contains('open')?closeS():openS()});
+  veil&&veil.addEventListener('click',closeS);
+
+  var overlay=document.getElementById('schedOverlay');
+  window.openModal=function(){overlay.classList.add('open')};
+  window.closeModal=function(){overlay.classList.remove('open')};
+  overlay&&overlay.addEventListener('click',function(e){if(e.target===overlay)closeModal()});
+
+  window.toggleSchedType=function(){
+    var type=document.getElementById('schedType').value;
+    document.getElementById('cronGroup').style.display=type==='cron'?'':'none';
+    document.getElementById('onceGroup').style.display=type==='once'?'':'none';
+  };
+})();
+</script>
+</body>
+</html>
