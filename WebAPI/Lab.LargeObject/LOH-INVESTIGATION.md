@@ -11,8 +11,9 @@
 5. [LOH 會不會封頂？一路加測試次數的實驗記錄](#5-loh-會不會封頂一路加測試次數的實驗記錄)
 6. [用 dotnet-trace 找到真正原因](#6-用-dotnet-trace-找到真正原因)
 7. [附帶發現：反射式反序列化的隱藏成本](#7-附帶發現反射式反序列化的隱藏成本)
-8. [結論](#8-結論)
-9. [附錄：如何重現](#9-附錄如何重現)
+8. [反序列化配置量的最終解法：手刻 Utf8JsonReader 解析](#8-反序列化配置量的最終解法手刻-utf8jsonreader-解析)
+9. [結論](#9-結論)
+10. [附錄：如何重現](#10-附錄如何重現)
 
 ---
 
@@ -169,25 +170,69 @@ thread pool 淨變化為 0，直接跟「持續注入新 thread」的假設矛�
 
 這些都是 gen0 等級的小物件配置，快、便宜、GC 很快清掉，不會造成 LOH 壓力——這也是為什麼整個排查過程中完全沒注意到它們。但如果在意的是**整體配置量／輸送量**而不只是 LOH，這才是真正的大頭，而且完全是意料之外的副作用：因為 `MemberAccount`／`ContactInfo` 是用 `JsonSerializer.Deserialize<T>(ref reader, options)` 走**反射式**反序列化，不是 Source Generator。
 
-## 8. 結論
+## 8. 反序列化配置量的最終解法：手刻 Utf8JsonReader 解析
+
+第 7 節的建議（改用 Source Generator）**實測後被推翻**。過程跟結果都記錄在 `.issues/deserialize-allocation-reduction.issues.md`，這裡只記結論。
+
+### 8.1 失敗的方向：Source Generator
+
+換上 `JsonSerializerContext`（`[JsonSerializable]`）之後，`PooledMemberAccountArrayJsonConverter.Read()` 完全沒改，仍舊對每個陣列元素呼叫一次 `JsonSerializer.Deserialize<MemberAccount>(ref reader, options)`，只是讓 STJ 內部改用 source-gen 產生的 metadata 而不是反射。500 次 POST 的 trace 結果：
+
+| 型別 | 反射版本 | Source Generator 版本 |
+|---|---|---|
+| `ReadStackFrame[]` | 4,143,974,424 bytes | 4,746,789,784 bytes（**漲**） |
+| `ContactInfo`（裝箱） | 429,694,424 | 739,183,576（**漲將近 1 倍**） |
+| `System.Text.Json.ArgumentState` | 未出現 | **1,270,832,616（全新冒出來的大戶）** |
+| 主要問題型別總和 | ≈ 8.45GB | ≈ **10.12GB（更差）** |
+
+原因：`MemberAccount`/`ContactInfo` 的屬性都宣告 `required init`，STJ 不管反射還是 Source Generator，都得配置一個 `ArgumentState` 追蹤物件確認所有 required 屬性設定齊全——Source Generator 這條路徑的追蹤更嚴格、配置更多。**真正的問題不是「metadata 從哪來」，是「每個元素都各自呼叫一次頂層 `Deserialize<T>`」這個呼叫模式本身**。
+
+### 8.2 真正有效的方向：完全繞開 JsonSerializer.Deserialize&lt;T&gt;
+
+改成跟 `PooledDoubleArrayJsonConverter` 一致的手法：`PooledMemberAccountArrayJsonConverter` 直接用 `Utf8JsonReader` 逐欄位手刻解析 `MemberAccount`／`ContactInfo`，用一般的 C# 物件初始化語法建構 struct，完全不進入 STJ 的 metadata／argument-state 機制。
+
+第一版直接用 `reader.GetString()` 讀屬性名稱、`switch` 比對字串，`String` 配置量反而從 2.2GB 飆到 5.76GB——因為每個屬性**名稱**也都被當成一個新字串配置（`memberId`、`account`、`contact` 這些 key 本身，不只是值）。改用 `reader.ValueTextEquals("memberId"u8)` 在 UTF8 位元組層級比對屬性名稱（不呼叫 `GetString()`）之後才真正達到效果：
+
+| 型別 | 反射版本（原始） | 手刻 v1（`GetString()` 比對屬性名） | 手刻 v2（`ValueTextEquals`） |
+|---|---|---|---|
+| `ReadStackFrame[]` | 4,143,974,424 | 消失 | 消失 |
+| `String` | 2,204,865,744 | 5,758,927,456（**反而更差**） | **2,480,899,440** |
+| `MemberAccount`/`ContactInfo`（裝箱） | 924M + 430M | 消失 | 消失 |
+| `ArgumentState` | 未出現 | 消失 | 消失 |
+| `BitArray` | 751,449,360 | 消失 | 消失 |
+| `Byte[]` | 840,265,456 | 78,237,136 | 70,389,096 |
+| 500 次 POST 耗時 | 22s | 15s | **12s** |
+
+主要問題型別總和：反射版 ≈ 8.45GB → 手刻 v2 ≈ 2.55GB，**降了約 70%**，且 `ReadStackFrame[]`／裝箱／`ArgumentState`／`BitArray` 這幾項完全歸零。剩下的 `String` 配置（2.48GB）是欄位值本身（`account`、`displayName`、`email` 等字串內容）必要的配置，不是額外開銷，跟原始反射版本的必要字串量級相近，是合理的下限。
+
+`MemberAccount[]`（LOH 陣列本身）大小維持在 ~33MB，跟這次改動無關（在意料之中，因為改的是元素解析邏輯，不是陣列容器的租用策略）。
+
+### 8.3 這次調查示範的方法論
+
+- 兩次改動都先建置、跑 `dotnet test`（4 個整合測試全過）才敢說「功能正常」；但**功能正常不等於效能有改善**——第一次改動（Source Generator）功能全過、效能卻更差，只有靠 `dotnet-trace` 才抓得到。
+- 手刻 v1 改完先跑測試就抓到一個真的 bug（`status` 是數字 token 時 `GetString()` 直接丟例外，`Post_Members_...` 測試從綠燈變紅燈）——這正是先寫測試再實作能攔下的那種問題,不是靠肉眼 review 能穩定抓到的。
+- 手刻 v1「解決了 boxing／ArgumentState，卻意外讓 String 配置暴增」，再次證明**要靠量測驗證每一步的效果，不能假設「用了更底層的 API 就一定比較快」**。
+
+## 9. 結論
 
 **已知事實**（有直接證據）：
 
 - 陣列容器只要 ≥ 85,000 bytes 就一定進 LOH，這條規則沒有例外。
 - 用 `ArrayPool<T>` 池化陣列容器，配合 `struct` 元素型別，能讓 LOH 配置在「池子暖機」後趨於零成長。
 - 500 次同大小請求裡，只有 8 次（1.6%）真的製造新的 LOH 配置，且 87.5% 集中在最初 5.3 秒。
-- 反射式反序列化巢狀 struct 產生的 boxing／內部機制配置量，遠大於 LOH 陣列本身。
+- 反射式反序列化巢狀 struct 產生的 boxing／內部機制配置量，遠大於 LOH 陣列本身；改用 Source Generator **不會**解決這個問題（實測反而更差），根因是「每元素一次頂層 `Deserialize<T>` 呼叫」加上 `required` 屬性的 argument-state 追蹤。
+- 完全繞開 `JsonSerializer.Deserialize<T>`、改用 `Utf8JsonReader` 手刻解析（搭配 `ValueTextEquals` 比對屬性名稱），能把主要問題型別的配置量降低約 70%，500 次請求耗時降低約 45%。
 
 **已推翻的假設**：
 
 - ~~LOH 階梯成長是因為 ThreadPool 持續注入新 thread~~ ——實測 thread 數量淨變化為 0，此假設不成立。
+- ~~改用 Source Generator 能降低反射式反序列化的配置量~~ ——實測配置量不降反升（8.45GB → 10.12GB），根因是 `required` 屬性的 argument-state 追蹤機制,不是 metadata 來源。
 
-**待驗證 / 建議下一步**：
+**待驗證**：
 
 - 沒有直接證據解釋「為什麼恰好是那 8 次請求 cache miss」（可能跟 Kestrel 連線建立/拆除的時序有關，但沒有進一步追查）。
-- 改用 System.Text.Json Source Generator（`[JsonSerializable]`）取代反射式反序列化，預期能大幅降低第 7 節提到的 GB 級配置量（`ReadStackFrame[]`、boxing），這比繼續研究 LOH 封不封頂更有實際效益。
 
-## 9. 附錄：如何重現
+## 10. 附錄：如何重現
 
 ### 9.1 專案內建的腳本（`scripts/`）
 
