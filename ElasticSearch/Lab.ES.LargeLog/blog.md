@@ -12,14 +12,16 @@ stripH1Header: true
 ---
 # [Elasticsearch] 每日一億筆時序資料架構實戰：Data Stream 與 .NET 10 Web API 整合
 
+面對每日一億筆（尖峰每秒破萬筆）的海量時序日誌 (Time Series Logs)，傳統依賴關聯式資料庫 (SQL) 或手動按日建立索引（Time-based Index）的做法，往往會面臨寫入吞吐瓶頸、過度分片 (Over-sharding) 以及維運刪除繁瑣等問題。本文將從 SQL 與 Elasticsearch 的概念差異出發，透過 Docker 快速建立測試環境，並深入介紹如何利用 Data Stream 搭配索引生命週期管理 (ILM) 解決每日 Log 的寫入與自動輪轉問題，最後透過 ASP.NET Core 10 Web API 搭配基於 `System.Threading.Channels` 封裝的記憶體佇列類別 `LogQueue` 與背景消費者 `LogBatchProcessor` 實現高效能的非阻塞批次寫入與自動化測試。
+
 ## 開發環境
 
 - Windows 11 / Ubuntu 24.04
 - .NET 10.0 (C# 14)
 - Elasticsearch 8.17.0
 - Docker / Docker Compose
-- Elastic.Clients.Elasticsearch 8.17.0
-（此為建議版本，非強制）
+- Elastic.Clients.Elasticsearch 8.17.0  
+  （此為建議版本，非強制）
 
 ---
 
@@ -350,7 +352,7 @@ curl -X POST "http://localhost:9200/my-first-index/_search" \
 
 - **程式碼維護繁瑣**：應用程式端必須在每次寫入時計算 `$"logs-{DateTime.UtcNow:yyyy.MM.dd}"`，若遇到時區轉換、跨日臨界點或延遲到達的 Log，容易發生寫錯索引或產生分散碎索引的問題。
 - **分片大小極度不均勻（Over-sharding）**：
-  - 業務離峰日（如週末或連假）Log 量少，但依然會建立出完整的 Shard，產生大量 &lt; 1GB 的小分片，白白浪費 Elasticsearch Node 的 JVM Heap 記憶體。
+  - 業務離峰日（如週末或連假）Log 量少，但依然會建立出完整的 Shard，產生大量 < 1GB 的小分片，白白浪費 Elasticsearch Node 的 JVM Heap 記憶體。
   - 業務尖峰日（如大型促銷活動）Log 量暴增，單日索引可能膨脹至數百 GB，導致單一 Shard 過大、查詢與復原變慢。
 - **過期清理需要額外維運**：必須在外部另外撰寫 CronJob 腳本（或使用 Curator 工具），每天定時掃描並下指令刪除 30 天前的舊索引名稱。
 
@@ -368,15 +370,13 @@ Elasticsearch 官方推出 **Data Stream** 就是為了解決上述痛點：
 
 #### 3. 傳統做法 vs 現代 Data Stream 做法完整對照表
 
-
-| 比較項目              | 傳統做法（手動按日建索引）                                    | 現代推薦做法（Data Stream + ILM）                  |
-| ----------------- | ------------------------------------------------ | ------------------------------------------ |
-| **寫入目標端點**        | 每天動態變化：<br>`POST /logs-2026.08.23/_doc`          | **永遠固定不變**：<br>`POST /logs-app-prod/_bulk` |
-| **程式端是否需算日期**     | **要**（需寫 `$"logs-{DateTime.UtcNow:yyyy.MM.dd}"`） | **完全不用**（永遠指向固定 Data Stream）               |
-| **Document 資料需求** | 純 JSON 欄位                                        | JSON 欄位中**必須包含 `@timestamp`**              |
-| **分片（Shard）均勻度**  | 差（量少時 Shard 過小浪費記憶體，暴量時 Shard 過大）                | **優**（由 ILM 嚴格依照「每滿 40GB」自動 Rollover 切分）   |
-| **生命週期自動清理**      | 需額外寫外部 CronJob / 腳本定期掃描刪除                        | **內建自動化**（由 ILM 策略設定滿 30 天底層自動刪除）          |
-
+| 比較項目 | 傳統做法（手動按日建索引） | 現代推薦做法（Data Stream + ILM） |
+|---|---|---|
+| **寫入目標端點** | 每天動態變化：<br>`POST /logs-2026.08.23/_doc` | **永遠固定不變**：<br>`POST /logs-app-prod/_bulk` |
+| **程式端是否需算日期** | **要**（需寫 `$"logs-{DateTime.UtcNow:yyyy.MM.dd}"`） | **完全不用**（永遠指向固定 Data Stream） |
+| **Document 資料需求** | 純 JSON 欄位 | JSON 欄位中**必須包含 `@timestamp`** |
+| **分片（Shard）均勻度** | 差（量少時 Shard 過小浪費記憶體，暴量時 Shard 過大） | **優**（由 ILM 嚴格依照「每滿 40GB」自動 Rollover 切分） |
+| **生命週期自動清理** | 需額外寫外部 CronJob / 腳本定期掃描刪除 | **內建自動化**（由 ILM 策略設定滿 30 天底層自動刪除） |
 
 ---
 
@@ -386,6 +386,41 @@ Elasticsearch 官方推出 **Data Stream** 就是為了解決上述痛點：
   - 在 Index Template 中已經定義了 `service (keyword)`、`message (text)`、`level (keyword)` 等型別，寫入 Document 時不需要在 Header 或 Body 重複宣告結構。
 2. **必備 `@timestamp` 欄位**：
   - 寫入 Document 時，只要在 JSON 本體包含 `@timestamp`（ISO 8601 UTC 時間字串，例如 `"2026-08-23T17:30:00.000Z"`），Elasticsearch 就會依據該時間戳記，在底層自動分流到當前啟用的 Backing Index 中。
+
+---
+
+#### 5. 程式碼直觀對比：傳統 C# 寫法 vs Data Stream C# 寫法
+
+這裡我們直接看兩者在應用程式端的寫法差異：
+
+**🔴 傳統手動按日索引寫法（Time-based Index）：**
+```csharp
+// 1. 寫入：每次寫入都必須手動計算與拼接當天日期字串（有跨日時區計算風險）
+var dailyIndex = $"logs-app-{DateTime.UtcNow:yyyy.MM.dd}";
+await _client.IndexAsync(entry, idx => idx.Index(dailyIndex));
+
+// 2. 查詢：跨日搜尋時，必須手動計算日期區間並組出多個索引清單
+var targetIndices = new[] { "logs-app-2026.08.22", "logs-app-2026.08.23" };
+var response = await _client.SearchAsync<LogEntry>(s => s
+    .Indices(targetIndices.Select(x => (IndexName)x).ToArray())
+    .Query(...)
+);
+```
+
+**🟢 現代 Data Stream 寫法（推薦）：**
+```csharp
+// 1. 寫入：目標端點永遠固定，程式碼零日期組裝邏輯（由 ES 底層 ILM 依容量與天數自動切分）
+await _client.BulkAsync(b => b
+    .Index("logs-app-prod")
+    .CreateMany(logs)
+);
+
+// 2. 查詢：直接指向固定 Data Stream，ES 底層自動跨 Backing Indices 平行檢索
+var response = await _client.SearchAsync<LogEntry>(s => s
+    .Indices("logs-app-prod")
+    .Query(...)
+);
+```
 
 ---
 
@@ -460,13 +495,15 @@ dotnet add package Elastic.Clients.Elasticsearch --version 8.17.0
 面對每日一億筆高併發寫入，API 不能每次收到請求就同步呼叫 ES，否則容易造成連線池耗盡與 HTTP 逾時。這裡我們拆分成以下幾個核心類別 (Class)：
 
 1. **資料模型類別 (`LogEntry.cs`)**：
- 定義 Log 結構，透過 `[JsonPropertyName("@timestamp")]` 映射 ES 時序必備欄位。
+   定義 Log 結構，透過 `[JsonPropertyName("@timestamp")]` 映射 ES 時序必備欄位。
 2. **記憶體非阻塞佇列類別 (`LogQueue.cs` / `ILogQueue`)**：
- 封裝 .NET 內建的 `System.Threading.Channels.Channel<LogEntry>` 作為高吞吐記憶體佇列 (Queue)，寫入操作不阻塞，耗時 &lt; 1ms。
+   封裝 .NET 內建的 `System.Threading.Channels.Channel<LogEntry>` 作為高吞吐記憶體佇列 (Queue)，寫入操作不阻塞，耗時 < 1ms。
 3. **背景批次寫入類別 (`LogBatchProcessor.cs`)**：
- 繼承 `BackgroundService`，作為 Queue 的背景消費者 (Consumer)，從 `ILogQueue` 批次取出 Log（如每 100~500 筆或每 500ms），透過 `ElasticsearchClient.BulkAsync` 批次寫入固定的 Data Stream 端點（`logs-app-prod`）。
-4. **查詢與維運服務類別 (`LogService.cs` / `ILogService`)**：
- 封裝 `ElasticsearchClient`，提供單筆查詢、時序區間全文檢索，以及針對底層 Backing Index 的更新與刪除操作。
+   繼承 `BackgroundService`，作為 Queue 的背景消費者 (Consumer)，從 `ILogQueue` 批次取出 Log（如每 100~500 筆或每 500ms），透過 `ElasticsearchClient.BulkAsync` 批次寫入固定的 Data Stream 端點（`logs-app-prod`）。
+4. **Data Stream 查詢與維運服務類別 (`LogService.cs` / `ILogService`)**：
+   封裝 `ElasticsearchClient`，提供單筆查詢、時序區間全文檢索，以及針對底層 Backing Index 的更新與刪除操作。
+5. **傳統按日索引服務類別 (`TraditionalLogService.cs` / `ITraditionalLogService`)**：
+   作為對照組，示範傳統 Time-based 手動組裝 `$"logs-app-{yyyy.MM.dd}"` 寫入與手動計算日期區間跨多索引搜尋的寫法。
 
 ---
 
@@ -589,9 +626,81 @@ public class LogBatchProcessor : BackgroundService
 
 ---
 
-### 5.4 Minimal API 依賴注入與端點註冊 (`Program.cs`)
+### 5.4 傳統手動按日索引實作 (`TraditionalLogService.cs`)
 
-在 `Program.cs` 註冊各個 Class 服務，API 接收請求後只做 `EnqueueAsync` 推入佇列並立即回傳 202 Accepted：
+這裡展示傳統做法：寫入時手動動態組裝 `logs-app-yyyy.MM.dd`，跨日查詢時手動列出所有日期的索引名稱：
+
+```csharp
+public interface ITraditionalLogService
+{
+    Task<bool> WriteLogAsync(LogEntry log);
+    Task<IReadOnlyCollection<LogEntry>> QueryLogsAsync(string? service, string? keyword, DateTime from, DateTime to, int size = 50);
+}
+
+public class TraditionalLogService : ITraditionalLogService
+{
+    private readonly ElasticsearchClient _client;
+    private readonly ILogger<TraditionalLogService> _logger;
+
+    public TraditionalLogService(ElasticsearchClient client, ILogger<TraditionalLogService> logger)
+    {
+        _client = client;
+        _logger = logger;
+    }
+
+    public async Task<bool> WriteLogAsync(LogEntry log)
+    {
+        var dailyIndex = $"logs-app-{log.Timestamp:yyyy.MM.dd}";
+        var response = await _client.IndexAsync(log, idx => idx.Index(dailyIndex));
+        return response.IsValidResponse;
+    }
+
+    public async Task<IReadOnlyCollection<LogEntry>> QueryLogsAsync(
+        string? service, string? keyword, DateTime from, DateTime to, int size = 50)
+    {
+        var targetIndices = new List<string>();
+        for (var date = from.Date; date <= to.Date; date = date.AddDays(1))
+        {
+            targetIndices.Add($"logs-app-{date:yyyy.MM.dd}");
+        }
+
+        var filters = new List<Query>
+        {
+            new DateRangeQuery(Infer.Field<LogEntry>(f => f.Timestamp))
+            {
+                Gte = from.ToString("o"),
+                Lte = to.ToString("o")
+            }
+        };
+
+        if (!string.IsNullOrWhiteSpace(service))
+            filters.Add(new TermQuery(Infer.Field<LogEntry>(f => f.Service)) { Value = service });
+
+        var mustQueries = new List<Query>();
+        if (!string.IsNullOrWhiteSpace(keyword))
+            mustQueries.Add(new MatchQuery(Infer.Field<LogEntry>(f => f.Message)) { Query = keyword });
+
+        var response = await _client.SearchAsync<LogEntry>(s => s
+            .Indices(targetIndices.Select(x => (IndexName)x).ToArray())
+            .Size(size)
+            .Sort(sort => sort.Field(f => f.Timestamp, new FieldSort { Order = SortOrder.Desc }))
+            .Query(new BoolQuery
+            {
+                Filter = filters,
+                Must = mustQueries.Count > 0 ? mustQueries : null
+            })
+        );
+
+        return response.IsValidResponse ? response.Documents : Array.Empty<LogEntry>();
+    }
+}
+```
+
+---
+
+### 5.5 Minimal API 依賴注入與端點註冊 (`Program.cs`)
+
+在 `Program.cs` 註冊各個 Class 服務，包含現代 Data Stream 端點與傳統按日索引端點：
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
@@ -604,8 +713,13 @@ builder.Services.AddSingleton(new ElasticsearchClient(settings));
 builder.Services.AddSingleton<ILogQueue, LogQueue>();
 builder.Services.AddHostedService<LogBatchProcessor>();
 builder.Services.AddScoped<ILogService, LogService>();
+builder.Services.AddScoped<ITraditionalLogService, TraditionalLogService>();
 
 var app = builder.Build();
+
+// -------------------------------------------------------------
+// [現代 Data Stream 模式]
+// -------------------------------------------------------------
 
 // [Create] 寫入 Log (推入 Queue 並回傳 202 Accepted，不需指定日期)
 app.MapPost("/api/logs", async (LogEntry entry, ILogQueue queue) =>
@@ -622,13 +736,9 @@ app.MapGet("/api/logs/{id}", async (string id, ILogService service) =>
     return log != null ? Results.Ok(log) : Results.NotFound();
 });
 
-// [Read] 依條件搜尋 Logs
+// [Read] 依條件搜尋 Logs (Data Stream)
 app.MapGet("/api/logs", async (
-    string? service,
-    string? keyword,
-    DateTime? from,
-    DateTime? to,
-    int? size,
+    string? service, string? keyword, DateTime? from, DateTime? to, int? size,
     ILogService logService) =>
 {
     var startTime = from ?? DateTime.UtcNow.AddHours(-24);
@@ -641,10 +751,7 @@ app.MapGet("/api/logs", async (
 
 // [Update] 修改 Log 內容 (需指定底層 Backing Index)
 app.MapPut("/api/logs/{index}/{id}", async (
-    string index,
-    string id,
-    UpdateLogRequest req,
-    ILogService logService) =>
+    string index, string id, UpdateLogRequest req, ILogService logService) =>
 {
     var success = await logService.UpdateLogMessageAsync(index, id, req.Message);
     return success ? Results.NoContent() : Results.BadRequest();
@@ -652,12 +759,35 @@ app.MapPut("/api/logs/{index}/{id}", async (
 
 // [Delete] 刪除 Log (需指定底層 Backing Index)
 app.MapDelete("/api/logs/{index}/{id}", async (
-    string index,
-    string id,
-    ILogService logService) =>
+    string index, string id, ILogService logService) =>
 {
     var success = await logService.DeleteLogAsync(index, id);
     return success ? Results.NoContent() : Results.NotFound();
+});
+
+// -------------------------------------------------------------
+// [傳統 Time-based 手動按日索引模式]
+// -------------------------------------------------------------
+
+// [Create] 傳統手動按日寫入 Log
+app.MapPost("/api/traditional/logs", async (LogEntry entry, ITraditionalLogService traditionalService) =>
+{
+    entry.Timestamp = DateTime.UtcNow;
+    var success = await traditionalService.WriteLogAsync(entry);
+    return success ? Results.Created($"/api/traditional/logs/{entry.Id}", entry) : Results.BadRequest();
+});
+
+// [Read] 傳統跨日搜尋 Logs
+app.MapGet("/api/traditional/logs", async (
+    string? service, string? keyword, DateTime? from, DateTime? to, int? size,
+    ITraditionalLogService traditionalService) =>
+{
+    var startTime = from ?? DateTime.UtcNow.AddHours(-24);
+    var endTime = to ?? DateTime.UtcNow.AddMinutes(5);
+    var pageSize = size ?? 50;
+
+    var logs = await traditionalService.QueryLogsAsync(service, keyword, startTime, endTime, pageSize);
+    return Results.Ok(logs);
 });
 
 app.Run();
@@ -673,9 +803,10 @@ app.Run();
 
 測試專案位於 `tests/EsDailyLogsApi.Tests`：
 
-- `**LogQueueTests.cs**`：單元測試，驗證 `System.Threading.Channels` 的非阻塞寫入與讀取。
-- `**LogServiceIntegrationTests.cs**`：整合測試，對真實 Elasticsearch 執行 Data Stream 下完整的 CRUD 生命週期驗證。
-- `**LogApiIntegrationTests.cs**`：Web API 整合測試，使用 `WebApplicationFactory<Program>` 驗證 HTTP API 端點行為。
+- `LogQueueTests.cs`：單元測試，驗證 `System.Threading.Channels` 的非阻塞寫入與讀取。
+- `LogServiceIntegrationTests.cs`：整合測試，對真實 Elasticsearch 執行 Data Stream 下完整的 CRUD 生命週期驗證。
+- `TraditionalLogServiceIntegrationTests.cs`：整合測試，驗證傳統 Time-based 手動按日索引的寫入與跨日範圍查詢。
+- `LogApiIntegrationTests.cs`：Web API 整合測試，使用 `WebApplicationFactory<Program>` 驗證 HTTP API 端點行為。
 
 執行測試指令：
 
@@ -690,7 +821,7 @@ Test run for tests/EsDailyLogsApi.Tests/bin/Debug/net10.0/EsDailyLogsApi.Tests.d
 Starting test execution, please wait...
 A total of 1 test files matched the specified pattern.
 
-Passed!  - Failed:     0, Passed:     3, Skipped:     0, Total:     3, Duration: 579 ms
+Passed!  - Failed:     0, Passed:     4, Skipped:     0, Total:     4, Duration: 1 s
 ```
 
 ---
@@ -758,14 +889,12 @@ PUT _ilm/policy/logs_ilm_policy
 
 ### 7.2 官方參考文件連結（Official References）
 
-
-| 規範主題                | 官方文件說明                                                  | 官方參考連結                                                                                                                      |
-| ------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| **分片容量規劃**          | Size your shards (How many shards should I have?)       | [Elastic Docs: Size your shards](https://www.elastic.co/guide/en/elasticsearch/reference/current/size-your-shards.html)     |
-| **避免過度分片**          | Avoid oversharding (Capacity planning &amp; Heap usage) | [Elastic Docs: Avoid oversharding](https://www.elastic.co/guide/en/elasticsearch/reference/current/avoid-oversharding.html) |
-| **ILM Rollover 動作** | Index Lifecycle Management: Rollover action             | [Elastic Docs: ILM Rollover](https://www.elastic.co/guide/en/elasticsearch/reference/current/ilm-rollover.html)             |
-| **Data Streams 概念** | Set up a data stream &amp; Backing indices              | [Elastic Docs: Data streams](https://www.elastic.co/guide/en/elasticsearch/reference/current/data-streams.html)             |
-
+| 規範主題 | 官方文件說明 | 官方參考連結 |
+| --- | --- | --- |
+| **分片容量規劃** | Size your shards (How many shards should I have?) | [Elastic Docs: Size your shards](https://www.elastic.co/guide/en/elasticsearch/reference/current/size-your-shards.html) |
+| **避免過度分片** | Avoid oversharding (Capacity planning & Heap usage) | [Elastic Docs: Avoid oversharding](https://www.elastic.co/guide/en/elasticsearch/reference/current/avoid-oversharding.html) |
+| **ILM Rollover 動作** | Index Lifecycle Management: Rollover action | [Elastic Docs: ILM Rollover](https://www.elastic.co/guide/en/elasticsearch/reference/current/ilm-rollover.html) |
+| **Data Streams 概念** | Set up a data stream & Backing indices | [Elastic Docs: Data streams](https://www.elastic.co/guide/en/elasticsearch/reference/current/data-streams.html) |
 
 ---
 
@@ -784,7 +913,7 @@ PUT _ilm/policy/logs_ilm_policy
 
 - **寫入端**：應用程式不再需要費心去算今天是什麼日期、組裝索引字串，直接丟給固定的 Data Stream 端點即可。
 - **分片與生命週期**：透過 ILM 自動依 Shard 容量（如 40GB）切分與定時清理，徹底解決過度分片 (Over-sharding) 與磁碟爆滿的維運惡夢。
-- **應用層吞吐**：透過非阻塞佇列類別 `LogQueue`（實作 `ILogQueue` 介面，底層封裝 `System.Threading.Channels.Channel[[ORCA_RICH_MD:2bc5b842e3cffc972f68d954a0045a52:inline-html:%3CLogEntry%3E]]`）進行記憶體排隊緩衝（這一段在生產環境完全有機會換成外部的 Message Queue 如 Kafka 或 RabbitMQ，為了演示先採用 .NET 內建的 Queue），搭配背景服務類別 `LogBatchProcessor`（繼承 `BackgroundService`）定期批次呼叫 `BulkAsync` 寫入，確保 API 回應速度在 1ms 內，兼顧高吞吐與系統穩定性。
+- **應用層吞吐**：透過非阻塞佇列類別 `LogQueue`（實作 `ILogQueue` 介面，底層封裝 `System.Threading.Channels.Channel<LogEntry>`）進行記憶體排隊緩衝（這一段在生產環境完全有機會換成外部的 Message Queue 如 Kafka 或 RabbitMQ，為了演示先採用 .NET 內建的 Queue），搭配背景服務類別 `LogBatchProcessor`（繼承 `BackgroundService`）定期批次呼叫 `BulkAsync` 寫入，確保 API 回應速度在 1ms 內，兼顧高吞吐與系統穩定性。
 
 ---
 

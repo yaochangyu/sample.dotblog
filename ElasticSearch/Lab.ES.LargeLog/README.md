@@ -1,6 +1,6 @@
 # Elasticsearch 8.x 與 .NET 10 Web API 實戰教學指南
 
-本教學為完整的 Elasticsearch (ES) 實戰手冊，涵蓋 **SQL 與 ES 概念差異圖解**、**Docker 測試環境建立**、**手把手實操與終端機真實執行畫面**、**每日一億筆海量時序資料（Data Stream + ILM）架構設計**、**每日 Log Doc 是否需額外指定日期關鍵觀念**，以及 **ASP.NET Core 10 Web API 的完整 CRUD 實作與自動化測試**。
+本教學為完整的 Elasticsearch (ES) 實戰手冊，涵蓋 **SQL 與 ES 概念差異圖解**、**Docker 測試環境建立**、**手把手實操與終端機真實執行畫面**、**每日一億筆海量時序資料（Data Stream + ILM）架構設計**、**傳統 Time-based 手動按日索引 vs 現代 Data Stream 關鍵觀念與 C# 程式碼對照**，以及 **ASP.NET Core 10 Web API 的完整 CRUD 實作與自動化測試**。
 
 ---
 
@@ -318,6 +318,38 @@ Elasticsearch 官方推出 **Data Stream** 就是為了解決上述痛點：
 2. **必備 `@timestamp` 欄位**：
    * 寫入 Document 時，只要在 JSON 本體包含 `@timestamp`（ISO 8601 UTC 時間字串，如 `"2026-08-23T17:30:00.000Z"`），Elasticsearch 就會依據該時間戳記，在底層自動分流到當前啟用的 Backing Index 中。
 
+---
+
+#### 5. 程式碼直觀對比：傳統 C# 寫法 vs Data Stream C# 寫法
+
+**🔴 傳統手動按日索引寫法（Time-based Index）：**
+```csharp
+// 1. 寫入：每次寫入都必須手動計算與拼接當天日期字串（有跨日時區計算風險）
+var dailyIndex = $"logs-app-{DateTime.UtcNow:yyyy.MM.dd}";
+await _client.IndexAsync(entry, idx => idx.Index(dailyIndex));
+
+// 2. 查詢：跨日搜尋時，必須手動計算日期區間並組出多個索引清單
+var targetIndices = new[] { "logs-app-2026.08.22", "logs-app-2026.08.23" };
+var response = await _client.SearchAsync<LogEntry>(s => s
+    .Indices(targetIndices.Select(x => (IndexName)x).ToArray())
+    .Query(...)
+);
+```
+
+**🟢 現代 Data Stream 寫法（推薦）：**
+```csharp
+// 1. 寫入：目標端點永遠固定，程式碼零日期組裝邏輯（由 ES 底層 ILM 依容量與天數自動切分）
+await _client.BulkAsync(b => b
+    .Index("logs-app-prod")
+    .CreateMany(logs)
+);
+
+// 2. 查詢：直接指向固定 Data Stream，ES 底層自動跨 Backing Indices 平行檢索
+var response = await _client.SearchAsync<LogEntry>(s => s
+    .Indices("logs-app-prod")
+    .Query(...)
+);
+```
 
 ---
 
@@ -384,16 +416,9 @@ curl -X PUT "http://localhost:9200/_index_template/logs_template" \
 ### 核心實作摘要
 - **記憶體非阻塞佇列 (`LogQueue.cs`)**：利用 `System.Threading.Channels` 接收高併發的 Log 請求，API 耗時 < 1ms。
 - **背景批次寫入 (`LogBatchProcessor.cs`)**：從 Queue 讀取並使用 `BulkAsync` 批次寫入固定的 Data Stream 端點（`logs-app-prod`）。
-- **CRUD 服務 (`LogService.cs`)**：處理查詢、更新與刪除操作。
-- **Minimal API (`Program.cs`)**：
-  ```csharp
-  // 寫入 Log (快速推入 Queue 並回傳 202 Accepted，不需指定日期)
-  app.MapPost("/api/logs", async (LogEntry entry, ILogQueue queue) => {
-      entry.Timestamp = DateTime.UtcNow;
-      await queue.EnqueueAsync(entry);
-      return Results.Accepted();
-  });
-  ```
+- **Data Stream CRUD 服務 (`LogService.cs`)**：處理 Data Stream 下的查詢、更新與刪除操作。
+- **傳統按日索引服務 (`TraditionalLogService.cs`)**：作為對照組，實作手動動態組裝 `logs-app-yyyy.MM.dd` 寫入與手動計算跨日多索引搜尋。
+- **Minimal API (`Program.cs`)**：同時提供現代 Data Stream 端點（`/api/logs`）與傳統按日端點（`/api/traditional/logs`）。
 
 ---
 
@@ -403,9 +428,10 @@ curl -X PUT "http://localhost:9200/_index_template/logs_template" \
 
 ### 6.1 執行 xUnit 自動化測試專案
 
-解決方案中包含 [`tests/EsDailyLogsApi.Tests`](file:///mnt/d/lab/survey-elasticsearch/tests/EsDailyLogsApi.Tests)：
+解決方案中包含 `tests/EsDailyLogsApi.Tests`：
 * **`LogQueueTests.cs`**：單元測試，驗證 `System.Threading.Channels` 的非阻塞寫入與讀取。
 * **`LogServiceIntegrationTests.cs`**：整合測試，對 Elasticsearch 實際執行 Data Stream 下完整的 CRUD 生命週期驗證。
+* **`TraditionalLogServiceIntegrationTests.cs`**：整合測試，驗證傳統 Time-based 手動按日索引的寫入與跨日範圍查詢。
 * **`LogApiIntegrationTests.cs`**：Web API 整合測試，使用 `WebApplicationFactory<Program>` 驗證 HTTP API 端點。
 
 執行測試指令：
@@ -419,14 +445,14 @@ Test run for tests/EsDailyLogsApi.Tests/bin/Debug/net10.0/EsDailyLogsApi.Tests.d
 Starting test execution, please wait...
 A total of 1 test files matched the specified pattern.
 
-Passed!  - Failed:     0, Passed:     3, Skipped:     0, Total:     3, Duration: 579 ms
+Passed!  - Failed:     0, Passed:     4, Skipped:     0, Total:     4, Duration: 1 s
 ```
 
 ---
 
 ### 6.2 執行 Bash 模擬腳本
 
-執行本專案提供的測試腳本 [`test_api.sh`](file:///mnt/d/lab/survey-elasticsearch/test_api.sh)：
+執行本專案提供的測試腳本 [`test_api.sh`](file:///mnt/d/lab/sample.dotblog/ElasticSearch/Lab.ES.LargeLog/test_api.sh)：
 
 ```bash
 # 1. 啟動 Web API
@@ -493,4 +519,3 @@ PUT _ilm/policy/logs_ilm_policy
 2. **高吞吐寫入 Refresh Interval**：預設 `1s` 頻繁建立 Segment 損耗 CPU，海量寫入建議調整為 `10s` 或 `30s`。
 3. **Data Stream 下的 Update / Delete**：Data Stream 本質為 Append-only；若有稽核修正或個資去識別化需求，需取得底層 Backing Index 名稱（如 `.ds-logs-app-prod-2026.08.23-000001`）與 `_id` 進行操作。
 4. **備份與快照（Snapshot）**：Replica 僅提供節點容錯與查詢分流，無法防止誤刪操作；生產環境必須設定 SLM 定時快照至外部雲端儲存（S3/GCS/NFS）。
-
