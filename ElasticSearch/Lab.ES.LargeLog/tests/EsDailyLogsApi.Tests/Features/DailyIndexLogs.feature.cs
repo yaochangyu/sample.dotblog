@@ -17,21 +17,21 @@ namespace EsDailyLogsApi.Tests.Features
     
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Reqnroll", "3.0.0.0")]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    public partial class 傳統手動按日索引日誌管理Feature : object, global::Xunit.IClassFixture<傳統手動按日索引日誌管理Feature.FixtureData>, global::Xunit.IAsyncLifetime
+    public partial class 手動按日索引日誌管理DailyIndexFeature : object, global::Xunit.IClassFixture<手動按日索引日誌管理DailyIndexFeature.FixtureData>, global::Xunit.IAsyncLifetime
     {
         
         private global::Reqnroll.ITestRunner testRunner;
         
         private static string[] featureTags = ((string[])(null));
         
-        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "傳統手動按日索引日誌管理", "  作為系統維運與開發人員\n  我想透過傳統手動按日索引模式寫入日誌並支援跨日範圍檢索\n  以驗證傳統 Time-based 模式之相容性", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
+        private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "手動按日索引日誌管理 (Daily Index)", "  作為系統維運與開發人員\n  我想透過手動按日索引模式寫入日誌並支援跨日範圍檢索\n  以驗證 Time-based Daily Index 模式之相容性", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
         
         private global::Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         
-#line 1 "TraditionalLogs.feature"
+#line 1 "DailyIndexLogs.feature"
 #line hidden
         
-        public 傳統手動按日索引日誌管理Feature(傳統手動按日索引日誌管理Feature.FixtureData fixtureData, global::Xunit.Abstractions.ITestOutputHelper testOutputHelper)
+        public 手動按日索引日誌管理DailyIndexFeature(手動按日索引日誌管理DailyIndexFeature.FixtureData fixtureData, global::Xunit.Abstractions.ITestOutputHelper testOutputHelper)
         {
             this._testOutputHelper = testOutputHelper;
         }
@@ -117,7 +117,7 @@ namespace EsDailyLogsApi.Tests.Features
         
         private static global::Reqnroll.Formatters.RuntimeSupport.FeatureLevelCucumberMessages InitializeCucumberMessages()
         {
-            return new global::Reqnroll.Formatters.RuntimeSupport.FeatureLevelCucumberMessages("Features/TraditionalLogs.feature.ndjson", 4);
+            return new global::Reqnroll.Formatters.RuntimeSupport.FeatureLevelCucumberMessages("Features/DailyIndexLogs.feature.ndjson", 4);
         }
         
         async global::System.Threading.Tasks.Task global::Xunit.IAsyncLifetime.InitializeAsync()
@@ -145,15 +145,15 @@ namespace EsDailyLogsApi.Tests.Features
             await this.TestTearDownAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="透過傳統 API 寫入當日日誌")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "傳統手動按日索引日誌管理")]
-        [global::Xunit.TraitAttribute("Description", "透過傳統 API 寫入當日日誌")]
-        public async global::System.Threading.Tasks.Task 透過傳統API寫入當日日誌()
+        [global::Xunit.SkippableFactAttribute(DisplayName="透過 API 寫入單日日誌")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "手動按日索引日誌管理 (Daily Index)")]
+        [global::Xunit.TraitAttribute("Description", "透過 API 寫入單日日誌")]
+        public async global::System.Threading.Tasks.Task 透過API寫入單日日誌()
         {
             string[] tagsOfScenario = ((string[])(null));
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "0";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("透過傳統 API 寫入當日日誌", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("透過 API 寫入單日日誌", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
 #line 10
@@ -178,12 +178,12 @@ namespace EsDailyLogsApi.Tests.Features
                             "inventory-service",
                             "Warning",
                             "庫存不足警告: 商品 SKU-8888",
-                            "trace-trad-bdd-01"});
+                            "trace-daily-bdd-01"});
 #line 11
-    await testRunner.GivenAsync("我有一筆傳統日誌資料:", ((string)(null)), table1, "Given ");
+    await testRunner.GivenAsync("我有一筆單日日誌資料:", ((string)(null)), table1, "Given ");
 #line hidden
 #line 14
-    await testRunner.WhenAsync("我發送 POST 請求至 \"/api/traditional/logs\" 寫入該傳統日誌", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
+    await testRunner.WhenAsync("我發送 POST 請求至 \"/api/daily-index/logs\" 寫入該單日日誌", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 15
     await testRunner.ThenAsync("API 應回傳 HTTP 狀態碼 201", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
@@ -195,15 +195,15 @@ namespace EsDailyLogsApi.Tests.Features
             await this.ScenarioCleanupAsync();
         }
         
-        [global::Xunit.SkippableFactAttribute(DisplayName="透過傳統 API 執行跨日範圍查詢日誌")]
-        [global::Xunit.TraitAttribute("FeatureTitle", "傳統手動按日索引日誌管理")]
-        [global::Xunit.TraitAttribute("Description", "透過傳統 API 執行跨日範圍查詢日誌")]
-        public async global::System.Threading.Tasks.Task 透過傳統API執行跨日範圍查詢日誌()
+        [global::Xunit.SkippableFactAttribute(DisplayName="透過 API 執行跨單日索引範圍查詢日誌")]
+        [global::Xunit.TraitAttribute("FeatureTitle", "手動按日索引日誌管理 (Daily Index)")]
+        [global::Xunit.TraitAttribute("Description", "透過 API 執行跨單日索引範圍查詢日誌")]
+        public async global::System.Threading.Tasks.Task 透過API執行跨單日索引範圍查詢日誌()
         {
             string[] tagsOfScenario = ((string[])(null));
             global::System.Collections.Specialized.OrderedDictionary argumentsOfScenario = new global::System.Collections.Specialized.OrderedDictionary();
             string pickleIndex = "1";
-            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("透過傳統 API 執行跨日範圍查詢日誌", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
+            global::Reqnroll.ScenarioInfo scenarioInfo = new global::Reqnroll.ScenarioInfo("透過 API 執行跨單日索引範圍查詢日誌", null, tagsOfScenario, argumentsOfScenario, featureTags, pickleIndex);
             string[] tagsOfRule = ((string[])(null));
             global::Reqnroll.RuleInfo ruleInfo = null;
 #line 18
@@ -230,18 +230,18 @@ namespace EsDailyLogsApi.Tests.Features
                             "shipping-service",
                             "Info",
                             "包裹出貨完成 TRK-2001",
-                            "trace-trad-bdd-02"});
+                            "trace-daily-bdd-02"});
                 table2.AddRow(new string[] {
                             "1",
                             "shipping-service",
                             "Info",
                             "包裹已抵達轉運中心 TRK-2001",
-                            "trace-trad-bdd-03"});
+                            "trace-daily-bdd-03"});
 #line 19
-    await testRunner.GivenAsync("傳統每日索引中已寫入以下日誌:", ((string)(null)), table2, "Given ");
+    await testRunner.GivenAsync("單日索引中已寫入以下日誌:", ((string)(null)), table2, "Given ");
 #line hidden
 #line 23
-    await testRunner.WhenAsync("我發送 GET 請求至 \"/api/traditional/logs\" 查詢服務 \"shipping-service\" 且關鍵字為 \"TRK-2001\" 涵蓋過去" +
+    await testRunner.WhenAsync("我發送 GET 請求至 \"/api/daily-index/logs\" 查詢服務 \"shipping-service\" 且關鍵字為 \"TRK-2001\" 涵蓋過去" +
                         " 1 天範圍", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
 #line hidden
 #line 24
@@ -261,12 +261,12 @@ namespace EsDailyLogsApi.Tests.Features
             
             async global::System.Threading.Tasks.Task global::Xunit.IAsyncLifetime.InitializeAsync()
             {
-                await 傳統手動按日索引日誌管理Feature.FeatureSetupAsync();
+                await 手動按日索引日誌管理DailyIndexFeature.FeatureSetupAsync();
             }
             
             async global::System.Threading.Tasks.Task global::Xunit.IAsyncLifetime.DisposeAsync()
             {
-                await 傳統手動按日索引日誌管理Feature.FeatureTearDownAsync();
+                await 手動按日索引日誌管理DailyIndexFeature.FeatureTearDownAsync();
             }
         }
     }

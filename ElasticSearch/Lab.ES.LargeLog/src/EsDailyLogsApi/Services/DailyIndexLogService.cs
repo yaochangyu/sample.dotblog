@@ -4,25 +4,25 @@ using EsDailyLogs.Models;
 
 namespace EsDailyLogs.Services;
 
-public interface ITraditionalLogService
+public interface IDailyIndexLogService
 {
     Task<bool> WriteLogAsync(LogEntry log);
     Task<IReadOnlyCollection<LogEntry>> QueryLogsAsync(string? service, string? keyword, DateTime from, DateTime to, int size = 50);
 }
 
-public class TraditionalLogService : ITraditionalLogService
+public class DailyIndexLogService : IDailyIndexLogService
 {
     private readonly ElasticsearchClient _client;
-    private readonly ILogger<TraditionalLogService> _logger;
+    private readonly ILogger<DailyIndexLogService> _logger;
 
-    public TraditionalLogService(ElasticsearchClient client, ILogger<TraditionalLogService> logger)
+    public DailyIndexLogService(ElasticsearchClient client, ILogger<DailyIndexLogService> logger)
     {
         _client = client;
         _logger = logger;
     }
 
     /// <summary>
-    /// 傳統寫法：每次寫入需在程式碼中動態組裝當天的 Index 名稱（如 logs-app-2026.08.23）
+    /// 手動按日索引寫法：每次寫入需在程式碼中動態組裝當天的 Index 名稱（如 logs-app-2026.08.23）
     /// </summary>
     public async Task<bool> WriteLogAsync(LogEntry log)
     {
@@ -34,7 +34,7 @@ public class TraditionalLogService : ITraditionalLogService
 
         if (!response.IsValidResponse)
         {
-            _logger.LogError("傳統寫入失敗: {DebugInfo}", response.DebugInformation);
+            _logger.LogError("每日索引寫入失敗: {DebugInfo}", response.DebugInformation);
             return false;
         }
 
@@ -42,7 +42,7 @@ public class TraditionalLogService : ITraditionalLogService
     }
 
     /// <summary>
-    /// 傳統寫法：跨日查詢時，必須手動計算日期範圍包含哪些單日索引
+    /// 手動按日索引查詢：跨日搜尋時，必須手動計算日期範圍包含哪些單日索引
     /// </summary>
     public async Task<IReadOnlyCollection<LogEntry>> QueryLogsAsync(
         string? service,
@@ -81,8 +81,6 @@ public class TraditionalLogService : ITraditionalLogService
         // 2. 指定多個每日索引進行查詢
         var response = await _client.SearchAsync<LogEntry>(s => s
             .Indices(targetIndices.Select(x => (IndexName)x).ToArray())
-            .AllowNoIndices(true)
-            .IgnoreUnavailable(true)
             .Size(size)
             .Sort(sort => sort.Field(new Field("@timestamp"), new FieldSort { Order = SortOrder.Desc }))
             .Query(new BoolQuery
@@ -94,7 +92,7 @@ public class TraditionalLogService : ITraditionalLogService
 
         if (!response.IsValidResponse)
         {
-            _logger.LogError("傳統查詢失敗: {DebugInfo}", response.DebugInformation);
+            _logger.LogError("每日索引查詢失敗: {DebugInfo}", response.DebugInformation);
             return Array.Empty<LogEntry>();
         }
 

@@ -417,8 +417,8 @@ curl -X PUT "http://localhost:9200/_index_template/logs_template" \
 - **記憶體非阻塞佇列 (`LogQueue.cs`)**：利用 `System.Threading.Channels` 接收高併發的 Log 請求，API 耗時 < 1ms。
 - **背景批次寫入 (`LogBatchProcessor.cs`)**：從 Queue 讀取並使用 `BulkAsync` 批次寫入固定的 Data Stream 端點（`logs-app-prod`）。
 - **Data Stream CRUD 服務 (`LogService.cs`)**：處理 Data Stream 下的查詢、更新與刪除操作。
-- **傳統按日索引服務 (`TraditionalLogService.cs`)**：作為對照組，實作手動動態組裝 `logs-app-yyyy.MM.dd` 寫入與手動計算跨日多索引搜尋。
-- **Minimal API (`Program.cs`)**：同時提供現代 Data Stream 端點（`/api/logs`）與傳統按日端點（`/api/traditional/logs`）。
+- **手動按日索引服務 (`DailyIndexLogService.cs`)**：作為對照組，實作手動動態組裝 `logs-app-yyyy.MM.dd` 寫入與手動計算跨日多索引搜尋。
+- **Minimal API (`Program.cs`)**：同時提供現代 Data Stream 端點（`/api/logs`）與手動單日索引端點（`/api/daily-index/logs`）。
 
 ---
 
@@ -433,10 +433,10 @@ curl -X PUT "http://localhost:9200/_index_template/logs_template" \
 
 解決方案中包含 `tests/EsDailyLogsApi.Tests`：
 * **`DataStreamLogs.feature`**：BDD 規格測試，驗證 Data Stream 寫入、背景批次入庫、全文檢索、單筆查詢、更新與刪除。
-* **`TraditionalLogs.feature`**：BDD 規格測試，驗證傳統 Time-based 手動按日索引的寫入與跨日範圍查詢。
+* **`DailyIndexLogs.feature`**：BDD 規格測試，驗證手動按日索引模式（`/api/daily-index/logs`）的寫入與跨日範圍查詢。
 * **`LogQueueTests.cs`**：單元測試，驗證 `System.Threading.Channels` 的非阻塞寫入與讀取。
 * **`LogServiceIntegrationTests.cs`**：整合測試，對 Elasticsearch 實際執行 Data Stream 下完整的 CRUD 生命週期驗證。
-* **`TraditionalLogServiceIntegrationTests.cs`**：整合測試，驗證傳統 Time-based 手動按日索引的寫入與跨日範圍查詢。
+* **`DailyIndexLogServiceIntegrationTests.cs`**：整合測試，驗證手動單日索引的寫入與跨日範圍查詢。
 * **`LogApiIntegrationTests.cs`**：Web API 整合測試，使用 `WebApplicationFactory<Program>` 驗證 HTTP API 端點。
 
 執行測試指令：
@@ -444,13 +444,13 @@ curl -X PUT "http://localhost:9200/_index_template/logs_template" \
 dotnet test EsDailyLogs.slnx
 ```
 
-**🖥️ 測試執行通過畫面（10 個測試 100% 通過）：**
+**🖥️ 測試執行通過畫面（11 個測試 100% 通過）：**
 ```text
 Test run for tests/EsDailyLogsApi.Tests/bin/Debug/net10.0/EsDailyLogsApi.Tests.dll (.NETCoreApp,Version=v10.0)
 Starting test execution, please wait...
 A total of 1 test files matched the specified pattern.
 
-Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 3 s
+Passed!  - Failed:     0, Passed:    11, Skipped:     0, Total:    11, Duration: 26 s
 ```
 
 ---

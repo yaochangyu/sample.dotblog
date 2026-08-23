@@ -12,7 +12,7 @@ builder.Services.AddSingleton(new ElasticsearchClient(settings));
 builder.Services.AddSingleton<ILogQueue, LogQueue>();
 builder.Services.AddHostedService<LogBatchProcessor>();
 builder.Services.AddScoped<ILogService, LogService>();
-builder.Services.AddScoped<ITraditionalLogService, TraditionalLogService>();
+builder.Services.AddScoped<IDailyIndexLogService, DailyIndexLogService>();
 
 var app = builder.Build();
 
@@ -74,31 +74,31 @@ app.MapDelete("/api/logs/{index}/{id}", async (
 });
 
 // -------------------------------------------------------------
-// [傳統 Time-based 手動按日索引模式]
+// [手動按日索引模式 (Daily Index)]
 // -------------------------------------------------------------
 
-// [Create] 傳統手動按日寫入 Log (需動態拼接當日索引名稱 logs-app-yyyy.MM.dd)
-app.MapPost("/api/traditional/logs", async (LogEntry entry, ITraditionalLogService traditionalService) =>
+// [Create] 手動按日寫入 Log (需動態拼接當日索引名稱 logs-app-yyyy.MM.dd)
+app.MapPost("/api/daily-index/logs", async (LogEntry entry, IDailyIndexLogService dailyIndexService) =>
 {
     entry.Timestamp = DateTime.UtcNow;
-    var success = await traditionalService.WriteLogAsync(entry);
-    return success ? Results.Created($"/api/traditional/logs/{entry.Id}", entry) : Results.BadRequest();
+    var success = await dailyIndexService.WriteLogAsync(entry);
+    return success ? Results.Created($"/api/daily-index/logs/{entry.Id}", entry) : Results.BadRequest();
 });
 
-// [Read] 傳統跨日搜尋 Logs (需手動計算涵蓋的多個每日索引)
-app.MapGet("/api/traditional/logs", async (
+// [Read] 跨單日索引搜尋 Logs (需手動計算涵蓋的多個每日索引)
+app.MapGet("/api/daily-index/logs", async (
     string? service,
     string? keyword,
     DateTime? from,
     DateTime? to,
     int? size,
-    ITraditionalLogService traditionalService) =>
+    IDailyIndexLogService dailyIndexService) =>
 {
     var startTime = from ?? DateTime.UtcNow.AddHours(-24);
     var endTime = to ?? DateTime.UtcNow.AddMinutes(5);
     var pageSize = size ?? 50;
 
-    var logs = await traditionalService.QueryLogsAsync(service, keyword, startTime, endTime, pageSize);
+    var logs = await dailyIndexService.QueryLogsAsync(service, keyword, startTime, endTime, pageSize);
     return Results.Ok(logs);
 });
 

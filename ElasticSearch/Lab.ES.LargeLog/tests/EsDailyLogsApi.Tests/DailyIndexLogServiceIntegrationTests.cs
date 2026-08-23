@@ -1,27 +1,26 @@
 using Elastic.Clients.Elasticsearch;
 using EsDailyLogs.Models;
 using EsDailyLogs.Services;
-using EsDailyLogsApi.Tests.Fixtures;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace EsDailyLogsApi.Tests;
 
-[Collection("Elasticsearch")]
-public class TraditionalLogServiceIntegrationTests
+public class DailyIndexLogServiceIntegrationTests
 {
     private readonly ElasticsearchClient _client;
-    private readonly TraditionalLogService _service;
+    private readonly DailyIndexLogService _service;
 
-    public TraditionalLogServiceIntegrationTests(ElasticsearchFixture fixture)
+    public DailyIndexLogServiceIntegrationTests()
     {
-        _client = fixture.Client;
-        _service = new TraditionalLogService(_client, NullLogger<TraditionalLogService>.Instance);
+        var settings = new ElasticsearchClientSettings(new Uri("http://localhost:9200"));
+        _client = new ElasticsearchClient(settings);
+        _service = new DailyIndexLogService(_client, NullLogger<DailyIndexLogService>.Instance);
     }
 
     [Fact]
-    public async Task Write_And_Query_On_Traditional_Daily_Index_Should_Succeed()
+    public async Task Write_And_Query_On_Daily_Index_Should_Succeed()
     {
         var now = DateTime.UtcNow;
         var dailyIndex = $"logs-app-{now:yyyy.MM.dd}";
@@ -29,13 +28,13 @@ public class TraditionalLogServiceIntegrationTests
         var log = new LogEntry
         {
             Timestamp = now,
-            Service = "traditional-test-service",
+            Service = "daily-index-test-service",
             Level = "Warning",
-            Message = "Traditional daily index test message",
-            TraceId = "trace-trad-001"
+            Message = "Daily index test message",
+            TraceId = "trace-daily-001"
         };
 
-        // 1. 寫入傳統每日索引
+        // 1. 寫入單日索引
         var writeSuccess = await _service.WriteLogAsync(log);
         writeSuccess.Should().BeTrue();
 
@@ -44,15 +43,15 @@ public class TraditionalLogServiceIntegrationTests
 
         // 2. 跨日範圍查詢
         var logs = await _service.QueryLogsAsync(
-            service: "traditional-test-service",
-            keyword: "Traditional",
+            service: "daily-index-test-service",
+            keyword: "Daily",
             from: now.AddHours(-1),
             to: now.AddHours(1),
             size: 10
         );
 
         logs.Should().NotBeEmpty();
-        var targetLog = logs.First(l => l.TraceId == "trace-trad-001");
-        targetLog.Message.Should().Be("Traditional daily index test message");
+        var targetLog = logs.First(l => l.TraceId == "trace-daily-001");
+        targetLog.Message.Should().Be("Daily index test message");
     }
 }

@@ -8,13 +8,13 @@ using Reqnroll;
 namespace EsDailyLogsApi.Tests.StepDefinitions;
 
 [Binding]
-public class TraditionalLogsStepDefinitions
+public class DailyIndexLogsStepDefinitions
 {
     private readonly ElasticsearchClient _esClient;
     private readonly HttpClient _httpClient;
     private readonly ScenarioContext _scenarioContext;
 
-    public TraditionalLogsStepDefinitions(
+    public DailyIndexLogsStepDefinitions(
         ElasticsearchClient esClient,
         HttpClient httpClient,
         ScenarioContext scenarioContext)
@@ -24,8 +24,8 @@ public class TraditionalLogsStepDefinitions
         _scenarioContext = scenarioContext;
     }
 
-    [Given(@"我有一筆傳統日誌資料:")]
-    public void Given我有一筆傳統日誌資料(Table table)
+    [Given(@"我有一筆單日日誌資料:")]
+    public void Given我有一筆單日日誌資料(Table table)
     {
         var row = table.Rows[0];
         var entry = new LogEntry
@@ -35,13 +35,13 @@ public class TraditionalLogsStepDefinitions
             Message = row["Message"],
             TraceId = row["TraceId"]
         };
-        _scenarioContext.Set(entry, "CurrentTraditionalLogEntry");
+        _scenarioContext.Set(entry, "CurrentDailyIndexLogEntry");
     }
 
-    [When(@"我發送 POST 請求至 ""(.*)"" 寫入該傳統日誌")]
-    public async Task When我發送POST請求至寫入該傳統日誌(string endpoint)
+    [When(@"我發送 POST 請求至 ""(.*)"" 寫入該單日日誌")]
+    public async Task When我發送POST請求至寫入該單日日誌(string endpoint)
     {
-        var entry = _scenarioContext.Get<LogEntry>("CurrentTraditionalLogEntry");
+        var entry = _scenarioContext.Get<LogEntry>("CurrentDailyIndexLogEntry");
         var response = await _httpClient.PostAsJsonAsync(endpoint, entry);
         _scenarioContext.Set(response, "LastHttpResponse");
     }
@@ -52,13 +52,13 @@ public class TraditionalLogsStepDefinitions
         var response = _scenarioContext.Get<HttpResponseMessage>("LastHttpResponse");
         var created = await response.Content.ReadFromJsonAsync<LogEntry>();
         created.Should().NotBeNull();
-        var original = _scenarioContext.Get<LogEntry>("CurrentTraditionalLogEntry");
+        var original = _scenarioContext.Get<LogEntry>("CurrentDailyIndexLogEntry");
         created!.Service.Should().Be(original.Service);
         created.Message.Should().Be(original.Message);
     }
 
-    [Given(@"傳統每日索引中已寫入以下日誌:")]
-    public async Task Given傳統每日索引中已寫入以下日誌(Table table)
+    [Given(@"單日索引中已寫入以下日誌:")]
+    public async Task Given單日索引中已寫入以下日誌(Table table)
     {
         var writtenIndices = new HashSet<string>();
 

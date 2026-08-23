@@ -502,8 +502,8 @@ dotnet add package Elastic.Clients.Elasticsearch --version 8.17.0
    繼承 `BackgroundService`，作為 Queue 的背景消費者 (Consumer)，從 `ILogQueue` 批次取出 Log（如每 100~500 筆或每 500ms），透過 `ElasticsearchClient.BulkAsync` 批次寫入固定的 Data Stream 端點（`logs-app-prod`）。
 4. **Data Stream 查詢與維運服務類別 (`LogService.cs` / `ILogService`)**：
    封裝 `ElasticsearchClient`，提供單筆查詢、時序區間全文檢索，以及針對底層 Backing Index 的更新與刪除操作。
-5. **傳統按日索引服務類別 (`TraditionalLogService.cs` / `ITraditionalLogService`)**：
-   作為對照組，示範傳統 Time-based 手動組裝 `$"logs-app-{yyyy.MM.dd}"` 寫入與手動計算日期區間跨多索引搜尋的寫法。
+5. **手動按日索引服務類別 (`DailyIndexLogService.cs` / `IDailyIndexLogService`)**：
+   作為對照組，示範 Time-based 手動組裝 `$"logs-app-{yyyy.MM.dd}"` 寫入與手動計算日期區間跨多索引搜尋的寫法。
 
 ---
 
@@ -626,23 +626,23 @@ public class LogBatchProcessor : BackgroundService
 
 ---
 
-### 5.4 傳統手動按日索引實作 (`TraditionalLogService.cs`)
+### 5.4 手動按日索引實作 (`DailyIndexLogService.cs`)
 
-這裡展示傳統做法：寫入時手動動態組裝 `logs-app-yyyy.MM.dd`，跨日查詢時手動列出所有日期的索引名稱：
+這裡展示手動按日索引做法：寫入時動態組裝 `logs-app-yyyy.MM.dd`，跨日查詢時手動列出所有日期的單日索引名稱：
 
 ```csharp
-public interface ITraditionalLogService
+public interface IDailyIndexLogService
 {
     Task<bool> WriteLogAsync(LogEntry log);
     Task<IReadOnlyCollection<LogEntry>> QueryLogsAsync(string? service, string? keyword, DateTime from, DateTime to, int size = 50);
 }
 
-public class TraditionalLogService : ITraditionalLogService
+public class DailyIndexLogService : IDailyIndexLogService
 {
     private readonly ElasticsearchClient _client;
-    private readonly ILogger<TraditionalLogService> _logger;
+    private readonly ILogger<DailyIndexLogService> _logger;
 
-    public TraditionalLogService(ElasticsearchClient client, ILogger<TraditionalLogService> logger)
+    public DailyIndexLogService(ElasticsearchClient client, ILogger<DailyIndexLogService> logger)
     {
         _client = client;
         _logger = logger;
@@ -666,7 +666,7 @@ public class TraditionalLogService : ITraditionalLogService
 
         var filters = new List<Query>
         {
-            new DateRangeQuery(Infer.Field<LogEntry>(f => f.Timestamp))
+            new DateRangeQuery(new Field("@timestamp"))
             {
                 Gte = from.ToString("o"),
                 Lte = to.ToString("o")
@@ -674,7 +674,7 @@ public class TraditionalLogService : ITraditionalLogService
         };
 
         if (!string.IsNullOrWhiteSpace(service))
-            filters.Add(new TermQuery(Infer.Field<LogEntry>(f => f.Service)) { Value = service });
+            filters.Add(new MatchQuery(Infer.Field<LogEntry>(f => f.Service)) { Query = service });
 
         var mustQueries = new List<Query>();
         if (!string.IsNullOrWhiteSpace(keyword))
@@ -683,7 +683,7 @@ public class TraditionalLogService : ITraditionalLogService
         var response = await _client.SearchAsync<LogEntry>(s => s
             .Indices(targetIndices.Select(x => (IndexName)x).ToArray())
             .Size(size)
-            .Sort(sort => sort.Field(f => f.Timestamp, new FieldSort { Order = SortOrder.Desc }))
+            .Sort(sort => sort.Field(new Field("@timestamp"), new FieldSort { Order = SortOrder.Desc }))
             .Query(new BoolQuery
             {
                 Filter = filters,
@@ -700,7 +700,7 @@ public class TraditionalLogService : ITraditionalLogService
 
 ### 5.5 Minimal API 依賴注入與端點註冊 (`Program.cs`)
 
-在 `Program.cs` 註冊各個 Class 服務，包含現代 Data Stream 端點與傳統按日索引端點：
+在 `Program.cs` 註冊各個 Class 服務，包含現代 Data Stream 端點與手動單日索引端點：
 
 ```csharp
 var builder = WebApplication.CreateBuilder(args);
@@ -713,7 +713,7 @@ builder.Services.AddSingleton(new ElasticsearchClient(settings));
 builder.Services.AddSingleton<ILogQueue, LogQueue>();
 builder.Services.AddHostedService<LogBatchProcessor>();
 builder.Services.AddScoped<ILogService, LogService>();
-builder.Services.AddScoped<ITraditionalLogService, TraditionalLogService>();
+builder.Services.AddScoped<IDailyIndexLogService, DailyIndexLogService>();
 
 var app = builder.Build();
 
@@ -766,27 +766,27 @@ app.MapDelete("/api/logs/{index}/{id}", async (
 });
 
 // -------------------------------------------------------------
-// [傳統 Time-based 手動按日索引模式]
+// [手動按日索引模式 (Daily Index)]
 // -------------------------------------------------------------
 
-// [Create] 傳統手動按日寫入 Log
-app.MapPost("/api/traditional/logs", async (LogEntry entry, ITraditionalLogService traditionalService) =>
+// [Create] 手動按日寫入 Log
+app.MapPost("/api/daily-index/logs", async (LogEntry entry, IDailyIndexLogService dailyIndexService) =>
 {
     entry.Timestamp = DateTime.UtcNow;
-    var success = await traditionalService.WriteLogAsync(entry);
-    return success ? Results.Created($"/api/traditional/logs/{entry.Id}", entry) : Results.BadRequest();
+    var success = await dailyIndexService.WriteLogAsync(entry);
+    return success ? Results.Created($"/api/daily-index/logs/{entry.Id}", entry) : Results.BadRequest();
 });
 
-// [Read] 傳統跨日搜尋 Logs
-app.MapGet("/api/traditional/logs", async (
+// [Read] 跨單日索引搜尋 Logs
+app.MapGet("/api/daily-index/logs", async (
     string? service, string? keyword, DateTime? from, DateTime? to, int? size,
-    ITraditionalLogService traditionalService) =>
+    IDailyIndexLogService dailyIndexService) =>
 {
     var startTime = from ?? DateTime.UtcNow.AddHours(-24);
     var endTime = to ?? DateTime.UtcNow.AddMinutes(5);
     var pageSize = size ?? 50;
 
-    var logs = await traditionalService.QueryLogsAsync(service, keyword, startTime, endTime, pageSize);
+    var logs = await dailyIndexService.QueryLogsAsync(service, keyword, startTime, endTime, pageSize);
     return Results.Ok(logs);
 });
 
@@ -844,11 +844,11 @@ Feature: 現代 Data Stream 日誌管理
 
 - **BDD 規格測試**：
   - `DataStreamLogs.feature`：驗證 Data Stream 寫入、全文檢索、單筆查詢、更新與刪除。
-  - `TraditionalLogs.feature`：驗證傳統 Time-based 手動按日索引寫入與跨日範圍查詢。
+  - `DailyIndexLogs.feature`：驗證手動按日索引模式（`/api/daily-index/logs`）的寫入與跨日範圍查詢。
 - **單元與整合測試**：
   - `LogQueueTests.cs`：驗證 `System.Threading.Channels` 的非阻塞寫入與讀取。
   - `LogServiceIntegrationTests.cs`：對 ES 執行 Data Stream 下完整的 CRUD 生命週期驗證。
-  - `TraditionalLogServiceIntegrationTests.cs`：驗證傳統 Time-based 按日索引的寫入與範圍檢索。
+  - `DailyIndexLogServiceIntegrationTests.cs`：驗證手動單日索引的寫入與範圍檢索。
   - `LogApiIntegrationTests.cs`：Web API 端點整合測試。
 
 執行測試指令：
@@ -857,14 +857,14 @@ Feature: 現代 Data Stream 日誌管理
 dotnet test EsDailyLogs.slnx
 ```
 
-終端機測試執行通過畫面如下（10 個測試 100% 通過）：
+終端機測試執行通過畫面如下（11 個測試 100% 通過）：
 
 ```text
 Test run for tests/EsDailyLogsApi.Tests/bin/Debug/net10.0/EsDailyLogsApi.Tests.dll (.NETCoreApp,Version=v10.0)
 Starting test execution, please wait...
 A total of 1 test files matched the specified pattern.
 
-Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 3 s
+Passed!  - Failed:     0, Passed:    11, Skipped:     0, Total:    11, Duration: 26 s
 ```
 
 ---

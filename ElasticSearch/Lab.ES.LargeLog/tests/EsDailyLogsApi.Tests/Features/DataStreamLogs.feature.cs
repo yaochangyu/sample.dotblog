@@ -170,18 +170,18 @@ namespace EsDailyLogsApi.Tests.Features
 #line 6
   await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table1 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table3 = new global::Reqnroll.Table(new string[] {
                             "Service",
                             "Level",
                             "Message",
                             "TraceId"});
-                table1.AddRow(new string[] {
+                table3.AddRow(new string[] {
                             "order-service",
                             "Information",
                             "訂單建立成功，訂單編號 ORD-1001",
                             "trace-bdd-001"});
 #line 11
-    await testRunner.GivenAsync("我有一筆日誌資料:", ((string)(null)), table1, "Given ");
+    await testRunner.GivenAsync("我有一筆日誌資料:", ((string)(null)), table3, "Given ");
 #line hidden
 #line 14
     await testRunner.WhenAsync("我發送 POST 請求至 \"/api/logs\" 寫入該日誌", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -223,18 +223,18 @@ namespace EsDailyLogsApi.Tests.Features
 #line 6
   await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table2 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table4 = new global::Reqnroll.Table(new string[] {
                             "Service",
                             "Level",
                             "Message",
                             "TraceId"});
-                table2.AddRow(new string[] {
+                table4.AddRow(new string[] {
                             "payment-service",
                             "Information",
                             "信用卡授權扣款完成 NT$ 1500",
                             "trace-bdd-002"});
 #line 20
-    await testRunner.GivenAsync("Data Stream 中已存在一筆日誌:", ((string)(null)), table2, "Given ");
+    await testRunner.GivenAsync("Data Stream 中已存在一筆日誌:", ((string)(null)), table4, "Given ");
 #line hidden
 #line 23
     await testRunner.WhenAsync("我發送 GET 請求依日誌 ID 查詢該筆日誌", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -273,18 +273,18 @@ namespace EsDailyLogsApi.Tests.Features
 #line 6
   await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table3 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table5 = new global::Reqnroll.Table(new string[] {
                             "Service",
                             "Level",
                             "Message",
                             "TraceId"});
-                table3.AddRow(new string[] {
+                table5.AddRow(new string[] {
                             "auth-service",
                             "Warning",
                             "使用者密碼嘗試失敗 1 次",
                             "trace-bdd-003"});
 #line 28
-    await testRunner.GivenAsync("Data Stream 中已存在一筆日誌:", ((string)(null)), table3, "Given ");
+    await testRunner.GivenAsync("Data Stream 中已存在一筆日誌:", ((string)(null)), table5, "Given ");
 #line hidden
 #line 31
     await testRunner.WhenAsync("我發送 PUT 請求至該日誌所屬底層索引更新訊息為 \"使用者密碼嘗試失敗 3 次（帳號鎖定）\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");
@@ -323,18 +323,18 @@ namespace EsDailyLogsApi.Tests.Features
 #line 6
   await this.FeatureBackgroundAsync();
 #line hidden
-                global::Reqnroll.Table table4 = new global::Reqnroll.Table(new string[] {
+                global::Reqnroll.Table table6 = new global::Reqnroll.Table(new string[] {
                             "Service",
                             "Level",
                             "Message",
                             "TraceId"});
-                table4.AddRow(new string[] {
+                table6.AddRow(new string[] {
                             "audit-service",
                             "Debug",
                             "暫存稽核日誌待刪除",
                             "trace-bdd-004"});
 #line 36
-    await testRunner.GivenAsync("Data Stream 中已存在一筆日誌:", ((string)(null)), table4, "Given ");
+    await testRunner.GivenAsync("Data Stream 中已存在一筆日誌:", ((string)(null)), table6, "Given ");
 #line hidden
 #line 39
     await testRunner.WhenAsync("我發送 DELETE 請求至該日誌所屬底層索引刪除該筆日誌", ((string)(null)), ((global::Reqnroll.Table)(null)), "When ");

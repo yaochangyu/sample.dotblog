@@ -35,6 +35,22 @@ public class LogApiIntegrationTests : IDisposable
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
     }
 
+    [Fact]
+    public async Task Post_DailyIndex_Log_Should_Return_Created_201()
+    {
+        var entry = new LogEntry
+        {
+            Service = "webapi-daily-test-service",
+            Level = "Warning",
+            Message = "Testing DailyIndex WebApi endpoint",
+            TraceId = "trace-api-daily-001"
+        };
+
+        var response = await _client.PostAsJsonAsync("/api/daily-index/logs", entry);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
     public void Dispose()
     {
         _client.Dispose();

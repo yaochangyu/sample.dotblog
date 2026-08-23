@@ -26,6 +26,13 @@ public class ElasticsearchFixture : IAsyncLifetime
             .RequestTimeout(TimeSpan.FromSeconds(30));
 
         Client = new ElasticsearchClient(settings);
+
+        // 初始化 Data Stream 索引樣板
+        await Client.Transport.RequestAsync<StringResponse>(
+            Elastic.Transport.HttpMethod.PUT,
+            "/_index_template/logs_template",
+            PostData.String("{\"index_patterns\":[\"logs-app-*\"],\"data_stream\":{},\"priority\":500}")
+        );
     }
 
     public async Task DisposeAsync()
