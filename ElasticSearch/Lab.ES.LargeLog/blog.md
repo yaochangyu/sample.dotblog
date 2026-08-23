@@ -1,6 +1,6 @@
 ---
 title: '[Elasticsearch] 每日一億筆時序資料架構實戰：Data Stream 與 .NET 10 Web API 整合'
-abstract: <p>面對每日一億筆（尖峰每秒破萬筆）的海量時序日誌 (Time Series Logs)，傳統依賴關聯式資料庫 (SQL) 或手動按日建立索引（Time-based Index）的做法，往往會面臨寫入吞吐瓶頸、過度分片 (Over-sharding) 以及維運刪除繁瑣等問題。本文將從 SQL 與 Elasticsearch 的概念差異出發，透過 Docker 快速建立測試環境，並深入介紹如何利用 Data Stream 搭配索引生命週期管理 (ILM) 解決每日 Log 的寫入與自動輪轉問題，最後透過 ASP.NET Core 10 Web API 搭配基於 <code>System.Threading.Channels</code> 封裝的記憶體佇列類別 <code>LogQueue</code> 與背景消費者 <code>LogBatchProcessor</code> 實現高效能的非阻塞批次寫入與自動化測試。</p>
+abstract: <p>面對每日一億筆（尖峰每秒破萬筆）的海量時序日誌 (Time Series Logs)，傳統依賴關聯式資料庫 (SQL) 或手動按日建立索引（Time-based Index）的做法，往往會面臨寫入吞吐瓶頸、過度分片 (Over-sharding) 以及維運刪除繁瑣等問題。本文將從 SQL 與 Elasticsearch 的概念差異出發，透過 Docker 快速建立測試環境，並深入介紹如何利用 Data Stream 搭配索引生命週期管理 (ILM) 解決每日 Log 的寫入與自動輪轉問題，最後透過 ASP.NET Core 10 Web API 搭配基於 System.Threading.Channels 封裝的記憶體佇列類別 LogQueue 與背景消費者 LogBatchProcessor 實現高效能的非阻塞批次寫入與自動化測試。</p><figure class="image"><img style="aspect-ratio:1376/768;" src="https://dotblogsfile.blob.core.windows.net/user/余小章/0b43e29f-2b87-4d80-9ccb-45649211425f/1787502760.png.png" width="1376" height="768"></figure>
 keywords: .NET 10,Data Stream,Elasticsearch,ILM
 categories: Elastic Search
 weblogName: 余小章 @ 大內殿堂
@@ -12,41 +12,24 @@ stripH1Header: true
 ---
 # [Elasticsearch] 每日一億筆時序資料架構實戰：Data Stream 與 .NET 10 Web API 整合
 
-面對每日一億筆（尖峰每秒破萬筆）的海量時序日誌 (Time Series Logs)，傳統依賴關聯式資料庫 (SQL) 或手動按日建立索引（Time-based Index）的做法，往往會面臨寫入吞吐瓶頸、過度分片 (Over-sharding) 以及維運刪除繁瑣等問題。本文將從 SQL 與 Elasticsearch 的概念差異出發，透過 Docker 快速建立測試環境，並深入介紹如何利用 Data Stream 搭配索引生命週期管理 (ILM) 解決每日 Log 的寫入與自動輪轉問題，最後透過 ASP.NET Core 10 Web API 搭配基於 `System.Threading.Channels` 封裝的記憶體佇列類別 `LogQueue` 與背景消費者 `LogBatchProcessor` 實現高效能的非阻塞批次寫入與自動化測試。
-
 ## 開發環境
 
 - Windows 11 / Ubuntu 24.04
 - .NET 10.0 (C# 14)
 - Elasticsearch 8.17.0
 - Docker / Docker Compose
-- Elastic.Clients.Elasticsearch 8.17.0  
-  （此為建議版本，非強制）
+- Elastic.Clients.Elasticsearch 8.17.0
 
 ---
 
-## 目錄
-
-1. [核心概念：SQL vs Elasticsearch 圖解](#1-核心概念sql-vs-elasticsearch-圖解)
-2. [環境準備：Docker Compose 快速啟動](#2-環境準備docker-compose-快速啟動)
-3. [快速上手：手把手實操與終端機真實執行畫面](#3-快速上手手把手實操與終端機真實執行畫面)
-4. [架構設計：每日一億筆時序資料（Data Stream + ILM）](#4-架構設計每日一億筆時序資料data-stream--ilm)
-  - [4.1 關鍵觀念：Index 根據欄位建立後，每日 Log Doc 還要額外指定？](#41-關鍵觀念index-根據欄位建立後每日-log-doc-還要額外指定)
-  - [4.2 初始化 ILM 與 Data Stream 腳本](#42-初始化-ilm-與-data-stream-腳本)
-5. [ASP.NET Core 10 Web API 實作](#5-aspnet-core-10-web-api-實作)
-6. [端對端驗證與自動化測試](#6-端對端驗證與自動化測試)
-7. [維運避坑指南與最佳實踐](#7-維運避坑指南與最佳實踐)
-
----
-
-## 1. 核心概念：SQL vs Elasticsearch 圖解
+## 1. 核心概念：SQL vs Elasticsearch
 
 ### 1.1 名詞概念與適用時機
 
 這裡先將大家熟悉的關聯式資料庫 (RDBMS / SQL) 與 Elasticsearch (ES) 做個名詞對照，方便快速建立心智模型：
 
 | 關聯式資料庫 (SQL) | Elasticsearch (ES) | 說明 |
-|---|---|---|
+| --- | --- | --- |
 | **Database** | *(Cluster 管理)* | ES 叢集 (Cluster) 內負責統一管理多個 Index |
 | **Table** | **Index** (索引) | 存放相同邏輯結構的文件集合 |
 | **Schema** | **Mapping** (映射) | 定義欄位名稱與型別（如 `text`、`keyword`、`date` 等） |
@@ -67,42 +50,42 @@ stripH1Header: true
 - **SQL (正向儲存 / B+ Tree)**：資料以「列 (Row)」為核心儲存。若要搜尋 `LIKE '%關鍵字%'`，因為無法有效利用 B+ Tree 前綴索引，必須逐筆全表掃描 (Full Table Scan)，資料量一旦達到數百萬筆以上，效能就會急遽下滑。
 - **ES (倒排索引 / Inverted Index)**：在資料寫入時，Elasticsearch 會先將文字進行分詞 (Tokenize)，建立一份「詞彙指向文件 ID 清單」的字典。查詢時直接查字典，毫秒級就能取得匹配清單，完全不需要掃描全表。
 
-這裡我們用圖解清楚對比兩者的搜尋機制差異：
+這裡我們用對比清楚解析兩者的搜尋機制差異：
 
-```plaintext
-┌────────────────────────────────────────────────────────────────────────┐
-│ 1. 傳統 SQL 正向儲存 (Row-based) 檢索方式                               │
-└────────────────────────────────────────────────────────────────────────┘
-  資料列 (Row ID) │ 內文 (Title / Message)
- ─────────────────┼───────────────────────────────────────────────
-       Doc 1      │ Elasticsearch 實戰指南
-       Doc 2      │ ASP.NET Core 10 開發筆記
-       Doc 3      │ Elasticsearch 效能調校
- 
-  🔍 搜尋 "Elasticsearch"：
-  [掃描 Doc 1 (命中)] ➔ [掃描 Doc 2 (不符)] ➔ [掃描 Doc 3 (命中)]
-  ⚠️ 資料量越大，全表掃描 (Full Table Scan) 耗時越長！
+#### 1. 傳統 SQL 正向儲存 (Row-based) 檢索方式
 
+**資料表儲存結構**：
 
-┌────────────────────────────────────────────────────────────────────────┐
-│ 2. Elasticsearch 倒排索引 (Inverted Index) 檢索方式                    │
-└────────────────────────────────────────────────────────────────────────┘
-  【寫入時分詞建立字典】
-   文件寫入 ➔ 分詞器 (Tokenizer) 拆解單字 ➔ 建立詞彙字典與倒排清單 (Posting List)
+| 資料列 (Row ID) | 內文 (Title / Message) |
+| --- | --- |
+| Doc 1 | Elasticsearch 實戰指南 |
+| Doc 2 | ASP.NET Core 10 開發筆記 |
+| Doc 3 | Elasticsearch 效能調校 |
 
-  【倒排清單結構 (Posting List)】
-   Term (詞彙)     │ 包含該詞的 Document ID 清單 (帶有詞頻與位置資訊)
-  ─────────────────┼───────────────────────────────────────────────
-   ASP.NET         │ [ Doc 2 ]
-   Core            │ [ Doc 2 ]
-   Elasticsearch   │ [ Doc 1, Doc 3 ]  ───👉 命中！直接取得 Doc 1 與 Doc 3
-   調校            │ [ Doc 3 ]
-   實戰            │ [ Doc 1 ]
+**搜尋流程 (**`LIKE '%Elasticsearch%'`**)**：  
+- `[掃描 Doc 1 (命中)]` ➔ `[掃描 Doc 2 (不符)]` ➔ `[掃描 Doc 3 (命中)]`  
+- ⚠️ **問題**：無法有效利用 B+ Tree 前綴索引，必須逐筆全表掃描 (Full Table Scan)，資料量越大耗時越長！
 
-  🔍 搜尋 "Elasticsearch"：
-  輸入查詢詞 ➔ 直接查找 Term Dictionary ➔ 立即返回 [Doc 1, Doc 3] (O(1) ~ O(log N))
-  ✨ 無需全表逐筆掃描，即使每日一億筆資料依然具備毫秒級查詢效能！
-```
+---
+
+#### 2. Elasticsearch 倒排索引 (Inverted Index) 檢索方式
+
+**【寫入時分詞建立字典】**  
+- 文件寫入 ➔ 分詞器 (Tokenizer) 拆解單字 ➔ 建立詞彙字典與倒排清單 (Posting List)
+
+**【倒排清單結構 (Posting List)】**
+
+| Term (詞彙) | 包含該詞的 Document ID 清單 (帶有詞頻與位置資訊) | 命中說明 |
+| --- | --- | --- |
+| ASP.NET | `[ Doc 2 ]` |  |
+| Core | `[ Doc 2 ]` |  |
+| **Elasticsearch** | `[ Doc 1, Doc 3 ]` | 👉 **命中！直接取得 Doc 1 與 Doc 3** |
+| 調校 | `[ Doc 3 ]` |  |
+| 實戰 | `[ Doc 1 ]` |  |
+
+**搜尋流程 (**`Elasticsearch`**)**：  
+- 輸入查詢詞 ➔ 直接查找 Term Dictionary ➔ 立即返回 `[Doc 1, Doc 3]`（時間複雜度接近 $O(1) \sim O(\log N)$）  
+- ✨ **優勢**：無需全表逐筆掃描，即使每日一億筆資料依然具備毫秒級查詢效能！
 
 ---
 
@@ -112,7 +95,7 @@ stripH1Header: true
 
 `docker-compose.yml` 設定如下：
 
-```yaml
+```
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
@@ -132,7 +115,7 @@ services:
 
 執行以下指令啟動容器：
 
-```bash
+```
 docker compose up -d
 ```
 
@@ -146,7 +129,7 @@ docker compose up -d
 
 透過 HTTP PUT 建立名為 `my-first-index` 的索引並定義 Mapping：
 
-```bash
+```
 curl -X PUT "http://localhost:9200/my-first-index" \
   -H "Content-Type: application/json" \
   -d '{
@@ -167,7 +150,7 @@ curl -X PUT "http://localhost:9200/my-first-index" \
 
 終端機回應畫面如下：
 
-```json
+```
 {
   "acknowledged": true,
   "shards_acknowledged": true,
@@ -183,7 +166,7 @@ curl -X PUT "http://localhost:9200/my-first-index" \
 
 以自訂 ID `doc-001` 寫入一筆文件：
 
-```bash
+```
 curl -X PUT "http://localhost:9200/my-first-index/_doc/doc-001" \
   -H "Content-Type: application/json" \
   -d '{
@@ -196,7 +179,7 @@ curl -X PUT "http://localhost:9200/my-first-index/_doc/doc-001" \
 
 終端機回應畫面如下：
 
-```json
+```
 {
   "_index": "my-first-index",
   "_id": "doc-001",
@@ -216,7 +199,7 @@ curl -X PUT "http://localhost:9200/my-first-index/_doc/doc-001" \
 
 使用 POST 讓 Elasticsearch 自動生成唯一 ID：
 
-```bash
+```
 curl -X POST "http://localhost:9200/my-first-index/_doc" \
   -H "Content-Type: application/json" \
   -d '{
@@ -229,7 +212,7 @@ curl -X POST "http://localhost:9200/my-first-index/_doc" \
 
 終端機回應畫面如下：
 
-```json
+```
 {
   "_index": "my-first-index",
   "_id": "LK7PLaABbPQ5FnXdYYdS",
@@ -255,13 +238,13 @@ curl -X POST "http://localhost:9200/my-first-index/_doc" \
 
 透過指定 Document ID 直接取得資料：
 
-```bash
+```
 curl "http://localhost:9200/my-first-index/_doc/doc-001"
 ```
 
 終端機回應畫面如下：
 
-```json
+```
 {
   "_index": "my-first-index",
   "_id": "doc-001",
@@ -282,7 +265,7 @@ curl "http://localhost:9200/my-first-index/_doc/doc-001"
 
 透過 `_search` 端點進行 `match` 關鍵字搜尋：
 
-```bash
+```
 curl -X POST "http://localhost:9200/my-first-index/_search" \
   -H "Content-Type: application/json" \
   -d '{
@@ -296,7 +279,7 @@ curl -X POST "http://localhost:9200/my-first-index/_search" \
 
 終端機回應畫面如下：
 
-```json
+```
 {
   "took": 2,
   "timed_out": false,
@@ -352,8 +335,8 @@ curl -X POST "http://localhost:9200/my-first-index/_search" \
 
 - **程式碼維護繁瑣**：應用程式端必須在每次寫入時計算 `$"logs-{DateTime.UtcNow:yyyy.MM.dd}"`，若遇到時區轉換、跨日臨界點或延遲到達的 Log，容易發生寫錯索引或產生分散碎索引的問題。
 - **分片大小極度不均勻（Over-sharding）**：
-  - 業務離峰日（如週末或連假）Log 量少，但依然會建立出完整的 Shard，產生大量 < 1GB 的小分片，白白浪費 Elasticsearch Node 的 JVM Heap 記憶體。
-  - 業務尖峰日（如大型促銷活動）Log 量暴增，單日索引可能膨脹至數百 GB，導致單一 Shard 過大、查詢與復原變慢。
+- 業務離峰日（如週末或連假）Log 量少，但依然會建立出完整的 Shard，產生大量 < 1GB 的小分片，白白浪費 Elasticsearch Node 的 JVM Heap 記憶體。
+- 業務尖峰日（如大型促銷活動）Log 量暴增，單日索引可能膨脹至數百 GB，導致單一 Shard 過大、查詢與復原變慢。
 - **過期清理需要額外維運**：必須在外部另外撰寫 CronJob 腳本（或使用 Curator 工具），每天定時掃描並下指令刪除 30 天前的舊索引名稱。
 
 ---
@@ -371,10 +354,10 @@ Elasticsearch 官方推出 **Data Stream** 就是為了解決上述痛點：
 #### 3. 傳統做法 vs 現代 Data Stream 做法完整對照表
 
 | 比較項目 | 傳統做法（手動按日建索引） | 現代推薦做法（Data Stream + ILM） |
-|---|---|---|
-| **寫入目標端點** | 每天動態變化：<br>`POST /logs-2026.08.23/_doc` | **永遠固定不變**：<br>`POST /logs-app-prod/_bulk` |
+| --- | --- | --- |
+| **寫入目標端點** | 每天動態變化： `POST /logs-2026.08.23/_doc` | **永遠固定不變**： `POST /logs-app-prod/_bulk` |
 | **程式端是否需算日期** | **要**（需寫 `$"logs-{DateTime.UtcNow:yyyy.MM.dd}"`） | **完全不用**（永遠指向固定 Data Stream） |
-| **Document 資料需求** | 純 JSON 欄位 | JSON 欄位中**必須包含 `@timestamp`** |
+| **Document 資料需求** | 純 JSON 欄位 | JSON 欄位中**必須包含** `@timestamp` |
 | **分片（Shard）均勻度** | 差（量少時 Shard 過小浪費記憶體，暴量時 Shard 過大） | **優**（由 ILM 嚴格依照「每滿 40GB」自動 Rollover 切分） |
 | **生命週期自動清理** | 需額外寫外部 CronJob / 腳本定期掃描刪除 | **內建自動化**（由 ILM 策略設定滿 30 天底層自動刪除） |
 
@@ -383,9 +366,9 @@ Elasticsearch 官方推出 **Data Stream** 就是為了解決上述痛點：
 #### 4. Document 資料需求與寫入規範
 
 1. **欄位結構（Mapping）已事先固化**：
-  - 在 Index Template 中已經定義了 `service (keyword)`、`message (text)`、`level (keyword)` 等型別，寫入 Document 時不需要在 Header 或 Body 重複宣告結構。
-2. **必備 `@timestamp` 欄位**：
-  - 寫入 Document 時，只要在 JSON 本體包含 `@timestamp`（ISO 8601 UTC 時間字串，例如 `"2026-08-23T17:30:00.000Z"`），Elasticsearch 就會依據該時間戳記，在底層自動分流到當前啟用的 Backing Index 中。
+2. 在 Index Template 中已經定義了 `service (keyword)`、`message (text)`、`level (keyword)` 等型別，寫入 Document 時不需要在 Header 或 Body 重複宣告結構。
+3. **必備** `@timestamp` **欄位**：
+4. 寫入 Document 時，只要在 JSON 本體包含 `@timestamp`（ISO 8601 UTC 時間字串，例如 `"2026-08-23T17:30:00.000Z"`），Elasticsearch 就會依據該時間戳記，在底層自動分流到當前啟用的 Backing Index 中。
 
 ---
 
@@ -394,7 +377,8 @@ Elasticsearch 官方推出 **Data Stream** 就是為了解決上述痛點：
 這裡我們直接看兩者在應用程式端的寫法差異：
 
 **🔴 傳統手動按日索引寫法（Time-based Index）：**
-```csharp
+
+```
 // 1. 寫入：每次寫入都必須手動計算與拼接當天日期字串（有跨日時區計算風險）
 var dailyIndex = $"logs-app-{DateTime.UtcNow:yyyy.MM.dd}";
 await _client.IndexAsync(entry, idx => idx.Index(dailyIndex));
@@ -408,7 +392,8 @@ var response = await _client.SearchAsync<LogEntry>(s => s
 ```
 
 **🟢 現代 Data Stream 寫法（推薦）：**
-```csharp
+
+```
 // 1. 寫入：目標端點永遠固定，程式碼零日期組裝邏輯（由 ES 底層 ILM 依容量與天數自動切分）
 await _client.BulkAsync(b => b
     .Index("logs-app-prod")
@@ -428,7 +413,7 @@ var response = await _client.SearchAsync<LogEntry>(s => s
 
 這裡我們設定 ILM 策略（滿 40GB 或滿 1 天自動 Rollover，30 天後自動刪除），並建立 Index Template 綁定 Data Stream：
 
-```bash
+```
 # 1. 建立 ILM 策略 (滿 40GB 或 1 天 Rollover，30 天後刪除)
 curl -X PUT "http://localhost:9200/_ilm/policy/logs_ilm_policy" \
   -H "Content-Type: application/json" \
@@ -486,7 +471,7 @@ curl -X PUT "http://localhost:9200/_index_template/logs_template" \
 
 專案完整原始碼位於 `src/EsDailyLogsApi`。使用官方 8.x SDK 套件：
 
-```bash
+```
 dotnet add package Elastic.Clients.Elasticsearch --version 8.17.0
 ```
 
@@ -494,15 +479,15 @@ dotnet add package Elastic.Clients.Elasticsearch --version 8.17.0
 
 面對每日一億筆高併發寫入，API 不能每次收到請求就同步呼叫 ES，否則容易造成連線池耗盡與 HTTP 逾時。這裡我們拆分成以下幾個核心類別 (Class)：
 
-1. **資料模型類別 (`LogEntry.cs`)**：
+1. **資料模型類別 (**`LogEntry.cs`**)**：  
    定義 Log 結構，透過 `[JsonPropertyName("@timestamp")]` 映射 ES 時序必備欄位。
-2. **記憶體非阻塞佇列類別 (`LogQueue.cs` / `ILogQueue`)**：
+2. **記憶體非阻塞佇列類別 (**`LogQueue.cs` **/** `ILogQueue`**)**：  
    封裝 .NET 內建的 `System.Threading.Channels.Channel<LogEntry>` 作為高吞吐記憶體佇列 (Queue)，寫入操作不阻塞，耗時 < 1ms。
-3. **背景批次寫入類別 (`LogBatchProcessor.cs`)**：
+3. **背景批次寫入類別 (**`LogBatchProcessor.cs`**)**：  
    繼承 `BackgroundService`，作為 Queue 的背景消費者 (Consumer)，從 `ILogQueue` 批次取出 Log（如每 100~500 筆或每 500ms），透過 `ElasticsearchClient.BulkAsync` 批次寫入固定的 Data Stream 端點（`logs-app-prod`）。
-4. **Data Stream 查詢與維運服務類別 (`LogService.cs` / `ILogService`)**：
+4. **Data Stream 查詢與維運服務類別 (**`LogService.cs` **/** `ILogService`**)**：  
    封裝 `ElasticsearchClient`，提供單筆查詢、時序區間全文檢索，以及針對底層 Backing Index 的更新與刪除操作。
-5. **手動按日索引服務類別 (`DailyIndexLogService.cs` / `IDailyIndexLogService`)**：
+5. **手動按日索引服務類別 (**`DailyIndexLogService.cs` **/** `IDailyIndexLogService`**)**：  
    作為對照組，示範 Time-based 手動組裝 `$"logs-app-{yyyy.MM.dd}"` 寫入與手動計算日期區間跨多索引搜尋的寫法。
 
 ---
@@ -511,7 +496,7 @@ dotnet add package Elastic.Clients.Elasticsearch --version 8.17.0
 
 這裡透過 `Channel.CreateBounded<LogEntry>` 建立有界佇列，提供非阻塞的入隊 (`EnqueueAsync`) 與非同步串流讀取 (`ReadAllAsync`)：
 
-```csharp
+```
 public interface ILogQueue
 {
     ValueTask EnqueueAsync(LogEntry entry, CancellationToken ct = default);
@@ -547,7 +532,7 @@ public class LogQueue : ILogQueue
 
 這裡的 `LogBatchProcessor` 類別會在背景持續監聽 `ILogQueue`，累積滿批次量或時間到達時呼叫 `BulkAsync` 批次寫入：
 
-```csharp
+```
 public class LogBatchProcessor : BackgroundService
 {
     private readonly ILogQueue _queue;
@@ -630,7 +615,7 @@ public class LogBatchProcessor : BackgroundService
 
 這裡展示手動按日索引做法：寫入時動態組裝 `logs-app-yyyy.MM.dd`，跨日查詢時手動列出所有日期的單日索引名稱：
 
-```csharp
+```
 public interface IDailyIndexLogService
 {
     Task<bool> WriteLogAsync(LogEntry log);
@@ -702,7 +687,7 @@ public class DailyIndexLogService : IDailyIndexLogService
 
 在 `Program.cs` 註冊各個 Class 服務，包含現代 Data Stream 端點與手動單日索引端點：
 
-```csharp
+```
 var builder = WebApplication.CreateBuilder(args);
 
 var settings = new ElasticsearchClientSettings(new Uri("http://localhost:9200"))
@@ -808,7 +793,7 @@ app.Run();
 
 這裡展示 Data Stream 完整生命週期的繁體中文 BDD 規格定義：
 
-```gherkin
+```
 Feature: 現代 Data Stream 日誌管理
   作為系統維運與開發人員
   我想透過 API 將日誌寫入 Elasticsearch Data Stream 並進行查詢、更新與刪除
@@ -843,23 +828,23 @@ Feature: 現代 Data Stream 日誌管理
 測試專案位於 `tests/EsDailyLogsApi.Tests`，包含：
 
 - **BDD 規格測試**：
-  - `DataStreamLogs.feature`：驗證 Data Stream 寫入、全文檢索、單筆查詢、更新與刪除。
-  - `DailyIndexLogs.feature`：驗證手動按日索引模式（`/api/daily-index/logs`）的寫入與跨日範圍查詢。
+- `DataStreamLogs.feature`：驗證 Data Stream 寫入、全文檢索、單筆查詢、更新與刪除。
+- `DailyIndexLogs.feature`：驗證手動按日索引模式（`/api/daily-index/logs`）的寫入與跨日範圍查詢。
 - **單元與整合測試**：
-  - `LogQueueTests.cs`：驗證 `System.Threading.Channels` 的非阻塞寫入與讀取。
-  - `LogServiceIntegrationTests.cs`：對 ES 執行 Data Stream 下完整的 CRUD 生命週期驗證。
-  - `DailyIndexLogServiceIntegrationTests.cs`：驗證手動單日索引的寫入與範圍檢索。
-  - `LogApiIntegrationTests.cs`：Web API 端點整合測試。
+- `LogQueueTests.cs`：驗證 `System.Threading.Channels` 的非阻塞寫入與讀取。
+- `LogServiceIntegrationTests.cs`：對 ES 執行 Data Stream 下完整的 CRUD 生命週期驗證。
+- `DailyIndexLogServiceIntegrationTests.cs`：驗證手動單日索引的寫入與範圍檢索。
+- `LogApiIntegrationTests.cs`：Web API 端點整合測試。
 
 執行測試指令：
 
-```bash
+```
 dotnet test EsDailyLogs.slnx
 ```
 
 終端機測試執行通過畫面如下（11 個測試 100% 通過）：
 
-```text
+```
 Test run for tests/EsDailyLogsApi.Tests/bin/Debug/net10.0/EsDailyLogsApi.Tests.dll (.NETCoreApp,Version=v10.0)
 Starting test execution, please wait...
 A total of 1 test files matched the specified pattern.
@@ -875,7 +860,7 @@ Passed!  - Failed:     0, Passed:    11, Skipped:     0, Total:    11, Duration:
 
 啟動 Web API 與執行測試腳本：
 
-```bash
+```
 # 1. 啟動 Web API
 dotnet run --project src/EsDailyLogsApi/EsDailyLogsApi.csproj
 
@@ -899,7 +884,7 @@ dotnet run --project src/EsDailyLogsApi/EsDailyLogsApi.csproj
 
 ILM 自動 Rollover 策略設定：
 
-```json
+```
 PUT _ilm/policy/logs_ilm_policy
 {
   "policy": {
@@ -952,7 +937,7 @@ PUT _ilm/policy/logs_ilm_policy
 
 ## 心得
 
-面對每日一億筆的海量時序資料，架構設計的關鍵在於「化繁為簡」：
+面對每日一億筆的海量時序資料：
 
 - **寫入端**：應用程式不再需要費心去算今天是什麼日期、組裝索引字串，直接丟給固定的 Data Stream 端點即可。
 - **分片與生命週期**：透過 ILM 自動依 Shard 容量（如 40GB）切分與定時清理，徹底解決過度分片 (Over-sharding) 與磁碟爆滿的維運惡夢。
@@ -962,4 +947,4 @@ PUT _ilm/policy/logs_ilm_policy
 
 ## 範例位置
 
-完整代碼位置: [https://github.com/yaochangyu/sample.dotblog/tree/master/ElasticSearch/Lab.ES.LargeLog](https://github.com/yaochangyu/sample.dotblog/tree/master/ElasticSearch/Lab.ES.LargeLog)
+完整代碼位置: <https://github.com/yaochangyu/sample.dotblog/tree/master/ElasticSearch/Lab.ES.LargeLog>
