@@ -1,21 +1,22 @@
 using Elastic.Clients.Elasticsearch;
 using EsDailyLogs.Models;
 using EsDailyLogs.Services;
+using EsDailyLogsApi.Tests.Fixtures;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace EsDailyLogsApi.Tests;
 
+[Collection("Elasticsearch")]
 public class TraditionalLogServiceIntegrationTests
 {
     private readonly ElasticsearchClient _client;
     private readonly TraditionalLogService _service;
 
-    public TraditionalLogServiceIntegrationTests()
+    public TraditionalLogServiceIntegrationTests(ElasticsearchFixture fixture)
     {
-        var settings = new ElasticsearchClientSettings(new Uri("http://localhost:9200"));
-        _client = new ElasticsearchClient(settings);
+        _client = fixture.Client;
         _service = new TraditionalLogService(_client, NullLogger<TraditionalLogService>.Instance);
     }
 

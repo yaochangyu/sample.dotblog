@@ -795,18 +795,61 @@ app.Run();
 
 ---
 
-## 6. 端對端驗證與自動化測試
+## 6. 端對端驗證與自動化測試（BDD + Testcontainers）
 
-這裡提供兩種驗證方式：**xUnit 自動化測試專案** 與 **Bash 端對端呼叫腳本**。
+為落實可靠的整合測試與規格化驗證，本專案採用 **BDD（Reqnroll / Cucumber .NET）** 搭配 **Testcontainers for .NET** 架構：
 
-### 6.1 執行 xUnit 自動化測試專案
+- **Testcontainers 拋棄式容器隔離**：在測試啟動時自動透過 `Testcontainers.Elasticsearch` 啟動真實的 Elasticsearch 8.17.0 容器，測試完畢自動銷毀，不再依賴本機手動啟動的環境。
+- **BDD 規格化活文件 (Living Documentation)**：透過 Gherkin 語法與繁體中文撰寫完整的情境規格（Feature & Scenario）。
 
-測試專案位於 `tests/EsDailyLogsApi.Tests`：
+---
 
-- `LogQueueTests.cs`：單元測試，驗證 `System.Threading.Channels` 的非阻塞寫入與讀取。
-- `LogServiceIntegrationTests.cs`：整合測試，對真實 Elasticsearch 執行 Data Stream 下完整的 CRUD 生命週期驗證。
-- `TraditionalLogServiceIntegrationTests.cs`：整合測試，驗證傳統 Time-based 手動按日索引的寫入與跨日範圍查詢。
-- `LogApiIntegrationTests.cs`：Web API 整合測試，使用 `WebApplicationFactory<Program>` 驗證 HTTP API 端點行為。
+### 6.1 BDD 規格檔範例 (`DataStreamLogs.feature`)
+
+這裡展示 Data Stream 完整生命週期的繁體中文 BDD 規格定義：
+
+```gherkin
+Feature: 現代 Data Stream 日誌管理
+  作為系統維運與開發人員
+  我想透過 API 將日誌寫入 Elasticsearch Data Stream 並進行查詢、更新與刪除
+  以便高效管理海量日誌
+
+  Background:
+    Given Elasticsearch 服務已正常運作
+    And 系統 API 服務已啟動
+
+  Scenario: 透過 API 寫入日誌並經由背景批次處理器寫入 Data Stream
+    Given 我有一筆日誌資料:
+      | Service       | Level       | Message                    | TraceId       |
+      | order-service | Information | 訂單建立成功，訂單編號 ORD-1001 | trace-bdd-001 |
+    When 我發送 POST 請求至 "/api/logs" 寫入該日誌
+    Then API 應回傳 HTTP 狀態碼 202
+    And 等待背景批次處理器將日誌寫入 Data Stream
+    Then 透過 Data Stream 全文檢索關鍵字 "ORD-1001" 應能查得該筆日誌
+
+  Scenario: 透過 API 依 ID 查詢單筆日誌
+    Given Data Stream 中已存在一筆日誌:
+      | Service         | Level       | Message                   | TraceId       |
+      | payment-service | Information | 信用卡授權扣款完成 NT$ 1500 | trace-bdd-002 |
+    When 我發送 GET 請求依日誌 ID 查詢該筆日誌
+    Then API 應回傳 HTTP 狀態碼 200
+    And 回傳的日誌內容訊息應為 "信用卡授權扣款完成 NT$ 1500"
+```
+
+---
+
+### 6.2 執行自動化測試專案
+
+測試專案位於 `tests/EsDailyLogsApi.Tests`，包含：
+
+- **BDD 規格測試**：
+  - `DataStreamLogs.feature`：驗證 Data Stream 寫入、全文檢索、單筆查詢、更新與刪除。
+  - `TraditionalLogs.feature`：驗證傳統 Time-based 手動按日索引寫入與跨日範圍查詢。
+- **單元與整合測試**：
+  - `LogQueueTests.cs`：驗證 `System.Threading.Channels` 的非阻塞寫入與讀取。
+  - `LogServiceIntegrationTests.cs`：對 ES 執行 Data Stream 下完整的 CRUD 生命週期驗證。
+  - `TraditionalLogServiceIntegrationTests.cs`：驗證傳統 Time-based 按日索引的寫入與範圍檢索。
+  - `LogApiIntegrationTests.cs`：Web API 端點整合測試。
 
 執行測試指令：
 
@@ -814,14 +857,14 @@ app.Run();
 dotnet test EsDailyLogs.slnx
 ```
 
-終端機測試執行通過畫面如下：
+終端機測試執行通過畫面如下（10 個測試 100% 通過）：
 
 ```text
 Test run for tests/EsDailyLogsApi.Tests/bin/Debug/net10.0/EsDailyLogsApi.Tests.dll (.NETCoreApp,Version=v10.0)
 Starting test execution, please wait...
 A total of 1 test files matched the specified pattern.
 
-Passed!  - Failed:     0, Passed:     4, Skipped:     0, Total:     4, Duration: 1 s
+Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 3 s
 ```
 
 ---

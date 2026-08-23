@@ -60,7 +60,7 @@ public class TraditionalLogService : ITraditionalLogService
 
         var filters = new List<Query>
         {
-            new DateRangeQuery(Infer.Field<LogEntry>(f => f.Timestamp))
+            new DateRangeQuery(new Field("@timestamp"))
             {
                 Gte = from.ToString("o"),
                 Lte = to.ToString("o")
@@ -69,7 +69,7 @@ public class TraditionalLogService : ITraditionalLogService
 
         if (!string.IsNullOrWhiteSpace(service))
         {
-            filters.Add(new TermQuery(Infer.Field<LogEntry>(f => f.Service)) { Value = service });
+            filters.Add(new MatchQuery(Infer.Field<LogEntry>(f => f.Service)) { Query = service });
         }
 
         var mustQueries = new List<Query>();
@@ -81,8 +81,10 @@ public class TraditionalLogService : ITraditionalLogService
         // 2. 指定多個每日索引進行查詢
         var response = await _client.SearchAsync<LogEntry>(s => s
             .Indices(targetIndices.Select(x => (IndexName)x).ToArray())
+            .AllowNoIndices(true)
+            .IgnoreUnavailable(true)
             .Size(size)
-            .Sort(sort => sort.Field(f => f.Timestamp, new FieldSort { Order = SortOrder.Desc }))
+            .Sort(sort => sort.Field(new Field("@timestamp"), new FieldSort { Order = SortOrder.Desc }))
             .Query(new BoolQuery
             {
                 Filter = filters,

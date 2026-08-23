@@ -1,19 +1,22 @@
 using System.Net;
 using System.Net.Http.Json;
 using EsDailyLogs.Models;
+using EsDailyLogsApi.Tests.Fixtures;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
 
 namespace EsDailyLogsApi.Tests;
 
-public class LogApiIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+[Collection("Elasticsearch")]
+public class LogApiIntegrationTests : IDisposable
 {
+    private readonly CustomWebApplicationFactory _factory;
     private readonly HttpClient _client;
 
-    public LogApiIntegrationTests(WebApplicationFactory<Program> factory)
+    public LogApiIntegrationTests(ElasticsearchFixture fixture)
     {
-        _client = factory.CreateClient();
+        _factory = new CustomWebApplicationFactory(fixture.ConnectionString);
+        _client = _factory.CreateClient();
     }
 
     [Fact]
@@ -30,5 +33,11 @@ public class LogApiIntegrationTests : IClassFixture<WebApplicationFactory<Progra
         var response = await _client.PostAsJsonAsync("/api/logs", entry);
 
         response.StatusCode.Should().Be(HttpStatusCode.Accepted);
+    }
+
+    public void Dispose()
+    {
+        _client.Dispose();
+        _factory.Dispose();
     }
 }

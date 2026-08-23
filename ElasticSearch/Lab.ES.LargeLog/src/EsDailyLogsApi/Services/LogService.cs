@@ -55,7 +55,7 @@ public class LogService : ILogService
     {
         var filters = new List<Query>
         {
-            new DateRangeQuery(Infer.Field<LogEntry>(f => f.Timestamp))
+            new DateRangeQuery(new Field("@timestamp"))
             {
                 Gte = from.ToString("o"),
                 Lte = to.ToString("o")
@@ -64,7 +64,7 @@ public class LogService : ILogService
 
         if (!string.IsNullOrWhiteSpace(service))
         {
-            filters.Add(new TermQuery(Infer.Field<LogEntry>(f => f.Service)) { Value = service });
+            filters.Add(new MatchQuery(Infer.Field<LogEntry>(f => f.Service)) { Query = service });
         }
 
         var mustQueries = new List<Query>();
@@ -76,7 +76,7 @@ public class LogService : ILogService
         var response = await _client.SearchAsync<LogEntry>(s => s
             .Indices(TargetDataStream)
             .Size(size)
-            .Sort(sort => sort.Field(f => f.Timestamp, new FieldSort { Order = SortOrder.Desc }))
+            .Sort(sort => sort.Field(new Field("@timestamp"), new FieldSort { Order = SortOrder.Desc }))
             .Query(new BoolQuery
             {
                 Filter = filters,

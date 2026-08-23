@@ -422,13 +422,18 @@ curl -X PUT "http://localhost:9200/_index_template/logs_template" \
 
 ---
 
-## 6. 端對端驗證與自動化測試
+## 6. 端對端驗證與自動化測試（BDD + Testcontainers）
 
-本解決方案包含兩種驗證方式：**xUnit 自動化測試專案** 與 **Bash 端對端呼叫腳本**。
+本解決方案採用 **BDD（Reqnroll / Cucumber .NET）** 搭配 **Testcontainers for .NET** 進行規格化驗證與隔離測試：
 
-### 6.1 執行 xUnit 自動化測試專案
+- **Testcontainers 拋棄式容器隔離**：在測試啟動時自動透過 `Testcontainers.Elasticsearch` 啟動真實的 Elasticsearch 8.17.0 容器，測試完畢自動銷毀，不再依賴本機手動啟動的環境。
+- **BDD 規格化活文件 (Living Documentation)**：透過 Gherkin 語法與繁體中文撰寫完整的情境規格（Feature & Scenario）。
+
+### 6.1 自動化測試專案清單
 
 解決方案中包含 `tests/EsDailyLogsApi.Tests`：
+* **`DataStreamLogs.feature`**：BDD 規格測試，驗證 Data Stream 寫入、背景批次入庫、全文檢索、單筆查詢、更新與刪除。
+* **`TraditionalLogs.feature`**：BDD 規格測試，驗證傳統 Time-based 手動按日索引的寫入與跨日範圍查詢。
 * **`LogQueueTests.cs`**：單元測試，驗證 `System.Threading.Channels` 的非阻塞寫入與讀取。
 * **`LogServiceIntegrationTests.cs`**：整合測試，對 Elasticsearch 實際執行 Data Stream 下完整的 CRUD 生命週期驗證。
 * **`TraditionalLogServiceIntegrationTests.cs`**：整合測試，驗證傳統 Time-based 手動按日索引的寫入與跨日範圍查詢。
@@ -439,13 +444,13 @@ curl -X PUT "http://localhost:9200/_index_template/logs_template" \
 dotnet test EsDailyLogs.slnx
 ```
 
-**🖥️ 測試執行通過畫面：**
+**🖥️ 測試執行通過畫面（10 個測試 100% 通過）：**
 ```text
 Test run for tests/EsDailyLogsApi.Tests/bin/Debug/net10.0/EsDailyLogsApi.Tests.dll (.NETCoreApp,Version=v10.0)
 Starting test execution, please wait...
 A total of 1 test files matched the specified pattern.
 
-Passed!  - Failed:     0, Passed:     4, Skipped:     0, Total:     4, Duration: 1 s
+Passed!  - Failed:     0, Passed:    10, Skipped:     0, Total:    10, Duration: 3 s
 ```
 
 ---
