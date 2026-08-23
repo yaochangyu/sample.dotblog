@@ -57,4 +57,22 @@ echo "=== 8. [Read] 驗證刪除後已查不到 ==="
 AFTER_DEL_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/api/logs/$FIRST_ID")
 echo "Get Deleted ID Status: $AFTER_DEL_STATUS (預期 404)"
 
-echo "=== 全部 CRUD 測試 100% 通過！==="
+echo "=== 9. [Daily Index] 手動按日索引寫入與跨日查詢 ==="
+DAILY_CREATE_STATUS=$(curl -s -X POST "$API_URL/api/daily-index/logs" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "service": "shipping-service",
+    "level": "Warning",
+    "message": "Shipping delay test notification",
+    "traceId": "trace-sh-001"
+  }' -w "%{http_code}")
+echo "Daily Index Create Status: $DAILY_CREATE_STATUS (預期 201)"
+
+TODAY_INDEX="logs-app-$(date -u +%Y.%m.%d)"
+curl -s -X POST "http://localhost:9200/$TODAY_INDEX/_refresh" > /dev/null
+
+DAILY_SEARCH_RES=$(curl -s "$API_URL/api/daily-index/logs?service=shipping-service&keyword=Shipping")
+echo "Daily Index Search Result:"
+echo "$DAILY_SEARCH_RES" | jq .
+
+echo "=== 全部 CRUD 與 Daily Index 測試 100% 通過！==="

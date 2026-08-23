@@ -29,3 +29,18 @@ Content-Type: application/json
 
 ### 5. [Delete] 刪除 Log (請替換為實際底層索引與 _id)
 DELETE {{HostAddress}}/api/logs/.ds-logs-app-prod-2026.08.23-000001/K67LLaABbPQ5FnXdTodm
+
+### 6. [Create] 手動按日索引模式：寫入 Log
+POST {{HostAddress}}/api/daily-index/logs
+Content-Type: application/json
+
+{
+  "service": "shipping-service",
+  "level": "Warning",
+  "message": "Shipping delay detected for order #1002",
+  "traceId": "trace-http-daily-001"
+}
+
+### 7. [Read] 手動按日索引模式：跨日搜尋 Logs
+GET {{HostAddress}}/api/daily-index/logs?service=shipping-service&keyword=Shipping
+Accept: application/json
