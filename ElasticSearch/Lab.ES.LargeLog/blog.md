@@ -25,7 +25,7 @@ stripH1Header: true
 
 ## 目錄
 
-1. [核心概念：SQL vs Elasticsearch 概念對照](#1-核心概念sql-vs-elasticsearch-概念對照)
+1. [核心概念：SQL vs Elasticsearch 圖解](#1-核心概念sql-vs-elasticsearch-圖解)
 2. [環境準備：Docker Compose 快速啟動](#2-環境準備docker-compose-快速啟動)
 3. [快速上手：手把手實操與終端機真實執行畫面](#3-快速上手手把手實操與終端機真實執行畫面)
 4. [架構設計：每日一億筆時序資料（Data Stream + ILM）](#4-架構設計每日一億筆時序資料data-stream--ilm)
@@ -37,23 +37,21 @@ stripH1Header: true
 
 ---
 
-## 1. 核心概念：SQL vs Elasticsearch 概念對照
+## 1. 核心概念：SQL vs Elasticsearch 圖解
 
 ### 1.1 名詞概念與適用時機
 
 這裡先將大家熟悉的關聯式資料庫 (RDBMS / SQL) 與 Elasticsearch (ES) 做個名詞對照，方便快速建立心智模型：
 
-
-| 關聯式資料庫 (SQL)    | Elasticsearch (ES) | 說明                                     |
-| --------------- | ------------------ | -------------------------------------- |
-| **Database**    | *(Cluster 管理)*     | ES 叢集 (Cluster) 內負責統一管理多個 Index        |
-| **Table**       | **Index** (索引)     | 存放相同邏輯結構的文件集合                          |
-| **Schema**      | **Mapping** (映射)   | 定義欄位名稱與型別（如 `text`、`keyword`、`date` 等） |
-| **Row**         | **Document** (文件)  | 一筆獨立的資料，以 **JSON** 格式儲存                |
-| **Column**      | **Field** (欄位)     | JSON 物件中的 Key-Value 鍵值對                |
-| **Primary Key** | `**_id**`          | 每筆 Document 在 Index 內的唯一識別碼            |
-| **SQL Query**   | **Query DSL**      | 基於 JSON 的查詢語法或 RESTful API             |
-
+| 關聯式資料庫 (SQL) | Elasticsearch (ES) | 說明 |
+|---|---|---|
+| **Database** | *(Cluster 管理)* | ES 叢集 (Cluster) 內負責統一管理多個 Index |
+| **Table** | **Index** (索引) | 存放相同邏輯結構的文件集合 |
+| **Schema** | **Mapping** (映射) | 定義欄位名稱與型別（如 `text`、`keyword`、`date` 等） |
+| **Row** | **Document** (文件) | 一筆獨立的資料，以 **JSON** 格式儲存 |
+| **Column** | **Field** (欄位) | JSON 物件中的 Key-Value 鍵值對 |
+| **Primary Key** | `**_id**` | 每筆 Document 在 Index 內的唯一識別碼 |
+| **SQL Query** | **Query DSL** | 基於 JSON 的查詢語法或 RESTful API |
 
 至於選型時機：
 
@@ -62,8 +60,47 @@ stripH1Header: true
 
 ### 1.2 底層檢索差異：B+ Tree vs 倒排索引 (Inverted Index)
 
-- **SQL (正向儲存)**：資料以「列 (Row)」為核心儲存。若要搜尋 `LIKE '%關鍵字%'`，因為無法有效利用 B+ Tree 前綴索引，必須逐筆全表掃描，資料量一大效能就會嚴重下降。
-- **ES (倒排索引 / Inverted Index)**：資料寫入時會先進行分詞 (Tokenize)，建立一份「詞彙指向文件 ID 清單」的字典。查詢時直接查字典，毫秒級就能取得匹配清單，不需要全表掃描。
+為什麼 Elasticsearch 搜尋全文速度遠遠快於傳統關聯式資料庫？關鍵在於底層的資料組織與檢索機制不同：
+
+- **SQL (正向儲存 / B+ Tree)**：資料以「列 (Row)」為核心儲存。若要搜尋 `LIKE '%關鍵字%'`，因為無法有效利用 B+ Tree 前綴索引，必須逐筆全表掃描 (Full Table Scan)，資料量一旦達到數百萬筆以上，效能就會急遽下滑。
+- **ES (倒排索引 / Inverted Index)**：在資料寫入時，Elasticsearch 會先將文字進行分詞 (Tokenize)，建立一份「詞彙指向文件 ID 清單」的字典。查詢時直接查字典，毫秒級就能取得匹配清單，完全不需要掃描全表。
+
+這裡我們用圖解清楚對比兩者的搜尋機制差異：
+
+```plaintext
+┌────────────────────────────────────────────────────────────────────────┐
+│ 1. 傳統 SQL 正向儲存 (Row-based) 檢索方式                               │
+└────────────────────────────────────────────────────────────────────────┘
+  資料列 (Row ID) │ 內文 (Title / Message)
+ ─────────────────┼───────────────────────────────────────────────
+       Doc 1      │ Elasticsearch 實戰指南
+       Doc 2      │ ASP.NET Core 10 開發筆記
+       Doc 3      │ Elasticsearch 效能調校
+ 
+  🔍 搜尋 "Elasticsearch"：
+  [掃描 Doc 1 (命中)] ➔ [掃描 Doc 2 (不符)] ➔ [掃描 Doc 3 (命中)]
+  ⚠️ 資料量越大，全表掃描 (Full Table Scan) 耗時越長！
+
+
+┌────────────────────────────────────────────────────────────────────────┐
+│ 2. Elasticsearch 倒排索引 (Inverted Index) 檢索方式                    │
+└────────────────────────────────────────────────────────────────────────┘
+  【寫入時分詞建立字典】
+   文件寫入 ➔ 分詞器 (Tokenizer) 拆解單字 ➔ 建立詞彙字典與倒排清單 (Posting List)
+
+  【倒排清單結構 (Posting List)】
+   Term (詞彙)     │ 包含該詞的 Document ID 清單 (帶有詞頻與位置資訊)
+  ─────────────────┼───────────────────────────────────────────────
+   ASP.NET         │ [ Doc 2 ]
+   Core            │ [ Doc 2 ]
+   Elasticsearch   │ [ Doc 1, Doc 3 ]  ───👉 命中！直接取得 Doc 1 與 Doc 3
+   調校            │ [ Doc 3 ]
+   實戰            │ [ Doc 1 ]
+
+  🔍 搜尋 "Elasticsearch"：
+  輸入查詢詞 ➔ 直接查找 Term Dictionary ➔ 立即返回 [Doc 1, Doc 3] (O(1) ~ O(log N))
+  ✨ 無需全表逐筆掃描，即使每日一億筆資料依然具備毫秒級查詢效能！
+```
 
 ---
 
