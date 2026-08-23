@@ -25,7 +25,7 @@ stripH1Header: true
 
 ## 目錄
 
-1. [核心概念：SQL vs Elasticsearch 圖解](#1-核心概念sql-vs-elasticsearch-圖解)
+1. [核心概念：SQL vs Elasticsearch 概念對照](#1-核心概念sql-vs-elasticsearch-概念對照)
 2. [環境準備：Docker Compose 快速啟動](#2-環境準備docker-compose-快速啟動)
 3. [快速上手：手把手實操與終端機真實執行畫面](#3-快速上手手把手實操與終端機真實執行畫面)
 4. [架構設計：每日一億筆時序資料（Data Stream + ILM）](#4-架構設計每日一億筆時序資料data-stream--ilm)
@@ -37,7 +37,7 @@ stripH1Header: true
 
 ---
 
-## 1. 核心概念：SQL vs Elasticsearch 圖解
+## 1. 核心概念：SQL vs Elasticsearch 概念對照
 
 ### 1.1 名詞概念與適用時機
 
