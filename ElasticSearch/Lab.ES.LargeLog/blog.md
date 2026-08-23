@@ -1,7 +1,7 @@
 ---
 title: '[Elasticsearch] 每日一億筆時序資料架構實戰：Data Stream 與 .NET 10 Web API 整合'
 abstract: <p>面對每日一億筆（尖峰每秒破萬筆）的海量時序日誌 (Time Series Logs)，傳統依賴關聯式資料庫 (SQL) 或手動按日建立索引（Time-based Index）的做法，往往會面臨寫入吞吐瓶頸、過度分片 (Over-sharding) 以及維運刪除繁瑣等問題。本文將從 SQL 與 Elasticsearch 的概念差異出發，透過 Docker 快速建立測試環境，並深入介紹如何利用 Data Stream 搭配索引生命週期管理 (ILM) 解決每日 Log 的寫入與自動輪轉問題，最後透過 ASP.NET Core 10 Web API 搭配基於 <code>System.Threading.Channels</code> 封裝的記憶體佇列類別 <code>LogQueue</code> 與背景消費者 <code>LogBatchProcessor</code> 實現高效能的非阻塞批次寫入與自動化測試。</p>
-keywords: .NET 10,Channels,Data Stream,Elasticsearch,ILM
+keywords: .NET 10,Data Stream,Elasticsearch,ILM
 categories: Elastic Search
 weblogName: 余小章 @ 大內殿堂
 postId: 0b43e29f-2b87-4d80-9ccb-45649211425f
