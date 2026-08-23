@@ -1,0 +1,31 @@
+@HostAddress = http://localhost:5287
+
+### 1. [Create] 寫入 Log（推入佇列）
+POST {{HostAddress}}/api/logs
+Content-Type: application/json
+
+{
+  "service": "order-service",
+  "level": "Information",
+  "message": "Payment process completed for order #1001",
+  "traceId": "trace-http-001"
+}
+
+### 2. [Read] 依關鍵字與服務搜尋 Logs
+GET {{HostAddress}}/api/logs?service=order-service&keyword=Payment
+Accept: application/json
+
+### 3. [Read] 依 ID 取得單筆 Log (請替換為實際 _id)
+GET {{HostAddress}}/api/logs/K67LLaABbPQ5FnXdTodm
+Accept: application/json
+
+### 4. [Update] 更新 Log 訊息 (請替換為實際底層索引與 _id)
+PUT {{HostAddress}}/api/logs/.ds-logs-app-prod-2026.08.23-000001/K67LLaABbPQ5FnXdTodm
+Content-Type: application/json
+
+{
+  "message": "Payment process completed and audited"
+}
+
+### 5. [Delete] 刪除 Log (請替換為實際底層索引與 _id)
+DELETE {{HostAddress}}/api/logs/.ds-logs-app-prod-2026.08.23-000001/K67LLaABbPQ5FnXdTodm
