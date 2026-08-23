@@ -464,6 +464,21 @@ dotnet run --project src/EsDailyLogsApi/EsDailyLogsApi.csproj
 
 實測支援完整 CRUD：成功將資料推入 Queue (202)、搜尋紀錄 (200)、更新/刪除指定的底層文件 (204)。
 
+### 6.3 一鍵壓測腳本
+
+如果你要一次跑完 **docker compose 啟動 → API 啟動 → k6 壓測 50/100/150 RPS → 自動關閉**，可直接執行：
+
+```bash
+chmod +x scripts/run-stress-test.sh
+./scripts/run-stress-test.sh
+```
+
+可用環境變數調整每段壓測時間：
+
+```bash
+K6_DURATION=30s ./scripts/run-stress-test.sh
+```
+
 ---
 
 ## 7. 維運避坑指南與最佳實踐
