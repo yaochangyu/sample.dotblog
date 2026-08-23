@@ -4,13 +4,17 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 API_PROJECT="$ROOT_DIR/src/EsDailyLogsApi/EsDailyLogsApi.csproj"
-K6_SCRIPT="$ROOT_DIR/scripts/k6-traditional-logs.js"
+K6_SCRIPT="$ROOT_DIR/scripts/k6-daily-index-logs.js"
 RPS_LEVELS=(50 100 150)
 K6_DURATION="${K6_DURATION:-30s}"
 RUN_ID="$(date +%Y%m%d-%H%M%S)"
-RUN_DIR="/tmp/opencode/es-traditional-stress-test/$RUN_ID"
+RUN_DIR="$ROOT_DIR/.output/es-traditional-stress-test/$RUN_ID"
 API_LOG="$RUN_DIR/api.log"
-REPORT_FILE="$RUN_DIR/traditional-stress-report.md"
+REPORT_FILE="$RUN_DIR/daily-index-stress-report.md"
+ES_URL="http://127.0.0.1:9200"
+TODAY_INDEX="logs-app-$(date -u +%Y.%m.%d)"
+SUMMARY_ROWS_FILE="$RUN_DIR/summary-rows.md"
+ES_ROWS_FILE="$RUN_DIR/es-rows.md"
 
 mkdir -p "$RUN_DIR"
 
@@ -44,6 +48,8 @@ wait_for_ok() {
 }
 
 write_report_header() {
+  : >"$SUMMARY_ROWS_FILE"
+  : >"$ES_ROWS_FILE"
   cat >"$REPORT_FILE" <<EOF
 # Daily index endpoint stress test report
 
@@ -60,10 +66,45 @@ write_report_header() {
 EOF
 }
 
+append_es_row() {
+  local rps="$1"
+  local count="$2"
+  printf '| %s | %s |\n' "$rps" "$count" >>"$ES_ROWS_FILE"
+}
+
+count_written_docs() {
+  curl -fsS -X POST "$ES_URL/$TODAY_INDEX/_refresh" >/dev/null
+  curl -fsS -X POST "$ES_URL/$TODAY_INDEX/_count" \
+    -H 'Content-Type: application/json' \
+    -d '{"query":{"match_all":{}}}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["count"])'
+}
+
+wait_for_es_count() {
+  local rps="$1"
+  local attempt=0
+  local count=0
+
+  until [[ "$count" -gt 0 ]]; do
+    count="$(count_written_docs "$rps")"
+    if [[ "$count" -gt 0 ]]; then
+      printf '%s' "$count"
+      return 0
+    fi
+
+    attempt=$((attempt + 1))
+    if (( attempt >= 30 )); then
+      printf '%s' "$count"
+      return 0
+    fi
+
+    sleep 1
+  done
+}
+
 append_report_row() {
   local rps="$1"
   local summary_json="$2"
-  python3 - "$rps" "$summary_json" >>"$REPORT_FILE" <<'PY'
+  python3 - "$rps" "$summary_json" <<'PY'
 import json
 import sys
 
@@ -90,14 +131,25 @@ print(f'| {rps} | {requests:.0f} | {fails:.0f} | {avg:.2f} | {p95:.2f} | {succes
 PY
 }
 
-write_report_footer() {
-  cat >>"$REPORT_FILE" <<EOF
+finalize_report() {
+  {
+    cat "$SUMMARY_ROWS_FILE"
+    cat <<'EOF'
+
+## ES Verification
+
+| RPS | ES documents with this run tag |
+|---|---:|
+EOF
+    cat "$ES_ROWS_FILE"
+    cat <<'EOF'
 
 ## Notes
 
 - 這份報告壓的是手動按日索引端點，不是 Data Stream。
 - 201 代表寫入成功，檢查條件以 HTTP status 為準。
 EOF
+  } >>"$REPORT_FILE"
 }
 
 echo "[1/4] 啟動 Elasticsearch"
@@ -120,12 +172,15 @@ for rps in "${RPS_LEVELS[@]}"; do
     -e RPS="$rps" \
     -e DURATION="$K6_DURATION" \
     -e API_URL="http://127.0.0.1:5287/api/daily-index/logs" \
+    -e RUN_ID="$RUN_ID" \
     -v "$K6_SCRIPT:/scripts/k6-traditional-logs.js:ro" \
     -v "$RUN_DIR:/reports" \
     grafana/k6:0.56.0 run --summary-export "/reports/summary-${rps}.json" /scripts/k6-traditional-logs.js
-  append_report_row "$rps" "$SUMMARY_JSON"
+  append_report_row "$rps" "$SUMMARY_JSON" >>"$SUMMARY_ROWS_FILE"
+  ES_COUNT="$(wait_for_es_count "$rps")"
+  append_es_row "$rps" "$ES_COUNT"
 done
-write_report_footer
+finalize_report
 
 echo "[4/4] 完成"
 echo "Report: $REPORT_FILE"

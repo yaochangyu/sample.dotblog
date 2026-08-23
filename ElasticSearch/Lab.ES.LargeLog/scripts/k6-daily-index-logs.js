@@ -4,6 +4,7 @@ const { check } = require('k6');
 const rps = Number.parseInt(__ENV.RPS ?? '50', 10);
 const duration = __ENV.DURATION ?? '30s';
 const apiUrl = __ENV.API_URL ?? 'http://127.0.0.1:5287/api/daily-index/logs';
+const runId = __ENV.RUN_ID ?? 'local-run';
 
 exports.options = {
   scenarios: {
@@ -20,10 +21,10 @@ exports.options = {
 
 exports.default = function () {
   const res = http.post(apiUrl, JSON.stringify({
-    service: 'traditional-load-test',
+    service: `daily-index-load-test-${runId}-${rps}`,
     level: 'Information',
-    message: `traditional endpoint k6 write ${Date.now()}`,
-    traceId: `trace-${__VU}-${__ITER}`,
+    message: `daily-index endpoint k6 write ${runId} rps=${rps}`,
+    traceId: `${runId}-${rps}-${__VU}-${__ITER}`,
   }), {
     headers: {
       'Content-Type': 'application/json',

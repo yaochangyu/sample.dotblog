@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 API_PROJECT="$ROOT_DIR/src/EsDailyLogsApi/EsDailyLogsApi.csproj"
-K6_SCRIPT="$ROOT_DIR/scripts/k6-write-es.js"
+K6_SCRIPT="$ROOT_DIR/scripts/k6-daily-index-logs.js"
 RPS_LEVELS=(50 100 150)
 K6_DURATION="${K6_DURATION:-60s}"
 RUN_ID="$(date +%Y%m%d-%H%M%S)"
