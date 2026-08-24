@@ -93,6 +93,12 @@ RUN_TO_TARGET_DOCS=1 TARGET_DOCS=10000000 TARGET_RPS=5000 ./scripts/run-daily-in
 
 這會用單一 RPS 跑到預估的目標時間，然後再檢查 ES 裡的文件數。
 
+如果你要直接跑 **12 小時方案**：
+
+```bash
+RUN_PRESET=12h ./scripts/run-daily-index-stress-test.sh
+```
+
 ---
 
 ## 輸出放哪裡

@@ -19,6 +19,14 @@ ES_ROWS_FILE="$RUN_DIR/es-rows.md"
 RUN_TO_TARGET_DOCS="${RUN_TO_TARGET_DOCS:-0}"
 TARGET_DOCS="${TARGET_DOCS:-10000000}"
 TARGET_RPS="${TARGET_RPS:-5000}"
+RUN_PRESET="${RUN_PRESET:-}"
+
+if [[ "$RUN_PRESET" == "12h" ]]; then
+  RUN_TO_TARGET_DOCS=1
+  TARGET_DOCS=10000000
+  TARGET_RPS=232
+  K6_DURATION="12h"
+fi
 
 if [[ "$RUN_TO_TARGET_DOCS" == "1" ]]; then
   DURATION_SECONDS=$(((TARGET_DOCS + TARGET_RPS - 1) / TARGET_RPS))
@@ -76,6 +84,13 @@ EOF
     cat >>"$REPORT_FILE" <<EOF
 - Target docs: ${TARGET_DOCS}
 - Target RPS: ${TARGET_RPS}
+
+EOF
+  fi
+
+  if [[ -n "$RUN_PRESET" ]]; then
+    cat >>"$REPORT_FILE" <<EOF
+- Preset: ${RUN_PRESET}
 
 EOF
   else
