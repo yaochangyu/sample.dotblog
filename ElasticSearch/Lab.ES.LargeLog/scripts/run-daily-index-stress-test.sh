@@ -6,6 +6,7 @@ COMPOSE_FILE="$ROOT_DIR/docker-compose.yml"
 API_PROJECT="$ROOT_DIR/src/EsDailyLogsApi/EsDailyLogsApi.csproj"
 K6_SCRIPT="$ROOT_DIR/scripts/k6-daily-index-logs.js"
 RPS_LEVELS=(50 100 150)
+K6_DURATION_RAW="${K6_DURATION:-}"
 K6_DURATION="${K6_DURATION:-30s}"
 RUN_ID="$(date +%Y%m%d-%H%M%S)"
 RUN_DIR="$ROOT_DIR/.output/es-traditional-stress-test/$RUN_ID"
@@ -15,6 +16,17 @@ ES_URL="http://127.0.0.1:9200"
 TODAY_INDEX="logs-app-$(date -u +%Y.%m.%d)"
 SUMMARY_ROWS_FILE="$RUN_DIR/summary-rows.md"
 ES_ROWS_FILE="$RUN_DIR/es-rows.md"
+RUN_TO_TARGET_DOCS="${RUN_TO_TARGET_DOCS:-0}"
+TARGET_DOCS="${TARGET_DOCS:-10000000}"
+TARGET_RPS="${TARGET_RPS:-5000}"
+
+if [[ "$RUN_TO_TARGET_DOCS" == "1" ]]; then
+  DURATION_SECONDS=$(((TARGET_DOCS + TARGET_RPS - 1) / TARGET_RPS))
+  if [[ -z "$K6_DURATION_RAW" ]]; then
+    K6_DURATION="${DURATION_SECONDS}s"
+  fi
+  RPS_LEVELS=("$TARGET_RPS")
+fi
 
 mkdir -p "$RUN_DIR"
 
@@ -58,6 +70,21 @@ write_report_header() {
 - RPS levels: ${RPS_LEVELS[*]}
 - Duration per level: ${K6_DURATION}
 - Run directory: ${RUN_DIR}
+EOF
+
+  if [[ "$RUN_TO_TARGET_DOCS" == "1" ]]; then
+    cat >>"$REPORT_FILE" <<EOF
+- Target docs: ${TARGET_DOCS}
+- Target RPS: ${TARGET_RPS}
+
+EOF
+  else
+    cat >>"$REPORT_FILE" <<EOF
+
+EOF
+  fi
+
+  cat >>"$REPORT_FILE" <<EOF
 
 ## Summary
 
@@ -80,25 +107,43 @@ count_written_docs() {
 }
 
 wait_for_es_count() {
-  local rps="$1"
+  local expected_count="$1"
   local attempt=0
   local count=0
 
-  until [[ "$count" -gt 0 ]]; do
-    count="$(count_written_docs "$rps")"
-    if [[ "$count" -gt 0 ]]; then
-      printf '%s' "$count"
-      return 0
-    fi
+  if [[ "$expected_count" -gt 0 ]]; then
+    until [[ "$count" -ge "$expected_count" ]]; do
+      count="$(count_written_docs)"
+      if [[ "$count" -ge "$expected_count" ]]; then
+        printf '%s' "$count"
+        return 0
+      fi
 
-    attempt=$((attempt + 1))
-    if (( attempt >= 30 )); then
-      printf '%s' "$count"
-      return 0
-    fi
+      attempt=$((attempt + 1))
+      if (( attempt >= 30 )); then
+        printf '%s' "$count"
+        return 0
+      fi
 
-    sleep 1
-  done
+      sleep 1
+    done
+  else
+    until [[ "$count" -gt 0 ]]; do
+      count="$(count_written_docs)"
+      if [[ "$count" -gt 0 ]]; then
+        printf '%s' "$count"
+        return 0
+      fi
+
+      attempt=$((attempt + 1))
+      if (( attempt >= 30 )); then
+        printf '%s' "$count"
+        return 0
+      fi
+
+      sleep 1
+    done
+  fi
 }
 
 append_report_row() {
@@ -177,7 +222,11 @@ for rps in "${RPS_LEVELS[@]}"; do
     -v "$RUN_DIR:/reports" \
     grafana/k6:0.56.0 run --summary-export "/reports/summary-${rps}.json" /scripts/k6-traditional-logs.js
   append_report_row "$rps" "$SUMMARY_JSON" >>"$SUMMARY_ROWS_FILE"
-  ES_COUNT="$(wait_for_es_count "$rps")"
+  if [[ "$RUN_TO_TARGET_DOCS" == "1" ]]; then
+    ES_COUNT="$(wait_for_es_count "$TARGET_DOCS")"
+  else
+    ES_COUNT="$(wait_for_es_count 0)"
+  fi
   append_es_row "$rps" "$ES_COUNT"
 done
 finalize_report

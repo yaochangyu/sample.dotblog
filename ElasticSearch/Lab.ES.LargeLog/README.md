@@ -85,6 +85,14 @@ chmod +x scripts/run-daily-index-stress-test.sh
 K6_DURATION=30s ./scripts/run-daily-index-stress-test.sh
 ```
 
+如果你要往 **1000 萬筆** 目標跑：
+
+```bash
+RUN_TO_TARGET_DOCS=1 TARGET_DOCS=10000000 TARGET_RPS=5000 ./scripts/run-daily-index-stress-test.sh
+```
+
+這會用單一 RPS 跑到預估的目標時間，然後再檢查 ES 裡的文件數。
+
 ---
 
 ## 輸出放哪裡
