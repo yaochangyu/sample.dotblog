@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-ssd
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx-ssd
+  template:
+    metadata:
+      labels:
+        app: nginx-ssd
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: disktype
+                    operator: In
+                    values:
+                      - ssd
+      containers:
+        - name: nginx
+          image: nginx:alpine
