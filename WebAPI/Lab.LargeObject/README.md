@@ -19,20 +19,23 @@ ASP.NET Core 接收大型（~1MB）JSON 陣列時，如何避免每個 request �
 Lab.LargeObject/
 ├── Lab.LargeObject.slnx
 ├── src/Lab.LargeObject.Api/
-│   ├── Program.cs                              # minimal API（包含 PooledArray, List, IAsyncEnumerable 三種寫法端點）
-│   ├── PooledArray.cs                          # 包住租用陣列的 IDisposable wrapper（泛型，共用）
-│   ├── PooledDoubleArrayJsonConverter.cs       # double[] 專用的 ArrayPool JsonConverter
-│   ├── MemberAccount.cs                        # 會員帳號網域模型（巢狀 struct：MemberAccount + ContactInfo）
-│   └── PooledMemberAccountArrayJsonConverter.cs # MemberAccount[] 專用的 ArrayPool JsonConverter
+│   ├── Program.cs                                  # minimal API（包含 4 種型別 × 3 種架構共 12 個端點）
+│   ├── PooledArray.cs                              # 包住租用陣列的 IDisposable wrapper（泛型，共用）
+│   ├── PooledDoubleArrayJsonConverter.cs           # double[] 專用的 ArrayPool JsonConverter
+│   ├── PooledStringArrayJsonConverter.cs           # string[] 專用的 ArrayPool JsonConverter
+│   ├── MemberAccount.cs                            # 會員帳號值型別模型（巢狀 struct：MemberAccount + ContactInfo）
+│   ├── PooledMemberAccountArrayJsonConverter.cs     # MemberAccount[] 專用的 ArrayPool JsonConverter
+│   ├── MemberAccountClass.cs                       # 會員帳號參考型別模型（巢狀 class：MemberAccountClass + ContactInfoClass）
+│   └── PooledMemberAccountClassArrayJsonConverter.cs # MemberAccountClass[] 專用的 ArrayPool JsonConverter
 ├── tests/Lab.LargeObject.Api.Tests/
-│   ├── LargeArrayEndpointTests.cs              # /api/readings, /api/readings-list, /api/readings-stream 整合測試
-│   └── MemberAccountEndpointTests.cs           # /api/members, /api/members-list, /api/members-stream 整合測試
+│   ├── LargeArrayEndpointTests.cs                  # /api/readings* 整合測試
+│   ├── StringEndpointTests.cs                      # /api/strings* 整合測試
+│   ├── MemberAccountEndpointTests.cs               # /api/members* (struct) 整合測試
+│   └── MemberAccountClassEndpointTests.cs          # /api/members-class* (class) 整合測試
 └── scripts/
-    ├── load-test.sh                            # 基礎壓測腳本
-    ├── observe-counters.sh                     # 用 dotnet-counters 觀察 GC/LOH 計數器
-    ├── experiment-4mb.sh                       # 4MB (524,288 double) 負載對照實驗腳本
-    ├── experiment-members.sh                   # 複雜型別 (20,000 MemberAccount) 負載對照實驗腳本
-    └── benchmark-all.sh                        # 三種寫法一鍵全自動壓測與指標比對腳本
+    ├── benchmark-all-12.sh                         # 12 種全組合一鍵全自動壓測與持久化報表腳本
+    ├── benchmark-class-vs-struct.sh                # 6 種 Struct vs Class 對照實驗腳本
+    └── benchmark-all.sh                            # 3 種架構對照實驗腳本
 ```
 
 ## 核心做法：三種架構的比較
@@ -139,11 +142,11 @@ Lab.LargeObject/
 專案內建完整實驗工具（支援結果持久化與重複渲染）：
 
 ```bash
-# 1. 執行 9 種全組合壓測並將結果持久化至 scripts/latest-results.json
-./scripts/benchmark-all-9.sh
+# 1. 執行 12 種全組合壓測並將結果持久化至 scripts/latest-results.json
+./scripts/benchmark-all-12.sh
 
 # 2. ⚡ 秒級重用上次測試結果，直接輸出 Markdown 大一統總表（無需重跑）
-./scripts/benchmark-all-9.sh --report
+./scripts/benchmark-all-12.sh --report
 
 # 3. 6 種 Struct vs Class 對照實驗
 ./scripts/benchmark-class-vs-struct.sh

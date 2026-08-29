@@ -297,8 +297,8 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 
 - 陣列容器只要 ≥ 85,000 bytes 就一定進 LOH，這條規則沒有例外。
 - 用 `ArrayPool<T>` 池化陣列容器，配合 `struct` 元素型別，能讓 LOH 配置在「池子暖機」後趨於零成長。
-- 若元素為 `class`，`ArrayPool` 只能池化指標陣列，無法池化物件實體，Gen0 GC 依然高達 24,000+ 次。
-- 改用 `IAsyncEnumerable<T>` 串流解析可徹底免除大陣列配置，達成全程 0 LOH、Working Set 減半且處理速度最快。
+- 若元素為 `class` 或 `string`，`ArrayPool` 只能池化指標陣列，無法池化物件/字串實體，Gen0 GC 依然高達 20,000+ 次。
+- 改用 `IAsyncEnumerable<T>` 串流解析可徹底免除大陣列配置，在 4 種型別上全面達成全程 0 LOH、Working Set 減半且處理速度最快。
 - 反射式反序列化巢狀 struct 產生的 boxing／內部機制配置量，遠大於 LOH 陣列本身；手刻 `Utf8JsonReader` + `ValueTextEquals` 能大幅削減 70% 配置量。
 
 **已推翻的假設**：
@@ -315,11 +315,11 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 ### 11.1 專案內建的腳本（`scripts/`）
 
 ```bash
-# 1. 執行 9 種全組合壓測並將結果持久化至 scripts/latest-results.json
-./scripts/benchmark-all-9.sh
+# 1. 執行 12 種全組合壓測並將結果持久化至 scripts/latest-results.json
+./scripts/benchmark-all-12.sh
 
 # 2. ⚡ 秒級重用上次測試結果，直接輸出 Markdown 大一統總表（無需重跑）
-./scripts/benchmark-all-9.sh --report
+./scripts/benchmark-all-12.sh --report
 
 # 3. 6 種 Struct vs Class 對照實驗
 ./scripts/benchmark-class-vs-struct.sh
