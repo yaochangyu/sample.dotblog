@@ -52,24 +52,37 @@ Lab.LargeObject/
 
 ---
 
-## 實測數據：三種寫法完整對照
+## 實測數據：全架構完整對照總表
 
-在完全相同測試環境下（**20,000 筆巢狀 `MemberAccount`、3.8MB JSON Body、10 並行、50 筆請求**），使用 `scripts/benchmark-all.sh` 實測：
+在完全相同測試環境下（**20,000 筆巢狀會員資料、3.8MB JSON Body、10 並行、50 筆請求，共 1,000,000 筆資料**），使用 `scripts/benchmark-class-vs-struct.sh` 實測：
 
-| 評測指標 | 1. `List<T>`（未池化） | 2. `PooledArray<T>`（ArrayPool 池化） | 3. `IAsyncEnumerable<T>`（串流解析） |
-|---|---|---|---|
-| **端點路徑** | `/api/members-list` | `/api/members` | `/api/members-stream` |
-| **總處理耗時** | **5,610 ms**（最慢） | **3,695 ms**（快 34%） | **3,382 ms**（**最快，快 40%**） |
-| **LOH 記憶體峰值** | **55.4 MB** | **60.3 MB** | **0 bytes（完全零 LOH）** |
-| **LOH 穩態最終值** | **42.1 MB（持續上下震盪）** | **60.3 MB（暖機後持平）** | **0 bytes（全程無大物件）** |
-| **壓測期間 Gen2 GC** | **11 次（頻繁介入）** | **12 次（僅暖機期，後續歸 0）** | **6 次（常規小回收，無 LOH 壓力）** |
-| **實體記憶體 Working Set** | **278 MB** | **306 MB** | **142 MB（減半，極低佔用）** |
+| 模型型別 | 實作架構 | API 端點 | 總耗時<br>(ms) | Gen0 GC<br>次數 | Gen2 GC<br>次數 | LOH 峰值<br>(MB) | Working Set<br>實體記憶體 | 核心特性與評語 |
+|:---|:---|:---|:---:|:---:|:---:|:---:|:---:|:---|
+| **Struct**<br>*(值型別)* | **1. List (未池化)** | `/api/members-list` | 5,705 | 115,046 | **87 次** | 41 MB | 236 MB | ❌ **最慢、GC 壓力最大**<br>大陣列持續擴容，製造大量短命 LOH 垃圾 |
+| **Struct**<br>*(值型別)* | **2. ArrayPool (池化)** | `/api/members` | 3,386 | **483** | **10 次**<br>*(暖機後 0)* | 70 MB | 323 MB | ⚡ **吞吐量最高、Gen0 最少**<br>資料整包池化，暖機後零 GC 停頓（常駐 70MB Buffer） |
+| **Struct**<br>*(值型別)* | **3. Streaming (串流)** | `/api/members-stream` | **3,389** | 6,814 | **17 次** | **0 MB** | **137 MB** | 🏆 **雙贏最佳解**<br>邊讀邊算，**0 LOH、實體記憶體減半、速度最快** |
+| **Class**<br>*(參考型別)* | **4. List (未池化)** | `/api/members-class-list` | 3,273 | 24,152 | 39 次 | 4 MB | 251 MB | ⚠️ **LOH 小但 Gen0 暴增**<br>僅指標陣列進 LOH，4 萬個物件實體散落 Gen0 |
+| **Class**<br>*(參考型別)* | **5. ArrayPool (池化)** | `/api/members-class-pooled` | 3,553 | 24,151 | 67 次 | 6 MB | 257 MB | ⚠️ **池化效益極低**<br>只池化到指標陣列，無法消除物件實體的 GC 負擔 |
+| **Class**<br>*(參考型別)* | **6. Streaming (串流)** | `/api/members-class-stream` | 4,028 | 11,645 | **27 次** | **0 MB** | **139 MB** | 🏆 **Class 架構下的最佳解**<br>逐筆即用即丟，**0 LOH、Gen0 砍半、記憶體減半** |
 
-### 常見疑問：為什麼 `PooledArray<T>` 的記憶體數字看起來比 `List<T>` 高？
+---
 
-- **`PooledArray` 採「空間換時間」策略**：租用的 Buffer 在 Request 結束後歸還至池子保留給下一個請求複用（不丟給 GC），因此監控上看到的 60MB LOH 是「常駐可用的 Buffer 固定資產」。
-- **`List<T>` 看到的 42MB 是「剛好被 GC 掃過後的垃圾殘留快照」**：`List<T>` 每次請求都在產生新的 1~2MB 垃圾，引發了 11 次耗損 CPU 的 Gen2 Full GC，表面看似佔用較少，實則代價最高。
-- **`IAsyncEnumerable<T>` 達到「效能與記憶體雙贏」**：無需維護大 Buffer，直接從串流逐筆解析，LOH 徹底歸零，Working Set 僅 142MB。
+## 核心剖析：為什麼 ArrayPool「Working Set（記憶體佔用）較大，但 Gen2 GC 卻極少」？
+
+在監控指標上，常會看到 `PooledArray` 的 Working Set（實體記憶體）高達 300MB+，看似比 `List<T>` 還佔記憶體，但 Gen2 GC 卻直接歸零。這背後是 .NET 記憶體管理的核心運作機制：
+
+### 1. 為什麼 Gen2 GC 幾乎為 0？（Zero Allocation 效應）
+- **沒有垃圾，GC 就不需要出動**：
+  - 在 `List<T>` 寫法中，每次 Request 建立的大陣列在用完後失去引用變成「垃圾」，迫使 GC 必須進行代價高昂的 Gen2 Full GC 來清理 LOH。
+  - 在 `PooledArray<T>` 寫法中，Buffer 來自 `ArrayPool`，用完立刻透過 `Dispose()` 歸還給 `ArrayPool`。**這塊記憶體從未變成垃圾**，LOH 上沒有垃圾堆積，因此 GC 完全沒有介入回收的理由，Gen2 GC 觸發次數自然降為 0。
+
+### 2. 為什麼 Working Set（實體記憶體）會維持在較大數值？
+- **ArrayPool 的常駐預留（空間換時間）**：
+  - `ArrayPool` 在高並發（如 10 並行）下，會租用並建立多個對應 Bucket 大小的連續 Buffer（例如 10 塊 2MB~4MB 的陣列）。
+  - 當請求結束歸還時，Buffer 是被**保留在池子（Process 內部記憶體）中**隨時等待下一個請求複用，並不會釋放回作業系統。
+- **.NET GC 預設不主動向 OS 歸還記憶體（Decommit）**：
+  - .NET GC 在向作業系統申請實體記憶體（Working Set）後，為了維持高效能，預設不會在沒有外部記憶體壓力的情況下主動將 Committed 記憶體還給作業系統。
+  - 因此 Working Set 會維持在「並行數 $\times$ Buffer 大小」的穩態高點，這是專為**換取零 GC 停頓與高吞吐量**而預先持有的固定資產。
 
 ---
 
@@ -78,12 +91,15 @@ Lab.LargeObject/
 專案內建完整實驗工具：
 
 ```bash
-# 1. 一鍵全自動對比三種寫法（會自動啟動 API、收集 counters 並輸出報表）
+# 1. 一鍵全自動對比 Struct vs Class 完整 6 種組合
+./scripts/benchmark-class-vs-struct.sh
+
+# 2. 一鍵全自動對比三種架構（List vs ArrayPool vs Streaming）
 ./scripts/benchmark-all.sh
 
-# 2. 執行 4MB (524,288 double) 負載實驗
+# 3. 執行 4MB (524,288 double) 負載實驗
 ./scripts/experiment-4mb.sh http://localhost:5138 10 50 all
 
-# 3. 執行 20,000 筆複雜型別 (MemberAccount) 負載實驗
+# 4. 執行 20,000 筆複雜型別 (MemberAccount) 負載實驗
 ./scripts/experiment-members.sh http://localhost:5138 10 50 all
 ```

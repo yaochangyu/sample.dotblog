@@ -230,11 +230,16 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 | **Gen2 GC 次數** | **11 次（持續介入）** | **12 次（僅暖機期，後續歸 0）** | **6 次（常規小回收）** |
 | **Working Set** | **278 MB** | **306 MB** | **142 MB（減半）** |
 
-### 9.2 為什麼 `IAsyncEnumerable<T>` 能夠達成 0 LOH？
+### 9.3 為什麼 ArrayPool 的 Working Set 較大，但 Gen2 GC 卻極少？
 
-- **管線化邊讀邊算**：底層直接從 HTTP Request Stream 小區塊讀取，逐一反序列化單一 struct（64 bytes），直接在 Gen0 進行處理與釋放。
-- **無大陣列容器**：整個過程中記憶體從未存在過 20,000 筆的連續大陣列，因此完全不觸碰 85,000 bytes 的 LOH 門檻。
-- **雙贏結果**：相較於 ArrayPool 需要預留池化空間，串流解析同時達成了 **最低記憶體（142MB）** 與 **最高處理速度（3,382ms）**。
+這是排查過程中常有的直覺誤區：「監控上看到 ArrayPool 的 Working Set（實體記憶體）與 LOH 數字比 List<T> 還高，是不是代表更耗記憶體？」
+
+1. **為什麼 Gen2 GC 幾乎為 0（Zero Allocation 效應）**：
+   - `List<T>` 每次請求建立的大陣列在用完後失去引用成為「垃圾」，迫使 GC 必須進行代價高昂的 Gen2 Full GC 來清理 LOH。
+   - `PooledArray<T>` 的 Buffer 是自 ArrayPool 租用，用完立即透過 `Dispose()` 歸還給池子。**這塊記憶體從未變成垃圾**，LOH 上沒有垃圾堆積，因此 GC 完全沒有介入回收的理由，Gen2 GC 觸發次數自然降為 0。
+2. **為什麼 Working Set 會維持在較大數值**：
+   - **ArrayPool 的常駐預留（空間換時間）**：ArrayPool 在高並發下租用並建立多個對應 Bucket 大小的連續 Buffer。請求結束歸還時，Buffer 是被**保留在池子（Process 內部記憶體）中**隨時等待下一個請求複用，並不會釋放回作業系統。
+   - **.NET GC 預設不主動向 OS 歸還記憶體（Decommit）**：.NET GC 向作業系統申請實體記憶體後，預設不會在沒有外部記憶體壓力的情況下主動將 Committed 記憶體還給 OS。因此 Working Set 會維持在「並行數 × Buffer 大小」的穩態高點，這是專為**換取零 GC 停頓與高吞吐量**而預先持有的固定資產。
 
 ## 10. 結論
 
