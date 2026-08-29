@@ -250,7 +250,13 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 在 .NET CLR 中，**Gen2 GC 沒有固定時間週期（不是每隔幾秒執行一次）**，而是採用**「事件驅動」與「動態預算（Budget-driven）」**機制：
 1. **世代晉升累積（Generational Promotion）**：Gen0 滿載觸發 Gen0 GC $\rightarrow$ 存活物件晉升 Gen1 $\rightarrow$ Gen1 滿載晉升 Gen2 $\rightarrow$ 累積超過 **Gen2 Budget** 時觸發 Full GC。
 2. **LOH 配置門檻跨越**：當 $\ge 85\text{KB}$ 的大物件配置量打爆 LOH 動態門檻時，強制觸發 Gen2 GC（這就是 `List<T>` 頻繁觸發 GC 的主因）。
-3. **非同步微型物件自然累積**：在 `Streaming` 模式下雖然 LOH 為 0，但處理百萬筆資料時，`await` 狀態機等微型物件自然晉升至 Gen2 預算上限，引發常規低頻的 Gen2 GC（停頓僅 10~55ms，極輕量）。
+
+> **常見疑問：Streaming 模式 LOH 為 0 MB，這 16~19 次 Gen2 GC 是哪裡產生的？**
+> - **答案：完全沒有任何地方產生 LOH 大物件（LOH 配置量確鑿為 0 bytes）。**
+> - 在 50 筆 4MB 請求中，共處理了 **2,621 萬筆 `double`（或 100 萬筆 `MemberAccount`）**。
+> - 雖然沒有大物件，但在處理這 2,600 萬筆資料的非同步網路串流時，產生了大量 Gen0 微型物件（如 Kestrel Socket Buffer、`await foreach` 狀態機、`IAsyncEnumerator` 物件）。
+> - 剛好處於非同步 I/O 等待中的微型物件會自然晉升至 Gen1，進而晉升至 Gen2 並填滿了 Gen2 的動態 Budget 配額，因而觸發了常規 Gen2 GC。
+> - **核心證據（GC 停頓時間）**：因為 LOH 為 0 且沒有大垃圾，每次回收只要 0.5ms，50 筆請求的累積 GC 停頓**僅 10.6 ms（佔總時間 0.33%）**；反觀 `List<T>` 因 LOH 垃圾觸發的 Gen2 停頓高達 **246.3 ms**。
 
 ### 9.5 為什麼未池化的 LOH 大物件會導致 OOM？
 
