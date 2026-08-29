@@ -219,16 +219,19 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 
 如果業務邏輯不需要隨機存取（例如批次匯入、過濾、統計），.NET 提供了另一種更極致的解法：**`System.Text.Json.JsonSerializer.DeserializeAsyncEnumerable<T>(request.Body)` 串流解析**。
 
-### 9.1 全架構完整實測總表（Struct vs Class × 3 種寫法，20,000 筆資料，10 並行 × 50 請求）
+### 9.1 全架構 9 種組合完整實測總表（3 種資料型別 × 3 種架構，10 並行 × 50 請求）
 
-| 模型型別 | 實作架構 | API 端點 | 總耗時<br>(ms) | Gen0 GC<br>次數 | Gen2 GC<br>次數 | LOH 峰值<br>(MB) | Working Set<br>實體記憶體 | 核心特性與評語 |
+| 資料型別分類 | 實作架構 | API 端點 | 總耗時<br>(ms) | Gen0 GC<br>頻率/量級 | Gen2 GC<br>介入程度 | LOH 峰值<br>(MB) | Working Set<br>實體記憶體 | 核心評語與行為特徵 |
 |:---|:---|:---|:---:|:---:|:---:|:---:|:---:|:---|
-| **Struct**<br>*(值型別)* | **1. List (未池化)** | `/api/members-list` | 5,705 | 115,046 | **87 次** | 41 MB | 236 MB | ❌ **最慢、GC 壓力最大**<br>大陣列持續擴容，製造大量短命 LOH 垃圾 |
-| **Struct**<br>*(值型別)* | **2. ArrayPool (池化)** | `/api/members` | 3,386 | **483** | **10 次**<br>*(暖機後 0)* | 70 MB | 323 MB | ⚡ **吞吐量最高、Gen0 最少**<br>資料整包池化，暖機後零 GC 停頓（常駐 70MB Buffer） |
-| **Struct**<br>*(值型別)* | **3. Streaming (串流)** | `/api/members-stream` | **3,389** | 6,814 | **17 次** | **0 MB** | **137 MB** | 🏆 **雙贏最佳解**<br>邊讀邊算，**0 LOH、實體記憶體減半、速度最快** |
-| **Class**<br>*(參考型別)* | **4. List (未池化)** | `/api/members-class-list` | 3,273 | 24,152 | 39 次 | 4 MB | 251 MB | ⚠️ **LOH 小但 Gen0 暴增**<br>僅指標陣列進 LOH，4 萬個物件實體散落 Gen0 |
-| **Class**<br>*(參考型別)* | **5. ArrayPool (池化)** | `/api/members-class-pooled` | 3,553 | 24,151 | 67 次 | 6 MB | 257 MB | ⚠️ **池化效益極低**<br>只池化到指標陣列，無法消除物件實體的 GC 負擔 |
-| **Class**<br>*(參考型別)* | **6. Streaming (串流)** | `/api/members-class-stream` | 4,028 | 11,645 | **27 次** | **0 MB** | **139 MB** | 🏆 **Class 架構下的最佳解**<br>逐筆即用即丟，**0 LOH、Gen0 砍半、記憶體減半** |
+| **1. 原生數值**<br>*(double 4MB)* | **List (未池化)** | `/api/readings-list` | 4,030 | 中 (46M) | ⚠️ 高 (27M) | 72 MB | 198 MB | ❌ 擴容連續遺棄多個暫存陣列，製造 LOH 垃圾 |
+| **1. 原生數值**<br>*(double 4MB)* | **ArrayPool (池化)** | `/api/readings` | 5,430 | 中 (57M) | ⚠️ 高 (29M) | 122 MB | 323 MB | ⚡ 陣列完整池化，暖機後重複複用 4MB Buffer |
+| **1. 原生數值**<br>*(double 4MB)* | **Streaming (串流)** | `/api/readings-stream` | **3,963** | 低 (21M) | ✅ 低 (17M) | **0 MB** | **115 MB** | 🏆 **最快且記憶體最低**，全程零大物件 |
+| **2. 巢狀結構**<br>*(Struct 20k 筆)* | **List (未池化)** | `/api/members-list` | 3,720 | 中 (59M) | ⚠️ 極高 (101M) | 33 MB | 235 MB | ❌ 大量短命 Struct 陣列垃圾，逼出大量 Gen2 GC |
+| **2. 巢狀結構**<br>*(Struct 20k 筆)* | **ArrayPool (池化)** | `/api/members` | 3,769 | **極低 (0.6M)** | ⚠️ 暖機高 (130M) | 62 MB | 275 MB | ⚡ **Gen0 降幅達 99%**，資料內嵌於 Buffer 完整池化 |
+| **2. 巢狀結構**<br>*(Struct 20k 筆)* | **Streaming (串流)** | `/api/members-stream` | **3,575** | 低 (1.5M) | ✅ 低 (24M) | **0 MB** | **131 MB** | 🏆 **Struct 最佳解**，0 LOH、實體記憶體減半 |
+| **3. 參考型別**<br>*(Class 20k 筆)* | **List (未池化)** | `/api/members-class-list` | **3,171** | 極高 (95M) | ❌ 劇烈 (365M) | 3 MB | 249 MB | ⚠️ LOH 雖小，但 4 萬個物件實體散落 Gen0 狂觸發 GC |
+| **3. 參考型別**<br>*(Class 20k 筆)* | **ArrayPool (池化)** | `/api/members-class-pooled` | 3,384 | 高 (16M) | ❌ 劇烈 (290M) | 6 MB | 351 MB | ⚠️ **池化效益極低**，只池化到指標，無法消除實體 GC |
+| **3. 參考型別**<br>*(Class 20k 筆)* | **Streaming (串流)** | `/api/members-class-stream` | 4,406 | 低 (4.6M) | ✅ 低 (26M) | **0 MB** | **139 MB** | 🏆 **Class 最佳解**，逐筆讀取釋放，記憶體維持極低 |
 
 ### 9.2 為什麼 Class 搭配 ArrayPool 效益極低？
 
