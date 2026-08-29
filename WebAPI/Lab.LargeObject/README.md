@@ -133,15 +133,18 @@ Lab.LargeObject/
 
 ## 重現實驗腳本
 
-專案內建完整實驗工具：
+專案內建完整實驗工具（支援結果持久化與重複渲染）：
 
 ```bash
-# 1. 9 種全組合一鍵全自動橫向對照實驗
+# 1. 執行 9 種全組合壓測並將結果持久化至 scripts/latest-results.json
 ./scripts/benchmark-all-9.sh
 
-# 2. 6 種 Struct vs Class 對照實驗
+# 2. ⚡ 秒級重用上次測試結果，直接輸出 Markdown 大一統總表（無需重跑）
+./scripts/benchmark-all-9.sh --report
+
+# 3. 6 種 Struct vs Class 對照實驗
 ./scripts/benchmark-class-vs-struct.sh
 
-# 3. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
+# 4. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
 ./scripts/benchmark-all.sh
 ```
