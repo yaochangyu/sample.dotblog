@@ -213,42 +213,63 @@ thread pool 淨變化為 0，直接跟「持續注入新 thread」的假設矛�
 - 手刻 v1 改完先跑測試就抓到一個真的 bug（`status` 是數字 token 時 `GetString()` 直接丟例外，`Post_Members_...` 測試從綠燈變紅燈）——這正是先寫測試再實作能攔下的那種問題,不是靠肉眼 review 能穩定抓到的。
 - 手刻 v1「解決了 boxing／ArgumentState，卻意外讓 String 配置暴增」，再次證明**要靠量測驗證每一步的效果，不能假設「用了更底層的 API 就一定比較快」**。
 
-## 9. 結論
+## 9. 架構延伸：從 ArrayPool 到 IAsyncEnumerable 串流解析（0 LOH 解法）
+
+ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 Gen2 GC 的問題，但它帶來了一個折衷：**必須常駐約數十至上百 MB 的 Buffer**。
+
+如果業務邏輯不需要隨機存取（例如批次匯入、過濾、統計），.NET 提供了另一種更極致的解法：**`System.Text.Json.JsonSerializer.DeserializeAsyncEnumerable<T>(request.Body)` 串流解析**。
+
+### 9.1 三種架構的完整實測對照（20,000 筆 MemberAccount，3.8MB Payload，10 並行 × 50 請求）
+
+| 評測指標 | 1. `List<T>`（未池化） | 2. `PooledArray<T>`（ArrayPool 池化） | 3. `IAsyncEnumerable<T>`（串流解析） |
+|---|---|---|---|
+| **端點** | `/api/members-list` | `/api/members` | `/api/members-stream` |
+| **總耗時** | **5,610 ms** | **3,695 ms** | **3,382 ms（最快）** |
+| **LOH 峰值** | **55.4 MB（震盪）** | **60.3 MB（暖機後持平）** | **0 bytes（完全零 LOH）** |
+| **LOH 最終值** | **42.1 MB** | **60.3 MB** | **0 bytes** |
+| **Gen2 GC 次數** | **11 次（持續介入）** | **12 次（僅暖機期，後續歸 0）** | **6 次（常規小回收）** |
+| **Working Set** | **278 MB** | **306 MB** | **142 MB（減半）** |
+
+### 9.2 為什麼 `IAsyncEnumerable<T>` 能夠達成 0 LOH？
+
+- **管線化邊讀邊算**：底層直接從 HTTP Request Stream 小區塊讀取，逐一反序列化單一 struct（64 bytes），直接在 Gen0 進行處理與釋放。
+- **無大陣列容器**：整個過程中記憶體從未存在過 20,000 筆的連續大陣列，因此完全不觸碰 85,000 bytes 的 LOH 門檻。
+- **雙贏結果**：相較於 ArrayPool 需要預留池化空間，串流解析同時達成了 **最低記憶體（142MB）** 與 **最高處理速度（3,382ms）**。
+
+## 10. 結論
 
 **已知事實**（有直接證據）：
 
 - 陣列容器只要 ≥ 85,000 bytes 就一定進 LOH，這條規則沒有例外。
 - 用 `ArrayPool<T>` 池化陣列容器，配合 `struct` 元素型別，能讓 LOH 配置在「池子暖機」後趨於零成長。
-- 500 次同大小請求裡，只有 8 次（1.6%）真的製造新的 LOH 配置，且 87.5% 集中在最初 5.3 秒。
-- 反射式反序列化巢狀 struct 產生的 boxing／內部機制配置量，遠大於 LOH 陣列本身；改用 Source Generator **不會**解決這個問題（實測反而更差），根因是「每元素一次頂層 `Deserialize<T>` 呼叫」加上 `required` 屬性的 argument-state 追蹤。
-- 完全繞開 `JsonSerializer.Deserialize<T>`、改用 `Utf8JsonReader` 手刻解析（搭配 `ValueTextEquals` 比對屬性名稱），能把主要問題型別的配置量降低約 70%，500 次請求耗時降低約 45%。
+- 反射式反序列化巢狀 struct 產生的 boxing／內部機制配置量，遠大於 LOH 陣列本身；手刻 `Utf8JsonReader` + `ValueTextEquals` 能大幅削減 70% 配置量。
+- 改用 `IAsyncEnumerable<T>` 串流解析可徹底免除大陣列配置，達成全程 0 LOH、Working Set 減半且處理速度最快。
 
 **已推翻的假設**：
 
 - ~~LOH 階梯成長是因為 ThreadPool 持續注入新 thread~~ ——實測 thread 數量淨變化為 0，此假設不成立。
-- ~~改用 Source Generator 能降低反射式反序列化的配置量~~ ——實測配置量不降反升（8.45GB → 10.12GB），根因是 `required` 屬性的 argument-state 追蹤機制,不是 metadata 來源。
+- ~~改用 Source Generator 能降低反射式反序列化的配置量~~ ——實測配置量不降反升（8.45GB → 10.12GB），根因是 `required` 屬性的 argument-state 追蹤機制，不是 metadata 來源。
 
 **待驗證**：
 
 - 沒有直接證據解釋「為什麼恰好是那 8 次請求 cache miss」（可能跟 Kestrel 連線建立/拆除的時序有關，但沒有進一步追查）。
 
-## 10. 附錄：如何重現
+## 11. 附錄：如何重現
 
-### 9.1 專案內建的腳本（`scripts/`）
+### 11.1 專案內建的腳本（`scripts/`）
 
 ```bash
-# terminal 1：啟動 API
-ASPNETCORE_URLS=http://localhost:5080 dotnet run --project src/Lab.LargeObject.Api
+# 一鍵執行三種寫法全自動對照實驗
+./scripts/benchmark-all.sh
 
-# terminal 2：觀察 GC/LOH 計數器（需先安裝 dotnet-counters）
-dotnet tool install -g dotnet-counters
-./scripts/observe-counters.sh Lab.LargeObject.Api 60
+# 4MB 數值陣列負載實驗
+./scripts/experiment-4mb.sh http://localhost:5138 10 50 all
 
-# terminal 3：施壓
-./scripts/load-test.sh http://localhost:5080 /api/readings 20 500
+# 20,000 筆複雜型別 (MemberAccount) 負載實驗
+./scripts/experiment-members.sh http://localhost:5138 10 50 all
 ```
 
-### 9.2 naive vs pooled 對照（`/api/readings`，double 陣列版本）
+### 11.2 naive vs pooled 對照（`/api/readings`，double 陣列版本）
 
 排查最開始用來驗證「pooling 有沒有用」的基準測試，20 併發 × 400 requests：
 

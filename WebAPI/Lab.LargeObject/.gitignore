@@ -4,3 +4,8 @@
 
 ## Local tool/plugin session state (oh-my-claudecode)
 .omc/
+
+## Benchmark generated data and outputs
+scripts/*.csv
+scripts/payload-*.json
+

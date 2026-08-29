@@ -70,4 +70,120 @@ public class MemberAccountEndpointTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Equal(0, summary.SuspendedCount);
         Assert.Equal(0, summary.DeletedCount);
     }
+
+    [Fact]
+    public async Task Post_MembersList_接收超過LOH門檻的大List_回傳正確狀態統計()
+    {
+        // Arrange：20000 筆會員帳號（64 bytes * 20000 = 1.28MB，內部陣列超過 85000 bytes 門檻）
+        const int memberCount = 20_000;
+        var members = new MemberAccount[memberCount];
+        for (var i = 0; i < memberCount; i++)
+        {
+            members[i] = new MemberAccount
+            {
+                MemberId = i,
+                Account = $"member{i:D6}",
+                DisplayName = $"會員 {i}",
+                Status = (MemberStatus)(i % 3),
+                Contact = new ContactInfo
+                {
+                    Email = $"member{i:D6}@example.com",
+                    PhoneNumber = i % 2 == 0 ? $"09{i:D8}" : null
+                },
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+        }
+
+        var expectedActive = members.Count(m => m.Status == MemberStatus.Active);
+        var expectedSuspended = members.Count(m => m.Status == MemberStatus.Suspended);
+        var expectedDeleted = members.Count(m => m.Status == MemberStatus.Deleted);
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/members-list", members);
+
+        // Assert
+        response.EnsureSuccessStatusCode();
+        var summary = await response.Content.ReadFromJsonAsync<MemberAccountSummary>();
+
+        Assert.NotNull(summary);
+        Assert.Equal(memberCount, summary!.Count);
+        Assert.Equal(expectedActive, summary.ActiveCount);
+        Assert.Equal(expectedSuspended, summary.SuspendedCount);
+        Assert.Equal(expectedDeleted, summary.DeletedCount);
+    }
+
+    [Fact]
+    public async Task Post_MembersStream_串流解析大陣列_回傳正確狀態統計()
+    {
+        const int memberCount = 20_000;
+        var members = new MemberAccount[memberCount];
+        for (var i = 0; i < memberCount; i++)
+        {
+            members[i] = new MemberAccount
+            {
+                MemberId = i,
+                Account = $"member{i:D6}",
+                DisplayName = $"會員 {i}",
+                Status = (MemberStatus)(i % 3),
+                Contact = new ContactInfo
+                {
+                    Email = $"member{i:D6}@example.com",
+                    PhoneNumber = i % 2 == 0 ? $"09{i:D8}" : null
+                },
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+        }
+
+        var expectedActive = members.Count(m => m.Status == MemberStatus.Active);
+        var expectedSuspended = members.Count(m => m.Status == MemberStatus.Suspended);
+        var expectedDeleted = members.Count(m => m.Status == MemberStatus.Deleted);
+
+        // Act
+        var response = await _client.PostAsJsonAsync("/api/members-stream", members);
+
+        // Assert
+        response.EnsureSuccessStatusCode();
+        var summary = await response.Content.ReadFromJsonAsync<MemberAccountSummary>();
+
+        Assert.NotNull(summary);
+        Assert.Equal(memberCount, summary!.Count);
+        Assert.Equal(expectedActive, summary.ActiveCount);
+        Assert.Equal(expectedSuspended, summary.SuspendedCount);
+        Assert.Equal(expectedDeleted, summary.DeletedCount);
+    }
+
+    [Fact]
+    public async Task Post_MembersClass_三個端點皆能正確反序列化並統計()
+    {
+        const int memberCount = 1_000;
+        var members = new MemberAccountClass[memberCount];
+        for (var i = 0; i < memberCount; i++)
+        {
+            members[i] = new MemberAccountClass
+            {
+                MemberId = i,
+                Account = $"member{i:D6}",
+                DisplayName = $"會員 {i}",
+                Status = (MemberStatus)(i % 3),
+                Contact = new ContactInfoClass
+                {
+                    Email = $"member{i:D6}@example.com",
+                    PhoneNumber = i % 2 == 0 ? $"09{i:D8}" : null
+                },
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+        }
+
+        var endpoints = new[] { "/api/members-class-list", "/api/members-class-pooled", "/api/members-class-stream" };
+
+        foreach (var ep in endpoints)
+        {
+            var response = await _client.PostAsJsonAsync(ep, members);
+            response.EnsureSuccessStatusCode();
+            var summary = await response.Content.ReadFromJsonAsync<MemberAccountSummary>();
+
+            Assert.NotNull(summary);
+            Assert.Equal(memberCount, summary!.Count);
+        }
+    }
 }
