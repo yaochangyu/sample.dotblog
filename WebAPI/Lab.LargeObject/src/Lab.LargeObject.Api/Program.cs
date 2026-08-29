@@ -17,6 +17,19 @@ var app = builder.Build();
 
 app.MapGet("/", () => "Hello World!");
 
+app.MapGet("/diag/gc-stats", () =>
+{
+    var memInfo = GC.GetGCMemoryInfo();
+    return Results.Ok(new
+    {
+        TotalPauseDurationMs = GC.GetTotalPauseDuration().TotalMilliseconds,
+        PauseTimePercentage = memInfo.PauseTimePercentage,
+        Gen0Collections = GC.CollectionCount(0),
+        Gen1Collections = GC.CollectionCount(1),
+        Gen2Collections = GC.CollectionCount(2)
+    });
+});
+
 app.MapPost("/api/readings", ([FromBody] PooledArray<double> readings) =>
 {
     // 用完務必歸還租用陣列；readings 離開這個 using 區塊前都不能外流出去。
