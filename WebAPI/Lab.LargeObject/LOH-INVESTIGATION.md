@@ -12,8 +12,9 @@
 6. [用 dotnet-trace 找到真正原因](#6-用-dotnet-trace-找到真正原因)
 7. [附帶發現：反射式反序列化的隱藏成本](#7-附帶發現反射式反序列化的隱藏成本)
 8. [反序列化配置量的最終解法：手刻 Utf8JsonReader 解析](#8-反序列化配置量的最終解法手刻-utf8jsonreader-解析)
-9. [結論](#9-結論)
-10. [附錄：如何重現](#10-附錄如何重現)
+9. [架構延伸：從 ArrayPool 到 IAsyncEnumerable 串流解析（9 組全組合大橫評）](#9-架構延伸從-arraypool-到-iasyncenumerable-串流解析0-loh-解法)
+10. [寫法優劣排序與結論](#10-寫法優劣排序與結論)
+11. [附錄：如何重現](#11-附錄如何重現)
 
 ---
 
@@ -255,14 +256,27 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
    - **ArrayPool 的常駐預留（空間換時間）**：ArrayPool 在高並發下租用並建立多個對應 Bucket 大小的連續 Buffer。請求結束歸還時，Buffer 是被**保留在池子（Process 內部記憶體）中**隨時等待下一個請求複用，並不會釋放回作業系統。
    - **.NET GC 預設不主動向 OS 歸還記憶體（Decommit）**：.NET GC 向作業系統申請實體記憶體後，預設不會在沒有外部記憶體壓力的情況下主動將 Committed 記憶體還給 OS。因此 Working Set 會維持在「並行數 × Buffer 大小」的穩態高點，這是專為**換取零 GC 停頓與高吞吐量**而預先持有的固定資產。
 
-## 10. 結論
+## 10. 寫法優劣排序與結論
+
+### 10.1 全架構寫法優劣梯隊
+
+| 排名梯隊 | 架構寫法組合 | LOH 配置 | Gen2 GC 壓力 | Working Set 記憶體 | 處理耗時 | 綜合評語 |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| 🥇 **S 級 (最優解)** | **`Struct` + `IAsyncEnumerable<T>` 串流解析** | **0 MB** | **極低 (17~24次)** | **115~131 MB (減半)** | **最快 (3.3~3.5s)** | 🏆 **效能與記憶體雙冠王**，全程 0 大物件、零暖機成本 |
+| 🥈 **A 級 (特定首選)** | **`Struct` + `ArrayPool<T>` 自訂池化** | 62~122 MB | **暖機後 0 次** | 275~323 MB (常駐) | **極快 (3.3~3.7s)** | ⚡ **需隨機存取陣列時的首選**，Gen0 暴降 99%，零後續 GC 停頓 |
+| 🥉 **B 級 (折衷方案)** | **`Class` + `IAsyncEnumerable<T>` 串流解析** | **0 MB** | **低 (26次)** | **139 MB (減半)** | 良好 (4.0~4.4s) | 🛡️ **既有 Class 模型無法改為 struct 時的最佳解** |
+| ⚠️ **C 級 (效益極低)** | **`Class` + `ArrayPool<T>` 池化** | 6 MB | 劇烈 (290次) | 351 MB (偏高) | 普 (3.3~3.5s) | ❌ **白做工**，只池化到指標，物件實體依舊在 Gen0 瘋狂產出垃圾 |
+| 🚫 **D 級 (強烈禁止)** | **`Struct` / `Class` + 直接用 `List<T>` 接收** | 33~72 MB | **極高 (87~365次)** | 198~249 MB | **最慢且抖動** | 💥 **效能毒藥**，擴容放大效應引發頻繁 Gen2 GC 與 OOM 風險 |
+
+### 10.2 核心事實與結論
 
 **已知事實**（有直接證據）：
 
 - 陣列容器只要 ≥ 85,000 bytes 就一定進 LOH，這條規則沒有例外。
 - 用 `ArrayPool<T>` 池化陣列容器，配合 `struct` 元素型別，能讓 LOH 配置在「池子暖機」後趨於零成長。
-- 反射式反序列化巢狀 struct 產生的 boxing／內部機制配置量，遠大於 LOH 陣列本身；手刻 `Utf8JsonReader` + `ValueTextEquals` 能大幅削減 70% 配置量。
+- 若元素為 `class`，`ArrayPool` 只能池化指標陣列，無法池化物件實體，Gen0 GC 依然高達 24,000+ 次。
 - 改用 `IAsyncEnumerable<T>` 串流解析可徹底免除大陣列配置，達成全程 0 LOH、Working Set 減半且處理速度最快。
+- 反射式反序列化巢狀 struct 產生的 boxing／內部機制配置量，遠大於 LOH 陣列本身；手刻 `Utf8JsonReader` + `ValueTextEquals` 能大幅削減 70% 配置量。
 
 **已推翻的假設**：
 
@@ -278,14 +292,14 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 ### 11.1 專案內建的腳本（`scripts/`）
 
 ```bash
-# 一鍵執行三種寫法全自動對照實驗
+# 9 種全組合一鍵全自動橫向對照實驗
+./scripts/benchmark-all-9.sh
+
+# 6 種 Struct vs Class 對照實驗
+./scripts/benchmark-class-vs-struct.sh
+
+# 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
 ./scripts/benchmark-all.sh
-
-# 4MB 數值陣列負載實驗
-./scripts/experiment-4mb.sh http://localhost:5138 10 50 all
-
-# 20,000 筆複雜型別 (MemberAccount) 負載實驗
-./scripts/experiment-members.sh http://localhost:5138 10 50 all
 ```
 
 ### 11.2 naive vs pooled 對照（`/api/readings`，double 陣列版本）
@@ -297,7 +311,7 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 | gen2 GC 次數 | +38 | +1 |
 | Working Set | 78MB → 191MB，之後停在高點 | 189MB → 215MB，之後停在高點 |
 
-### 9.3 dotnet-trace 分析器
+### 11.3 dotnet-trace 分析器
 
 `dotnet-trace collect -p <pid> --profile gc-verbose -o trace.nettrace --duration <hh:mm:ss>` 收集 trace 之後，需要一支小工具解析 `.nettrace`（本身沒有現成的事件明細輸出指令）：
 

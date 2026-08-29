@@ -89,20 +89,49 @@ Lab.LargeObject/
 
 ---
 
+## 寫法優劣排序與技術選型 SOP
+
+### 1. 全架構優劣梯隊
+
+| 排名梯隊 | 架構寫法組合 | LOH 配置 | Gen2 GC 壓力 | Working Set 記憶體 | 處理耗時 | 綜合評語 |
+|:---|:---|:---:|:---:|:---:|:---:|:---|
+| 🥇 **S 級 (最優解)** | **`Struct` + `IAsyncEnumerable<T>` 串流解析** | **0 MB** | **極低 (17~24次)** | **115~131 MB (減半)** | **最快 (3.3~3.5s)** | 🏆 **效能與記憶體雙冠王**，全程 0 大物件、零暖機成本 |
+| 🥈 **A 級 (特定首選)** | **`Struct` + `ArrayPool<T>` 自訂池化** | 62~122 MB | **暖機後 0 次** | 275~323 MB (常駐) | **極快 (3.3~3.7s)** | ⚡ **需隨機存取陣列時的首選**，Gen0 暴降 99%，零後續 GC 停頓 |
+| 🥉 **B 級 (折衷方案)** | **`Class` + `IAsyncEnumerable<T>` 串流解析** | **0 MB** | **低 (26次)** | **139 MB (減半)** | 良好 (4.0~4.4s) | 🛡️ **既有 Class 模型無法改為 struct 時的最佳解** |
+| ⚠️ **C 級 (效益極低)** | **`Class` + `ArrayPool<T>` 池化** | 6 MB | 劇烈 (290次) | 351 MB (偏高) | 普 (3.3~3.5s) | ❌ **白做工**，只池化到指標，物件實體依舊在 Gen0 瘋狂產出垃圾 |
+| 🚫 **D 級 (強烈禁止)** | **`Struct` / `Class` + 直接用 `List<T>` 接收** | 33~72 MB | **極高 (87~365次)** | 198~249 MB | **最慢且抖動** | 💥 **效能毒藥**，擴容放大效應引發頻繁 Gen2 GC 與 OOM 風險 |
+
+### 2. 生產環境選型決策樹
+
+```text
+接收大型 JSON 陣列 (≥ 85KB)
+├── 步驟 1：業務邏輯需要拿到完整陣列才能運算嗎？
+│   │
+│   ├── 【否（可逐筆累加/過濾/存入 DB）】
+│   │   👉 唯一首選：IAsyncEnumerable<T> 串流解析 (S 級)
+│   │
+│   └── 【是（必須做隨機索引、排序、矩陣運算）】
+│       │
+│       └── 步驟 2：資料模型可以設計成 struct 嗎？
+│           │
+│           ├── 【能】👉 選擇：readonly struct + ArrayPool + 自訂 JsonConverter (A 級)
+│           │
+│           └── 【不能（既有 class）】👉 強制重構業務邏輯為串流處理，切勿直接用 List<T>
+```
+
+---
+
 ## 重現實驗腳本
 
 專案內建完整實驗工具：
 
 ```bash
-# 1. 一鍵全自動對比 Struct vs Class 完整 6 種組合
+# 1. 9 種全組合一鍵全自動橫向對照實驗
+./scripts/benchmark-all-9.sh
+
+# 2. 6 種 Struct vs Class 對照實驗
 ./scripts/benchmark-class-vs-struct.sh
 
-# 2. 一鍵全自動對比三種架構（List vs ArrayPool vs Streaming）
+# 3. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
 ./scripts/benchmark-all.sh
-
-# 3. 執行 4MB (524,288 double) 負載實驗
-./scripts/experiment-4mb.sh http://localhost:5138 10 50 all
-
-# 4. 執行 20,000 筆複雜型別 (MemberAccount) 負載實驗
-./scripts/experiment-members.sh http://localhost:5138 10 50 all
 ```
