@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# 9 種全組合一鍵自動化大橫評腳本（包含精準 GC 停頓時間 Pause Time 與 % Time in GC）：
+# 9 種全組合一鍵自動化大橫評腳本（包含 Gen0, Gen1, Gen2 精確次數與 GC 停頓時間）：
 # 3 種資料型別 (double, Struct, Class) × 3 種架構 (List, ArrayPool, Streaming)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PAYLOAD_DOUBLE="$SCRIPT_DIR/payload-4mb.json"
 PAYLOAD_MEMBERS="$SCRIPT_DIR/payload-members-20k.json"
-PORT=5142
+PORT=5143
 BASE_URL="http://localhost:$PORT"
 CONCURRENCY=10
 TOTAL_REQUESTS=50
@@ -62,6 +62,12 @@ run_test() {
     stats_before=$(curl -s "$BASE_URL/diag/gc-stats")
     local pause_before
     pause_before=$(echo "$stats_before" | grep -o '"totalPauseDurationMs":[0-9.]*' | cut -d: -f2)
+    local g0_before
+    g0_before=$(echo "$stats_before" | grep -o '"gen0Collections":[0-9]*' | cut -d: -f2)
+    local g1_before
+    g1_before=$(echo "$stats_before" | grep -o '"gen1Collections":[0-9]*' | cut -d: -f2)
+    local g2_before
+    g2_before=$(echo "$stats_before" | grep -o '"gen2Collections":[0-9]*' | cut -d: -f2)
 
     local start_time
     start_time=$(date +%s%N)
@@ -84,9 +90,18 @@ run_test() {
     pause_after=$(echo "$stats_after" | grep -o '"totalPauseDurationMs":[0-9.]*' | cut -d: -f2)
     local pause_pct
     pause_pct=$(echo "$stats_after" | grep -o '"pauseTimePercentage":[0-9.]*' | cut -d: -f2)
+    local g0_after
+    g0_after=$(echo "$stats_after" | grep -o '"gen0Collections":[0-9]*' | cut -d: -f2)
+    local g1_after
+    g1_after=$(echo "$stats_after" | grep -o '"gen1Collections":[0-9]*' | cut -d: -f2)
+    local g2_after
+    g2_after=$(echo "$stats_after" | grep -o '"gen2Collections":[0-9]*' | cut -d: -f2)
 
     local gc_pause_delta
     gc_pause_delta=$(awk -v a="$pause_after" -v b="$pause_before" 'BEGIN{printf "%.1f", a-b}')
+    local g0_delta=$((g0_after - g0_before))
+    local g1_delta=$((g1_after - g1_before))
+    local g2_delta=$((g2_after - g2_before))
 
     wait $counter_pid 2>/dev/null || true
 
@@ -99,16 +114,6 @@ run_test() {
         full_csv="$csv_out"
     fi
 
-    local gen2_sum=0
-    if grep -q 'generation=gen2' "$full_csv" 2>/dev/null; then
-        gen2_sum=$(grep 'generation=gen2' "$full_csv" | awk -F',' '{sum+=$5} END{print int(sum)}')
-    fi
-
-    local gen0_sum=0
-    if grep -q 'generation=gen0' "$full_csv" 2>/dev/null; then
-        gen0_sum=$(grep 'generation=gen0' "$full_csv" | awk -F',' '{sum+=$5} END{print int(sum)}')
-    fi
-
     local loh_peak=0
     if grep -q 'generation=loh' "$full_csv" 2>/dev/null; then
         loh_peak=$(grep 'generation=loh' "$full_csv" | grep 'heap.size' | awk -F',' 'BEGIN{max=0} {if($5>max) max=$5} END{print int(max)}')
@@ -119,10 +124,10 @@ run_test() {
         ws_final=$(grep 'working_set' "$full_csv" | tail -n 1 | awk -F',' '{print int($5)}')
     fi
 
-    echo "RESULT | $type_category | $pattern_name | $endpoint | 耗時:${elapsed_ms}ms | GC停頓:${gc_pause_delta}ms (${pause_pct}%) | Gen0:${gen0_sum} | Gen2:${gen2_sum} | LOH_Peak:$((loh_peak/1024/1024))MB | WS:$((ws_final/1024/1024))MB"
+    echo "RESULT | $type_category | $pattern_name | $endpoint | 耗時:${elapsed_ms}ms | GC停頓:${gc_pause_delta}ms (${pause_pct}%) | Gen0:${g0_delta}次 | Gen1:${g1_delta}次 | Gen2:${g2_delta}次 | LOH_Peak:$((loh_peak/1024/1024))MB | WS:$((ws_final/1024/1024))MB"
 }
 
-echo "=== 開始 9 種全組合橫評測試（含精確 GC 停頓時間）(50 請求，10 並行) ==="
+echo "=== 開始 9 種全組合橫評測試（含 Gen0/Gen1/Gen2 精確次數）(50 請求，10 並行) ==="
 # 1. 數值型別 (4MB double)
 run_test "1.原生數值 (double 4MB)" "List (未池化)" "/api/readings-list" "$PAYLOAD_DOUBLE"
 run_test "1.原生數值 (double 4MB)" "ArrayPool (池化)" "/api/readings" "$PAYLOAD_DOUBLE"
