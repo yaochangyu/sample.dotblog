@@ -1,5 +1,6 @@
 using Lab.LargeObject.Api;
 using Microsoft.AspNetCore.Mvc;
+using System.Buffers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -322,142 +323,214 @@ app.MapPost("/api/strings-stream", async (HttpRequest request, CancellationToken
 });
 
 // ==========================================
-// 5. 大型 Response（回傳資料）端點情境
+// 5. 大型 Response（回傳資料）端點情境（4 型別 × 3 架構 = 12 組）
 // ==========================================
 
-// 1. ❌ List 未池化：在記憶體中建立 20,000 筆的大 List 直接 Results.Ok
-app.MapGet("/api/export-list", () =>
+// --- 1. 原生數值 double (524,288 筆，4MB) ---
+app.MapGet("/api/export-readings-list", () =>
+{
+    var list = new List<double>(524288);
+    for (var i = 0; i < 524288; i++) list.Add(i + 0.5);
+    return Results.Ok(list);
+});
+
+app.MapGet("/api/export-readings", async (HttpResponse response, CancellationToken ct) =>
+{
+    var rented = ArrayPool<double>.Shared.Rent(524288);
+    try
+    {
+        for (var i = 0; i < 524288; i++) rented[i] = i + 0.5;
+        using var pooled = new PooledArray<double>(rented, 524288);
+        response.ContentType = "application/json";
+        var options = new JsonSerializerOptions { Converters = { new PooledDoubleArrayJsonConverter() } };
+        await JsonSerializer.SerializeAsync(response.Body, pooled, options, cancellationToken: ct);
+    }
+    finally
+    {
+        ArrayPool<double>.Shared.Return(rented);
+    }
+});
+
+app.MapGet("/api/export-readings-stream", (CancellationToken ct) => StreamReadingsAsync(ct));
+
+static async IAsyncEnumerable<double> StreamReadingsAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+{
+    for (var i = 0; i < 524288; i++)
+    {
+        if (i % 10000 == 0) ct.ThrowIfCancellationRequested();
+        yield return i + 0.5;
+    }
+}
+
+// --- 2. 原生字串 string (50,000 筆，~3.7MB) ---
+app.MapGet("/api/export-strings-list", () =>
+{
+    var list = new List<string>(50000);
+    for (var i = 0; i < 50000; i++) list.Add($"sample-log-record-uuid-0000-0000-000000000000-{i:D8}-dotblog-benchmark");
+    return Results.Ok(list);
+});
+
+app.MapGet("/api/export-strings", async (HttpResponse response, CancellationToken ct) =>
+{
+    var rented = ArrayPool<string>.Shared.Rent(50000);
+    try
+    {
+        for (var i = 0; i < 50000; i++) rented[i] = $"sample-log-record-uuid-0000-0000-000000000000-{i:D8}-dotblog-benchmark";
+        using var pooled = new PooledArray<string>(rented, 50000);
+        response.ContentType = "application/json";
+        var options = new JsonSerializerOptions { Converters = { new PooledStringArrayJsonConverter() } };
+        await JsonSerializer.SerializeAsync(response.Body, pooled, options, cancellationToken: ct);
+    }
+    finally
+    {
+        ArrayPool<string>.Shared.Return(rented, clearArray: true);
+    }
+});
+
+app.MapGet("/api/export-strings-stream", (CancellationToken ct) => StreamStringsAsync(ct));
+
+static async IAsyncEnumerable<string> StreamStringsAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+{
+    for (var i = 0; i < 50000; i++)
+    {
+        if (i % 5000 == 0) ct.ThrowIfCancellationRequested();
+        yield return $"sample-log-record-uuid-0000-0000-000000000000-{i:D8}-dotblog-benchmark";
+    }
+}
+
+// --- 3. 巢狀結構 Struct (20,000 筆 MemberAccount) ---
+app.MapGet("/api/export-members-list", () =>
 {
     var list = new List<MemberAccount>(20000);
     for (var i = 0; i < 20000; i++)
     {
-        var status = (i % 3) switch
-        {
-            0 => MemberStatus.Active,
-            1 => MemberStatus.Suspended,
-            _ => MemberStatus.Deleted
-        };
+        var status = (i % 3) switch { 0 => MemberStatus.Active, 1 => MemberStatus.Suspended, _ => MemberStatus.Deleted };
         list.Add(new MemberAccount
         {
             MemberId = i,
             Account = $"member{i:D6}",
             DisplayName = $"會員 {i}",
             Status = status,
-            Contact = new ContactInfo
-            {
-                Email = $"member{i:D6}@example.com",
-                PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null
-            },
+            Contact = new ContactInfo { Email = $"member{i:D6}@example.com", PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null },
             CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc)
         });
     }
     return Results.Ok(list);
 });
 
-// 2. ❌ SerializeToUtf8Bytes / byte[]：直接序列化為大型 byte 陣列放進 LOH
-app.MapGet("/api/export-bytes", () =>
+app.MapGet("/api/export-members", async (HttpResponse response, CancellationToken ct) =>
 {
-    var list = new List<MemberAccount>(20000);
-    for (var i = 0; i < 20000; i++)
-    {
-        var status = (i % 3) switch
-        {
-            0 => MemberStatus.Active,
-            1 => MemberStatus.Suspended,
-            _ => MemberStatus.Deleted
-        };
-        list.Add(new MemberAccount
-        {
-            MemberId = i,
-            Account = $"member{i:D6}",
-            DisplayName = $"會員 {i}",
-            Status = status,
-            Contact = new ContactInfo
-            {
-                Email = $"member{i:D6}@example.com",
-                PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null
-            },
-            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc)
-        });
-    }
-
-    var bytes = JsonSerializer.SerializeToUtf8Bytes(list, new JsonSerializerOptions
-    {
-        Converters = { new JsonStringEnumConverter() }
-    });
-
-    return Results.File(bytes, "application/json");
-});
-
-// 3. ⚡ ArrayPool 池化：租用 Buffer 填充後序列化輸出至 Response.Body
-app.MapGet("/api/export-pooled", async (HttpResponse response, CancellationToken ct) =>
-{
-    var rented = System.Buffers.ArrayPool<MemberAccount>.Shared.Rent(20000);
+    var rented = ArrayPool<MemberAccount>.Shared.Rent(20000);
     try
     {
         for (var i = 0; i < 20000; i++)
         {
-            var status = (i % 3) switch
-            {
-                0 => MemberStatus.Active,
-                1 => MemberStatus.Suspended,
-                _ => MemberStatus.Deleted
-            };
+            var status = (i % 3) switch { 0 => MemberStatus.Active, 1 => MemberStatus.Suspended, _ => MemberStatus.Deleted };
             rented[i] = new MemberAccount
             {
                 MemberId = i,
                 Account = $"member{i:D6}",
                 DisplayName = $"會員 {i}",
                 Status = status,
-                Contact = new ContactInfo
-                {
-                    Email = $"member{i:D6}@example.com",
-                    PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null
-                },
+                Contact = new ContactInfo { Email = $"member{i:D6}@example.com", PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null },
                 CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc)
             };
         }
-
         using var pooled = new PooledArray<MemberAccount>(rented, 20000);
         response.ContentType = "application/json";
-        var options = new JsonSerializerOptions
-        {
-            Converters = { new PooledMemberAccountArrayJsonConverter(), new JsonStringEnumConverter() }
-        };
+        var options = new JsonSerializerOptions { Converters = { new PooledMemberAccountArrayJsonConverter(), new JsonStringEnumConverter() } };
         await JsonSerializer.SerializeAsync(response.Body, pooled, options, cancellationToken: ct);
     }
     finally
     {
-        System.Buffers.ArrayPool<MemberAccount>.Shared.Return(rented, clearArray: true);
+        ArrayPool<MemberAccount>.Shared.Return(rented, clearArray: true);
     }
 });
 
-// 4. 🏆 IAsyncEnumerable 串流回傳：逐筆 yield return 邊產邊傳，全程 0 LOH
-app.MapGet("/api/export-stream", (CancellationToken ct) => StreamMembersAsync(ct));
+app.MapGet("/api/export-members-stream", (CancellationToken ct) => StreamMembersAsync(ct));
 
 static async IAsyncEnumerable<MemberAccount> StreamMembersAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
 {
     for (var i = 0; i < 20000; i++)
     {
-        ct.ThrowIfCancellationRequested();
-        var status = (i % 3) switch
-        {
-            0 => MemberStatus.Active,
-            1 => MemberStatus.Suspended,
-            _ => MemberStatus.Deleted
-        };
-
+        if (i % 2000 == 0) ct.ThrowIfCancellationRequested();
+        var status = (i % 3) switch { 0 => MemberStatus.Active, 1 => MemberStatus.Suspended, _ => MemberStatus.Deleted };
         yield return new MemberAccount
         {
             MemberId = i,
             Account = $"member{i:D6}",
             DisplayName = $"會員 {i}",
             Status = status,
-            Contact = new ContactInfo
+            Contact = new ContactInfo { Email = $"member{i:D6}@example.com", PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null },
+            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc)
+        };
+    }
+}
+
+// --- 4. 參考型別 Class (20,000 筆 MemberAccountClass) ---
+app.MapGet("/api/export-members-class-list", () =>
+{
+    var list = new List<MemberAccountClass>(20000);
+    for (var i = 0; i < 20000; i++)
+    {
+        var status = (i % 3) switch { 0 => MemberStatus.Active, 1 => MemberStatus.Suspended, _ => MemberStatus.Deleted };
+        list.Add(new MemberAccountClass
+        {
+            MemberId = i,
+            Account = $"member{i:D6}",
+            DisplayName = $"會員 {i}",
+            Status = status,
+            Contact = new ContactInfoClass { Email = $"member{i:D6}@example.com", PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null },
+            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc)
+        });
+    }
+    return Results.Ok(list);
+});
+
+app.MapGet("/api/export-members-class-pooled", async (HttpResponse response, CancellationToken ct) =>
+{
+    var rented = ArrayPool<MemberAccountClass>.Shared.Rent(20000);
+    try
+    {
+        for (var i = 0; i < 20000; i++)
+        {
+            var status = (i % 3) switch { 0 => MemberStatus.Active, 1 => MemberStatus.Suspended, _ => MemberStatus.Deleted };
+            rented[i] = new MemberAccountClass
             {
-                Email = $"member{i:D6}@example.com",
-                PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null
-            },
+                MemberId = i,
+                Account = $"member{i:D6}",
+                DisplayName = $"會員 {i}",
+                Status = status,
+                Contact = new ContactInfoClass { Email = $"member{i:D6}@example.com", PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null },
+                CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc)
+            };
+        }
+        using var pooled = new PooledArray<MemberAccountClass>(rented, 20000);
+        response.ContentType = "application/json";
+        var options = new JsonSerializerOptions { Converters = { new PooledMemberAccountClassArrayJsonConverter(), new JsonStringEnumConverter() } };
+        await JsonSerializer.SerializeAsync(response.Body, pooled, options, cancellationToken: ct);
+    }
+    finally
+    {
+        ArrayPool<MemberAccountClass>.Shared.Return(rented, clearArray: true);
+    }
+});
+
+app.MapGet("/api/export-members-class-stream", (CancellationToken ct) => StreamMembersClassAsync(ct));
+
+static async IAsyncEnumerable<MemberAccountClass> StreamMembersClassAsync([System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
+{
+    for (var i = 0; i < 20000; i++)
+    {
+        if (i % 2000 == 0) ct.ThrowIfCancellationRequested();
+        var status = (i % 3) switch { 0 => MemberStatus.Active, 1 => MemberStatus.Suspended, _ => MemberStatus.Deleted };
+        yield return new MemberAccountClass
+        {
+            MemberId = i,
+            Account = $"member{i:D6}",
+            DisplayName = $"會員 {i}",
+            Status = status,
+            Contact = new ContactInfoClass { Email = $"member{i:D6}@example.com", PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null },
             CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc)
         };
     }

@@ -18,51 +18,127 @@ public class ResponseEndpointTests : IClassFixture<WebApplicationFactory<Program
         _client = factory.CreateClient();
     }
 
+    // --- 1. 原生數值 double (524,288 筆) ---
     [Fact]
-    public async Task ExportList_Returns20kMembers()
+    public async Task ExportReadingsList_Returns524kItems()
     {
-        var response = await _client.GetAsync("/api/export-list");
+        var response = await _client.GetAsync("/api/export-readings-list");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var list = await response.Content.ReadFromJsonAsync<List<MemberAccount>>(Options);
+        var list = await response.Content.ReadFromJsonAsync<List<double>>();
         Assert.NotNull(list);
-        Assert.Equal(20000, list.Count);
-        Assert.Equal("member000000", list[0].Account);
+        Assert.Equal(524288, list.Count);
     }
 
     [Fact]
-    public async Task ExportBytes_Returns20kMembers()
+    public async Task ExportReadingsPooled_Returns524kItems()
     {
-        var response = await _client.GetAsync("/api/export-bytes");
+        var response = await _client.GetAsync("/api/export-readings");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var list = await response.Content.ReadFromJsonAsync<List<MemberAccount>>(Options);
+        var list = await response.Content.ReadFromJsonAsync<List<double>>();
         Assert.NotNull(list);
-        Assert.Equal(20000, list.Count);
-        Assert.Equal("member000000", list[0].Account);
+        Assert.Equal(524288, list.Count);
     }
 
     [Fact]
-    public async Task ExportPooled_Returns20kMembers()
+    public async Task ExportReadingsStream_Returns524kItems()
     {
-        var response = await _client.GetAsync("/api/export-pooled");
+        var response = await _client.GetAsync("/api/export-readings-stream");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
-        var list = await response.Content.ReadFromJsonAsync<List<MemberAccount>>(Options);
+        var list = await response.Content.ReadFromJsonAsync<List<double>>();
         Assert.NotNull(list);
-        Assert.Equal(20000, list.Count);
-        Assert.Equal("member000000", list[0].Account);
+        Assert.Equal(524288, list.Count);
+    }
+
+    // --- 2. 原生字串 string (50,000 筆) ---
+    [Fact]
+    public async Task ExportStringsList_Returns50kStrings()
+    {
+        var response = await _client.GetAsync("/api/export-strings-list");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var list = await response.Content.ReadFromJsonAsync<List<string>>();
+        Assert.NotNull(list);
+        Assert.Equal(50000, list.Count);
     }
 
     [Fact]
-    public async Task ExportStream_Returns20kMembers()
+    public async Task ExportStringsPooled_Returns50kStrings()
     {
-        var response = await _client.GetAsync("/api/export-stream");
+        var response = await _client.GetAsync("/api/export-strings");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var list = await response.Content.ReadFromJsonAsync<List<string>>();
+        Assert.NotNull(list);
+        Assert.Equal(50000, list.Count);
+    }
 
+    [Fact]
+    public async Task ExportStringsStream_Returns50kStrings()
+    {
+        var response = await _client.GetAsync("/api/export-strings-stream");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var list = await response.Content.ReadFromJsonAsync<List<string>>();
+        Assert.NotNull(list);
+        Assert.Equal(50000, list.Count);
+    }
+
+    // --- 3. 巢狀結構 Struct (20,000 筆) ---
+    [Fact]
+    public async Task ExportMembersList_Returns20kMembers()
+    {
+        var response = await _client.GetAsync("/api/export-members-list");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var list = await response.Content.ReadFromJsonAsync<List<MemberAccount>>(Options);
         Assert.NotNull(list);
         Assert.Equal(20000, list.Count);
-        Assert.Equal("member000000", list[0].Account);
+    }
+
+    [Fact]
+    public async Task ExportMembersPooled_Returns20kMembers()
+    {
+        var response = await _client.GetAsync("/api/export-members");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var list = await response.Content.ReadFromJsonAsync<List<MemberAccount>>(Options);
+        Assert.NotNull(list);
+        Assert.Equal(20000, list.Count);
+    }
+
+    [Fact]
+    public async Task ExportMembersStream_Returns20kMembers()
+    {
+        var response = await _client.GetAsync("/api/export-members-stream");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var list = await response.Content.ReadFromJsonAsync<List<MemberAccount>>(Options);
+        Assert.NotNull(list);
+        Assert.Equal(20000, list.Count);
+    }
+
+    // --- 4. 參考型別 Class (20,000 筆) ---
+    [Fact]
+    public async Task ExportMembersClassList_Returns20kMembers()
+    {
+        var response = await _client.GetAsync("/api/export-members-class-list");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var list = await response.Content.ReadFromJsonAsync<List<MemberAccountClass>>(Options);
+        Assert.NotNull(list);
+        Assert.Equal(20000, list.Count);
+    }
+
+    [Fact]
+    public async Task ExportMembersClassPooled_Returns20kMembers()
+    {
+        var response = await _client.GetAsync("/api/export-members-class-pooled");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var list = await response.Content.ReadFromJsonAsync<List<MemberAccountClass>>(Options);
+        Assert.NotNull(list);
+        Assert.Equal(20000, list.Count);
+    }
+
+    [Fact]
+    public async Task ExportMembersClassStream_Returns20kMembers()
+    {
+        var response = await _client.GetAsync("/api/export-members-class-stream");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var list = await response.Content.ReadFromJsonAsync<List<MemberAccountClass>>(Options);
+        Assert.NotNull(list);
+        Assert.Equal(20000, list.Count);
     }
 }

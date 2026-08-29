@@ -1,20 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Response 大型回傳資料 4 種架構大橫評腳本（支援結果持久化與結果重用）：
-# 1. /api/export-list   (List 未池化)
-# 2. /api/export-bytes  (SerializeToUtf8Bytes / byte[])
-# 3. /api/export-pooled (ArrayPool 池化)
-# 4. /api/export-stream (IAsyncEnumerable 串流回傳)
-#
+# 12 種全組合 Response 大橫評腳本（4 種資料型別 × 3 種架構，支援結果持久化與結果重用）：
+# 4 種型別：1. double (524k 筆), 2. string (50k 筆), 3. Struct (20k 筆), 4. Class (20k 筆)
+# 3 種架構：Streaming, ArrayPool, List
 # 參數支援：
-#   ./benchmark-response.sh           # 完整執行 4 組 Response 壓測並持久化至 latest-response-results.json
+#   ./benchmark-response.sh           # 完整執行 12 組 Response 壓測並持久化至 latest-response-results.json
 #   ./benchmark-response.sh --report  # 直接讀取上次儲存的結果並渲染 Markdown 表格（無需重跑）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 RESULTS_JSON="$SCRIPT_DIR/latest-response-results.json"
-PORT=5146
+PORT=5147
 BASE_URL="http://localhost:$PORT"
 CONCURRENCY=10
 TOTAL_REQUESTS=50
@@ -25,7 +22,7 @@ render_markdown_table() {
         exit 1
     fi
 
-    echo "## 實測數據：Response（回傳大型資料）4 種架構完整對照大一統總表"
+    echo "## 實測數據：Response（回傳大型資料）12 種全組合完整對照大一統總表"
     echo ""
     echo "| 推薦等級 | 資料型別分類 | 實作架構 | API 端點 | 總耗時<br>(ms) | GC 總停頓時間<br>(Pause Time / 佔比) | Gen0 GC<br>次數 | Gen1 GC<br>次數 | Gen2 GC<br>次數 | LOH 峰值<br>(MB) | Working Set<br>實體記憶體 | 核心評語與行為特徵 |"
     echo "|:---:|:---|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|"
@@ -111,7 +108,7 @@ run_test() {
     local pattern_name="$3"
     local endpoint="$4"
     local verdict="$5"
-    local csv_out="$SCRIPT_DIR/bench-resp-${pattern_name}-$(date +%s).csv"
+    local csv_out="$SCRIPT_DIR/bench-resp-12-${type_category}-${pattern_name}-$(date +%s).csv"
 
     ASPNETCORE_URLS="$BASE_URL" dotnet run --project "$ROOT_DIR/src/Lab.LargeObject.Api" --no-launch-profile > /dev/null 2>&1 &
     local api_pid=$!
@@ -203,19 +200,27 @@ run_test() {
     echo "RESULT | $tier | $type_category | $pattern_name | $endpoint | 耗時:${elapsed_ms}ms | GC停頓:${gc_pause_delta}ms (${pause_pct}%) | Gen0:${g0_delta}次 | Gen1:${g1_delta}次 | Gen2:${g2_delta}次 | LOH:${loh_mb}MB | WS:${ws_mb}MB"
 }
 
-echo "=== 開始 Response 大型回傳資料 4 種架構橫評測試 (50 請求，10 並行) ==="
+echo "=== 開始 Response 12 種全組合橫評測試 (50 請求，10 並行) ==="
 
-# 1. 串流回傳
-run_test "🏆 S 級" "Response 回傳 (20k 筆)" "Streaming (串流回傳)" "/api/export-stream" "🏆 0 LOH、GC 停頓極短、邊產邊傳記憶體極低"
+# 1. 數值型別 (4MB double，524k 筆)
+run_test "🏆 S 級" "1. 原生數值 (double 4MB)" "Streaming (串流回傳)" "/api/export-readings-stream" "🏆 0 LOH、GC 停頓極短、邊產邊傳記憶體極低"
+run_test "⚡ A 級" "1. 原生數值 (double 4MB)" "ArrayPool (池化回傳)" "/api/export-readings" "⚡ 租用 4MB Buffer 序列化後歸還"
+run_test "❌ D 級" "1. 原生數值 (double 4MB)" "List (未池化回傳)" "/api/export-readings-list" "❌ 每次請求建立大 List 佔據 LOH"
 
-# 2. ArrayPool 池化
-run_test "⚡ A 級" "Response 回傳 (20k 筆)" "ArrayPool (池化回傳)" "/api/export-pooled" "⚡ 租用 Buffer 序列化後歸還，避免多次分配"
+# 2. 字串型別 (string 50k 筆，~3.7MB)
+run_test "🏆 S 級" "2. 原生字串 (string 50k)" "Streaming (串流回傳)" "/api/export-strings-stream" "🏆 0 LOH、停頓極短、記憶體維持低檔"
+run_test "⚠️ C 級" "2. 原生字串 (string 50k)" "ArrayPool (池化回傳)" "/api/export-strings" "⚠️ 僅池化指標陣列，5 萬字串仍在 Gen0 產垃圾"
+run_test "❌ D 級" "2. 原生字串 (string 50k)" "List (未池化回傳)" "/api/export-strings-list" "❌ 5 萬字串大 List 衝入 LOH 引發頻繁回收"
 
-# 3. List 未池化
-run_test "❌ D 級" "Response 回傳 (20k 筆)" "List (未池化回傳)" "/api/export-list" "❌ 每次請求建立大 List 佔據 LOH，引發 GC 停頓"
+# 3. 結構值型別 (Struct 20k 筆)
+run_test "🏆 S 級" "3. 巢狀結構 (Struct 20k)" "Streaming (串流回傳)" "/api/export-members-stream" "🏆 最快、0 LOH、停頓短、記憶體減半"
+run_test "⚡ A 級" "3. 巢狀結構 (Struct 20k)" "ArrayPool (池化回傳)" "/api/export-members" "⚡ 租用 Buffer 序列化後歸還，資料完整內嵌"
+run_test "❌ D 級" "3. 巢狀結構 (Struct 20k)" "List (未池化回傳)" "/api/export-members-list" "❌ 20k 筆 Struct List 進入 LOH 引發 GC 停頓"
 
-# 4. SerializeToUtf8Bytes (byte[])
-run_test "💥 D 級" "Response 回傳 (20k 筆)" "SerializeToUtf8Bytes (byte[])" "/api/export-bytes" "💥 直接產出 3MB byte[] 丟進 LOH，效能最差"
+# 4. 參考型別 (Class 20k 筆)
+run_test "🛡️ B 級" "4. 參考型別 (Class 20k)" "Streaming (串流回傳)" "/api/export-members-class-stream" "🏆 Class 最佳解，0 LOH，記憶體維持極低"
+run_test "⚠️ C 級" "4. 參考型別 (Class 20k)" "ArrayPool (池化回傳)" "/api/export-members-class-pooled" "⚠️ 池化效益低，Class 物件實體依舊引發 GC"
+run_test "❌ D 級" "4. 參考型別 (Class 20k)" "List (未池化回傳)" "/api/export-members-class-list" "❌ 20k Class List 佔據 LOH，停頓最長"
 
 mv "$TEMP_RESULTS_FILE" "$RESULTS_JSON"
 echo ""
