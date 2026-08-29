@@ -219,18 +219,29 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 
 如果業務邏輯不需要隨機存取（例如批次匯入、過濾、統計），.NET 提供了另一種更極致的解法：**`System.Text.Json.JsonSerializer.DeserializeAsyncEnumerable<T>(request.Body)` 串流解析**。
 
-### 9.1 三種架構的完整實測對照（20,000 筆 MemberAccount，3.8MB Payload，10 並行 × 50 請求）
+### 9.1 全架構完整實測總表（Struct vs Class × 3 種寫法，20,000 筆資料，10 並行 × 50 請求）
 
-| 評測指標 | 1. `List<T>`（未池化） | 2. `PooledArray<T>`（ArrayPool 池化） | 3. `IAsyncEnumerable<T>`（串流解析） |
-|---|---|---|---|
-| **端點** | `/api/members-list` | `/api/members` | `/api/members-stream` |
-| **總耗時** | **5,610 ms** | **3,695 ms** | **3,382 ms（最快）** |
-| **LOH 峰值** | **55.4 MB（震盪）** | **60.3 MB（暖機後持平）** | **0 bytes（完全零 LOH）** |
-| **LOH 最終值** | **42.1 MB** | **60.3 MB** | **0 bytes** |
-| **Gen2 GC 次數** | **11 次（持續介入）** | **12 次（僅暖機期，後續歸 0）** | **6 次（常規小回收）** |
-| **Working Set** | **278 MB** | **306 MB** | **142 MB（減半）** |
+| 模型型別 | 實作架構 | API 端點 | 總耗時<br>(ms) | Gen0 GC<br>次數 | Gen2 GC<br>次數 | LOH 峰值<br>(MB) | Working Set<br>實體記憶體 | 核心特性與評語 |
+|:---|:---|:---|:---:|:---:|:---:|:---:|:---:|:---|
+| **Struct**<br>*(值型別)* | **1. List (未池化)** | `/api/members-list` | 5,705 | 115,046 | **87 次** | 41 MB | 236 MB | ❌ **最慢、GC 壓力最大**<br>大陣列持續擴容，製造大量短命 LOH 垃圾 |
+| **Struct**<br>*(值型別)* | **2. ArrayPool (池化)** | `/api/members` | 3,386 | **483** | **10 次**<br>*(暖機後 0)* | 70 MB | 323 MB | ⚡ **吞吐量最高、Gen0 最少**<br>資料整包池化，暖機後零 GC 停頓（常駐 70MB Buffer） |
+| **Struct**<br>*(值型別)* | **3. Streaming (串流)** | `/api/members-stream` | **3,389** | 6,814 | **17 次** | **0 MB** | **137 MB** | 🏆 **雙贏最佳解**<br>邊讀邊算，**0 LOH、實體記憶體減半、速度最快** |
+| **Class**<br>*(參考型別)* | **4. List (未池化)** | `/api/members-class-list` | 3,273 | 24,152 | 39 次 | 4 MB | 251 MB | ⚠️ **LOH 小但 Gen0 暴增**<br>僅指標陣列進 LOH，4 萬個物件實體散落 Gen0 |
+| **Class**<br>*(參考型別)* | **5. ArrayPool (池化)** | `/api/members-class-pooled` | 3,553 | 24,151 | 67 次 | 6 MB | 257 MB | ⚠️ **池化效益極低**<br>只池化到指標陣列，無法消除物件實體的 GC 負擔 |
+| **Class**<br>*(參考型別)* | **6. Streaming (串流)** | `/api/members-class-stream` | 4,028 | 11,645 | **27 次** | **0 MB** | **139 MB** | 🏆 **Class 架構下的最佳解**<br>逐筆即用即丟，**0 LOH、Gen0 砍半、記憶體減半** |
 
-### 9.3 為什麼 ArrayPool 的 Working Set 較大，但 Gen2 GC 卻極少？
+### 9.2 為什麼 Class 搭配 ArrayPool 效益極低？
+
+- **指標陣列 vs 物件實體**：當宣告為 `class` 時，`ArrayPool<MemberAccountClass>` 僅能池化 8 bytes 的指標陣列（$20,000 \times 8 = 160\text{KB}$）。
+- 每個請求依然必須在 Gen0 Heap 上 `new` 出 20,000 個 `MemberAccountClass` 與 20,000 個 `ContactInfoClass` 實體，因此 Gen0 GC 次數完全無法下降（依然高達 24,151 次）。**要讓 ArrayPool 發揮池化威力，元素必須為 `struct`**。
+
+### 9.3 為什麼 IAsyncEnumerable<T> 能夠達成 0 LOH？
+
+- **管線化邊讀邊算**：底層直接從 HTTP Request Stream 小區塊讀取，逐一反序列化單一物件，直接在 Gen0 進行處理與釋放。
+- **無大陣列容器**：整個過程中記憶體從未存在過 20,000 筆的連續大陣列，因此完全不觸碰 85,000 bytes 的 LOH 門檻。
+- **雙贏結果**：不論是 Struct 或 Class，串流解析同時達成了 **最低記憶體（137~139MB）** 與 **優異的處理速度**。
+
+### 9.4 為什麼 ArrayPool 的 Working Set 較大，但 Gen2 GC 卻極少？
 
 這是排查過程中常有的直覺誤區：「監控上看到 ArrayPool 的 Working Set（實體記憶體）與 LOH 數字比 List<T> 還高，是不是代表更耗記憶體？」
 
