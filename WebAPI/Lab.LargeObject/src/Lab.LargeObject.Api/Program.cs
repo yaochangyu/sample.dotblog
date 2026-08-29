@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
     options.SerializerOptions.Converters.Add(new PooledDoubleArrayJsonConverter());
+    options.SerializerOptions.Converters.Add(new PooledStringArrayJsonConverter());
     options.SerializerOptions.Converters.Add(new PooledMemberAccountArrayJsonConverter());
     options.SerializerOptions.Converters.Add(new PooledMemberAccountClassArrayJsonConverter());
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -266,11 +267,67 @@ app.MapPost("/api/members-class-stream", async (HttpRequest request, Cancellatio
     return Results.Ok(new MemberAccountSummary(count, active, suspended, deleted));
 });
 
+// ==========================================
+// 4. 原生字串陣列 (string[]) 端點
+// ==========================================
+
+app.MapPost("/api/strings-list", ([FromBody] List<string> strings) =>
+{
+    // 未池化 List<string>
+    long totalLength = 0;
+    for (var i = 0; i < strings.Count; i++)
+    {
+        if (strings[i] is not null)
+        {
+            totalLength += strings[i].Length;
+        }
+    }
+    return Results.Ok(new StringsSummary(strings.Count, totalLength));
+});
+
+app.MapPost("/api/strings", ([FromBody] PooledArray<string> strings) =>
+{
+    // ArrayPool 池化 string[]
+    using (strings)
+    {
+        var span = strings.Span;
+        long totalLength = 0;
+        for (var i = 0; i < span.Length; i++)
+        {
+            if (span[i] is not null)
+            {
+                totalLength += span[i].Length;
+            }
+        }
+        return Results.Ok(new StringsSummary(span.Length, totalLength));
+    }
+});
+
+app.MapPost("/api/strings-stream", async (HttpRequest request, CancellationToken cancellationToken) =>
+{
+    // IAsyncEnumerable<string> 串流解析
+    var count = 0;
+    long totalLength = 0;
+
+    await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<string>(request.Body, cancellationToken: cancellationToken))
+    {
+        if (item is not null)
+        {
+            count++;
+            totalLength += item.Length;
+        }
+    }
+
+    return Results.Ok(new StringsSummary(count, totalLength));
+});
+
 app.Run();
 
 public record ReadingsSummary(int Count, double Sum, double Average);
 
 public record MemberAccountSummary(int Count, int ActiveCount, int SuspendedCount, int DeletedCount);
+
+public record StringsSummary(int Count, long TotalLength);
 
 // 讓 WebApplicationFactory<Program> 能找到進入點型別。
 public partial class Program;
