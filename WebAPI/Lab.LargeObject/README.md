@@ -70,22 +70,26 @@ Lab.LargeObject/
 
 ---
 
-## 核心剖析：為什麼 ArrayPool「Working Set（記憶體佔用）較大，但 Gen2 GC 卻極少」？
+## 核心剖析：深入 .NET GC 與 LOH 的運作本質
 
-在監控指標上，常會看到 `PooledArray` 的 Working Set（實體記憶體）高達 300MB+，看似比 `List<T>` 還佔記憶體，但 Gen2 GC 卻直接歸零。這背後是 .NET 記憶體管理的核心運作機制：
+### 1. Gen2 GC 的回收週期是什麼？（Budget-driven 非定時器）
 
-### 1. 為什麼 Gen2 GC 幾乎為 0？（Zero Allocation 效應）
-- **沒有垃圾，GC 就不需要出動**：
-  - 在 `List<T>` 寫法中，每次 Request 建立的大陣列在用完後失去引用變成「垃圾」，迫使 GC 必須進行代價高昂的 Gen2 Full GC 來清理 LOH。
-  - 在 `PooledArray<T>` 寫法中，Buffer 來自 `ArrayPool`，用完立刻透過 `Dispose()` 歸還給 `ArrayPool`。**這塊記憶體從未變成垃圾**，LOH 上沒有垃圾堆積，因此 GC 完全沒有介入回收的理由，Gen2 GC 觸發次數自然降為 0。
+在 .NET CLR 中，**Gen2 GC 沒有固定時間週期（不是每隔幾秒執行一次）**，而是採用**「事件驅動」與「動態預算（Budget-driven）」**機制：
+- **世代晉升累積**：Gen0 滿載觸發 Gen0 GC $\rightarrow$ 存活物件晉升 Gen1 $\rightarrow$ Gen1 滿載晉升 Gen2 $\rightarrow$ 累積超過 **Gen2 Budget** 時觸發 Full GC。
+- **LOH 配置門檻跨越**：當 $\ge 85\text{KB}$ 的大物件配置量打爆 LOH 動態門檻時，強制觸發 Gen2 GC（這就是 `List<T>` 頻繁觸發 GC 的主因）。
+- **非同步微型物件自然累積**：在 `Streaming` 模式下雖然 LOH 為 0，但處理百萬筆資料時，`await` 狀態機等微型物件自然晉升至 Gen2 預算上限，引發常規低頻的 Gen2 GC（停頓僅 10~55ms，極輕量）。
 
-### 2. 為什麼 Working Set（實體記憶體）會維持在較大數值？
-- **ArrayPool 的常駐預留（空間換時間）**：
-  - `ArrayPool` 在高並發（如 10 並行）下，會租用並建立多個對應 Bucket 大小的連續 Buffer（例如 10 塊 2MB~4MB 的陣列）。
-  - 當請求結束歸還時，Buffer 是被**保留在池子（Process 內部記憶體）中**隨時等待下一個請求複用，並不會釋放回作業系統。
-- **.NET GC 預設不主動向 OS 歸還記憶體（Decommit）**：
-  - .NET GC 在向作業系統申請實體記憶體（Working Set）後，為了維持高效能，預設不會在沒有外部記憶體壓力的情況下主動將 Committed 記憶體還給作業系統。
-  - 因此 Working Set 會維持在「並行數 $\times$ Buffer 大小」的穩態高點，這是專為**換取零 GC 停頓與高吞吐量**而預先持有的固定資產。
+### 2. 為什麼未池化的 LOH 大物件會導致 OOM？
+
+未池化的大物件（如 `List<T>`）導致系統 OOM 的 3 大真實途徑：
+1. **LOH 記憶體碎片化（Fragmentation）**：LOH 預設不壓縮（No Compaction），GC 回收後只留下 Free List 洞。若找不到足夠大的連續空間，即使剩餘總記憶體充足也會拋出 `OutOfMemoryException`。
+2. **K8s 容器記憶體硬上限撞爆（OOMKilled）**：GC 標記回收 $\neq$ 把記憶體還給作業系統（No Decommit）。高並發下多個請求連續擴容將 Working Set 推向 400MB~500MB，直接撞上 Pod `limits.memory` 被 Linux Kernel 砍死（Exit Code 137）。
+3. **GC 追趕不上配置速度（GC Thrashing 惡性循環）**：頻繁 Gen2 GC 搶佔 30%~50% CPU $\rightarrow$ API 處理變慢 $\rightarrow$ 請求在記憶體中排隊積壓 $\rightarrow$ 記憶體被積壓請求灌滿 $\rightarrow$ OOM。
+
+### 3. 為什麼 ArrayPool「Working Set 較大，但 Gen2 GC 卻極少」？
+
+- **Zero Allocation 效應**：`PooledArray<T>` 的 Buffer 用完即歸還至 ArrayPool，**這塊記憶體從未變成垃圾**，LOH 上沒有垃圾堆積，GC 自然無需介入清理。
+- **空間換時間的固定資產**：ArrayPool 在高並發下租用多個連續 Buffer，歸還後留在 Process 記憶體中供後續請求重複使用，且 .NET GC 預設不向 OS decommit，因此 Working Set 會維持在「並行數 $\times$ Buffer 大小」的平穩高點。
 
 ---
 

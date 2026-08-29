@@ -245,7 +245,21 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 - **無大陣列容器**：整個過程中記憶體從未存在過 20,000 筆的連續大陣列，因此完全不觸碰 85,000 bytes 的 LOH 門檻。
 - **雙贏結果**：不論是 Struct 或 Class，串流解析同時達成了 **最低記憶體（137~139MB）** 與 **優異的處理速度**。
 
-### 9.4 為什麼 ArrayPool 的 Working Set 較大，但 Gen2 GC 卻極少？
+### 9.4 Gen2 GC 的回收週期是什麼？（Budget-driven 非定時器）
+
+在 .NET CLR 中，**Gen2 GC 沒有固定時間週期（不是每隔幾秒執行一次）**，而是採用**「事件驅動」與「動態預算（Budget-driven）」**機制：
+1. **世代晉升累積（Generational Promotion）**：Gen0 滿載觸發 Gen0 GC $\rightarrow$ 存活物件晉升 Gen1 $\rightarrow$ Gen1 滿載晉升 Gen2 $\rightarrow$ 累積超過 **Gen2 Budget** 時觸發 Full GC。
+2. **LOH 配置門檻跨越**：當 $\ge 85\text{KB}$ 的大物件配置量打爆 LOH 動態門檻時，強制觸發 Gen2 GC（這就是 `List<T>` 頻繁觸發 GC 的主因）。
+3. **非同步微型物件自然累積**：在 `Streaming` 模式下雖然 LOH 為 0，但處理百萬筆資料時，`await` 狀態機等微型物件自然晉升至 Gen2 預算上限，引發常規低頻的 Gen2 GC（停頓僅 10~55ms，極輕量）。
+
+### 9.5 為什麼未池化的 LOH 大物件會導致 OOM？
+
+未池化的大物件（如 `List<T>`）導致系統 OOM 的 3 大真實途徑：
+1. **LOH 記憶體碎片化（Fragmentation）**：LOH 預設不壓縮（No Compaction），GC 回收後只留下 Free List 洞。若找不到足夠大的連續空間，即使剩餘總記憶體充足也會拋出 `OutOfMemoryException`。
+2. **K8s 容器記憶體硬上限撞爆（OOMKilled）**：GC 標記回收 $\neq$ 把記憶體還給作業系統（No Decommit）。高並發下多個請求連續擴容將 Working Set 推向 400MB~500MB，直接撞上 Pod `limits.memory` 被 Linux Kernel 砍死（Exit Code 137）。
+3. **GC 追趕不上配置速度（GC Thrashing 惡性循環）**：頻繁 Gen2 GC 搶佔 30%~50% CPU $\rightarrow$ API 處理變慢 $\rightarrow$ 請求在記憶體中排隊積壓 $\rightarrow$ 記憶體被積壓請求灌滿 $\rightarrow$ OOM。
+
+### 9.6 為什麼 ArrayPool 的 Working Set 較大，但 Gen2 GC 卻極少？
 
 這是排查過程中常有的直覺誤區：「監控上看到 ArrayPool 的 Working Set（實體記憶體）與 LOH 數字比 List<T> 還高，是不是代表更耗記憶體？」
 
