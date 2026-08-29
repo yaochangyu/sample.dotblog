@@ -291,7 +291,18 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 | ⚠️ **C 級** | **Class / string** | **ArrayPool (池化)** | `/api/strings`, `/api/members-class-pooled` | 2.2~3.1s | 91.0~106.3 ms (偏長) | 20~24 次 | 10~11 次 | ❌ **9~10 次 (劇烈)** | 6~13 MB | 297~344 MB (偏高) | ❌ **白做工**，只池化到指標，物件/字串實體依舊在 Gen0 瘋狂產出垃圾 |
 | 🚫 **D 級** | **所有型別 (未池化)** | **List (未池化)** | `/api/*-list` | 2.2~3.2s | **45.7~232.0 ms (極長)** | 20~28 次 | 12~21 次 | ❌ **8~20 次 (劇烈)** | 5~81 MB | 192~303 MB | 💥 **效能毒藥**，擴容放大效應引發頻繁 Gen2 GC 與 OOM 風險 |
 
-### 10.2 核心事實與結論
+### 10.2 Response（回傳大型資料）實測數據與架構對照
+
+回傳大型資料（例如 20,000 筆資料、數 MB JSON）時，寫法不當同樣會引發嚴重的 LOH 飆升：
+
+| 推薦等級 | 資料型別分類 | 實作架構 | API 端點 | 總耗時<br>(ms) | GC 總停頓時間<br>(Pause Time / 佔比) | Gen0 GC<br>次數 | Gen1 GC<br>次數 | Gen2 GC<br>次數 | LOH 峰值<br>(MB) | Working Set<br>實體記憶體 | 核心評語與行為特徵 |
+|:---:|:---|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
+| 🏆 **S 級** | **Response 回傳 (20k 筆)** | **Streaming (串流回傳)** | `/api/export-stream` | **782** | **52.7 ms (1.59%)** | **41 次** | **3 次** | ✅ **2 次 (極低)** | **0 MB** | **102 MB** | 🏆 **最快(782ms)、0 LOH、停頓短、記憶體最低** |
+| ⚡ **A 級** | **Response 回傳 (20k 筆)** | **ArrayPool (池化回傳)** | `/api/export-pooled` | 1,165 | 196.2 ms (5.35%) | 26 次 | 15 次 | ⚠️ 10 次 (常規) | 126 MB | 443 MB | ⚡ 租用 Buffer 序列化後歸還，避免多次分散配置 |
+| ❌ **D 級** | **Response 回傳 (20k 筆)** | **List (未池化回傳)** | `/api/export-list` | 1,251 | 115.4 ms (3.08%) | 19 次 | 9 次 | ❌ 7 次 (劇烈) | 18 MB | 217 MB | ❌ 每次請求建立大 List 佔據 LOH，引發 GC 停頓 |
+| 💥 **D 級** | **Response 回傳 (20k 筆)** | **SerializeToUtf8Bytes (byte[])** | `/api/export-bytes` | 1,195 | **165.7 ms (4.64%)** | 24 次 | 18 次 | ❌ **16 次 (劇烈)** | **194 MB** | **520 MB** | 💥 **LOH 與 Working Set 暴衝 5 倍(520MB)，OOM 風險最高** |
+
+### 10.3 核心事實與結論
 
 **已知事實**（有直接證據）：
 
@@ -299,6 +310,7 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 - 用 `ArrayPool<T>` 池化陣列容器，配合 `struct` 元素型別，能讓 LOH 配置在「池子暖機」後趨於零成長。
 - 若元素為 `class` 或 `string`，`ArrayPool` 只能池化指標陣列，無法池化物件/字串實體，Gen0 GC 依然高達 20,000+ 次。
 - 改用 `IAsyncEnumerable<T>` 串流解析可徹底免除大陣列配置，在 4 種型別上全面達成全程 0 LOH、Working Set 減半且處理速度最快。
+- 在 Response 端，`SerializeToUtf8Bytes` 會產生大量 3.7MB 的短命 byte[] 垃圾直接塞爆 LOH（峰值 194MB），而 `IAsyncEnumerable<T>` 串流回傳能保持 0 LOH 且記憶體僅 102MB。
 - 反射式反序列化巢狀 struct 產生的 boxing／內部機制配置量，遠大於 LOH 陣列本身；手刻 `Utf8JsonReader` + `ValueTextEquals` 能大幅削減 70% 配置量。
 
 **已推翻的假設**：
@@ -315,16 +327,22 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 ### 11.1 專案內建的腳本（`scripts/`）
 
 ```bash
-# 1. 執行 12 種全組合壓測並將結果持久化至 scripts/latest-results.json
+# 1. 執行 12 種全組合 Request 壓測並將結果持久化至 scripts/latest-results.json
 ./scripts/benchmark-all-12.sh
 
-# 2. ⚡ 秒級重用上次測試結果，直接輸出 Markdown 大一統總表（無需重跑）
+# 2. ⚡ 秒級重用上次 Request 測試結果，直接輸出 Markdown 大一統總表（無需重跑）
 ./scripts/benchmark-all-12.sh --report
 
-# 3. 6 種 Struct vs Class 對照實驗
+# 3. 執行 4 種 Response 壓測並將結果持久化至 scripts/latest-response-results.json
+./scripts/benchmark-response.sh
+
+# 4. ⚡ 秒級重用上次 Response 測試結果，直接輸出 Markdown 表格（無需重跑）
+./scripts/benchmark-response.sh --report
+
+# 5. 6 種 Struct vs Class 對照實驗
 ./scripts/benchmark-class-vs-struct.sh
 
-# 4. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
+# 6. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
 ./scripts/benchmark-all.sh
 ```
 

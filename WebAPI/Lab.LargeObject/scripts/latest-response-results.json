@@ -1,0 +1,62 @@
+[
+  {
+    "tier": "🏆 S 級",
+    "type_category": "Response 回傳 (20k 筆)",
+    "pattern_name": "Streaming (串流回傳)",
+    "endpoint": "/api/export-stream",
+    "elapsed_ms": 782,
+    "gc_pause_ms": 52.7,
+    "gc_pause_pct": "1.59",
+    "gen0_count": 41,
+    "gen1_count": 3,
+    "gen2_count": 2,
+    "loh_peak_mb": 0,
+    "working_set_mb": 102,
+    "verdict": "🏆 0 LOH、GC 停頓極短、邊產邊傳記憶體極低"
+  },
+  {
+    "tier": "⚡ A 級",
+    "type_category": "Response 回傳 (20k 筆)",
+    "pattern_name": "ArrayPool (池化回傳)",
+    "endpoint": "/api/export-pooled",
+    "elapsed_ms": 1165,
+    "gc_pause_ms": 196.2,
+    "gc_pause_pct": "5.35",
+    "gen0_count": 26,
+    "gen1_count": 15,
+    "gen2_count": 10,
+    "loh_peak_mb": 126,
+    "working_set_mb": 443,
+    "verdict": "⚡ 租用 Buffer 序列化後歸還，避免多次分配"
+  },
+  {
+    "tier": "❌ D 級",
+    "type_category": "Response 回傳 (20k 筆)",
+    "pattern_name": "List (未池化回傳)",
+    "endpoint": "/api/export-list",
+    "elapsed_ms": 1251,
+    "gc_pause_ms": 115.4,
+    "gc_pause_pct": "3.08",
+    "gen0_count": 19,
+    "gen1_count": 9,
+    "gen2_count": 7,
+    "loh_peak_mb": 18,
+    "working_set_mb": 217,
+    "verdict": "❌ 每次請求建立大 List 佔據 LOH，引發 GC 停頓"
+  },
+  {
+    "tier": "💥 D 級",
+    "type_category": "Response 回傳 (20k 筆)",
+    "pattern_name": "SerializeToUtf8Bytes (byte[])",
+    "endpoint": "/api/export-bytes",
+    "elapsed_ms": 1195,
+    "gc_pause_ms": 165.7,
+    "gc_pause_pct": "4.64",
+    "gen0_count": 24,
+    "gen1_count": 18,
+    "gen2_count": 16,
+    "loh_peak_mb": 194,
+    "working_set_mb": 520,
+    "verdict": "💥 直接產出 3MB byte[] 丟進 LOH，效能最差"
+  }
+]

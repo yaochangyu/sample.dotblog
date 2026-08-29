@@ -137,20 +137,45 @@ Lab.LargeObject/
 
 ---
 
+## Response（回傳大型資料）實測數據與架構對照
+
+回傳大型資料（例如 20,000 筆資料、數 MB JSON）時，**寫法不當同樣會引發 LOH 飆升與 OOM 風險**。
+
+在完全相同測試環境下（**10 並行、50 筆請求**），針對 4 種 Response 架構進行實測：
+
+| 推薦等級 | 資料型別分類 | 實作架構 | API 端點 | 總耗時<br>(ms) | GC 總停頓時間<br>(Pause Time / 佔比) | Gen0 GC<br>次數 | Gen1 GC<br>次數 | Gen2 GC<br>次數 | LOH 峰值<br>(MB) | Working Set<br>實體記憶體 | 核心評語與行為特徵 |
+|:---:|:---|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
+| 🏆 **S 級** | **Response 回傳 (20k 筆)** | **Streaming (串流回傳)** | `/api/export-stream` | **782** | **52.7 ms (1.59%)** | **41 次** | **3 次** | ✅ **2 次 (極低)** | **0 MB** | **102 MB** | 🏆 **最快(782ms)、0 LOH、停頓短、記憶體最低** |
+| ⚡ **A 級** | **Response 回傳 (20k 筆)** | **ArrayPool (池化回傳)** | `/api/export-pooled` | 1,165 | 196.2 ms (5.35%) | 26 次 | 15 次 | ⚠️ 10 次 (常規) | 126 MB | 443 MB | ⚡ 租用 Buffer 序列化後歸還，避免多次分散配置 |
+| ❌ **D 級** | **Response 回傳 (20k 筆)** | **List (未池化回傳)** | `/api/export-list` | 1,251 | 115.4 ms (3.08%) | 19 次 | 9 次 | ❌ 7 次 (劇烈) | 18 MB | 217 MB | ❌ 每次請求建立大 List 佔據 LOH，引發 GC 停頓 |
+| 💥 **D 級** | **Response 回傳 (20k 筆)** | **SerializeToUtf8Bytes (byte[])** | `/api/export-bytes` | 1,195 | **165.7 ms (4.64%)** | 24 次 | 18 次 | ❌ **16 次 (劇烈)** | **194 MB** | **520 MB** | 💥 **LOH 與 Working Set 暴衝 5 倍(520MB)，OOM 風險最高** |
+
+### 核心發現：
+1. **`SerializeToUtf8Bytes` 是最大的記憶體地雷**：直接將 20k 筆資料轉成單一 `byte[]`（~3.7MB），每次 Request 都向 LOH 丟入 3.7MB 垃圾，LOH 峰值直接飆至 **194 MB**，Working Set 飆上 **520 MB**。
+2. **`IAsyncEnumerable<T>` 是 Response 最佳解**：直接以 HTTP 串流逐筆寫出，**LOH 為 0 MB**，耗時僅 **782 ms**，Working Set 僅 **102 MB**（省下 80% 實體記憶體）。
+
+---
+
 ## 重現實驗腳本
 
 專案內建完整實驗工具（支援結果持久化與重複渲染）：
 
 ```bash
-# 1. 執行 12 種全組合壓測並將結果持久化至 scripts/latest-results.json
+# 1. 執行 12 種全組合 Request 壓測並將結果持久化至 scripts/latest-results.json
 ./scripts/benchmark-all-12.sh
 
-# 2. ⚡ 秒級重用上次測試結果，直接輸出 Markdown 大一統總表（無需重跑）
+# 2. ⚡ 秒級重用上次 Request 測試結果，直接輸出 Markdown 大一統總表（無需重跑）
 ./scripts/benchmark-all-12.sh --report
 
-# 3. 6 種 Struct vs Class 對照實驗
+# 3. 執行 4 種 Response 壓測並將結果持久化至 scripts/latest-response-results.json
+./scripts/benchmark-response.sh
+
+# 4. ⚡ 秒級重用上次 Response 測試結果，直接輸出 Markdown 表格（無需重跑）
+./scripts/benchmark-response.sh --report
+
+# 5. 6 種 Struct vs Class 對照實驗
 ./scripts/benchmark-class-vs-struct.sh
 
-# 4. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
+# 6. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
 ./scripts/benchmark-all.sh
 ```
