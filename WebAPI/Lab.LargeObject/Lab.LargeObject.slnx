@@ -4,6 +4,5 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Lab.LargeObject.Api.Tests/Lab.LargeObject.Api.Tests.csproj" />
-    <Project Path="tests/Lab.LargeObject.Specs/Lab.LargeObject.Specs.csproj" />
   </Folder>
 </Solution>

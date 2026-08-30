@@ -79,3 +79,25 @@ K8s 是一個「聲明式」的容器編排系統，分成 **Control Plane（控
 | **能不能跑 kubeadm** | 可以，這是它被設計來做的環境 | 不行（用一般 container 直接跑），除非用特製過的映像檔硬做出 systemd-in-container |
 
 kind 能用 Docker container 模擬出「看起來像節點」的東西，是因為用了特製的 node image（裡面塞了偽 systemd、containerd、預先調好的 kernel module 掛載），本質上是繞過上述限制的工程解法，而且只能在同一台 Docker host 上運作，跨不了實體機。
+
+## 失敗紀錄：手動用 Docker container 模擬新機器加入 kind cluster
+
+**嘗試做的事**：不透過 `kind create cluster` 重建，而是手動 `docker run` 一個跟現有 worker 相同規格（`kindest/node` image、privileged、掛 `/lib/modules`、接到 `kind` network）的新 container，再從 control-plane 取得 `kubeadm join` 指令，讓這個新 container 用真正的 kubeadm join 流程動態加入現有 cluster——目的是體驗最貼近「真實新機器加入」的操作。
+
+**結果：失敗，而且弄壞了整個 cluster 的網路**
+
+1. 新 container 開起來後，systemd/containerd/kubeadm/kubelet 都正常
+2. 執行 `kubeadm join` 卡在 `[discovery] Waiting for the cluster-info ConfigMap` 逾時
+3. 診斷發現：不只新 container 連不到 apiserver（`172.19.0.4:6443`），連**原本已經在跑、正常運作中的 worker** 對 apiserver 的新連線也全部逾時（舊的、已建立的連線因為 conntrack 還撐著沒斷，所以 node 沒有立刻變 NotReady，但新連線一律不通）
+4. 刪掉新 container 後問題沒有恢復
+5. 用 `kind delete cluster` + 重新 `kind create cluster` 想靠重建 Docker network 修復，結果新 cluster 一樣卡在同樣的 `kubeadm join` 逾時——證實問題不是 `kind` network 本身壞掉，而是**宿主機層級**的東西被動到了
+6. 沒有 sudo 權限，無法檢查/清除 iptables 規則做進一步診斷，只能靠 `sudo systemctl restart docker`（會重啟所有 container，包含這台機器上其他不相干的服務）才可能修復，但這需要使用者授權才能執行
+
+**根因推測**：這台環境是 WSL2，container 之間共用同一個 host kernel。新 container 的 entrypoint 腳本在啟動時會動 iptables/cgroup/sysctl 等設定，這些操作在一般 Linux 上是被 network namespace 隔離的，但在 WSL2 這種簡化過的核心環境下，某些規則可能不是完全隔離，導致新 container 啟動的副作用波及到同一個 Docker network 上其他 container 的連線能力。
+
+**結論／教訓**：
+- **不要用「手動 docker run 複製 kind node 規格 + kubeadm join」的方式模擬新機器加入 cluster**——這是非官方支援的操作，在 WSL2 這類共用 kernel 的環境下風險很高，一出問題就是整個 cluster 網路壞掉，而且無法在沒有 sudo 的情況下自行修復
+- 要真正練習「新機器加入 cluster」，建議用**真正獨立的 VM 或實體機**跑 kubeadm join，這樣才有真正的 kernel/network namespace 隔離，不會波及既有節點
+- kind 的定位就是「單機模擬」，不要硬拗成「動態加節點」的教材，這不是它被設計來做的事
+
+**目前 cluster 狀態**：因為上述問題，`lab-cluster` 目前無法正常運作，需要先執行 `sudo systemctl restart docker`（需人工授權/操作）才能重新建立乾淨的 cluster。
