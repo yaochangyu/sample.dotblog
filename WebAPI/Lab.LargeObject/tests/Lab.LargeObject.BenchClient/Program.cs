@@ -163,7 +163,7 @@ static async IAsyncEnumerable<T> GetStreamAsync<T>(HttpClient client, string url
     response.EnsureSuccessStatusCode();
 
     using var stream = await response.Content.ReadAsStreamAsync(ct);
-    await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<T>(stream, options, cancellationToken: ct))
+    await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<T>(stream, options, cancellationToken: ct).WithCancellation(ct))
     {
         if (item is not null)
         {

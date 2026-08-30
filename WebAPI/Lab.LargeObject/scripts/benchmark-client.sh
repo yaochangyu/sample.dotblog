@@ -72,7 +72,7 @@ cleanup() {
     pkill -9 -f Lab.LargeObject.Api 2>/dev/null || true
     pkill -9 -f Lab.LargeObject.BenchClient 2>/dev/null || true
 }
-trap cleanup EXIT
+trap cleanup EXIT INT TERM
 
 while ! curl -s "$BASE_URL/" >/dev/null 2>&1; do
     sleep 0.5

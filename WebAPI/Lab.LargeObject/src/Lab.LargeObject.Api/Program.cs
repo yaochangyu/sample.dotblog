@@ -337,18 +337,11 @@ app.MapGet("/api/export-readings-list", () =>
 app.MapGet("/api/export-readings", async (HttpResponse response, CancellationToken ct) =>
 {
     var rented = ArrayPool<double>.Shared.Rent(524288);
-    try
-    {
-        for (var i = 0; i < 524288; i++) rented[i] = i + 0.5;
-        using var pooled = new PooledArray<double>(rented, 524288);
-        response.ContentType = "application/json";
-        var options = new JsonSerializerOptions { Converters = { new PooledDoubleArrayJsonConverter() } };
-        await JsonSerializer.SerializeAsync(response.Body, pooled, options, cancellationToken: ct);
-    }
-    finally
-    {
-        ArrayPool<double>.Shared.Return(rented);
-    }
+    for (var i = 0; i < 524288; i++) rented[i] = i + 0.5;
+    using var pooled = new PooledArray<double>(rented, 524288);
+    response.ContentType = "application/json";
+    var options = new JsonSerializerOptions { Converters = { new PooledDoubleArrayJsonConverter() } };
+    await JsonSerializer.SerializeAsync(response.Body, pooled, options, cancellationToken: ct);
 });
 
 app.MapGet("/api/export-readings-stream", (CancellationToken ct) => StreamReadingsAsync(ct));
@@ -373,18 +366,11 @@ app.MapGet("/api/export-strings-list", () =>
 app.MapGet("/api/export-strings", async (HttpResponse response, CancellationToken ct) =>
 {
     var rented = ArrayPool<string>.Shared.Rent(50000);
-    try
-    {
-        for (var i = 0; i < 50000; i++) rented[i] = $"sample-log-record-uuid-0000-0000-000000000000-{i:D8}-dotblog-benchmark";
-        using var pooled = new PooledArray<string>(rented, 50000);
-        response.ContentType = "application/json";
-        var options = new JsonSerializerOptions { Converters = { new PooledStringArrayJsonConverter() } };
-        await JsonSerializer.SerializeAsync(response.Body, pooled, options, cancellationToken: ct);
-    }
-    finally
-    {
-        ArrayPool<string>.Shared.Return(rented, clearArray: true);
-    }
+    for (var i = 0; i < 50000; i++) rented[i] = $"sample-log-record-uuid-0000-0000-000000000000-{i:D8}-dotblog-benchmark";
+    using var pooled = new PooledArray<string>(rented, 50000);
+    response.ContentType = "application/json";
+    var options = new JsonSerializerOptions { Converters = { new PooledStringArrayJsonConverter() } };
+    await JsonSerializer.SerializeAsync(response.Body, pooled, options, cancellationToken: ct);
 });
 
 app.MapGet("/api/export-strings-stream", (CancellationToken ct) => StreamStringsAsync(ct));
@@ -421,30 +407,23 @@ app.MapGet("/api/export-members-list", () =>
 app.MapGet("/api/export-members", async (HttpResponse response, CancellationToken ct) =>
 {
     var rented = ArrayPool<MemberAccount>.Shared.Rent(20000);
-    try
+    for (var i = 0; i < 20000; i++)
     {
-        for (var i = 0; i < 20000; i++)
+        var status = (i % 3) switch { 0 => MemberStatus.Active, 1 => MemberStatus.Suspended, _ => MemberStatus.Deleted };
+        rented[i] = new MemberAccount
         {
-            var status = (i % 3) switch { 0 => MemberStatus.Active, 1 => MemberStatus.Suspended, _ => MemberStatus.Deleted };
-            rented[i] = new MemberAccount
-            {
-                MemberId = i,
-                Account = $"member{i:D6}",
-                DisplayName = $"會員 {i}",
-                Status = status,
-                Contact = new ContactInfo { Email = $"member{i:D6}@example.com", PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null },
-                CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc)
-            };
-        }
-        using var pooled = new PooledArray<MemberAccount>(rented, 20000);
-        response.ContentType = "application/json";
-        var options = new JsonSerializerOptions { Converters = { new PooledMemberAccountArrayJsonConverter(), new JsonStringEnumConverter() } };
-        await JsonSerializer.SerializeAsync(response.Body, pooled, options, cancellationToken: ct);
+            MemberId = i,
+            Account = $"member{i:D6}",
+            DisplayName = $"會員 {i}",
+            Status = status,
+            Contact = new ContactInfo { Email = $"member{i:D6}@example.com", PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null },
+            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc)
+        };
     }
-    finally
-    {
-        ArrayPool<MemberAccount>.Shared.Return(rented, clearArray: true);
-    }
+    using var pooled = new PooledArray<MemberAccount>(rented, 20000);
+    response.ContentType = "application/json";
+    var options = new JsonSerializerOptions { Converters = { new PooledMemberAccountArrayJsonConverter(), new JsonStringEnumConverter() } };
+    await JsonSerializer.SerializeAsync(response.Body, pooled, options, cancellationToken: ct);
 });
 
 app.MapGet("/api/export-members-stream", (CancellationToken ct) => StreamMembersAsync(ct));
@@ -490,30 +469,23 @@ app.MapGet("/api/export-members-class-list", () =>
 app.MapGet("/api/export-members-class-pooled", async (HttpResponse response, CancellationToken ct) =>
 {
     var rented = ArrayPool<MemberAccountClass>.Shared.Rent(20000);
-    try
+    for (var i = 0; i < 20000; i++)
     {
-        for (var i = 0; i < 20000; i++)
+        var status = (i % 3) switch { 0 => MemberStatus.Active, 1 => MemberStatus.Suspended, _ => MemberStatus.Deleted };
+        rented[i] = new MemberAccountClass
         {
-            var status = (i % 3) switch { 0 => MemberStatus.Active, 1 => MemberStatus.Suspended, _ => MemberStatus.Deleted };
-            rented[i] = new MemberAccountClass
-            {
-                MemberId = i,
-                Account = $"member{i:D6}",
-                DisplayName = $"會員 {i}",
-                Status = status,
-                Contact = new ContactInfoClass { Email = $"member{i:D6}@example.com", PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null },
-                CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc)
-            };
-        }
-        using var pooled = new PooledArray<MemberAccountClass>(rented, 20000);
-        response.ContentType = "application/json";
-        var options = new JsonSerializerOptions { Converters = { new PooledMemberAccountClassArrayJsonConverter(), new JsonStringEnumConverter() } };
-        await JsonSerializer.SerializeAsync(response.Body, pooled, options, cancellationToken: ct);
+            MemberId = i,
+            Account = $"member{i:D6}",
+            DisplayName = $"會員 {i}",
+            Status = status,
+            Contact = new ContactInfoClass { Email = $"member{i:D6}@example.com", PhoneNumber = (i % 2 == 0) ? $"09{i:D8}" : null },
+            CreatedAt = new DateTime(2026, 8, 29, 0, 0, 0, DateTimeKind.Utc)
+        };
     }
-    finally
-    {
-        ArrayPool<MemberAccountClass>.Shared.Return(rented, clearArray: true);
-    }
+    using var pooled = new PooledArray<MemberAccountClass>(rented, 20000);
+    response.ContentType = "application/json";
+    var options = new JsonSerializerOptions { Converters = { new PooledMemberAccountClassArrayJsonConverter(), new JsonStringEnumConverter() } };
+    await JsonSerializer.SerializeAsync(response.Body, pooled, options, cancellationToken: ct);
 });
 
 app.MapGet("/api/export-members-class-stream", (CancellationToken ct) => StreamMembersClassAsync(ct));

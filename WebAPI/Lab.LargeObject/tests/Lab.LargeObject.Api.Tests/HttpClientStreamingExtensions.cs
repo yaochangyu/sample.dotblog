@@ -30,7 +30,7 @@ public static class HttpClientStreamingExtensions
         await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<T>(
             stream,
             options,
-            cancellationToken: cancellationToken))
+            cancellationToken: cancellationToken).WithCancellation(cancellationToken))
         {
             if (item is not null)
             {

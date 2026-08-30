@@ -16,6 +16,12 @@ BASE_URL="http://localhost:$PORT"
 CONCURRENCY=10
 TOTAL_REQUESTS=50
 
+cleanup() {
+    kill $(jobs -p) 2>/dev/null || true
+    pkill -9 -f Lab.LargeObject || true
+}
+trap cleanup EXIT INT TERM
+
 render_markdown_table() {
     if [[ ! -f "$RESULTS_JSON" ]]; then
         echo "❌ 找不到過去的 Response 測試紀錄 ($RESULTS_JSON)，請先完整執行一次壓測！" >&2
