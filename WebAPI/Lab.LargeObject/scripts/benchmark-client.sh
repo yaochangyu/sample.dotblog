@@ -69,8 +69,8 @@ SERVER_PID=$!
 
 cleanup() {
     kill -9 $SERVER_PID 2>/dev/null || true
-    pkill -9 -f Lab.LargeObject.Api 2>/dev/null || true
-    pkill -9 -f Lab.LargeObject.BenchClient 2>/dev/null || true
+    pkill -9 -f "Lab.LargeObject.Api.dll" 2>/dev/null || true
+    pkill -9 -f "Lab.LargeObject.BenchClient.dll" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 

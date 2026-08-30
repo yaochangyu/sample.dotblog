@@ -134,4 +134,38 @@ public class LargeArrayEndpointTests : IClassFixture<WebApplicationFactory<Progr
         Assert.Equal(expectedSum, summary.Sum, precision: 6);
         Assert.Equal(expectedAverage, summary.Average, precision: 6);
     }
+
+    [Fact]
+    public async Task Post_Readings_三種寫法皆能正確處理百萬級大型資料()
+    {
+        const int elementCount = 131_072;
+        var readings = new double[elementCount];
+        for (var i = 0; i < elementCount; i++) readings[i] = i + 0.5;
+
+        var expectedSum = readings.Sum();
+
+        // 1. ArrayPool 接收
+        var respPooled = await _client.PostAsJsonAsync("/api/readings", readings);
+        respPooled.EnsureSuccessStatusCode();
+        var summaryPooled = await respPooled.Content.ReadFromJsonAsync<ReadingsSummary>();
+        Assert.NotNull(summaryPooled);
+        Assert.Equal(elementCount, summaryPooled!.Count);
+        Assert.Equal(expectedSum, summaryPooled.Sum, precision: 6);
+
+        // 2. List 接收
+        var respList = await _client.PostAsJsonAsync("/api/readings-list", readings);
+        respList.EnsureSuccessStatusCode();
+        var summaryList = await respList.Content.ReadFromJsonAsync<ReadingsSummary>();
+        Assert.NotNull(summaryList);
+        Assert.Equal(elementCount, summaryList!.Count);
+        Assert.Equal(expectedSum, summaryList.Sum, precision: 6);
+
+        // 3. Streaming 接收
+        var respStream = await _client.PostAsJsonAsync("/api/readings-stream", readings);
+        respStream.EnsureSuccessStatusCode();
+        var summaryStream = await respStream.Content.ReadFromJsonAsync<ReadingsSummary>();
+        Assert.NotNull(summaryStream);
+        Assert.Equal(elementCount, summaryStream!.Count);
+        Assert.Equal(expectedSum, summaryStream.Sum, precision: 6);
+    }
 }

@@ -21,7 +21,8 @@ TOTAL_REQUESTS=50
 
 cleanup() {
     kill $(jobs -p) 2>/dev/null || true
-    pkill -9 -f Lab.LargeObject || true
+    pkill -9 -f "Lab.LargeObject.Api.dll" 2>/dev/null || true
+    pkill -9 -f "Lab.LargeObject.BenchClient.dll" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
@@ -213,7 +214,7 @@ run_test() {
     wait $counter_pid 2>/dev/null || true
 
     kill -9 $api_pid 2>/dev/null || true
-    pkill -9 -f Lab.LargeObject.Api 2>/dev/null || true
+    pkill -9 -f "Lab.LargeObject.Api.dll" 2>/dev/null || true
     sleep 1
 
     local full_csv="${csv_out}.csv"

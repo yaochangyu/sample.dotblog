@@ -227,6 +227,12 @@ await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<MemberAccou
 專案內建完整實驗工具（支援結果持久化與重複渲染）：
 
 ```bash
+# 🚀 0. 【一鍵總指揮】自動跑完全套 32 組壓測（Request 12組 + Response 12組 + Client 8組）
+./scripts/benchmark-all-suites.sh
+
+# ⚡ 0. 秒級一鍵渲染全套 32 組大一統 Markdown 彙總大表（0.1 秒秒級重用，無需重跑）
+./scripts/benchmark-all-suites.sh --report
+
 # 1. 執行 12 種全組合 Request 壓測並將結果持久化至 scripts/latest-results.json
 ./scripts/benchmark-all-12.sh
 
