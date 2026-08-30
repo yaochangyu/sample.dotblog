@@ -310,7 +310,22 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 | ⚠️ **C 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **ArrayPool (池化回傳)** | `/api/export-members-class-pooled` | 851 | 156.6 ms (4.88%) | 17 次 | 11 次 | ❌ 8 次 (劇烈) | 120 MB | 410 MB | ⚠️ 池化效益低，Class 物件實體依舊引發 GC |
 | ❌ **D 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **List (未池化回傳)** | `/api/export-members-class-list` | 1,014 | 98.2 ms (2.78%) | 10 次 | 6 次 | ❌ 3 次 (劇烈) | 5 MB | 311 MB | ❌ 20k Class List 佔據 LOH，停頓偏長 |
 
-### 10.3 核心事實與結論
+### 10.3 Client 端實測數據與兩種量測方式深度對照（10 並行 × 50 請求）
+
+針對 Client 端行程（`Lab.LargeObject.BenchClient`）進行實測，並交叉比對兩種量測工具：
+
+| 推薦等級 | 資料型別分類 | Client 接收架構 | 總耗時<br>(ms) | GC 總停頓時間<br>(Pause Time / 佔比) | Gen0 GC<br>次數 | Gen1 GC<br>次數 | Gen2 GC<br>次數 | In-Process<br>LOH (MB) | dotnet-counters<br>LOH Peak (MB) | Working Set<br>實體記憶體 | 核心評語與行為特徵 |
+|:---:|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
+| 🏆 **S 級** | **1. 原生數值**<br>*(double 4MB)* | **Streaming (串流接收)** | **3,153** | **98.8 ms (3.11%)** | 67 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **220 MB** | 🏆 **Client 0 LOH、無大陣列擴容** |
+| ❌ **D 級** | **1. 原生數值**<br>*(double 4MB)* | **List (未池化接收)** | 1,140 | 30.0 ms (2.65%) | 14 次 | 14 次 | ❌ 14 次 (劇烈) | **67.25 MB** | 2 MB | 212 MB | ❌ **Client 每次 new 4MB double[] 砸進 LOH** |
+| 🏆 **S 級** | **2. 原生字串**<br>*(string 50k)* | **Streaming (串流接收)** | **526** | **41.5 ms (7.72%)** | 25 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **215 MB** | 🏆 **Client 逐筆消費 0 LOH** |
+| ❌ **D 級** | **2. 原生字串**<br>*(string 50k)* | **List (未池化接收)** | 976 | **295.2 ms (28.77%)** | 31 次 | 30 次 | ❌ 10 次 (劇烈) | **5.38 MB** | 2 MB | 213 MB | ❌ **GC 停頓佔 28.7%，頻繁 Gen2 GC** |
+| 🏆 **S 級** | **3. 巢狀結構**<br>*(Struct 20k)* | **Streaming (串流接收)** | **1,324** | **54.0 ms (4.05%)** | 28 次 | 1 次 | ✅ **0 次 (零 Gen2)** | **0 MB** | **2 MB** | **216 MB** | 🏆 **Client 0 LOH、零 Gen2 GC** |
+| ❌ **D 級** | **3. 巢狀結構**<br>*(Struct 20k)* | **List (未池化接收)** | 1,637 | **647.0 ms (38.97%)** | 32 次 | 32 次 | ❌ 11 次 (劇烈) | **21.13 MB** | 2 MB | 216 MB | ❌ **GC 停頓高達 38.97% (647ms)** |
+| 🛡️ **B 級** | **4. 參考型別**<br>*(Class 20k)* | **Streaming (串流接收)** | **1,316** | **43.3 ms (3.29%)** | 23 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **214 MB** | 🏆 **Client 0 LOH、停頓極短** |
+| ❌ **D 級** | **4. 參考型別**<br>*(Class 20k)* | **List (未池化接收)** | 1,643 | **632.6 ms (37.86%)** | 29 次 | 28 次 | ❌ 8 次 (劇烈) | **1.88 MB** | 2 MB | 213 MB | ❌ **GC 停頓高達 37.86% (632ms)** |
+
+### 10.4 核心事實與結論
 
 **已知事實**（有直接證據）：
 
@@ -318,8 +333,8 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 - 用 `ArrayPool<T>` 池化陣列容器，配合 `struct` 元素型別，能讓 LOH 配置在「池子暖機」後趨於零成長。
 - 若元素為 `class` 或 `string`，`ArrayPool` 只能池化指標陣列，無法池化物件/字串實體，Gen0 GC 依然高達 20,000+ 次。
 - 改用 `IAsyncEnumerable<T>` 串流解析可徹底免除大陣列配置，在 4 種型別上全面達成全程 0 LOH、Working Set 減半且處理速度最快。
-- 在 Response 端，`SerializeToUtf8Bytes` 會產生大量 3.7MB 的短命 byte[] 垃圾直接塞爆 LOH（峰值 194MB），而 `IAsyncEnumerable<T>` 串流回傳能保持 0 LOH 且記憶體僅 102MB。
-- 反射式反序列化巢狀 struct 產生的 boxing／內部機制配置量，遠大於 LOH 陣列本身；手刻 `Utf8JsonReader` + `ValueTextEquals` 能大幅削減 70% 配置量。
+- 在 Client 端，未池化 List 接收引發高達 **38.97% (647ms)** 的極長 GC 停頓，而 `IAsyncEnumerable<T>` 串流接收全程 **0 LOH、停頓僅 40~98ms**。
+- `GC.GetGCMemoryInfo()`（In-Process）能精確捕捉到瞬時 LOH 尖峰（67.25MB），而 `dotnet-counters`（Out-of-Process）因取樣週期容易遺漏短暫峰值，兩者結合能兼顧微觀配置與宏觀 Working Set。
 
 **已推翻的假設**：
 
@@ -341,16 +356,22 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 # 2. ⚡ 秒級重用上次 Request 測試結果，直接輸出 Markdown 大一統總表（無需重跑）
 ./scripts/benchmark-all-12.sh --report
 
-# 3. 執行 4 種 Response 壓測並將結果持久化至 scripts/latest-response-results.json
+# 3. 執行 12 種全組合 Response 壓測並將結果持久化至 scripts/latest-response-results.json
 ./scripts/benchmark-response.sh
 
 # 4. ⚡ 秒級重用上次 Response 測試結果，直接輸出 Markdown 表格（無需重跑）
 ./scripts/benchmark-response.sh --report
 
-# 5. 6 種 Struct vs Class 對照實驗
+# 5. 執行 Client 端 4 種型別 × 2 種接收方式量測與量測工具對照實驗
+./scripts/benchmark-client.sh
+
+# 6. ⚡ 秒級重用上次 Client 測試結果，直接輸出 Markdown 表格（無需重跑）
+./scripts/benchmark-client.sh --report
+
+# 7. 6 種 Struct vs Class 對照實驗
 ./scripts/benchmark-class-vs-struct.sh
 
-# 6. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
+# 8. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
 ./scripts/benchmark-all.sh
 ```
 

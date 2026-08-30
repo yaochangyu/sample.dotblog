@@ -190,6 +190,35 @@ await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<MemberAccou
 
 ---
 
+## Client 端實測數據與兩種量測方式深度對照
+
+針對 Client 端行程（`Lab.LargeObject.BenchClient`，10 並行 × 50 請求）進行實測，並交叉比對兩種量測工具：
+
+| 推薦等級 | 資料型別分類 | Client 接收架構 | 總耗時<br>(ms) | GC 總停頓時間<br>(Pause Time / 佔比) | Gen0 GC<br>次數 | Gen1 GC<br>次數 | Gen2 GC<br>次數 | In-Process<br>LOH (MB) | dotnet-counters<br>LOH Peak (MB) | Working Set<br>實體記憶體 | 核心評語與行為特徵 |
+|:---:|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
+| 🏆 **S 級** | **1. 原生數值**<br>*(double 4MB)* | **Streaming (串流接收)** | **3,153** | **98.8 ms (3.11%)** | 67 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **220 MB** | 🏆 **Client 0 LOH、無大陣列擴容** |
+| ❌ **D 級** | **1. 原生數值**<br>*(double 4MB)* | **List (未池化接收)** | 1,140 | 30.0 ms (2.65%) | 14 次 | 14 次 | ❌ 14 次 (劇烈) | **67.25 MB** | 2 MB | 212 MB | ❌ **Client 每次 new 4MB double[] 砸進 LOH** |
+| 🏆 **S 級** | **2. 原生字串**<br>*(string 50k)* | **Streaming (串流接收)** | **526** | **41.5 ms (7.72%)** | 25 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **215 MB** | 🏆 **Client 逐筆消費 0 LOH** |
+| ❌ **D 級** | **2. 原生字串**<br>*(string 50k)* | **List (未池化接收)** | 976 | **295.2 ms (28.77%)** | 31 次 | 30 次 | ❌ 10 次 (劇烈) | **5.38 MB** | 2 MB | 213 MB | ❌ **GC 停頓佔 28.7%，頻繁 Gen2 GC** |
+| 🏆 **S 級** | **3. 巢狀結構**<br>*(Struct 20k)* | **Streaming (串流接收)** | **1,324** | **54.0 ms (4.05%)** | 28 次 | 1 次 | ✅ **0 次 (零 Gen2)** | **0 MB** | **2 MB** | **216 MB** | 🏆 **Client 0 LOH、零 Gen2 GC** |
+| ❌ **D 級** | **3. 巢狀結構**<br>*(Struct 20k)* | **List (未池化接收)** | 1,637 | **647.0 ms (38.97%)** | 32 次 | 32 次 | ❌ 11 次 (劇烈) | **21.13 MB** | 2 MB | 216 MB | ❌ **GC 停頓高達 38.97% (647ms)** |
+| 🛡️ **B 級** | **4. 參考型別**<br>*(Class 20k)* | **Streaming (串流接收)** | **1,316** | **43.3 ms (3.29%)** | 23 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **214 MB** | 🏆 **Client 0 LOH、停頓極短** |
+| ❌ **D 級** | **4. 參考型別**<br>*(Class 20k)* | **List (未池化接收)** | 1,643 | **632.6 ms (37.86%)** | 29 次 | 28 次 | ❌ 8 次 (劇烈) | **1.88 MB** | 2 MB | 213 MB | ❌ **GC 停頓高達 37.86% (632ms)** |
+
+### 兩種量測方式的關鍵差異剖析：
+
+1. **方式 A：程式內微觀量測（In-Process Profiling，`GC.GetGCMemoryInfo()`）**：
+   - **優點**：直接讀取 CLR 核心資料結構，能精確記錄當前堆積各世代的精確位元組（例如直接捕捉到 List 模式下 LOH 激增了 **67.25 MB / 21.13 MB**，而 Streaming 確鑿為 **0 MB**）。
+   - **適用場景**：單元測試、整合測試斷言、微基準分析。
+2. **方式 B：外部取樣監控（Out-of-Process Sampling，`dotnet-counters`）**：
+   - **優點**：跨行程、非侵入式、能持續監控 Working Set 與 OS 實體記憶體變化。
+   - **盲點與限制**：`dotnet-counters` 預設每 1 秒 Polling 取樣一次。當 Client 端產生短命大陣列且迅速被 Gen2 GC 清理時，取樣點若剛好落在回收後，會只記錄到殘留的 2MB 水位，**容易遺漏短暫的瞬時 LOH 配置尖峰**！
+3. **最佳實務結論**：
+   - 抓 **LOH 世代精確配置量與短命垃圾** $\rightarrow$ 首選 **`GC.GetGCMemoryInfo()`** 程式內量測。
+   - 抓 **K8s 容器記憶體硬上限與 OOMKilled 風險** $\rightarrow$ 首選 **`dotnet-counters`** 監控 Working Set。
+
+---
+
 ## 重現實驗腳本
 
 專案內建完整實驗工具（支援結果持久化與重複渲染）：
@@ -207,9 +236,15 @@ await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<MemberAccou
 # 4. ⚡ 秒級重用上次 Response 測試結果，直接輸出 Markdown 表格（無需重跑）
 ./scripts/benchmark-response.sh --report
 
-# 5. 6 種 Struct vs Class 對照實驗
+# 5. 執行 Client 端 4 種型別 × 2 種接收方式量測與量測工具對照實驗
+./scripts/benchmark-client.sh
+
+# 6. ⚡ 秒級重用上次 Client 測試結果，直接輸出 Markdown 表格（無需重跑）
+./scripts/benchmark-client.sh --report
+
+# 7. 6 種 Struct vs Class 對照實驗
 ./scripts/benchmark-class-vs-struct.sh
 
-# 6. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
+# 8. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
 ./scripts/benchmark-all.sh
 ```
