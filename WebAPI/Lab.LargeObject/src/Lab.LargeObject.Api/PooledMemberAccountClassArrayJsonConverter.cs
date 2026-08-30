@@ -36,7 +36,8 @@ public sealed class PooledMemberAccountClassArrayJsonConverter : JsonConverter<P
                     buffer = larger;
                 }
 
-                buffer[count++] = ReadMemberAccountClass(ref reader);
+                buffer[count++] = JsonSerializer.Deserialize<MemberAccountClass>(ref reader, options)
+                    ?? throw new JsonException("Member account element cannot be null.");
             }
 
             return new PooledArray<MemberAccountClass>(buffer, count);
@@ -57,104 +58,5 @@ public sealed class PooledMemberAccountClassArrayJsonConverter : JsonConverter<P
         }
         writer.WriteEndArray();
     }
-
-    private static MemberAccountClass ReadMemberAccountClass(ref Utf8JsonReader reader)
-    {
-        if (reader.TokenType != JsonTokenType.StartObject)
-        {
-            throw new JsonException("Expected start of a member account JSON object.");
-        }
-
-        long? memberId = null;
-        string? account = null;
-        string? displayName = null;
-        MemberStatus? status = null;
-        ContactInfoClass? contact = null;
-        DateTimeOffset? createdAt = null;
-
-        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
-        {
-            if (reader.ValueTextEquals("memberId"u8))
-            {
-                reader.Read();
-                memberId = reader.GetInt64();
-            }
-            else if (reader.ValueTextEquals("account"u8))
-            {
-                reader.Read();
-                account = reader.GetString();
-            }
-            else if (reader.ValueTextEquals("displayName"u8))
-            {
-                reader.Read();
-                displayName = reader.GetString();
-            }
-            else if (reader.ValueTextEquals("status"u8))
-            {
-                reader.Read();
-                status = reader.TokenType == JsonTokenType.Number
-                    ? (MemberStatus)reader.GetInt32()
-                    : Enum.Parse<MemberStatus>(reader.GetString()!, ignoreCase: true);
-            }
-            else if (reader.ValueTextEquals("contact"u8))
-            {
-                reader.Read();
-                contact = ReadContactInfoClass(ref reader);
-            }
-            else if (reader.ValueTextEquals("createdAt"u8))
-            {
-                reader.Read();
-                createdAt = reader.GetDateTimeOffset();
-            }
-            else
-            {
-                reader.Skip();
-            }
-        }
-
-        return new MemberAccountClass
-        {
-            MemberId = memberId ?? throw new JsonException("memberId is required"),
-            Account = account ?? throw new JsonException("account is required"),
-            DisplayName = displayName ?? throw new JsonException("displayName is required"),
-            Status = status ?? throw new JsonException("status is required"),
-            Contact = contact ?? throw new JsonException("contact is required"),
-            CreatedAt = createdAt ?? throw new JsonException("createdAt is required")
-        };
-    }
-
-    private static ContactInfoClass ReadContactInfoClass(ref Utf8JsonReader reader)
-    {
-        if (reader.TokenType != JsonTokenType.StartObject)
-        {
-            throw new JsonException("Expected start of contact info JSON object.");
-        }
-
-        string? email = null;
-        string? phone = null;
-
-        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
-        {
-            if (reader.ValueTextEquals("email"u8))
-            {
-                reader.Read();
-                email = reader.GetString();
-            }
-            else if (reader.ValueTextEquals("phoneNumber"u8))
-            {
-                reader.Read();
-                phone = reader.TokenType == JsonTokenType.Null ? null : reader.GetString();
-            }
-            else
-            {
-                reader.Skip();
-            }
-        }
-
-        return new ContactInfoClass
-        {
-            Email = email ?? throw new JsonException("email is required"),
-            PhoneNumber = phone
-        };
-    }
 }
+

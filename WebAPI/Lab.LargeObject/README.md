@@ -28,7 +28,7 @@ Lab.LargeObject/
 │   ├── MemberAccountClass.cs                       # 會員帳號參考型別模型（巢狀 class：MemberAccountClass + ContactInfoClass）
 │   └── PooledMemberAccountClassArrayJsonConverter.cs # MemberAccountClass[] 專用的 ArrayPool JsonConverter
 ├── tests/
-│   ├── Lab.LargeObject.Api.Tests/                  # 單元與整合測試（30 項測試全綠，含 Client 記憶體斷言）
+│   ├── Lab.LargeObject.Api.Tests/                  # 單元與整合測試（31 項測試全綠，含 Client 記憶體斷言）
 │   │   ├── LargeArrayEndpointTests.cs              # /api/readings* Request 整合測試
 │   │   ├── StringEndpointTests.cs                  # /api/strings* Request 整合測試
 │   │   ├── MemberAccountEndpointTests.cs           # /api/members* (struct) Request 整合測試
