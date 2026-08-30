@@ -19,7 +19,7 @@ ASP.NET Core 接收大型（~1MB）JSON 陣列時，如何避免每個 request �
 Lab.LargeObject/
 ├── Lab.LargeObject.slnx
 ├── src/Lab.LargeObject.Api/
-│   ├── Program.cs                                  # minimal API（包含 4 種型別 × 3 種架構共 12 個端點）
+│   ├── Program.cs                                  # minimal API（包含 Request 12 組 + Response 12 組共 24 個端點）
 │   ├── PooledArray.cs                              # 包住租用陣列的 IDisposable wrapper（泛型，共用）
 │   ├── PooledDoubleArrayJsonConverter.cs           # double[] 專用的 ArrayPool JsonConverter
 │   ├── PooledStringArrayJsonConverter.cs           # string[] 專用的 ArrayPool JsonConverter
@@ -28,12 +28,16 @@ Lab.LargeObject/
 │   ├── MemberAccountClass.cs                       # 會員帳號參考型別模型（巢狀 class：MemberAccountClass + ContactInfoClass）
 │   └── PooledMemberAccountClassArrayJsonConverter.cs # MemberAccountClass[] 專用的 ArrayPool JsonConverter
 ├── tests/Lab.LargeObject.Api.Tests/
-│   ├── LargeArrayEndpointTests.cs                  # /api/readings* 整合測試
-│   ├── StringEndpointTests.cs                      # /api/strings* 整合測試
-│   ├── MemberAccountEndpointTests.cs               # /api/members* (struct) 整合測試
-│   └── MemberAccountClassEndpointTests.cs          # /api/members-class* (class) 整合測試
+│   ├── LargeArrayEndpointTests.cs                  # /api/readings* Request 整合測試
+│   ├── StringEndpointTests.cs                      # /api/strings* Request 整合測試
+│   ├── MemberAccountEndpointTests.cs               # /api/members* (struct) Request 整合測試
+│   ├── MemberAccountClassEndpointTests.cs          # /api/members-class* (class) Request 整合測試
+│   ├── ResponseEndpointTests.cs                    # /api/export-* Response 12 個端點整合測試
+│   ├── HttpClientStreamingExtensions.cs            # HttpClient 0 LOH 串流接收擴充方法 (GetFromJsonStreamingAsync)
+│   └── HttpClientStreamingTests.cs                 # Client 端 0 LOH 串流消費測試（29 項測試全綠）
 └── scripts/
-    ├── benchmark-all-12.sh                         # 12 種全組合一鍵全自動壓測與持久化報表腳本
+    ├── benchmark-all-12.sh                         # Request 12 種全組合一鍵全自動壓測與持久化報表腳本
+    ├── benchmark-response.sh                       # Response 12 種全組合一鍵全自動壓測與持久化報表腳本
     ├── benchmark-class-vs-struct.sh                # 6 種 Struct vs Class 對照實驗腳本
     └── benchmark-all.sh                            # 3 種架構對照實驗腳本
 ```
@@ -164,6 +168,25 @@ Lab.LargeObject/
    - 實體記憶體 Working Set 穩定壓在 **90~117 MB**（比池化與未池化省下 75% 記憶體），且處理速度最快（469ms~962ms）。
 2. **Response 端的 ArrayPool / List 易在 Buffer 序列化時產生瞬時 LOH 尖峰**：
    - 當端點持有數十萬筆集合傳給 `JsonSerializer.SerializeAsync` 時，若序列化器在輸出管線中持有大塊 Buffer，會導致 LOH 與 Working Set 上升（370~444MB）。因此回傳大型集合時，**首選始終是 `IAsyncEnumerable<T>` 串流輸出**。
+
+### Client 端（HttpClient）如何達成 0 LOH 接收？
+
+若 Client 端直接用 `GetFromJsonAsync<List<T>>()` 或 `GetStringAsync()`，依然會在 Client 端引發 LOH 暴衝。
+
+**Client 端 0 LOH 正確寫法（已封裝於測試專案中）**：
+```csharp
+// 關鍵 1：必須指定 HttpCompletionOption.ResponseHeadersRead（不緩衝 Body）
+using var request = new HttpRequestMessage(HttpMethod.Get, "/api/export-stream");
+using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+
+// 關鍵 2：取得 Stream 配合 DeserializeAsyncEnumerable 逐筆消費
+using var stream = await response.Content.ReadAsStreamAsync(ct);
+await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<MemberAccount>(stream, options, ct))
+{
+    // 記憶體中永遠只有「當前一筆」，達成 Client 端全程 0 LOH！
+    Process(item);
+}
+```
 
 ---
 
