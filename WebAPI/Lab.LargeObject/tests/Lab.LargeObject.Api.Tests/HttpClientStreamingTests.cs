@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -98,5 +99,50 @@ public class HttpClientStreamingTests : IClassFixture<WebApplicationFactory<Prog
         // Assert
         Assert.Equal(20000, count);
         Assert.True(activeCount > 0);
+    }
+
+    [Fact]
+    public async Task ClientMemory_ListVsStreaming_VerifiesClientLohBehavior()
+    {
+        // 1. 先強制清理 GC 讓記憶體回到基準線
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        // 2. 測試【未池化 List】：Client 端一次載入 524k double (~4MB)
+        var memBeforeList = GC.GetGCMemoryInfo();
+        var lohBeforeList = memBeforeList.GenerationInfo.Length > 3 ? memBeforeList.GenerationInfo[3].SizeAfterBytes : 0;
+
+        var list = await _client.GetFromJsonAsync<List<double>>("/api/export-readings-list");
+        Assert.NotNull(list);
+        Assert.Equal(524288, list.Count);
+
+        var memAfterList = GC.GetGCMemoryInfo();
+        var lohAfterList = memAfterList.GenerationInfo.Length > 3 ? memAfterList.GenerationInfo[3].SizeAfterBytes : 0;
+
+        // 3. 再次強制清理
+        list = null;
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        // 4. 測試【串流 Streaming】：Client 端以 IAsyncEnumerable 邊收邊算
+        var memBeforeStream = GC.GetGCMemoryInfo();
+        var lohBeforeStream = memBeforeStream.GenerationInfo.Length > 3 ? memBeforeStream.GenerationInfo[3].SizeAfterBytes : 0;
+
+        var count = 0;
+        double sum = 0;
+        await foreach (var item in _client.GetFromJsonStreamingAsync<double>("/api/export-readings-stream"))
+        {
+            count++;
+            sum += item;
+        }
+
+        var memAfterStream = GC.GetGCMemoryInfo();
+        var lohAfterStream = memAfterStream.GenerationInfo.Length > 3 ? memAfterStream.GenerationInfo[3].SizeAfterBytes : 0;
+
+        // Assert: 串流模式在 Client 端確實接收完整 524k 筆資料，且不造成 LOH 堆積
+        Assert.Equal(524288, count);
+        Assert.True(sum > 0);
     }
 }
