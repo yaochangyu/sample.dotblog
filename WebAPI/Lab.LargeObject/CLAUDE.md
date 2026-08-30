@@ -22,15 +22,14 @@ dotnet run --project src/Lab.LargeObject.Api   # run the API (default: http://lo
 `scripts/` holds automated diagnostic and benchmarking tools (supports caching and report rendering):
 
 ```bash
-# 1. 一鍵自動執行全套 32 組壓測（Request 12組 + Response 12組 + Client 8組）
+# 1. 一鍵自動執行全套 32 組壓測（Server 24組 + Client 8組）
 ./scripts/benchmark-all.sh
 
 # 2. 秒級一鍵渲染全套 32 組大一統 Markdown 彙總大表（無需重跑）
 ./scripts/benchmark-all.sh --report
 
 # 3. 個別執行子套件壓測
-./scripts/benchmark-request.sh       # Request 12 組全組合壓測
-./scripts/benchmark-response.sh      # Response 12 組全組合壓測
+./scripts/benchmark-server.sh        # Server 端 24 組壓測（支援 --request / --response / --report）
 ./scripts/benchmark-client.sh        # Client 端 8 組實測與量測方式對照
 ```
 

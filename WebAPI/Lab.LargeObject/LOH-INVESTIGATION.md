@@ -350,21 +350,19 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 ### 11.1 專案內建的腳本（`scripts/`）
 
 ```bash
-# 🚀 1. 【全套總指揮】一鍵重跑全套 32 組壓測（Request 12組 + Response 12組 + Client 8組）
+# 🚀 1. 【全套總指揮】一鍵重跑全套 32 組壓測（Server 24組 + Client 8組）
 ./scripts/benchmark-all.sh
 
 # ⚡ 2. 【全套總報表】秒級一鍵輸出 32 組大一統 Markdown 彙總大表（0.1 秒秒級重用，無需重跑）
 ./scripts/benchmark-all.sh --report
 
-# 📊 3. 【Request 專題】執行 12 種全組合 Request 壓測（支援 --report 秒級查看）
-./scripts/benchmark-request.sh
-./scripts/benchmark-request.sh --report
+# 🖥️ 3. 【Server 專題】執行 Server 端 24 組壓測（支援 --request / --response / --report）
+./scripts/benchmark-server.sh             # 跑 Server 全套 24 組
+./scripts/benchmark-server.sh --request   # 僅跑 Request 12 組
+./scripts/benchmark-server.sh --response  # 僅跑 Response 12 組
+./scripts/benchmark-server.sh --report    # 秒級輸出 Server 24 組大表
 
-# 📊 4. 【Response 專題】執行 12 種全組合 Response 壓測（支援 --report 秒級查看）
-./scripts/benchmark-response.sh
-./scripts/benchmark-response.sh --report
-
-# 📊 5. 【Client 專題】執行 8 組 Client 端實測與量測工具對照（支援 --report 秒級查看）
+# 💻 4. 【Client 專題】執行 8 組 Client 端實測與量測工具對照（支援 --report 秒級查看）
 ./scripts/benchmark-client.sh
 ./scripts/benchmark-client.sh --report
 ```
