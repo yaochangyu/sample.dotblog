@@ -10,7 +10,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-RESULTS_JSON="$SCRIPT_DIR/latest-client-results.json"
+OUTPUT_DIR="$SCRIPT_DIR/.output"
+mkdir -p "$OUTPUT_DIR"
+RESULTS_JSON="$OUTPUT_DIR/latest-client-results.json"
 PORT=5149
 BASE_URL="http://localhost:$PORT"
 CONCURRENCY=10
@@ -85,7 +87,7 @@ run_client_test() {
     local raw_type="$4"
     local raw_mode="$5"
     local verdict="$6"
-    local csv_out="$SCRIPT_DIR/bench-client-${raw_type}-${raw_mode}-$(date +%s).csv"
+    local csv_out="$OUTPUT_DIR/bench-client-${raw_type}-${raw_mode}-$(date +%s).csv"
 
     # 先啟動 Client 端背景執行
     dotnet run --project "$ROOT_DIR/tests/Lab.LargeObject.BenchClient" --no-launch-profile \

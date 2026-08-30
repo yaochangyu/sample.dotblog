@@ -6,6 +6,10 @@
 .omc/
 
 ## Benchmark generated data and outputs
+.output/
+scripts/.output/
 scripts/*.csv
 scripts/payload-*.json
+scripts/latest-*.json
+
 

@@ -10,11 +10,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-RESULTS_REQ_JSON="$SCRIPT_DIR/latest-results.json"
-RESULTS_RESP_JSON="$SCRIPT_DIR/latest-response-results.json"
-PAYLOAD_DOUBLE="$SCRIPT_DIR/payload-4mb.json"
-PAYLOAD_STRINGS="$SCRIPT_DIR/payload-strings-50k.json"
-PAYLOAD_MEMBERS="$SCRIPT_DIR/payload-members-20k.json"
+OUTPUT_DIR="$SCRIPT_DIR/.output"
+mkdir -p "$OUTPUT_DIR"
+RESULTS_REQ_JSON="$OUTPUT_DIR/latest-results.json"
+RESULTS_RESP_JSON="$OUTPUT_DIR/latest-response-results.json"
+PAYLOAD_DOUBLE="$OUTPUT_DIR/payload-4mb.json"
+PAYLOAD_STRINGS="$OUTPUT_DIR/payload-strings-50k.json"
+PAYLOAD_MEMBERS="$OUTPUT_DIR/payload-members-20k.json"
 PORT=5146
 BASE_URL="http://localhost:$PORT"
 CONCURRENCY=10
@@ -112,7 +114,7 @@ run_single_server_test() {
     local is_post="$6"
     local payload_file="${7:-}"
     local verdict="$8"
-    local csv_out="$SCRIPT_DIR/bench-srv-${endpoint//\//_}-$(date +%s).csv"
+    local csv_out="$OUTPUT_DIR/bench-srv-${endpoint//\//_}-$(date +%s).csv"
 
     ASPNETCORE_URLS="$BASE_URL" dotnet run --project "$ROOT_DIR/src/Lab.LargeObject.Api" --no-launch-profile > /dev/null 2>&1 &
     local api_pid=$!
