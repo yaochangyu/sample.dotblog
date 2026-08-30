@@ -5,7 +5,7 @@ keywords:
 categories: 
 weblogName: 余小章 @ 大內殿堂
 postId: 5975fd56-c2d2-4ac3-9f62-cbae71717479
-postDate: 2026-08-30T22:09:47.0000000
+postDate: 2026-08-30T14:09:51.0000000
 postStatus: 
 dontInferFeaturedImage: false
 stripH1Header: true
@@ -27,9 +27,9 @@ stripH1Header: true
 
 .NET 的垃圾回收機制中，只要單一物件配置 $\ge 85,000\text{ bytes}$（約 83KB），CLR 就會直接配置在 LOH。
 
-直接使用 `[FromBody] List<T>` 在高並發下容易引發 OOM，主要原因有三：
-- **記憶體碎片化（Fragmentation）**：LOH 預設不壓縮（No Compaction），回收後只留下 Free List 洞，找不到足夠連續空間就會拋出 `OutOfMemoryException`。
-- **容器記憶體硬上限（OOMKilled）**：GC 回收不等於把記憶體歸還 OS（No Decommit），多個請求連續擴容將 Working Set 灌爆，直接被 K8s / Linux Kernel 砍掉（Exit Code 137，噴掉了啦!!!）。
+直接使用 `[FromBody] List<T>` 在高並發下容易引發 OOM，主要原因有三：  
+- **記憶體碎片化（Fragmentation）**：LOH 預設不壓縮（No Compaction），回收後只留下 Free List 洞，找不到足夠連續空間就會拋出 `OutOfMemoryException`。  
+- **容器記憶體硬上限（OOMKilled）**：GC 回收不等於把記憶體歸還 OS（No Decommit），多個請求連續擴容將 Working Set 灌爆，直接被 K8s / Linux Kernel 砍掉（Exit Code 137，噴掉了啦!!!）。  
 - **GC 追趕不上配置速度（GC Thrashing）**：頻繁觸發 Gen2 GC 搶佔 CPU，造成請求積壓惡性循環。
 
 ---
@@ -44,7 +44,7 @@ stripH1Header: true
 
 這裡我們宣告唯讀結構 `PooledArray<T>` 封裝租借陣列：
 
-```csharp
+```
 public readonly struct PooledArray<T> : IDisposable
 {
     private readonly T[] _rented;
@@ -72,7 +72,7 @@ NOTE：若元素型別包含參考型別（如 `string` 或包含類別的 struc
 
 自訂專屬的 `JsonConverter<PooledArray<T>>` 接管反序列化：
 
-```csharp
+```
 public sealed class PooledDoubleArrayJsonConverter : JsonConverter<PooledArray<double>>
 {
     public override PooledArray<double> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -114,7 +114,7 @@ public sealed class PooledDoubleArrayJsonConverter : JsonConverter<PooledArray<d
 
 端點中使用 `using` 確保租用陣列用完即歸還：
 
-```csharp
+```
 app.MapPost("/api/readings", ([FromBody] PooledArray<double> readings) =>
 {
     using (readings)
@@ -133,7 +133,7 @@ app.MapPost("/api/readings", ([FromBody] PooledArray<double> readings) =>
 
 這裡使用 `DeserializeAsyncEnumerable` 進行 Request 串流解析：
 
-```csharp
+```
 app.MapPost("/api/readings-stream", async (HttpRequest request, CancellationToken ct) =>
 {
     double sum = 0;
@@ -159,26 +159,26 @@ app.MapPost("/api/readings-stream", async (HttpRequest request, CancellationToke
 透過 .NET 10 原生 `GC.GetTotalPauseDuration()` 與 `dotnet-counters` 實測：
 
 | 資料型別 | 實作架構 | API 端點 | 總耗時 (ms) | GC 總停頓時間 (Pause Time / 佔比) | Gen2 GC 次數 | LOH 峰值 (MB) | Working Set 記憶體 | 評語 |
-|:---|:---|:---|:---:|:---:|:---:|:---:|:---:|:---|
-| **1. 原生數值**<br>*(double 4MB)* | **Streaming (串流)** | `/api/readings-stream` | **4,862** | **9.7 ms (0.36%)** | ✅ **4 次 (常規)** | **0 MB** | **112 MB** | 🏆 **0 LOH、停頓極短** |
-| | **ArrayPool (池化)** | `/api/readings` | 3,692 | 53.7 ms (0.32%) | ⚠️ 10 次 (常規) | 2 MB | 220 MB | ⚡ 連續 Buffer 租借複用 |
-| | **List (未池化)** | `/api/readings-list` | 2,929 | 13.9 ms (0.26%) | ⚠️ 5 次 (常規) | 2 MB | 223 MB | ❌ 4MB 大陣列直接衝進 LOH |
-| **2. 原生字串**<br>*(string 50k 筆)* | **Streaming (串流)** | `/api/strings-stream` | **1,938** | **18.4 ms (0.26%)** | ✅ **1 次 (常規)** | **2 MB** | **222 MB** | 🏆 **字串最佳解，0 LOH** |
-| | **ArrayPool (池化)** | `/api/strings` | 2,208 | 44.9 ms (0.31%) | ❌ **2 次 (劇烈)** | 2 MB | 221 MB | ⚠️ 僅池化指標，字串仍在 Gen0 |
-| | **List (未池化)** | `/api/strings-list` | 2,150 | **102.2 ms (0.45%)** | ❌ **2 次 (劇烈)** | 2 MB | 225 MB | ❌ 擴容指標衝破 85KB LOH |
-| **3. 巢狀結構**<br>*(Struct 20k 筆)* | **Streaming (串流)** | `/api/members-stream` | **2,783** | **23.1 ms (0.42%)** | ✅ **1 次 (常規)** | **2 MB** | **224 MB** | 🏆 **Struct 最佳解，停頓最低** |
-| | **ArrayPool (池化)** | `/api/members` | 2,295 | 28.1 ms (0.42%) | ⚠️ 1 次 (常規) | 2 MB | 223 MB | ⚡ 資料內嵌於連續 Buffer |
-| | **List (未池化)** | `/api/members-list` | 2,318 | **144.9 ms (0.56%)** | ❌ **3 次 (劇烈)** | 2 MB | 221 MB | ❌ 頻繁觸發 Gen2 Full GC |
-| **4. 參考型別**<br>*(Class 20k 筆)* | **Streaming (串流)** | `/api/members-class-stream` | **2,294** | **36.1 ms (0.55%)** | ✅ **1 次 (常規)** | **2 MB** | **223 MB** | 🏆 **Class 最佳解，停頓降 66%** |
-| | **ArrayPool (池化)** | `/api/members-class-pooled` | 2,332 | 90.8 ms (0.60%) | ❌ **1 次 (劇烈)** | 2 MB | 223 MB | ⚠️ 池化效益低，物件觸發 GC |
-| | **List (未池化)** | `/api/members-class-list` | 2,406 | **179.1 ms (0.72%)** | ❌ **2 次 (劇烈)** | 2 MB | 223 MB | ❌ 4 萬個 Class 實體散落 Gen0 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| **1. 原生數值** *(double 4MB)* | **Streaming (串流)** | `/api/readings-stream` | **4,862** | **9.7 ms (0.36%)** | ✅ **4 次 (常規)** | **0 MB** | **112 MB** | 🏆 **0 LOH、停頓極短** |
+|  | **ArrayPool (池化)** | `/api/readings` | 3,692 | 53.7 ms (0.32%) | ⚠️ 10 次 (常規) | 2 MB | 220 MB | ⚡ 連續 Buffer 租借複用 |
+|  | **List (未池化)** | `/api/readings-list` | 2,929 | 13.9 ms (0.26%) | ⚠️ 5 次 (常規) | 2 MB | 223 MB | ❌ 4MB 大陣列直接衝進 LOH |
+| **2. 原生字串** *(string 50k 筆)* | **Streaming (串流)** | `/api/strings-stream` | **1,938** | **18.4 ms (0.26%)** | ✅ **1 次 (常規)** | **2 MB** | **222 MB** | 🏆 **字串最佳解，0 LOH** |
+|  | **ArrayPool (池化)** | `/api/strings` | 2,208 | 44.9 ms (0.31%) | ❌ **2 次 (劇烈)** | 2 MB | 221 MB | ⚠️ 僅池化指標，字串仍在 Gen0 |
+|  | **List (未池化)** | `/api/strings-list` | 2,150 | **102.2 ms (0.45%)** | ❌ **2 次 (劇烈)** | 2 MB | 225 MB | ❌ 擴容指標衝破 85KB LOH |
+| **3. 巢狀結構** *(Struct 20k 筆)* | **Streaming (串流)** | `/api/members-stream` | **2,783** | **23.1 ms (0.42%)** | ✅ **1 次 (常規)** | **2 MB** | **224 MB** | 🏆 **Struct 最佳解，停頓最低** |
+|  | **ArrayPool (池化)** | `/api/members` | 2,295 | 28.1 ms (0.42%) | ⚠️ 1 次 (常規) | 2 MB | 223 MB | ⚡ 資料內嵌於連續 Buffer |
+|  | **List (未池化)** | `/api/members-list` | 2,318 | **144.9 ms (0.56%)** | ❌ **3 次 (劇烈)** | 2 MB | 221 MB | ❌ 頻繁觸發 Gen2 Full GC |
+| **4. 參考型別** *(Class 20k 筆)* | **Streaming (串流)** | `/api/members-class-stream` | **2,294** | **36.1 ms (0.55%)** | ✅ **1 次 (常規)** | **2 MB** | **223 MB** | 🏆 **Class 最佳解，停頓降 66%** |
+|  | **ArrayPool (池化)** | `/api/members-class-pooled` | 2,332 | 90.8 ms (0.60%) | ❌ **1 次 (劇烈)** | 2 MB | 223 MB | ⚠️ 池化效益低，物件觸發 GC |
+|  | **List (未池化)** | `/api/members-class-list` | 2,406 | **179.1 ms (0.72%)** | ❌ **2 次 (劇烈)** | 2 MB | 223 MB | ❌ 4 萬個 Class 實體散落 Gen0 |
 
 ### 3.2 Response 回傳與 Client 接收重點
 
 1. **Response 回傳（12 組實測）**：回傳大型資料時，`IAsyncEnumerable<T>` 串流回傳全面制霸（耗時 304~787ms，GC 停頓時間大幅降低，全程 0 LOH）。
 2. **Client 端 0 LOH 接收**：Client 端若直接用 `GetFromJsonAsync<List<T>>()`，會造成 Client 端 LOH 飆升；正確寫法應配合 `ResponseHeadersRead` 與 `DeserializeAsyncEnumerable` 串流消費：
 
-```csharp
+```
 // Client 端 0 LOH 接收
 using var request = new HttpRequestMessage(HttpMethod.Get, "/api/export-stream");
 using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
@@ -190,15 +190,15 @@ await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<MemberAccou
 }
 ```
 
-3. **量測工具選擇**：
-   - 抓 **LOH 世代精確配置與短命垃圾** $\rightarrow$ 首選 **`GC.GetGCMemoryInfo()`**（In-Process）。
-   - 抓 **K8s 容器記憶體硬上限與 OOMKilled** $\rightarrow$ 首選 **`dotnet-counters`**（Out-of-Process）。
+1. **量測工具選擇**：
+2. 抓 **LOH 世代精確配置與短命垃圾** $\rightarrow$ 首選 **`GC.GetGCMemoryInfo()`**（In-Process）。
+3. 抓 **K8s 容器記憶體硬上限與 OOMKilled** $\rightarrow$ 首選 **`dotnet-counters`**（Out-of-Process）。
 
 ---
 
 ## 4. 生產環境選型決策（SOP）
 
-```text
+```
 接收大型 JSON 陣列 (≥ 85KB)
 ├── 步驟 1：業務邏輯需要拿到完整陣列才能運算嗎？
 │   ├── 【否】👉 唯一首選：IAsyncEnumerable<T> 串流解析 (S 級，0 LOH、停頓極短)
@@ -213,7 +213,7 @@ await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<MemberAccou
 
 專案內建一鍵壓測與報表輸出工具：
 
-```bash
+```
 # 1. 一鍵執行全套 32 組壓測（Server 24組 + Client 8組）
 ./scripts/benchmark-all.sh
 
@@ -225,9 +225,9 @@ await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<MemberAccou
 
 ## 心得
 
-- **串流解析（IAsyncEnumerable<T>）為第一首選**：只要不需隨機存取，Request 接收與 Response 回傳一律採用串流，能達成 0 LOH 並大幅壓低 GC 停頓時間。
+- **串流解析（IAsyncEnumerable）為第一首選**：只要不需隨機存取，Request 接收與 Response 回傳一律採用串流，能達成 0 LOH 並大幅壓低 GC 停頓時間。
 - **ArrayPool 池化適用於 Struct / 原生數值**：資料內嵌於 Buffer 能發揮最大效益；若為 Class 參考型別，僅池化指標陣列效益有限。
-- **避免使用 List<T> 接收大型資料**：擴容機制會產生大量短命大陣列衝入 LOH，引發 Gen2 GC 停頓與 OOMKilled 風險。
+- **避免使用 List 接收大型資料**：擴容機制會產生大量短命大陣列衝入 LOH，引發 Gen2 GC 停頓與 OOMKilled 風險。
 
 ---
 
