@@ -350,35 +350,23 @@ ArrayPool 透過「空間換時間」解決了重複配置 LOH 垃圾與頻繁 G
 ### 11.1 專案內建的腳本（`scripts/`）
 
 ```bash
-# 🚀 0. 【一鍵總指揮】自動跑完全套 32 組壓測（Request 12組 + Response 12組 + Client 8組）
-./scripts/benchmark-all-suites.sh
+# 🚀 1. 【全套總指揮】一鍵重跑全套 32 組壓測（Request 12組 + Response 12組 + Client 8組）
+./scripts/benchmark-all.sh
 
-# ⚡ 0. 秒級一鍵渲染全套 32 組大一統 Markdown 彙總大表（0.1 秒秒級重用，無需重跑）
-./scripts/benchmark-all-suites.sh --report
+# ⚡ 2. 【全套總報表】秒級一鍵輸出 32 組大一統 Markdown 彙總大表（0.1 秒秒級重用，無需重跑）
+./scripts/benchmark-all.sh --report
 
-# 1. 執行 12 種全組合 Request 壓測並將結果持久化至 scripts/latest-results.json
-./scripts/benchmark-all-12.sh
+# 📊 3. 【Request 專題】執行 12 種全組合 Request 壓測（支援 --report 秒級查看）
+./scripts/benchmark-request.sh
+./scripts/benchmark-request.sh --report
 
-# 2. ⚡ 秒級重用上次 Request 測試結果，直接輸出 Markdown 大一統總表（無需重跑）
-./scripts/benchmark-all-12.sh --report
-
-# 3. 執行 12 種全組合 Response 壓測並將結果持久化至 scripts/latest-response-results.json
+# 📊 4. 【Response 專題】執行 12 種全組合 Response 壓測（支援 --report 秒級查看）
 ./scripts/benchmark-response.sh
-
-# 4. ⚡ 秒級重用上次 Response 測試結果，直接輸出 Markdown 表格（無需重跑）
 ./scripts/benchmark-response.sh --report
 
-# 5. 執行 Client 端 4 種型別 × 2 種接收方式量測與量測工具對照實驗
+# 📊 5. 【Client 專題】執行 8 組 Client 端實測與量測工具對照（支援 --report 秒級查看）
 ./scripts/benchmark-client.sh
-
-# 6. ⚡ 秒級重用上次 Client 測試結果，直接輸出 Markdown 表格（無需重跑）
 ./scripts/benchmark-client.sh --report
-
-# 7. 6 種 Struct vs Class 對照實驗
-./scripts/benchmark-class-vs-struct.sh
-
-# 8. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
-./scripts/benchmark-all.sh
 ```
 
 ### 11.2 naive vs pooled 對照（`/api/readings`，double 陣列版本）

@@ -38,12 +38,10 @@ Lab.LargeObject/
 │   │   └── HttpClientStreamingTests.cs             # Client 端 0 LOH 串流消費與記憶體斷言測試
 │   └── Lab.LargeObject.BenchClient/                # Client 端高並發壓測與 In-Process GC 量測 Console 程式
 └── scripts/
-    ├── benchmark-all-suites.sh                     # 🚀【一鍵總指揮】自動跑完全套 32 組壓測與持久化報表
-    ├── benchmark-all-12.sh                         # Request 12 種全組合一鍵全自動壓測與持久化報表腳本
-    ├── benchmark-response.sh                       # Response 12 種全組合一鍵全自動壓測與持久化報表腳本
-    ├── benchmark-client.sh                         # Client 端 8 組實測與量測方式 (In-Process vs Counters) 對照腳本
-    ├── benchmark-class-vs-struct.sh                # 6 種 Struct vs Class 對照實驗腳本
-    └── benchmark-all.sh                            # 3 種架構對照實驗腳本
+    ├── benchmark-all.sh                            # 🚀【全套總指揮】一鍵跑完 32 組壓測（Request+Response+Client）
+    ├── benchmark-request.sh                        # Request 12 組全組合壓測腳本（4 型別 × 3 架構）
+    ├── benchmark-response.sh                       # Response 12 組全組合壓測腳本（4 型別 × 3 架構）
+    └── benchmark-client.sh                         # Client 端 8 組實測與量測方式對照腳本（4 型別 × 2 接收）
 ```
 
 ## 核心做法：三種架構的比較
@@ -225,36 +223,24 @@ await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<MemberAccou
 
 ## 重現實驗腳本
 
-專案內建完整實驗工具（支援結果持久化與重複渲染）：
+專案內建完整實驗工具（支援結果持久化與秒級快取重複渲染）：
 
 ```bash
-# 🚀 0. 【一鍵總指揮】自動跑完全套 32 組壓測（Request 12組 + Response 12組 + Client 8組）
-./scripts/benchmark-all-suites.sh
+# 🚀 1. 【全套總指揮】一鍵重跑全套 32 組壓測（Request 12組 + Response 12組 + Client 8組）
+./scripts/benchmark-all.sh
 
-# ⚡ 0. 秒級一鍵渲染全套 32 組大一統 Markdown 彙總大表（0.1 秒秒級重用，無需重跑）
-./scripts/benchmark-all-suites.sh --report
+# ⚡ 2. 【全套總報表】秒級一鍵輸出 32 組大一統 Markdown 彙總大表（0.1 秒秒級重用，無需重跑）
+./scripts/benchmark-all.sh --report
 
-# 1. 執行 12 種全組合 Request 壓測並將結果持久化至 scripts/latest-results.json
-./scripts/benchmark-all-12.sh
+# 📊 3. 【Request 專題】執行 12 種全組合 Request 壓測（支援 --report 秒級查看）
+./scripts/benchmark-request.sh
+./scripts/benchmark-request.sh --report
 
-# 2. ⚡ 秒級重用上次 Request 測試結果，直接輸出 Markdown 大一統總表（無需重跑）
-./scripts/benchmark-all-12.sh --report
-
-# 3. 執行 12 種全組合 Response 壓測並將結果持久化至 scripts/latest-response-results.json
+# 📊 4. 【Response 專題】執行 12 種全組合 Response 壓測（支援 --report 秒級查看）
 ./scripts/benchmark-response.sh
-
-# 4. ⚡ 秒級重用上次 Response 測試結果，直接輸出 Markdown 表格（無需重跑）
 ./scripts/benchmark-response.sh --report
 
-# 5. 執行 Client 端 4 種型別 × 2 種接收方式量測與量測工具對照實驗
+# 📊 5. 【Client 專題】執行 8 組 Client 端實測與量測工具對照（支援 --report 秒級查看）
 ./scripts/benchmark-client.sh
-
-# 6. ⚡ 秒級重用上次 Client 測試結果，直接輸出 Markdown 表格（無需重跑）
 ./scripts/benchmark-client.sh --report
-
-# 7. 6 種 Struct vs Class 對照實驗
-./scripts/benchmark-class-vs-struct.sh
-
-# 8. 3 種架構 (List vs ArrayPool vs Streaming) 對照實驗
-./scripts/benchmark-all.sh
 ```

@@ -5,8 +5,8 @@ set -euo pipefail
 # 4 種型別：1. double 4MB, 2. string 50k, 3. Struct 20k, 4. Class 20k
 # 3 種架構：Streaming, ArrayPool, List
 # 參數支援：
-#   ./benchmark-all-12.sh           # 完整執行 12 組壓測並持久化至 latest-results.json
-#   ./benchmark-all-12.sh --report  # 直接讀取上次儲存的結果並渲染 Markdown 表格（無需重跑）
+#   ./benchmark-request.sh           # 完整執行 Request 12 組壓測並持久化至 latest-results.json
+#   ./benchmark-request.sh --report  # 直接讀取上次儲存的結果並渲染 Markdown 表格（無需重跑）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -265,4 +265,4 @@ run_test "❌ D 級" "4. 參考型別 (Class 20k)" "List (未池化)" "/api/memb
 mv "$TEMP_RESULTS_FILE" "$RESULTS_JSON"
 echo ""
 echo "✅ 測試結果已成功儲存至 $RESULTS_JSON！"
-echo "👉 後續可直接執行 ./scripts/benchmark-all-12.sh --report 重複查看此報表，無需重跑。"
+echo "👉 後續可直接執行 ./scripts/benchmark-request.sh --report 重複查看此報表，無需重跑。"
