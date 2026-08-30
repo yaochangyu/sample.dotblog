@@ -27,17 +27,20 @@ Lab.LargeObject/
 │   ├── PooledMemberAccountArrayJsonConverter.cs     # MemberAccount[] 專用的 ArrayPool JsonConverter
 │   ├── MemberAccountClass.cs                       # 會員帳號參考型別模型（巢狀 class：MemberAccountClass + ContactInfoClass）
 │   └── PooledMemberAccountClassArrayJsonConverter.cs # MemberAccountClass[] 專用的 ArrayPool JsonConverter
-├── tests/Lab.LargeObject.Api.Tests/
-│   ├── LargeArrayEndpointTests.cs                  # /api/readings* Request 整合測試
-│   ├── StringEndpointTests.cs                      # /api/strings* Request 整合測試
-│   ├── MemberAccountEndpointTests.cs               # /api/members* (struct) Request 整合測試
-│   ├── MemberAccountClassEndpointTests.cs          # /api/members-class* (class) Request 整合測試
-│   ├── ResponseEndpointTests.cs                    # /api/export-* Response 12 個端點整合測試
-│   ├── HttpClientStreamingExtensions.cs            # HttpClient 0 LOH 串流接收擴充方法 (GetFromJsonStreamingAsync)
-│   └── HttpClientStreamingTests.cs                 # Client 端 0 LOH 串流消費測試（29 項測試全綠）
+├── tests/
+│   ├── Lab.LargeObject.Api.Tests/                  # 單元與整合測試（30 項測試全綠，含 Client 記憶體斷言）
+│   │   ├── LargeArrayEndpointTests.cs              # /api/readings* Request 整合測試
+│   │   ├── StringEndpointTests.cs                  # /api/strings* Request 整合測試
+│   │   ├── MemberAccountEndpointTests.cs           # /api/members* (struct) Request 整合測試
+│   │   ├── MemberAccountClassEndpointTests.cs      # /api/members-class* (class) Request 整合測試
+│   │   ├── ResponseEndpointTests.cs                # /api/export-* Response 12 個端點整合測試
+│   │   ├── HttpClientStreamingExtensions.cs        # HttpClient 0 LOH 串流接收擴充方法 (GetFromJsonStreamingAsync)
+│   │   └── HttpClientStreamingTests.cs             # Client 端 0 LOH 串流消費與記憶體斷言測試
+│   └── Lab.LargeObject.BenchClient/                # Client 端高並發壓測與 In-Process GC 量測 Console 程式
 └── scripts/
     ├── benchmark-all-12.sh                         # Request 12 種全組合一鍵全自動壓測與持久化報表腳本
     ├── benchmark-response.sh                       # Response 12 種全組合一鍵全自動壓測與持久化報表腳本
+    ├── benchmark-client.sh                         # Client 端 8 組實測與量測方式 (In-Process vs Counters) 對照腳本
     ├── benchmark-class-vs-struct.sh                # 6 種 Struct vs Class 對照實驗腳本
     └── benchmark-all.sh                            # 3 種架構對照實驗腳本
 ```
