@@ -27,14 +27,23 @@ Lab.LargeObject/
 │   ├── PooledMemberAccountArrayJsonConverter.cs     # MemberAccount[] 專用的 ArrayPool JsonConverter
 │   ├── MemberAccountClass.cs                       # 會員帳號參考型別模型（巢狀 class：MemberAccountClass + ContactInfoClass）
 │   └── PooledMemberAccountClassArrayJsonConverter.cs # MemberAccountClass[] 專用的 ArrayPool JsonConverter
-├── tests/Lab.LargeObject.Api.Tests/
-│   ├── LargeArrayEndpointTests.cs                  # /api/readings* Request 整合測試
-│   ├── StringEndpointTests.cs                      # /api/strings* Request 整合測試
-│   ├── MemberAccountEndpointTests.cs               # /api/members* (struct) Request 整合測試
-│   ├── MemberAccountClassEndpointTests.cs          # /api/members-class* (class) Request 整合測試
-│   ├── ResponseEndpointTests.cs                    # /api/export-* Response 12 個端點整合測試
-│   ├── HttpClientStreamingExtensions.cs            # HttpClient 0 LOH 串流接收擴充方法 (GetFromJsonStreamingAsync)
-│   └── HttpClientStreamingTests.cs                 # Client 端 0 LOH 串流消費測試（29 項測試全綠）
+├── tests/
+│   ├── Lab.LargeObject.Api.Tests/                  # 單元與整合測試（29 項測試全綠）
+│   │   ├── LargeArrayEndpointTests.cs              # /api/readings* Request 整合測試
+│   │   ├── StringEndpointTests.cs                  # /api/strings* Request 整合測試
+│   │   ├── MemberAccountEndpointTests.cs           # /api/members* (struct) Request 整合測試
+│   │   ├── MemberAccountClassEndpointTests.cs      # /api/members-class* (class) Request 整合測試
+│   │   ├── ResponseEndpointTests.cs                # /api/export-* Response 12 個端點整合測試
+│   │   ├── HttpClientStreamingExtensions.cs        # HttpClient 0 LOH 串流接收擴充方法 (GetFromJsonStreamingAsync)
+│   │   └── HttpClientStreamingTests.cs             # Client 端 0 LOH 串流消費測試
+│   └── Lab.LargeObject.Specs/                      # Cucumber / Reqnroll BDD 規格測試（6 項 Scenarios 全綠）
+│       ├── Features/
+│       │   ├── LargeObjectRequest.feature          # 接收大資料 ArrayPool / 串流規格
+│       │   └── LargeObjectResponse.feature         # 回傳大資料 0 LOH 串流消費規格
+│       ├── StepDefinitions/
+│       │   ├── LargeObjectRequestSteps.cs          # Request 步驟定義（中文步驟）
+│       │   └── LargeObjectResponseSteps.cs         # Response 步驟定義（中文步驟）
+│       └── Hooks/TestHooks.cs                      # WebApplicationFactory 綁定
 └── scripts/
     ├── benchmark-all-12.sh                         # Request 12 種全組合一鍵全自動壓測與持久化報表腳本
     ├── benchmark-response.sh                       # Response 12 種全組合一鍵全自動壓測與持久化報表腳本
