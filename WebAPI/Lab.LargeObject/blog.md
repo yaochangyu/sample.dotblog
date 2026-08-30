@@ -1,5 +1,5 @@
 ---
-title: '[.NET] ASP.NET Core 接收大型 JSON 集合：從 ArrayPool 池化到 IAsyncEnumerable 串流解析徹底避開 LOH 與 OOM 實戰'
+title: '[ASP.NET Core] 處理大型物件的解法，以 IAsyncEnumerable 打造低延遲、高吞吐的資料管線'
 abstract: <p>在 ASP.NET Core 接收或回傳約 1MB 以上的大型 JSON 陣列時，若直接用 <code>List&lt;T&gt;</code> 接收，底層陣列只要超過 85,000 bytes 就會直接丟進大型物件堆積（Large Object Heap, LOH）。在高並發下，這會引發頻繁的 Gen2 垃圾回收（Garbage Collection, GC）與記憶體碎片化。這裡透過實測排查，示範如何用 <code>ArrayPool&lt;T&gt;</code> 池化與 <code>IAsyncEnumerable&lt;T&gt;</code> 串流解析徹底避開 LOH 壓力。</p>
 keywords: 
 categories: 
@@ -10,7 +10,7 @@ postStatus:
 dontInferFeaturedImage: false
 stripH1Header: true
 ---
-# [.NET] ASP.NET Core 接收大型 JSON 集合：從 ArrayPool 池化到 IAsyncEnumerable 串流解析徹底避開 LOH 與 OOM 實戰
+# [ASP.NET Core] 處理大型物件的解法，以 IAsyncEnumerable 打造低延遲、高吞吐的資料管線
 
 在 ASP.NET Core 接收或回傳約 1MB 以上的大型 JSON 陣列時，若直接用 `List<T>` 接收，底層陣列只要超過 85,000 bytes 就會直接丟進大型物件堆積（Large Object Heap, LOH）。在高並發下，這會引發頻繁的 Gen2 垃圾回收（Garbage Collection, GC）與記憶體碎片化。這裡透過實測排查，示範如何用 `ArrayPool<T>` 池化與 `IAsyncEnumerable<T>` 串流解析徹底避開 LOH 壓力。
 
