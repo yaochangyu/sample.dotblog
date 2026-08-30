@@ -19,20 +19,20 @@ dotnet run --project src/Lab.LargeObject.Api   # run the API (default: http://lo
 
 ### Load-testing / observing LOH behavior
 
-`scripts/` holds manual diagnostic tooling (not part of `dotnet test`), meant to be run against a live instance in two terminals:
+`scripts/` holds automated diagnostic and benchmarking tools (supports caching and report rendering):
 
 ```bash
-# terminal 1: run the API
-ASPNETCORE_URLS=http://localhost:5080 dotnet run --project src/Lab.LargeObject.Api
+# 1. 一鍵自動執行全套 32 組壓測（Request 12組 + Response 12組 + Client 8組）
+./scripts/benchmark-all-suites.sh
 
-# terminal 2: observe GC/LOH counters while under load (needs: dotnet tool install -g dotnet-counters)
-./scripts/observe-counters.sh Lab.LargeObject.Api 60
+# 2. 秒級一鍵渲染全套 32 組大一統 Markdown 彙總大表（無需重跑）
+./scripts/benchmark-all-suites.sh --report
 
-# terminal 3: generate concurrent load with a ~1MB payload (needs: curl, awk, xargs)
-./scripts/load-test.sh http://localhost:5080 /api/readings 20 500
+# 3. 個別執行子套件壓測
+./scripts/benchmark-all-12.sh        # Request 12 組全組合壓測
+./scripts/benchmark-response.sh      # Response 12 組全組合壓測
+./scripts/benchmark-client.sh        # Client 端 8 組實測與量測方式對照
 ```
-
-`observe-counters.sh` wraps `dotnet-counters collect`, polling `System.Runtime` counters (`dotnet.gc.last_collection.heap.size` broken out by generation including `loh`, `dotnet.gc.last_collection.heap.fragmentation.size`, `dotnet.gc.collections`, `dotnet.gc.heap.total_allocated`, `dotnet.process.memory.working_set`) into a timestamped CSV in `scripts/`. `load-test.sh` generates and caches a 131,072-element `double` JSON payload (`payload-1mb.json`, ~1MB — deliberately over the LOH threshold) and fires it concurrently via `xargs -P`.
 
 ## Architecture
 

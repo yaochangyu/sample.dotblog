@@ -38,6 +38,7 @@ Lab.LargeObject/
 │   │   └── HttpClientStreamingTests.cs             # Client 端 0 LOH 串流消費與記憶體斷言測試
 │   └── Lab.LargeObject.BenchClient/                # Client 端高並發壓測與 In-Process GC 量測 Console 程式
 └── scripts/
+    ├── benchmark-all-suites.sh                     # 🚀【一鍵總指揮】自動跑完全套 32 組壓測與持久化報表
     ├── benchmark-all-12.sh                         # Request 12 種全組合一鍵全自動壓測與持久化報表腳本
     ├── benchmark-response.sh                       # Response 12 種全組合一鍵全自動壓測與持久化報表腳本
     ├── benchmark-client.sh                         # Client 端 8 組實測與量測方式 (In-Process vs Counters) 對照腳本
@@ -68,18 +69,18 @@ Lab.LargeObject/
 
 | 推薦等級 | 資料型別分類 | 實作架構 | API 端點 | 總耗時<br>(ms) | GC 總停頓時間<br>(Pause Time / 佔比) | Gen0 GC<br>次數 | Gen1 GC<br>次數 | Gen2 GC<br>次數 | LOH 峰值<br>(MB) | Working Set<br>實體記憶體 | 核心評語與行為特徵 |
 |:---:|:---|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
-| 🏆 **S 級** | **1. 原生數值**<br>*(double 4MB)* | **Streaming (串流)** | `/api/readings-stream` | **5,121** | **12.6 ms (0.42%)** | **4 次** | **4 次** | ✅ **4 次 (常規)** | **0 MB** | **114 MB** | 🏆 **最快、停頓最短 (12ms)、記憶體最低** |
-| ⚡ **A 級** | **1. 原生數值**<br>*(double 4MB)* | **ArrayPool (池化)** | `/api/readings` | 3,850 | 46.5 ms (1.01%) | 13 次 | 13 次 | ⚠️ 13 次 (常規) | 110 MB | 325 MB | ⚡ 陣列完整池化，暖機後重複複用 4MB Buffer |
-| ❌ **D 級** | **1. 原生數值**<br>*(double 4MB)* | **List (未池化)** | `/api/readings-list` | 3,230 | 45.7 ms (0.86%) | 20 次 | 20 次 | ⚠️ 20 次 (常規) | 81 MB | 192 MB | ❌ 擴容連續拋棄暫存陣列，製造 LOH 垃圾 |
-| 🏆 **S 級** | **2. 原生字串**<br>*(string 50k 筆)* | **Streaming (串流)** | `/api/strings-stream` | **2,156** | **42.5 ms (0.93%)** | 37 次 | **7 次** | ✅ **7 次 (常規)** | **0 MB** | **132 MB** | 🏆 **String 最佳解**，0 LOH、停頓極短、記憶體極低 |
-| ⚠️ **C 級** | **2. 原生字串**<br>*(string 50k 筆)* | **ArrayPool (池化)** | `/api/strings` | 2,279 | 91.0 ms (1.99%) | 24 次 | 11 次 | ❌ **10 次 (劇烈)** | 13 MB | 344 MB | ⚠️ **池化效益低**，僅池化指標陣列，字串實體仍散落 Gen0 |
-| ❌ **D 級** | **2. 原生字串**<br>*(string 50k 筆)* | **List (未池化)** | `/api/strings-list` | 2,255 | **132.1 ms (2.80%)** | 26 次 | 15 次 | ❌ **11 次 (劇烈)** | 10 MB | 303 MB | ❌ 擴容指標陣列衝破 85KB LOH，且引發高頻 GC |
-| 🏆 **S 級** | **3. 巢狀結構**<br>*(Struct 20k 筆)* | **Streaming (串流)** | `/api/members-stream` | **3,078** | **56.7 ms (1.04%)** | 34 次 | **6 次** | ✅ **6 次 (常規)** | **0 MB** | **137 MB** | 🏆 **Struct 最佳解**，停頓降 76%、0 LOH、記憶體減半 |
-| ⚡ **A 級** | **3. 巢狀結構**<br>*(Struct 20k 筆)* | **ArrayPool (池化)** | `/api/members` | 2,903 | 86.2 ms (1.58%) | 20 次 | 13 次 | ⚠️ 11 次 (常規) | 62 MB | 274 MB | ⚡ **需隨機存取首選**，資料內嵌於 Buffer 完整池化 |
-| ❌ **D 級** | **3. 巢狀結構**<br>*(Struct 20k 筆)* | **List (未池化)** | `/api/members-list` | 3,002 | **232.0 ms (4.25%)** | 28 次 | 21 次 | ❌ **16 次 (劇烈)** | 28 MB | 280 MB | ❌ **GC 停頓極長 (232ms)**，短命陣列引發頻繁 Full GC |
-| 🛡️ **B 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **Streaming (串流)** | `/api/members-class-stream` | 3,406 | **55.7 ms (0.99%)** | 39 次 | **5 次** | ✅ **5 次 (常規)** | **0 MB** | **127 MB** | 🏆 **Class 最佳解**，GC 停頓降 69%，記憶體維持極低 |
-| ⚠️ **C 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **ArrayPool (池化)** | `/api/members-class-pooled` | 3,199 | 106.3 ms (1.97%) | 20 次 | 10 次 | ❌ **9 次 (劇烈)** | 6 MB | 297 MB | ⚠️ **池化效益低**，僅省下指標，物件依舊觸發長時間 GC |
-| ❌ **D 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **List (未池化)** | `/api/members-class-list` | 2,853 | 180.6 ms (3.41%) | 23 次 | 12 次 | ❌ **8 次 (劇烈)** | 5 MB | 226 MB | ⚠️ 4 萬個 Class 實體散落 Gen0，GC 停頓高達 180ms |
+| 🏆 **S 級** | **1. 原生數值**<br>*(double 4MB)* | **Streaming (串流)** | `/api/readings-stream` | **4,862** | **9.7 ms (0.36%)** | **4 次** | **4 次** | ✅ **4 次 (常規)** | **0 MB** | **112 MB** | 🏆 **0 LOH、GC 停頓極短、邊收邊算** |
+| ⚡ **A 級** | **1. 原生數值**<br>*(double 4MB)* | **ArrayPool (池化)** | `/api/readings` | 3,692 | 53.7 ms (0.32%) | 10 次 | 10 次 | ⚠️ 10 次 (常規) | 2 MB | 220 MB | ⚡ 連續 Buffer 租借歸還，暖機後穩定 |
+| ❌ **D 級** | **1. 原生數值**<br>*(double 4MB)* | **List (未池化)** | `/api/readings-list` | 2,929 | 13.9 ms (0.26%) | 5 次 | 5 次 | ⚠️ 5 次 (常規) | 2 MB | 223 MB | ❌ 連續短命 4MB 陣列砸進 LOH |
+| 🏆 **S 級** | **2. 原生字串**<br>*(string 50k 筆)* | **Streaming (串流)** | `/api/strings-stream` | **1,938** | **18.4 ms (0.26%)** | 24 次 | **2 次** | ✅ **1 次 (常規)** | **2 MB** | **222 MB** | 🏆 **字串最佳解，0 LOH、停頓極短** |
+| ⚠️ **C 級** | **2. 原生字串**<br>*(string 50k 筆)* | **ArrayPool (池化)** | `/api/strings` | 2,208 | 44.9 ms (0.31%) | 13 次 | 8 次 | ❌ **2 次 (劇烈)** | 2 MB | 221 MB | ⚠️ 僅池化指標陣列，字串實體散落 Gen0 |
+| ❌ **D 級** | **2. 原生字串**<br>*(string 50k 筆)* | **List (未池化)** | `/api/strings-list` | 2,150 | **102.2 ms (0.45%)** | 12 次 | 6 次 | ❌ **2 次 (劇烈)** | 2 MB | 225 MB | ❌ 擴容指標陣列衝破 85KB LOH |
+| 🏆 **S 級** | **3. 巢狀結構**<br>*(Struct 20k 筆)* | **Streaming (串流)** | `/api/members-stream` | **2,783** | **23.1 ms (0.42%)** | 11 次 | **2 次** | ✅ **1 次 (常規)** | **2 MB** | **224 MB** | 🏆 **Struct 最佳解，停頓最低、0 LOH** |
+| ⚡ **A 級** | **3. 巢狀結構**<br>*(Struct 20k 筆)* | **ArrayPool (池化)** | `/api/members` | 2,295 | 28.1 ms (0.42%) | 7 次 | 4 次 | ⚠️ 1 次 (常規) | 2 MB | 223 MB | ⚡ 資料內嵌於連續 Buffer，隨機存取首選 |
+| ❌ **D 級** | **3. 巢狀結構**<br>*(Struct 20k 筆)* | **List (未池化)** | `/api/members-list` | 2,318 | **144.9 ms (0.56%)** | 13 次 | 6 次 | ❌ **3 次 (劇烈)** | 2 MB | 221 MB | ❌ 頻繁觸發 Gen2 Full GC |
+| 🛡️ **B 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **Streaming (串流)** | `/api/members-class-stream` | **2,294** | **36.1 ms (0.55%)** | 10 次 | **2 次** | ✅ **1 次 (常規)** | **2 MB** | **223 MB** | 🏆 **Class 最佳解，GC 停頓降 66%** |
+| ⚠️ **C 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **ArrayPool (池化)** | `/api/members-class-pooled` | 2,332 | 90.8 ms (0.60%) | 8 次 | 5 次 | ❌ **1 次 (劇烈)** | 2 MB | 223 MB | ⚠️ 池化效益低，物件依舊觸發 GC |
+| ❌ **D 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **List (未池化)** | `/api/members-class-list` | 2,406 | **179.1 ms (0.72%)** | 11 次 | 7 次 | ❌ **2 次 (劇烈)** | 2 MB | 223 MB | ❌ 4 萬個 Class 實體散落 Gen0 |
 
 ---
 
@@ -152,18 +153,18 @@ Lab.LargeObject/
 
 | 推薦等級 | 資料型別分類 | 實作架構 | API 端點 | 總耗時<br>(ms) | GC 總停頓時間<br>(Pause Time / 佔比) | Gen0 GC<br>次數 | Gen1 GC<br>次數 | Gen2 GC<br>次數 | LOH 峰值<br>(MB) | Working Set<br>實體記憶體 | 核心評語與行為特徵 |
 |:---:|:---|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
-| 🏆 **S 級** | **1. 原生數值**<br>*(double 4MB)* | **Streaming (串流回傳)** | `/api/export-readings-stream` | **1,790** | **0.0 ms (0.48%)** | **0 次** | **0 次** | ✅ **0 次 (零 GC)** | **0 MB** | **90 MB** | 🏆 **零 GC、0 LOH、實體記憶體僅 90MB** |
-| ⚡ **A 級** | **1. 原生數值**<br>*(double 4MB)* | **ArrayPool (池化回傳)** | `/api/export-readings` | 1,222 | 44.8 ms (1.55%) | 16 次 | 15 次 | ⚠️ 14 次 (常規) | 246 MB | 372 MB | ⚡ 租用 4MB Buffer 序列化後歸還 |
-| ❌ **D 級** | **1. 原生數值**<br>*(double 4MB)* | **List (未池化回傳)** | `/api/export-readings-list` | 1,294 | 15.7 ms (0.53%) | 8 次 | 8 次 | ⚠️ 8 次 (常規) | 60 MB | 137 MB | ❌ 每次請求建立大 List 佔據 LOH |
-| 🏆 **S 級** | **2. 原生字串**<br>*(string 50k 筆)* | **Streaming (串流回傳)** | `/api/export-strings-stream` | **469** | **71.5 ms (2.61%)** | 40 次 | **4 次** | ✅ **3 次 (常規)** | **0 MB** | **117 MB** | 🏆 **最快(469ms)、0 LOH、記憶體維持低檔** |
-| ⚠️ **C 級** | **2. 原生字串**<br>*(string 50k 筆)* | **ArrayPool (池化回傳)** | `/api/export-strings` | 697 | 102.6 ms (3.26%) | 19 次 | 9 次 | ❌ 7 次 (劇烈) | 111 MB | 444 MB | ⚠️ 僅池化指標陣列，5 萬字串仍在 Gen0 產垃圾 |
-| ❌ **D 級** | **2. 原生字串**<br>*(string 50k 筆)* | **List (未池化回傳)** | `/api/export-strings-list` | 695 | 83.8 ms (2.95%) | 14 次 | 9 次 | ❌ 7 次 (劇烈) | 9 MB | 497 MB | ❌ 5 萬字串大 List 衝入 LOH 引發頻繁回收 |
-| 🏆 **S 級** | **3. 巢狀結構**<br>*(Struct 20k 筆)* | **Streaming (串流回傳)** | `/api/export-members-stream` | **962** | **48.6 ms (1.46%)** | 30 次 | **4 次** | ✅ **3 次 (常規)** | **0 MB** | **109 MB** | 🏆 **最快、0 LOH、停頓短、記憶體減半** |
-| ⚡ **A 級** | **3. 巢狀結構**<br>*(Struct 20k 筆)* | **ArrayPool (池化回傳)** | `/api/export-members` | 1,159 | 224.8 ms (6.36%) | 29 次 | 14 次 | ⚠️ 11 次 (常規) | 126 MB | 437 MB | ⚡ 租用 Buffer 序列化後歸還，資料完整內嵌 |
-| ❌ **D 級** | **3. 巢狀結構**<br>*(Struct 20k 筆)* | **List (未池化回傳)** | `/api/export-members-list` | 1,146 | 107.8 ms (3.08%) | 15 次 | 9 次 | ❌ 7 次 (劇烈) | 20 MB | 230 MB | ❌ 20k 筆 Struct List 進入 LOH 引發 GC 停頓 |
-| 🛡️ **B 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **Streaming (串流回傳)** | `/api/export-members-class-stream` | **695** | **52.6 ms (1.72%)** | 28 次 | **3 次** | ✅ **2 次 (極低)** | **0 MB** | **105 MB** | 🏆 **Class 最佳解，0 LOH，記憶體維持極低** |
-| ⚠️ **C 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **ArrayPool (池化回傳)** | `/api/export-members-class-pooled` | 851 | 156.6 ms (4.88%) | 17 次 | 11 次 | ❌ 8 次 (劇烈) | 120 MB | 410 MB | ⚠️ 池化效益低，Class 物件實體依舊引發 GC |
-| ❌ **D 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **List (未池化回傳)** | `/api/export-members-class-list` | 1,014 | 98.2 ms (2.78%) | 10 次 | 6 次 | ❌ 3 次 (劇烈) | 5 MB | 311 MB | ❌ 20k Class List 佔據 LOH，停頓偏長 |
+| 🏆 **S 級** | **1. 原生數值**<br>*(double 4MB)* | **Streaming (串流回傳)** | `/api/export-readings-stream` | **1,765** | **0.0 ms (0.64%)** | **0 次** | **0 次** | ✅ **0 次 (零 GC)** | **0 MB** | **92 MB** | 🏆 **0 LOH、零 GC、記憶體僅 92MB** |
+| ⚡ **A 級** | **1. 原生數值**<br>*(double 4MB)* | **ArrayPool (池化回傳)** | `/api/export-readings` | 645 | 38.8 ms (0.22%) | 15 次 | 14 次 | ⚠️ 14 次 (常規) | 2 MB | 209 MB | ⚡ 租用 4MB Buffer 序列化後歸還 |
+| ❌ **D 級** | **1. 原生數值**<br>*(double 4MB)* | **List (未池化回傳)** | `/api/export-readings-list` | 709 | 2.5 ms (0.16%) | 1 次 | 1 次 | ⚠️ 1 次 (常規) | 2 MB | 223 MB | ❌ 每次請求建立大 List 佔據 LOH |
+| 🏆 **S 級** | **2. 原生字串**<br>*(string 50k 筆)* | **Streaming (串流回傳)** | `/api/export-strings-stream` | **387** | **31.6 ms (0.22%)** | 26 次 | **1 次** | ✅ **1 次 (常規)** | **2 MB** | **224 MB** | 🏆 **最快 (387ms)、0 LOH、停頓極短** |
+| ⚠️ **C 級** | **2. 原生字串**<br>*(string 50k 筆)* | **ArrayPool (池化回傳)** | `/api/export-strings` | 432 | 76.9 ms (0.36%) | 10 次 | 4 次 | ❌ 2 次 (劇烈) | 2 MB | 222 MB | ⚠️ 僅池化指標陣列，5 萬字串仍在 Gen0 |
+| ❌ **D 級** | **2. 原生字串**<br>*(string 50k 筆)* | **List (未池化回傳)** | `/api/export-strings-list` | 202 | 62.2 ms (0.42%) | 4 次 | 1 次 | ❌ 1 次 (劇烈) | 2 MB | 224 MB | ❌ 5 萬字串大 List 衝入 LOH |
+| 🏆 **S 級** | **3. 巢狀結構**<br>*(Struct 20k 筆)* | **Streaming (串流回傳)** | `/api/export-members-stream` | **523** | **59.7 ms (0.46%)** | 6 次 | **3 次** | ✅ **1 次 (常規)** | **2 MB** | **222 MB** | 🏆 **最快、0 LOH、停頓短、記憶體減半** |
+| ⚡ **A 級** | **3. 巢狀結構**<br>*(Struct 20k 筆)* | **ArrayPool (池化回傳)** | `/api/export-members` | 528 | 156.9 ms (0.64%) | 14 次 | 5 次 | ⚠️ 2 次 (常規) | 2 MB | 223 MB | ⚡ 租用 Buffer 序列化後歸還 |
+| ❌ **D 級** | **3. 巢狀結構**<br>*(Struct 20k 筆)* | **List (未池化回傳)** | `/api/export-members-list` | 336 | 119.4 ms (0.74%) | 6 次 | 3 次 | ❌ 1 次 (劇烈) | 2 MB | 225 MB | ❌ 20k Struct List 進入 LOH |
+| 🛡️ **B 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **Streaming (串流回傳)** | `/api/export-members-class-stream` | **333** | **61.4 ms (0.74%)** | 7 次 | **3 次** | ✅ **1 次 (極低)** | **2 MB** | **224 MB** | 🏆 **Class 最佳解，0 LOH** |
+| ⚠️ **C 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **ArrayPool (池化回傳)** | `/api/export-members-class-pooled` | 475 | 181.7 ms (0.88%) | 12 次 | 4 次 | ❌ 1 次 (劇烈) | 2 MB | 218 MB | ⚠️ 池化效益低，Class 物件觸發 GC |
+| ❌ **D 級** | **4. 參考型別**<br>*(Class 20k 筆)* | **List (未池化回傳)** | `/api/export-members-class-list` | 343 | 135.4 ms (0.95%) | 8 次 | 4 次 | ❌ 2 次 (劇烈) | 2 MB | 224 MB | ❌ 20k Class List 佔據 LOH |
 
 ### 核心發現：
 1. **`IAsyncEnumerable<T>` 串流輸出在 Response 端全面制霸（🏆 S 級）**：
@@ -199,14 +200,14 @@ await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<MemberAccou
 
 | 推薦等級 | 資料型別分類 | Client 接收架構 | 總耗時<br>(ms) | GC 總停頓時間<br>(Pause Time / 佔比) | Gen0 GC<br>次數 | Gen1 GC<br>次數 | Gen2 GC<br>次數 | In-Process<br>LOH (MB) | dotnet-counters<br>LOH Peak (MB) | Working Set<br>實體記憶體 | 核心評語與行為特徵 |
 |:---:|:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
-| 🏆 **S 級** | **1. 原生數值**<br>*(double 4MB)* | **Streaming (串流接收)** | **3,153** | **98.8 ms (3.11%)** | 67 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **220 MB** | 🏆 **Client 0 LOH、無大陣列擴容** |
-| ❌ **D 級** | **1. 原生數值**<br>*(double 4MB)* | **List (未池化接收)** | 1,140 | 30.0 ms (2.65%) | 14 次 | 14 次 | ❌ 14 次 (劇烈) | **67.25 MB** | 2 MB | 212 MB | ❌ **Client 每次 new 4MB double[] 砸進 LOH** |
-| 🏆 **S 級** | **2. 原生字串**<br>*(string 50k)* | **Streaming (串流接收)** | **526** | **41.5 ms (7.72%)** | 25 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **215 MB** | 🏆 **Client 逐筆消費 0 LOH** |
-| ❌ **D 級** | **2. 原生字串**<br>*(string 50k)* | **List (未池化接收)** | 976 | **295.2 ms (28.77%)** | 31 次 | 30 次 | ❌ 10 次 (劇烈) | **5.38 MB** | 2 MB | 213 MB | ❌ **GC 停頓佔 28.7%，頻繁 Gen2 GC** |
-| 🏆 **S 級** | **3. 巢狀結構**<br>*(Struct 20k)* | **Streaming (串流接收)** | **1,324** | **54.0 ms (4.05%)** | 28 次 | 1 次 | ✅ **0 次 (零 Gen2)** | **0 MB** | **2 MB** | **216 MB** | 🏆 **Client 0 LOH、零 Gen2 GC** |
-| ❌ **D 級** | **3. 巢狀結構**<br>*(Struct 20k)* | **List (未池化接收)** | 1,637 | **647.0 ms (38.97%)** | 32 次 | 32 次 | ❌ 11 次 (劇烈) | **21.13 MB** | 2 MB | 216 MB | ❌ **GC 停頓高達 38.97% (647ms)** |
-| 🛡️ **B 級** | **4. 參考型別**<br>*(Class 20k)* | **Streaming (串流接收)** | **1,316** | **43.3 ms (3.29%)** | 23 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **214 MB** | 🏆 **Client 0 LOH、停頓極短** |
-| ❌ **D 級** | **4. 參考型別**<br>*(Class 20k)* | **List (未池化接收)** | 1,643 | **632.6 ms (37.86%)** | 29 次 | 28 次 | ❌ 8 次 (劇烈) | **1.88 MB** | 2 MB | 213 MB | ❌ **GC 停頓高達 37.86% (632ms)** |
+| 🏆 **S 級** | **1. 原生數值**<br>*(double 4MB)* | **Streaming (串流接收)** | **2,861** | **95.96 ms (3.33%)** | 67 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **234 MB** | 🏆 **Client 0 LOH、無大陣列擴容** |
+| ❌ **D 級** | **1. 原生數值**<br>*(double 4MB)* | **List (未池化接收)** | 1,260 | 20.27 ms (1.90%) | 11 次 | 11 次 | ❌ 11 次 (劇烈) | **55.0 MB** | 2 MB | 212 MB | ❌ **Client 每次 new 4MB double[] 砸進 LOH** |
+| 🏆 **S 級** | **2. 原生字串**<br>*(string 50k)* | **Streaming (串流接收)** | **534** | **42.25 ms (7.70%)** | 25 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **212 MB** | 🏆 **Client 逐筆消費 0 LOH** |
+| ❌ **D 級** | **2. 原生字串**<br>*(string 50k)* | **List (未池化接收)** | 835 | **270.41 ms (29.82%)** | 31 次 | 30 次 | ❌ 10 次 (劇烈) | **4.5 MB** | 2 MB | 214 MB | ❌ **GC 停頓佔 29.8%，頻繁 Gen2 GC** |
+| 🏆 **S 級** | **3. 巢狀結構**<br>*(Struct 20k)* | **Streaming (串流接收)** | **1,432** | **52.87 ms (3.62%)** | 28 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **214 MB** | 🏆 **Client 0 LOH、記憶體佔用極小** |
+| ❌ **D 級** | **3. 巢狀結構**<br>*(Struct 20k)* | **List (未池化接收)** | 1,715 | **674.42 ms (38.27%)** | 33 次 | 33 次 | ❌ 12 次 (劇烈) | **23.0 MB** | 2 MB | 216 MB | ❌ **GC 停頓高達 38.27% (674ms)** |
+| 🛡️ **B 級** | **4. 參考型別**<br>*(Class 20k)* | **Streaming (串流接收)** | **1,044** | **45.14 ms (4.28%)** | 23 次 | 2 次 | ✅ **1 次 (極低)** | **0 MB** | **2 MB** | **211 MB** | 🏆 **Client 0 LOH、停頓極短** |
+| ❌ **D 級** | **4. 參考型別**<br>*(Class 20k)* | **List (未池化接收)** | 1,640 | **575.20 ms (34.18%)** | 29 次 | 28 次 | ❌ 8 次 (劇烈) | **2.5 MB** | 2 MB | 215 MB | ❌ **GC 停頓高達 34.18% (575ms)** |
 
 ### 兩種量測方式的關鍵差異剖析：
 
