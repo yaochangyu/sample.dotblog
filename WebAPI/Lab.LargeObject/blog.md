@@ -42,7 +42,7 @@ stripH1Header: true
 
 這裡我們宣告唯讀結構 `PooledArray<T>` 封裝租借陣列：
 
-```
+```csharp
 public readonly struct PooledArray<T> : IDisposable
 {
     private readonly T[] _rented;
@@ -70,7 +70,7 @@ NOTE：若元素型別包含參考型別（如 `string` 或包含類別的 struc
 
 端點中使用 `using` 確保租用陣列用完即歸還：
 
-```
+```csharp
 app.MapPost("/api/readings", ([FromBody] PooledArray<double> readings) =>
 {
     using (readings)
@@ -89,7 +89,7 @@ app.MapPost("/api/readings", ([FromBody] PooledArray<double> readings) =>
 
 這裡使用 `DeserializeAsyncEnumerable` 進行 Request 串流解析：
 
-```
+```csharp
 app.MapPost("/api/readings-stream", async (HttpRequest request, CancellationToken ct) =>
 {
     double sum = 0;
@@ -105,6 +105,8 @@ app.MapPost("/api/readings-stream", async (HttpRequest request, CancellationToke
     return Results.Ok(new ReadingsSummary(count, sum, count == 0 ? 0 : sum / count));
 });
 ```
+
+NOTE：`DeserializeAsyncEnumerable` 底層由 `Utf8JsonReader` 狀態機嚴格檢查 JSON 語法與括號閉合。只有在單一物件完整反序列化後才會 `yield return`；若傳輸中途網路斷線或格式損毀會直接拋出 `JsonException`，絕不會讀到半殘物件。
 
 ---
 
@@ -134,7 +136,7 @@ app.MapPost("/api/readings-stream", async (HttpRequest request, CancellationToke
 1. **Response 回傳（12 組實測）**：回傳大型資料時，`IAsyncEnumerable<T>` 串流回傳全面制霸（耗時 304~787ms，GC 停頓時間大幅降低，全程 0 LOH）。
 2. **Client 端 0 LOH 接收**：Client 端若直接用 `GetFromJsonAsync<List<T>>()`，會造成 Client 端 LOH 飆升；正確寫法應配合 `ResponseHeadersRead` 與 `DeserializeAsyncEnumerable` 串流消費：
 
-```
+```csharp
 // Client 端 0 LOH 接收
 using var request = new HttpRequestMessage(HttpMethod.Get, "/api/export-stream");
 using var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
