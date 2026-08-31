@@ -1,8 +1,8 @@
 ---
-title: '[ASP.NET Core] 用 IAsyncEnumerable 處理大型物件打造低延遲、高吞吐的資料管線'
-abstract: <p>在 ASP.NET Core 接收或回傳約 1MB 以上的大型 JSON 陣列時，若直接用 <code>List&lt;T&gt;</code> 接收，底層陣列只要超過 85,000 bytes 就會直接丟進大型物件堆積（Large Object Heap, LOH）。在高並發下，這會引發頻繁的 Gen2 垃圾回收（Garbage Collection, GC）、記憶體碎片化甚至直接導致 OOM。這裡透過實測排查，示範如何用 <code>ArrayPool&lt;T&gt;</code> 池化與 <code>IAsyncEnumerable&lt;T&gt;</code> 串流解析徹底避開 LOH 與 OOM 壓力。</p>
-keywords: 
-categories: 
+title: '[ASP.NET Core] 用 IAsyncEnumerable 處理大型物件，打造低延遲、高吞吐的資料管線'
+abstract: <p>在 ASP.NET Core 接收或回傳約 1MB 以上的大型 JSON 陣列時，若直接用 <code>List&lt;T&gt;</code> 接收，底層陣列只要超過 85,000 bytes 就會直接丟進大型物件堆積（Large Object Heap, LOH）。在高並發下，這會引發頻繁的 Gen2 垃圾回收（Garbage Collection, GC）、記憶體碎片化甚至直接導致 OOM。這裡透過實測排查，示範如何用 <code>ArrayPool&lt;T&gt;</code> 池化與 <code>IAsyncEnumerable&lt;T&gt;</code> 串流解析徹底避開 LOH 與 OOM 壓力。</p><figure class="image"><img style="aspect-ratio:1376/768;" src="https://dotblogsfile.blob.core.windows.net/user/余小章/5975fd56-c2d2-4ac3-9f62-cbae71717479/1788187617.jpg.jpg" width="1376" height="768"></figure>
+keywords: ASP.NET Core,LOH
+categories: LOH
 weblogName: 余小章 @ 大內殿堂
 postId: 5975fd56-c2d2-4ac3-9f62-cbae71717479
 postDate: 2026-08-30T14:09:51.0000000
@@ -10,9 +10,7 @@ postStatus:
 dontInferFeaturedImage: false
 stripH1Header: true
 ---
-# [ASP.NET Core] 用 IAsyncEnumerable 處理大型物件打造低延遲、高吞吐的資料管線
-
-在 ASP.NET Core 接收或回傳約 1MB 以上的大型 JSON 陣列時，若直接用 `List<T>` 接收，底層陣列只要超過 85,000 bytes 就會直接丟進大型物件堆積（Large Object Heap, LOH）。在高並發下，這會引發頻繁的 Gen2 垃圾回收（Garbage Collection, GC）、記憶體碎片化甚至導致 OOM。這裡透過實測排查，示範如何用 `ArrayPool<T>` 池化與 `IAsyncEnumerable<T>` 串流解析徹底避開 LOH 與 OOM 壓力。
+# [ASP.NET Core] 用 IAsyncEnumerable 處理大型物件，打造低延遲、高吞吐的資料管線
 
 ## 開發環境
 
@@ -191,8 +189,8 @@ await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<MemberAccou
 ```
 
 1. **量測工具選擇**：
-2. 抓 **LOH 世代精確配置與短命垃圾** $\rightarrow$ 首選 **`GC.GetGCMemoryInfo()`**（In-Process）。
-3. 抓 **K8s 容器記憶體硬上限與 OOMKilled** $\rightarrow$ 首選 **`dotnet-counters`**（Out-of-Process）。
+2. 抓 **LOH 世代精確配置與短命垃圾** $\rightarrow$ 首選 `GC.GetGCMemoryInfo()`（In-Process）。
+3. 抓 **K8s 容器記憶體硬上限與 OOMKilled** $\rightarrow$ 首選 `dotnet-counters`（Out-of-Process）。
 
 ---
 
@@ -233,4 +231,4 @@ await foreach (var item in JsonSerializer.DeserializeAsyncEnumerable<MemberAccou
 
 ## 範例位置
 
-完整代碼位置: https://github.com/yaochangyu/sample.dotblog/tree/master/WebAPI/Lab.LargeObject
+完整代碼位置：<https://github.com/yaochangyu/sample.dotblog/tree/master/WebAPI/Lab.LargeObject>
