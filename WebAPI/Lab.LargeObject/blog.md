@@ -1,7 +1,7 @@
 ---
 title: '[ASP.NET Core] 用 IAsyncEnumerable 處理大型物件，打造低延遲、高吞吐的資料管線'
 abstract: <p>在 ASP.NET Core 接收或回傳約 1MB 以上的大型 JSON 陣列時，若直接用 <code>List&lt;T&gt;</code> 接收，底層陣列只要超過 85,000 bytes 就會直接丟進大型物件堆積（Large Object Heap, LOH）。在高並發下，這會引發頻繁的 Gen2 垃圾回收（Garbage Collection, GC）、記憶體碎片化甚至直接導致 OOM。這裡透過實測排查，示範如何用 <code>ArrayPool&lt;T&gt;</code> 池化與 <code>IAsyncEnumerable&lt;T&gt;</code> 串流解析徹底避開 LOH 與 OOM 壓力。</p><figure class="image"><img style="aspect-ratio:1376/768;" src="https://dotblogsfile.blob.core.windows.net/user/余小章/5975fd56-c2d2-4ac3-9f62-cbae71717479/1788187617.jpg.jpg" width="1376" height="768"></figure>
-keywords: ASP.NET Core,LOH
+keywords: ASP.NET Core,LOH,IAsyncEnumerable
 categories: LOH
 weblogName: 余小章 @ 大內殿堂
 postId: 5975fd56-c2d2-4ac3-9f62-cbae71717479
@@ -67,48 +67,6 @@ public readonly struct PooledArray<T> : IDisposable
 ```
 
 NOTE：若元素型別包含參考型別（如 `string` 或包含類別的 struct），`Return()` 時務必傳入 `clearArray: true`，避免記憶體洩漏。
-
-自訂專屬的 `JsonConverter<PooledArray<T>>` 接管反序列化：
-
-```
-public sealed class PooledDoubleArrayJsonConverter : JsonConverter<PooledArray<double>>
-{
-    public override PooledArray<double> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        var buffer = ArrayPool<double>.Shared.Rent(1024);
-        var count = 0;
-        try
-        {
-            while (reader.Read())
-            {
-                if (reader.TokenType == JsonTokenType.EndArray) return new PooledArray<double>(buffer, count);
-                if (count == buffer.Length)
-                {
-                    var newBuffer = ArrayPool<double>.Shared.Rent(buffer.Length * 2);
-                    buffer.AsSpan(0, count).CopyTo(newBuffer);
-                    ArrayPool<double>.Shared.Return(buffer, clearArray: false);
-                    buffer = newBuffer;
-                }
-                buffer[count++] = reader.GetDouble();
-            }
-            throw new JsonException("未預期的 JSON 結尾");
-        }
-        catch
-        {
-            ArrayPool<double>.Shared.Return(buffer, clearArray: false);
-            throw;
-        }
-    }
-
-    public override void Write(Utf8JsonWriter writer, PooledArray<double> value, JsonSerializerOptions options)
-    {
-        writer.WriteStartArray();
-        var span = value.Span;
-        for (var i = 0; i < span.Length; i++) writer.WriteNumberValue(span[i]);
-        writer.WriteEndArray();
-    }
-}
-```
 
 端點中使用 `using` 確保租用陣列用完即歸還：
 
