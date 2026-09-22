@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lab-api-signature-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: lab_api_signature
+    ports:
+      - "5432:5432"
+    volumes:
+      - lab-api-signature-pgdata:/var/lib/postgresql/data
+
+volumes:
+  lab-api-signature-pgdata:
