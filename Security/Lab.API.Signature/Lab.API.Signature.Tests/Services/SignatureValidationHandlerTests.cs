@@ -29,6 +29,12 @@ public class SignatureValidationHandlerTests
             var match = _client is not null && _client.ApiKey == apiKey ? _client : null;
             return Task.FromResult(Maybe<ApiKeyClient>.From(match));
         }
+
+        public Task AddAsync(ApiKeyClient client, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("這個測試替身不應該被用來新增 Client。");
+
+        public Task<IReadOnlyList<ApiKeyClient>> GetAllAsync(CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("這個測試替身不應該被用來查詢 Client 清單。");
     }
 
     private static ApiKeyClient CreateDemoClient() => new()

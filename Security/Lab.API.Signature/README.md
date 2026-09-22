@@ -65,6 +65,52 @@ X-Nonce
 X-Signature
 ```
 
+### Admin API：頒發 Key
+
+Admin API 是供內部管理工具使用的核發與查詢功能，不是對外提供的自助申請或取得 Key
+功能，也不套用 `SignatureAuthenticationMiddleware` 的 HMAC 簽章保護。它只在
+Development 環境可用，呼叫時必須帶 `X-Admin-Key` Header，值為
+`appsettings.Development.json` 中的 `AdminApiKey` 設定值。
+
+路由本身在所有環境都會由 `MapControllers()` 註冊；非 Development 環境的請求會先由
+`AdminAuthenticationMiddleware` 攔截並回傳 `404 Not Found`，讓端點對外表現得像不存在。
+Development 環境下缺少或帶錯 `X-Admin-Key` 則回傳 `401 Unauthorized`。
+
+| 方法 | 路徑 | 說明 |
+| --- | --- | --- |
+| `POST` | `/api/admin/clients` | Request Body 只需 `ClientName`；核發並回傳 `ApiKey`、`Secret`、`ClientName`、`CreatedAt`。`Secret` 只在這次回應顯示一次 |
+| `GET` | `/api/admin/clients` | 回傳已核發 Client 清單，包含 `ApiKey`、`ClientName`、`CreatedAt`，不含 `Secret` |
+
+核發範例（Development）：
+
+```bash
+curl -X POST http://localhost:5232/api/admin/clients \
+  -H 'Content-Type: application/json' \
+  -H 'X-Admin-Key: admin-dev-only-please-change' \
+  -d '{"clientName":"Partner Alpha"}'
+```
+
+回應範例：
+
+```json
+{
+  "apiKey": "key-<32碼隨機hex，範例省略>",
+  "secret": "<64碼隨機hex，僅本次回應顯示，範例省略>",
+  "clientName": "Partner Alpha",
+  "createdAt": "2026-09-23T00:00:00+00:00"
+}
+```
+
+查詢清單：
+
+```bash
+curl http://localhost:5232/api/admin/clients \
+  -H 'X-Admin-Key: admin-dev-only-please-change'
+```
+
+也可以在 Development 環境開啟 Swagger UI（<http://localhost:5232/swagger>），於
+Admin API 請求的 `X-Admin-Key` Header 填入設定值後操作。
+
 ## 簽章機制規格
 
 ### Canonical String
@@ -184,6 +230,8 @@ Swagger UI 在 Development 環境可由 <http://localhost:5232/swagger> 開啟�
 - Secret 不得輸出到 log、exception、401 response、Swagger 範例、git history
 - `appsettings.json` / `docker-compose.yml` 不得放真實 secret
 - DB backup/dump、開發者本機資料庫都等同暴露 secret
+- `AdminApiKey` 明碼放在 `appsettings.Development.json`，預設值為
+  `admin-dev-only-please-change`，僅供本機教學；正式環境需要正式的權限管控機制
 - 正式環境至少要有 Secret Manager/KMS、存取控管、輪替、稽核、加密備份策略
 
 ## 正式環境不適用的原因

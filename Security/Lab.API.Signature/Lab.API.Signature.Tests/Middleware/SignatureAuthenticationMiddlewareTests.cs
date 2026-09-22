@@ -52,6 +52,12 @@ public class SignatureAuthenticationMiddlewareTests
     {
         public Task<Maybe<ApiKeyClient>> FindByApiKeyAsync(string apiKey, CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException("便宜檢查失敗時不應該查詢 Repository。");
+
+        public Task AddAsync(ApiKeyClient client, CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("這個測試替身不應該被用來新增 Client。");
+
+        public Task<IReadOnlyList<ApiKeyClient>> GetAllAsync(CancellationToken cancellationToken = default) =>
+            throw new InvalidOperationException("這個測試替身不應該被用來查詢 Client 清單。");
     }
 
     /// <summary>只要被呼叫就讓測試失敗的假 NonceStore，用來確認驗證失敗時不會登記 Nonce。</summary>

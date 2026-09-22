@@ -65,6 +65,15 @@ builder.Services.AddSwaggerGen(options =>
         return requirement;
     };
     options.AddSecurityRequirement(securityRequirement);
+
+    const string adminKeyHeader = "X-Admin-Key";
+    options.AddSecurityDefinition(adminKeyHeader, new OpenApiSecurityScheme
+    {
+        Name = adminKeyHeader,
+        Type = SecuritySchemeType.ApiKey,
+        In = ParameterLocation.Header,
+        Description = "內部管理用 Admin Key，僅 Development 環境的 /api/admin/* 端點需要。"
+    });
 });
 builder.Services.AddDbContext<SignatureDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("SignatureDb")));
@@ -73,6 +82,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ISignatureValidationHandler, SignatureValidationHandler>();
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<INonceStore, MemoryCacheNonceStore>();
+builder.Services.AddSingleton<IApiKeyGenerator, ApiKeyGenerator>();
 
 var app = builder.Build();
 
@@ -87,6 +97,7 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.UseHttpsRedirection();
 app.UseAuthorization();
+app.UseMiddleware<AdminAuthenticationMiddleware>();
 app.UseMiddleware<SignatureAuthenticationMiddleware>();
 app.MapControllers();
 
