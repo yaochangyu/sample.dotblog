@@ -257,7 +257,9 @@ Swagger UI 在 Development 環境可由 <http://localhost:5232/swagger> 開啟�
 
 ## 執行測試
 
-測試使用 Reqnroll BDD、`WebApplicationFactory` 與 Testcontainers PostgreSQL，會啟動真正的 PostgreSQL container，因此本機必須有 Docker 支援。
+測試使用 Reqnroll BDD、`WebApplicationFactory` 與 Testcontainers PostgreSQL。執行測試前**不需要**手動啟動測試環境，也不用先執行 `task db-up`：BDD 測試會透過 Testcontainers 自動啟動、管理並在測試結束後清除自己的獨立 PostgreSQL 16 容器。這個臨時容器與本機開發使用的 `docker-compose.yml` 容器是分開的兩回事。
+
+執行測試唯一的前提是本機 Docker daemon 正在執行且可以連線；不需要預先啟動 `lab-api-signature-postgres`。
 
 在本目錄執行：
 
@@ -266,5 +268,13 @@ task test           # 全部測試（單元 + BDD），等同於 dotnet test
 task test-unit       # 只跑單元測試，不需要 Docker
 task test-integration # 只跑 BDD 整合測試
 ```
+
+如果想確認 BDD 測試確實啟動並清除 Testcontainers 容器，可以使用詳細輸出：
+
+```bash
+dotnet test --filter "FullyQualifiedName~Lab.Signature.WebApi.Tests.Features" --logger "console;verbosity=detailed"
+```
+
+輸出中可看到 `testcontainers.org` 的容器建立、`pg_isready` readiness 檢查與容器清除紀錄。
 
 測試涵蓋正常 GET/POST、Body 竄改、Replay、過期 Timestamp、未知 ApiKey、缺少 Header、錯誤格式、Query String、空 body hash、不同 ApiKey 共用 Nonce、同一 Nonce 的併發請求，以及 Middleware 便宜檢查是否真的在讀 body 之前就攔截、Payload 超過大小上限等安全邊界。
