@@ -1,0 +1,6 @@
+@Lab.Signature.WebApi_HostAddress = http://localhost:5232
+
+GET {{Lab.Signature.WebApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
