@@ -179,7 +179,7 @@ task db-up
 
 ```bash
 task ef-database-update
-# 等同於：cd Lab.Signature.WebApi && dotnet ef database update
+# 等同於：cd src/Lab.Signature.WebApi && dotnet ef database update
 ```
 
 Migration 會建立 `ApiKeyClients` 資料表，並加入三組僅供本機教學使用的 demo 憑證：
@@ -196,7 +196,7 @@ Migration 會建立 `ApiKeyClients` 資料表，並加入三組僅供本機教�
 
 ```bash
 task api-dev
-# 等同於：cd Lab.Signature.WebApi && dotnet run
+# 等同於：cd src/Lab.Signature.WebApi && dotnet run
 ```
 
 HTTP profile 預設監聽 `http://localhost:5232`。

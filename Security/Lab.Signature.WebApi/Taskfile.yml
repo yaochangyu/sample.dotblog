@@ -1,7 +1,7 @@
 version: '3'
 
 vars:
-  API_DIR: Lab.Signature.WebApi
+  API_DIR: src/Lab.Signature.WebApi
 
 tasks:
   default:
