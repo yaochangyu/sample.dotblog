@@ -6,11 +6,18 @@
 Lab.API.Signature/
 ├── README.md                                  # 專案介紹、架構、簽章規格、啟動與風險說明
 ├── tree.md                                    # 本檔案：專案結構與檔案用途
+├── doc/
+│   ├── key-application-guide.md               # 給業務與內部人員的 API Key 申請、交付與驗證說明
+│   ├── key-application-form-example.md        # API Key 人工申請單的空白表格與填寫範例
+│   ├── key-application-process.md             # API Key 申請、審核、核發與安全交付流程
+│   ├── signature-generation-and-verification.md # Client 產生與 Server 驗證 HMAC 簽章
+│   └── protected-api-verification.md          # 受保護 API 請求的完整驗證流程
 ├── api-signature-protection-2026-09-21.plan.md # API 簽章保護 Lab 的完整執行計畫
-├── admin-key-issuance-2026-09-23.plan.md      # Admin API Key 頒發機制的完整執行計畫
 ├── docker-compose.yml                         # 本機 PostgreSQL 16 容器與 volume 設定
 ├── Taskfile.yml                               # task CLI 指令封裝（build/test/db-up/api-dev 等）
 ├── Lab.API.Signature.sln                      # .NET solution，包含 API 與測試專案
+├── .archive/
+│   └── admin-key-issuance-2026-09-23.plan.md  # Admin API Key 頒發機制的完整執行計畫（已完成封存）
 ├── .issues/
 │   ├── worker2-plan-review-2026-09-21.md      # 計畫審核與設計補強紀錄
 │   └── worker2-admin-key-review-2026-09-23.md # Admin Key 功能審查與修正紀錄
