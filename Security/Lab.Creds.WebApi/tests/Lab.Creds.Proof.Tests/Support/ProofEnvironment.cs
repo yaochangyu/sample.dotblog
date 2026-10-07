@@ -28,8 +28,14 @@ public static class ProofEnvironment
     public static Uri GatewayApiUri { get; private set; } = null!;
     public static WebApplication AuthServer => _authServer!;
 
+    // Each test step owns one CancellationTokenSource with this timeout (xUnit v2 / Reqnroll expose no scenario-level token).
+    public static readonly TimeSpan OperationTimeout = TimeSpan.FromSeconds(30);
+
     public static async Task StartAsync()
     {
+        // Bounded startup (image pull and container boot included).
+        using var startup = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        var cancellationToken = startup.Token;
         Certificates = new TestCertificates();
         PartnerA = Certificates.CreateClientCertificate("partner-a");
         PartnerB = Certificates.CreateClientCertificate("partner-b");
@@ -37,7 +43,7 @@ public static class ProofEnvironment
         ApiIdentity = Certificates.CreateClientCertificate("partner-api");
 
         _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
-        await _postgres.StartAsync();
+        await _postgres.StartAsync(cancellationToken);
 
         _authServer = ProofHosts.CreateAuthServer(new AuthServerOptions(
             Certificates.Server,
@@ -47,7 +53,7 @@ public static class ProofEnvironment
                 new ProofClient("partner-b", TestCertificates.PublicOnly(PartnerB), [ProofDefaults.SubmitScope]),
                 new ProofClient(ProofDefaults.Audience, TestCertificates.PublicOnly(ApiIdentity), [], CanIntrospect: true)
             ]));
-        await _authServer.StartAsync();
+        await _authServer.StartAsync(cancellationToken);
         AuthServerUri = AddressOf(_authServer);
 
         _api = ProofHosts.CreateApi(new ApiOptions(
@@ -56,7 +62,7 @@ public static class ProofEnvironment
             ProofDefaults.Audience,
             ApiIdentity,
             [Certificates.Root]));
-        await _api.StartAsync();
+        await _api.StartAsync(cancellationToken);
         ApiUri = AddressOf(_api);
 
         _gatewayApi = ProofHosts.CreateApi(new ApiOptions(
@@ -66,22 +72,34 @@ public static class ProofEnvironment
             ApiIdentity,
             [Certificates.Root],
             Gateway: new GatewayTrustOptions(TestCertificates.PublicOnly(Certificates.Gateway))));
-        await _gatewayApi.StartAsync();
+        await _gatewayApi.StartAsync(cancellationToken);
         GatewayApiUri = AddressOf(_gatewayApi);
 
         _envoy = new EnvoyGateway();
-        await _envoy.StartAsync(EnvoyGateway.RenderConfig(Certificates, GatewayApiUri.Port, [PartnerA, PartnerB]));
+        var envoyConfig = await EnvoyGateway.RenderConfigAsync(Certificates, GatewayApiUri.Port, [PartnerA, PartnerB], cancellationToken);
+        await _envoy.StartAsync(envoyConfig, cancellationToken);
         GatewayUri = _envoy.Uri;
     }
 
     public static async Task StopAsync()
     {
-        if (_envoy is not null) await _envoy.DisposeAsync();
-        if (_gatewayApi is not null) await _gatewayApi.DisposeAsync();
-        if (_api is not null) await _api.DisposeAsync();
-        if (_authServer is not null) await _authServer.DisposeAsync();
-        if (_postgres is not null) await _postgres.DisposeAsync();
-        Certificates?.Dispose();
+        // Cleanup has its own bounded token, independent of startup/step tokens that may already be cancelled.
+        using var cleanup = new CancellationTokenSource(TimeSpan.FromMinutes(1));
+        var cancellationToken = cleanup.Token;
+        var steps = new List<Func<Task>>();
+        if (_envoy is not null) steps.Add(() => _envoy.StopAsync(cancellationToken));
+        if (_gatewayApi is not null) steps.Add(() => _gatewayApi.StopAsync(cancellationToken));
+        if (_api is not null) steps.Add(() => _api.StopAsync(cancellationToken));
+        if (_authServer is not null) steps.Add(() => _authServer.StopAsync(cancellationToken));
+        if (_postgres is not null) steps.Add(() => _postgres.StopAsync(cancellationToken));
+        // DisposeAsync has no token; every owned resource is still disposed even if a stop failed or timed out.
+        if (_envoy is not null) steps.Add(() => _envoy.DisposeAsync().AsTask());
+        if (_gatewayApi is not null) steps.Add(() => _gatewayApi.DisposeAsync().AsTask());
+        if (_api is not null) steps.Add(() => _api.DisposeAsync().AsTask());
+        if (_authServer is not null) steps.Add(() => _authServer.DisposeAsync().AsTask());
+        if (_postgres is not null) steps.Add(() => _postgres.DisposeAsync().AsTask());
+        steps.Add(() => { Certificates?.Dispose(); return Task.CompletedTask; });
+        await CleanupRunner.RunAsync(steps);
     }
 
     // Real TLS validation: the server certificate must chain to the generated test root.

@@ -24,7 +24,7 @@ public static class ProofHosts
         ConfigureKestrel(builder, options.ServerCertificate);
 
         builder.Services.AddSingleton(options);
-        builder.Services.AddDbContext<ProofDbContext>(db =>
+        builder.Services.AddDbContextFactory<ProofDbContext>(db =>
         {
             db.UseNpgsql(options.ConnectionString);
             db.UseOpenIddict();
@@ -51,11 +51,12 @@ public static class ProofHosts
 
         app.MapPost("/connect/token", async (HttpContext context, IOpenIddictApplicationManager applications) =>
         {
+            var cancellationToken = context.RequestAborted;
             var request = context.GetOpenIddictServerRequest()!;
-            var application = (await applications.FindByClientIdAsync(request.ClientId!))!;
+            var application = (await applications.FindByClientIdAsync(request.ClientId!, cancellationToken))!;
 
             var identity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType, Claims.Name, Claims.Role);
-            identity.SetClaim(Claims.Subject, await applications.GetClientIdAsync(application));
+            identity.SetClaim(Claims.Subject, await applications.GetClientIdAsync(application, cancellationToken));
             var principal = new ClaimsPrincipal(identity);
             principal.SetScopes(request.GetScopes());
             principal.SetResources(options.Audience);
@@ -112,7 +113,7 @@ public static class ProofHosts
         app.MapPost("/partner/inspect/{**rest}", async (HttpContext http) =>
             {
                 using var body = new MemoryStream();
-                await http.Request.Body.CopyToAsync(body);
+                await http.Request.Body.CopyToAsync(body, http.RequestAborted);
                 var certificate = http.Connection.ClientCertificate;
                 var headers = new[] { "content-digest", "signature-input", "signature", "content-type" }
                     .Where(http.Request.Headers.ContainsKey)

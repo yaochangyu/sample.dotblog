@@ -58,12 +58,15 @@ public sealed class IntrospectionSteps(ScenarioState state, TokenSteps tokenStep
 
     private async Task Introspect(string clientId, X509Certificate2? certificate)
     {
+        using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
+        var cancellationToken = timeout.Token;
+
         using var client = ProofEnvironment.CreateClient(ProofEnvironment.AuthServerUri, certificate);
         _response = await client.PostAsync("/connect/introspect", new FormUrlEncodedContent(
         [
             new("client_id", clientId),
             new("token", state.AccessToken!)
-        ]));
-        _body = await _response.Content.ReadAsStringAsync();
+        ]), cancellationToken);
+        _body = await _response.Content.ReadAsStringAsync(cancellationToken);
     }
 }

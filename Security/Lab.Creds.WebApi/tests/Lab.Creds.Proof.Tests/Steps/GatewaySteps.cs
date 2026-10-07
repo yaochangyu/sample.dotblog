@@ -48,6 +48,9 @@ public sealed class GatewaySteps(ScenarioState state)
     [When("受信 Gateway 測試憑證直連 API 並帶上 {string} 的轉送憑證標頭")]
     public async Task WhenTrustedGatewayWithXfcc(string scenario)
     {
+        using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
+        var cancellationToken = timeout.Token;
+
         var good = $"Cert=\"{Uri.EscapeDataString(ProofEnvironment.PartnerA.ExportCertificatePem())}\"";
         var other = $"Cert=\"{Uri.EscapeDataString(ProofEnvironment.PartnerB.ExportCertificatePem())}\"";
         string[] values = scenario switch
@@ -72,8 +75,8 @@ public sealed class GatewaySteps(ScenarioState state)
             request.Headers.TryAddWithoutValidation("X-Forwarded-Client-Cert", values);
         }
 
-        _response = await client.SendAsync(request);
-        _body = await _response.Content.ReadAsStringAsync();
+        _response = await client.SendAsync(request, cancellationToken);
+        _body = await _response.Content.ReadAsStringAsync(cancellationToken);
     }
 
     [Then("Gateway 後的 API 回應 401 且不接受請求")]
@@ -115,13 +118,16 @@ public sealed class GatewaySteps(ScenarioState state)
     [Then("API 所見的 Client 憑證 x5t#S256 等於 token 的 cnf 與 partner-a 憑證指紋")]
     public async Task ThenCertificateMatchesCnf()
     {
+        using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
+        var cancellationToken = timeout.Token;
+
         using var json = JsonDocument.Parse(_body!);
         var observed = json.RootElement.GetProperty("clientCertificateX5tS256").GetString();
 
         using var authServer = ProofEnvironment.CreateClient(ProofEnvironment.AuthServerUri, ProofEnvironment.ApiIdentity);
         var introspection = await authServer.PostAsync("/connect/introspect", new FormUrlEncodedContent(
-            [new("client_id", ProofDefaults.Audience), new("token", state.AccessToken!)]));
-        using var introspected = JsonDocument.Parse(await introspection.Content.ReadAsStringAsync());
+            [new("client_id", ProofDefaults.Audience), new("token", state.AccessToken!)]), cancellationToken);
+        using var introspected = JsonDocument.Parse(await introspection.Content.ReadAsStringAsync(cancellationToken));
         var cnf = introspected.RootElement.GetProperty("cnf").GetProperty("x5t#S256").GetString();
 
         Assert.Equal(cnf, observed);
@@ -168,6 +174,9 @@ public sealed class GatewaySteps(ScenarioState state)
         X509Certificate2? certificate, string? accessToken, string rawPathAndQuery,
         IDictionary<string, string> headers, byte[] body)
     {
+        using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
+        var cancellationToken = timeout.Token;
+
         using var client = ProofEnvironment.CreateClient(ProofEnvironment.GatewayUri, certificate);
         using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(rawPathAndQuery, UriKind.Relative))
         {
@@ -182,8 +191,8 @@ public sealed class GatewaySteps(ScenarioState state)
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         try
         {
-            _response = await client.SendAsync(request);
-            _body = await _response.Content.ReadAsStringAsync();
+            _response = await client.SendAsync(request, cancellationToken);
+            _body = await _response.Content.ReadAsStringAsync(cancellationToken);
         }
         catch (HttpRequestException exception)
         {
@@ -211,6 +220,9 @@ public sealed class GatewaySteps(ScenarioState state)
 
     private async Task Submit(X509Certificate2? certificate, string? accessToken, IDictionary<string, string>? extraHeaders = null, Uri? baseAddress = null)
     {
+        using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
+        var cancellationToken = timeout.Token;
+
         using var client = ProofEnvironment.CreateClient(baseAddress ?? ProofEnvironment.GatewayUri, certificate);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/partner/submissions")
         {
@@ -228,8 +240,8 @@ public sealed class GatewaySteps(ScenarioState state)
 
         try
         {
-            _response = await client.SendAsync(request);
-            _body = await _response.Content.ReadAsStringAsync();
+            _response = await client.SendAsync(request, cancellationToken);
+            _body = await _response.Content.ReadAsStringAsync(cancellationToken);
         }
         catch (HttpRequestException exception)
         {

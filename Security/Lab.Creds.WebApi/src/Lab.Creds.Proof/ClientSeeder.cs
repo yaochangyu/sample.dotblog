@@ -6,12 +6,17 @@ using static OpenIddict.Abstractions.OpenIddictConstants;
 namespace Lab.Creds.Proof;
 
 // Registers each Client identity with its own self-signed TLS certificate (public part only).
-internal sealed class ClientSeeder(IServiceProvider services, AuthServerOptions options) : IHostedService
+internal sealed class ClientSeeder(
+    IServiceProvider services, IDbContextFactory<ProofDbContext> contextFactory, AuthServerOptions options) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        await using (var context = await contextFactory.CreateDbContextAsync(cancellationToken))
+        {
+            await context.Database.EnsureCreatedAsync(cancellationToken);
+        }
+
         await using var scope = services.CreateAsyncScope();
-        await scope.ServiceProvider.GetRequiredService<ProofDbContext>().Database.EnsureCreatedAsync(cancellationToken);
         var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
 
         foreach (var client in options.Clients)

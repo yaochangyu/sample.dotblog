@@ -25,14 +25,16 @@ public sealed class TokenSteps(ScenarioState state)
     [When("該服務以 mTLS 對 token 端點發出 client_credentials 請求")]
     public async Task WhenRequestToken()
     {
+        using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
+        var cancellationToken = timeout.Token;
         using var client = ProofEnvironment.CreateClient(ProofEnvironment.AuthServerUri, state.ClientCertificate);
         state.TokenResponse = await client.PostAsync("/connect/token", new FormUrlEncodedContent(
         [
             new("grant_type", "client_credentials"),
             new("client_id", state.ClientId!),
             new("scope", ProofDefaults.SubmitScope)
-        ]));
-        state.TokenBody = await state.TokenResponse.Content.ReadAsStringAsync();
+        ]), cancellationToken);
+        state.TokenBody = await state.TokenResponse.Content.ReadAsStringAsync(cancellationToken);
     }
 
     [Then("token 端點回應 200 且 token_type 為 Bearer")]

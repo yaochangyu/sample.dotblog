@@ -16,10 +16,10 @@ public sealed class EnvoyGateway : IAsyncDisposable
 
     public Uri Uri { get; private set; } = null!;
 
-    public static string RenderConfig(
-        TestCertificates certificates, int apiPort, IEnumerable<X509Certificate2> allowedClients)
+    public static async Task<string> RenderConfigAsync(
+        TestCertificates certificates, int apiPort, IEnumerable<X509Certificate2> allowedClients, CancellationToken cancellationToken)
     {
-        var template = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Support", "envoy.template.yaml"));
+        var template = await File.ReadAllTextAsync(Path.Combine(AppContext.BaseDirectory, "Support", "envoy.template.yaml"), cancellationToken);
         var allowlist = string.Join(Environment.NewLine,
             new[] { "              verify_certificate_hash:" }
                 .Concat(allowedClients.Select(c => $"              - \"{Convert.ToHexString(SHA256.HashData(c.RawData))}\"")));
@@ -34,7 +34,7 @@ public sealed class EnvoyGateway : IAsyncDisposable
             .Replace("{{API_PORT}}", apiPort.ToString());
     }
 
-    public async Task StartAsync(string config)
+    public async Task StartAsync(string config, CancellationToken cancellationToken)
     {
         _container = new ContainerBuilder(Image)
             .WithExtraHost("host.docker.internal", "host-gateway")
@@ -42,9 +42,12 @@ public sealed class EnvoyGateway : IAsyncDisposable
             .WithResourceMapping(System.Text.Encoding.UTF8.GetBytes(config), "/etc/envoy/envoy.yaml")
             .WithWaitStrategy(Wait.ForUnixContainer().UntilMessageIsLogged("starting main dispatch loop"))
             .Build();
-        await _container.StartAsync();
+        await _container.StartAsync(cancellationToken);
         Uri = new Uri($"https://localhost:{_container.GetMappedPublicPort(IngressPort)}");
     }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+        => _container is null ? Task.CompletedTask : _container.StopAsync(cancellationToken);
 
     public async ValueTask DisposeAsync()
     {

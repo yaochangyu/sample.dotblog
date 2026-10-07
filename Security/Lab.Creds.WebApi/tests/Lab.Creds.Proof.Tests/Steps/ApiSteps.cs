@@ -41,11 +41,14 @@ public sealed class ApiSteps(ScenarioState state)
     [When("授權伺服器撤銷該 token")]
     public async Task WhenRevoke()
     {
+        using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
+        var cancellationToken = timeout.Token;
+
         using var scope = ProofEnvironment.AuthServer.Services.CreateAsyncScope();
         var tokens = scope.ServiceProvider.GetRequiredService<OpenIddict.Abstractions.IOpenIddictTokenManager>();
-        var token = await tokens.FindByReferenceIdAsync(state.AccessToken!);
+        var token = await tokens.FindByReferenceIdAsync(state.AccessToken!, cancellationToken);
         Assert.NotNull(token);
-        Assert.True(await tokens.TryRevokeAsync(token!));
+        Assert.True(await tokens.TryRevokeAsync(token!, cancellationToken));
     }
 
     [Then("同一憑證與 token 再次呼叫 API 回應 401")]
@@ -83,18 +86,24 @@ public sealed class ApiSteps(ScenarioState state)
 
     private async Task RequestToken(X509Certificate2? certificate)
     {
+        using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
+        var cancellationToken = timeout.Token;
+
         using var client = ProofEnvironment.CreateClient(ProofEnvironment.AuthServerUri, certificate);
         _response = await client.PostAsync("/connect/token", new FormUrlEncodedContent(
         [
             new("grant_type", "client_credentials"),
             new("client_id", "partner-a"),
             new("scope", ProofDefaults.SubmitScope)
-        ]));
-        _body = await _response.Content.ReadAsStringAsync();
+        ]), cancellationToken);
+        _body = await _response.Content.ReadAsStringAsync(cancellationToken);
     }
 
     private async Task Submit(X509Certificate2? certificate, string? accessToken)
     {
+        using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
+        var cancellationToken = timeout.Token;
+
         using var client = ProofEnvironment.CreateClient(ProofEnvironment.ApiUri, certificate);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/partner/submissions")
         {
@@ -105,7 +114,7 @@ public sealed class ApiSteps(ScenarioState state)
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         }
 
-        _response = await client.SendAsync(request);
-        _body = await _response.Content.ReadAsStringAsync();
+        _response = await client.SendAsync(request, cancellationToken);
+        _body = await _response.Content.ReadAsStringAsync(cancellationToken);
     }
 }
