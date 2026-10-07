@@ -1,6 +1,6 @@
 # Lab.Creds.Proof 可重現驗證說明
 
-本文件記錄 `Security/Lab.Creds.WebApi` 專案中 Ticket 01 之 proof 可重現環境、架構契約與驗證指令，供後續開發與審查獨立復現，不依賴本機 session 絕對路徑。
+本文件記錄 `Security/Lab.Creds.WebApi` 專案中 Ticket 01／02 之 proof 可重現環境、架構契約與驗證指令，供後續開發與審查獨立復現，不依賴本機 session 絕對路徑。
 
 ---
 
@@ -25,7 +25,7 @@
 # 建置（0 Warning / 0 Error）
 dotnet build tests/Lab.Creds.Proof.Tests/Lab.Creds.Proof.Tests.csproj --nologo
 
-# 執行驗證測試（全數 29 項測試通過）
+# 執行驗證測試（全數 41 項測試通過）
 dotnet test tests/Lab.Creds.Proof.Tests/Lab.Creds.Proof.Tests.csproj --nologo --no-build
 ```
 
@@ -65,22 +65,33 @@ Caller ──── mTLS (RSA-2048 自簽憑證, SHA-256 allowlist) ────
 
 ---
 
-## 5. 測試組成（共 29 測試）
+## 5. 測試組成（共 41 測試）
 
-測試套件共包含 **29 項測試**（非 29 項 BDD）：
-- **27 項 Reqnroll BDD 情境**：
-  - 12 項 Client Credentials mTLS 基礎情境（`ClientCredentialsMtls.feature`、`ProtectedApi.feature`）
-  - 15 項 Gateway Envoy 整合情境（`GatewayEnvoy.feature`，涵蓋合規 Gateway 呼叫、憑證不符拒絕、防繞過拒絕、原始資訊比對，以及 6 項 XFCC 負面解析測試）
+測試套件共包含 **41 項測試**（Ticket 01 基線 29 項 + Ticket 02 新增 12 項；非全為 BDD）：
+- **39 項 Reqnroll BDD 情境**（5 + 12 + 22 = 39）：
+  - 5 項 Client Credentials mTLS 情境（`ClientCredentialsMtls.feature`，含 Ticket 02 新增的 5 分鐘效期）
+  - 12 項受保護 API 情境（`ProtectedApi.feature`，含 Ticket 02 新增的過期後重新取 token、無效 token、錯誤目標 API、無 client_secret 入口）
+  - 22 項 Gateway Envoy 情境（`GatewayEnvoy.feature`：10 個一般情境 + 12 個 XFCC 負面 Scenario Outline 範例；含 Ticket 02 新增的 6 個嚴格 XFCC 範例與 Body／標頭身分宣稱情境）
+  - 歷史基線（Ticket 01）為 29 項 = 27 BDD + 2 單元；Ticket 02 新增 12 項 BDD，現況合計 41 項。
 - **2 項 CleanupRunner 單元測試**：
   - `CleanupRunnerTests.cs`（驗證受控資源清理在步驟拋出例外時仍依序執行後續清理，並完整保留原始例外與堆疊）
 - **程式碼生成**：Reqnroll 生成檔案置於 `obj/`（設定 `ReqnrollUseIntermediateOutputPathForCodeBehind=true`），不追蹤 `.feature.cs` 程式碼。
 
 ---
 
+## 5.1 Ticket 02 契約與決策
+
+- **Token 效期**：Lab Opaque Access Token 有效期 5 分鐘（`ProofDefaults.AccessTokenLifetime`）。到期後重新以 Client Credentials（mTLS）取得；不使用 Refresh Token；不以自然到期取代 60 秒撤銷要求（撤銷屬後續 ticket）。
+- **效期驗證**：以真實協定驗證 `expires_in` 介於 299–300 秒、introspection `exp − iat` 恰為 300 秒；過期以將該 token 的資料庫 `ExpirationDate` 改為過去來驗證（不 sleep 5 分鐘、不縮短 production TTL），並驗證過期 token 被拒絕、重新取得後成功。
+- **憑證入口**：每個示範 Client 有獨立 RSA-2048 自簽憑證；無 API Key / Client Secret 替代入口（只帶 `client_secret` 不能取得 token）。
+- **目標 API**：token audience 為 `partner-api`；以 audience 為 `inventory-api` 的另一個 API 呼叫會被拒絕。
+- **XFCC 嚴格格式**：僅接受 Envoy v1.39.3 實際輸出的單一元素 `Hash=<sha256 hex>;Cert="<URL-encoded PEM>"`；Hash 必須等於憑證 SHA-256，Cert 須嚴格百分比編碼並解出恰一張 PEM 憑證；其餘（缺 Hash、Hash 不符、附加欄位、多張憑證、非法編碼、重複標頭等）一律 401。
+- **階段限制**：尚無 HTTP Message Signatures、nonce/防重放、Idempotency、完整業務授權、60 秒撤銷 SLA、HA/SDS、憑證輪替。
+
 ## 6. 限制、未驗項目與歷史誠實性
 
 1. **Proof 專用端點**：`/partner/inspect/{**rest}` 為 proof 診斷端點，用以驗證轉送指紋與原始請求欄位，不屬於正式開放合約（未列於 `doc/openapi.yml`）。
-2. **XFCC 解析器限制**：目前以 regex 解析，已實測無標頭、非 PEM、損毀 PEM、缺 Cert、重複標頭、多 Cert 皆拒絕（401）；正式實作須保留嚴格解析不變式（拒絕多 Cert、重複標頭、非 PEM，禁止 first-wins）。
+2. **XFCC 解析器**：已改為針對 Envoy v1.39.3 實際格式的嚴格單一元素解析（見 5.1）；僅適用於 Envoy `SANITIZE_SET` + `cert: true` 的輸出，不是完整 XFCC grammar。
 3. **生產級能力未定**：Gateway 高可用（HA）、動態 xDS/SDS、動態憑證輪替等生產環境配置未驗證。
 4. **後續 Tickets 驗收項目**：60 秒完整撤銷（含長連線）、服務故障 fail-closed、HTTP Message Signatures 驗簽/nonce/去重/輪替皆為後續票（03–10）範圍。
 5. **歷史紀錄誠信**：S2、G3 及前四項 XFCC 補測非 red-first（G3 當時已有 SANITIZE_SET，補測以變異測試驗證敏感度；前四項 XFCC 補測因既有程式碼已通過故為 green-first），如實記錄不虛構 red 歷程。

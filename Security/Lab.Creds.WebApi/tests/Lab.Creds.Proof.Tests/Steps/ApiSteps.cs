@@ -10,7 +10,7 @@ using Xunit;
 namespace Lab.Creds.Proof.Tests.Steps;
 
 [Binding]
-public sealed class ApiSteps(ScenarioState state)
+public sealed class ApiSteps(ScenarioState state, TokenSteps tokenSteps)
 {
     private HttpResponseMessage? _response;
     private string? _body;
@@ -51,6 +51,46 @@ public sealed class ApiSteps(ScenarioState state)
         Assert.True(await tokens.TryRevokeAsync(token!, cancellationToken));
     }
 
+    [When("該 token 的有效期限已到期")]
+    public async Task WhenExpired()
+    {
+        using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
+        var cancellationToken = timeout.Token;
+
+        using var scope = ProofEnvironment.AuthServer.Services.CreateAsyncScope();
+        var tokens = scope.ServiceProvider.GetRequiredService<OpenIddict.Abstractions.IOpenIddictTokenManager>();
+        var token = await tokens.FindByReferenceIdAsync(state.AccessToken!, cancellationToken);
+        Assert.NotNull(token);
+        var descriptor = new OpenIddict.Abstractions.OpenIddictTokenDescriptor();
+        await tokens.PopulateAsync(descriptor, token!, cancellationToken);
+        descriptor.ExpirationDate = DateTimeOffset.UtcNow.AddSeconds(-1);
+        await tokens.UpdateAsync(token!, descriptor, cancellationToken);
+    }
+
+    [When("該服務重新以 mTLS 取得 token")]
+    public async Task WhenReissue()
+    {
+        await tokenSteps.WhenRequestToken();
+        tokenSteps.ThenBearer();
+    }
+
+    [Then("該服務以新 token 對 API 提交合作廠商資料回應 202")]
+    public async Task ThenNewTokenAccepted()
+    {
+        await Submit(state.ClientCertificate, state.AccessToken);
+        ThenStatus(202);
+    }
+
+    [When("該服務以同一憑證與無效 token 對 API 提交合作廠商資料")]
+    public Task WhenInvalidToken() => Submit(state.ClientCertificate, "not-a-valid-token");
+
+    [When("該服務以同一憑證和 token 對目標為 {string} 的另一個 API 提交合作廠商資料")]
+    public Task WhenOtherTarget(string audience)
+        => Submit(state.ClientCertificate, state.AccessToken, audience == "inventory-api" ? ProofEnvironment.OtherApiUri : throw new ArgumentException(audience));
+
+    [When("沒有出示憑證的呼叫端以 partner-a 的 client_id 與 client_secret 對 token 端點發出請求")]
+    public Task WhenTokenClientSecret() => RequestToken(null, new KeyValuePair<string, string>("client_secret", "guessed-secret"));
+
     [Then("同一憑證與 token 再次呼叫 API 回應 401")]
     public async Task ThenRevokedRejected()
     {
@@ -84,7 +124,7 @@ public sealed class ApiSteps(ScenarioState state)
         Assert.Equal(error, json.RootElement.GetProperty("error").GetString());
     }
 
-    private async Task RequestToken(X509Certificate2? certificate)
+    private async Task RequestToken(X509Certificate2? certificate, params KeyValuePair<string, string>[] extra)
     {
         using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
         var cancellationToken = timeout.Token;
@@ -94,17 +134,18 @@ public sealed class ApiSteps(ScenarioState state)
         [
             new("grant_type", "client_credentials"),
             new("client_id", "partner-a"),
-            new("scope", ProofDefaults.SubmitScope)
+            new("scope", ProofDefaults.SubmitScope),
+            ..extra
         ]), cancellationToken);
         _body = await _response.Content.ReadAsStringAsync(cancellationToken);
     }
 
-    private async Task Submit(X509Certificate2? certificate, string? accessToken)
+    private async Task Submit(X509Certificate2? certificate, string? accessToken, Uri? baseAddress = null)
     {
         using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
         var cancellationToken = timeout.Token;
 
-        using var client = ProofEnvironment.CreateClient(ProofEnvironment.ApiUri, certificate);
+        using var client = ProofEnvironment.CreateClient(baseAddress ?? ProofEnvironment.ApiUri, certificate);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/partner/submissions")
         {
             Content = new StringContent("""{"partnerName":"Acme","payload":"demo"}""", Encoding.UTF8, "application/json")

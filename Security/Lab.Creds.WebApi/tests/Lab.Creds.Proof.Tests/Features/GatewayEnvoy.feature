@@ -62,3 +62,14 @@ Feature: Envoy Gateway 終止 mTLS 後 API 仍以原始 Client 憑證判斷 (Tic
       | 缺少 Cert 欄位     |
       | 重複的標頭         |
       | 多個 Cert 項目     |
+      | 缺少 Hash 欄位     |
+      | Hash 與憑證不符    |
+      | Cert 後附加其他欄位 |
+      | 同一 Cert 內含兩張憑證 |
+      | 非法的百分比編碼   |
+      | Cert 值內含未編碼空白 |
+
+  Scenario: Body 與標頭宣稱其他 Client 時仍以憑證驗證結果為準
+    Given 呼叫服務 "partner-a" 已以其憑證取得 reference token
+    When 該服務以同一憑證和 token 經 Gateway 提交宣稱自己是 "partner-b" 的合作廠商資料
+    Then Gateway 後的 API 回應 202 並回報已驗證 Client 為 "partner-a"

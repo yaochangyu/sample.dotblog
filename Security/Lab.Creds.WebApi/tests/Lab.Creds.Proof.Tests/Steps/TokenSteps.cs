@@ -46,6 +46,14 @@ public sealed class TokenSteps(ScenarioState state)
         state.AccessToken = json.RootElement.GetProperty("access_token").GetString();
     }
 
+    [Then("token 回應的 expires_in 介於 {int} 到 {int} 秒")]
+    public void ThenExpiresIn(int min, int max)
+    {
+        using var json = JsonDocument.Parse(state.TokenBody!);
+        var expiresIn = json.RootElement.GetProperty("expires_in").GetInt32();
+        Assert.InRange(expiresIn, min, max);
+    }
+
     [Then("access_token 為 opaque reference token 而非 JWT")]
     public void ThenOpaque()
     {

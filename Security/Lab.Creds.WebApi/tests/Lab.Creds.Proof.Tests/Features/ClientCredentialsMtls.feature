@@ -24,3 +24,9 @@ Feature: mTLS Client Credentials 核發憑證綁定的 opaque token (Ticket 01 p
     Given 呼叫服務 "partner-a" 已以其憑證取得 reference token
     When 沒有出示任何憑證的 "partner-api" 對 introspection 端點查詢該 token
     Then introspection 端點拒絕請求
+
+  Scenario: token 有效期為 5 分鐘
+    Given 呼叫服務 "partner-a" 已以其憑證取得 reference token
+    Then token 回應的 expires_in 介於 299 到 300 秒
+    When resource server "partner-api" 以其已註冊憑證 mTLS 對 introspection 端點查詢該 token
+    Then introspection 回應的 exp 減 iat 恰為 300 秒

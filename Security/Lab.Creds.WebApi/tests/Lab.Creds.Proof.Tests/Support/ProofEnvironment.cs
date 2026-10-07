@@ -14,6 +14,7 @@ public static class ProofEnvironment
     private static PostgreSqlContainer? _postgres;
     private static WebApplication? _authServer;
     private static WebApplication? _api;
+    private static WebApplication? _otherApi;
     private static WebApplication? _gatewayApi;
     private static EnvoyGateway? _envoy;
 
@@ -24,6 +25,7 @@ public static class ProofEnvironment
     public static X509Certificate2 ApiIdentity { get; private set; } = null!;
     public static Uri AuthServerUri { get; private set; } = null!;
     public static Uri ApiUri { get; private set; } = null!;
+    public static Uri OtherApiUri { get; private set; } = null!;
     public static Uri GatewayUri { get; private set; } = null!;
     public static Uri GatewayApiUri { get; private set; } = null!;
     public static WebApplication AuthServer => _authServer!;
@@ -65,6 +67,17 @@ public static class ProofEnvironment
         await _api.StartAsync(cancellationToken);
         ApiUri = AddressOf(_api);
 
+        // A second business API with a different audience, for the wrong-target-API rejection.
+        _otherApi = ProofHosts.CreateApi(new ApiOptions(
+            Certificates.Server,
+            AuthServerUri,
+            ProofDefaults.Audience,
+            ApiIdentity,
+            [Certificates.Root],
+            Audience: "inventory-api"));
+        await _otherApi.StartAsync(cancellationToken);
+        OtherApiUri = AddressOf(_otherApi);
+
         _gatewayApi = ProofHosts.CreateApi(new ApiOptions(
             Certificates.Server,
             AuthServerUri,
@@ -88,12 +101,14 @@ public static class ProofEnvironment
         var cancellationToken = cleanup.Token;
         var steps = new List<Func<Task>>();
         if (_envoy is not null) steps.Add(() => _envoy.StopAsync(cancellationToken));
+        if (_otherApi is not null) steps.Add(() => _otherApi.StopAsync(cancellationToken));
         if (_gatewayApi is not null) steps.Add(() => _gatewayApi.StopAsync(cancellationToken));
         if (_api is not null) steps.Add(() => _api.StopAsync(cancellationToken));
         if (_authServer is not null) steps.Add(() => _authServer.StopAsync(cancellationToken));
         if (_postgres is not null) steps.Add(() => _postgres.StopAsync(cancellationToken));
         // DisposeAsync has no token; every owned resource is still disposed even if a stop failed or timed out.
         if (_envoy is not null) steps.Add(() => _envoy.DisposeAsync().AsTask());
+        if (_otherApi is not null) steps.Add(() => _otherApi.DisposeAsync().AsTask());
         if (_gatewayApi is not null) steps.Add(() => _gatewayApi.DisposeAsync().AsTask());
         if (_api is not null) steps.Add(() => _api.DisposeAsync().AsTask());
         if (_authServer is not null) steps.Add(() => _authServer.DisposeAsync().AsTask());

@@ -38,6 +38,7 @@ public static class ProofHosts
                 server.SetTokenEndpointUris("/connect/token")
                     .SetIntrospectionEndpointUris("/connect/introspect");
                 server.AllowClientCredentialsFlow();
+                server.SetAccessTokenLifetime(ProofDefaults.AccessTokenLifetime);
                 server.RegisterScopes(ProofDefaults.SubmitScope);
                 server.UseReferenceAccessTokens();
                 server.UseClientCertificateBoundAccessTokens();

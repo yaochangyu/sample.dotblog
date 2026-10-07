@@ -233,11 +233,13 @@ nonce 保存期必須涵蓋簽章可接受期間與允許的時鐘容差。
 
 ### 待具體 API 設計的項目
 
+**已確認決策（Ticket 02）**：Lab Opaque Access Token 有效期為 5 分鐘；到期後呼叫端重新以 Client Credentials（mTLS）取得 Token，不新增 Refresh Token，也不以自然到期取代「撤銷後 60 秒內拒絕」的要求（撤銷仍須獨立達成，屬後續 ticket）。
+
 以下刻意未定，不得自行填入預設值並視為已核准：
 
 - 授權核心已選定 OpenIddict 7.7.1，業務 API Gateway Lab 選型已定為 Envoy v1.39.3，Token endpoint 採 caller 直連 mTLS；但 Gateway 生產級配置（高可用 HA、SDS/xDS 動態設定、憑證動態輪替）及 Token endpoint 經 Gateway 路徑目前未定（未驗證）。
 - HTTP Message Signatures 簽章演算法、必要欄位、Token 綁定資訊的表示方式與中介改寫處理（獨立於 mTLS RSA 憑證，簽章演算法契約未定）。
-- Token 效期、快取配置、撤銷同步機制與容量規劃。
+- 快取配置、撤銷同步機制與容量規劃。Token 效期已由使用者確認（見下）。
 - 簽章接受時間窗、時鐘容差、nonce 儲存方式及保存期。
 - 業務識別範圍、內容比對規則、Idempotency Key 保存期。
 - 處理中回應、服務錯誤與拒絕情境的具體 HTTP 狀態／回應格式。

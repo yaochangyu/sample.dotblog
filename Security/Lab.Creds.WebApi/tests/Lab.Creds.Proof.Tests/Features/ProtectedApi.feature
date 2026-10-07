@@ -43,3 +43,26 @@ Feature: 受保護 API 以憑證綁定判斷接受請求 (Ticket 01 proof)
     And 該 token 目前可以成功呼叫 API
     When 授權伺服器撤銷該 token
     Then 同一憑證與 token 再次呼叫 API 回應 401
+
+  Scenario: 過期的 token 被拒絕且重新以憑證取得 token 後可成功呼叫
+    Given 呼叫服務 "partner-a" 已以其憑證取得 reference token
+    And 該 token 目前可以成功呼叫 API
+    When 該 token 的有效期限已到期
+    Then 同一憑證與 token 再次呼叫 API 回應 401
+    When 該服務重新以 mTLS 取得 token
+    Then 該服務以新 token 對 API 提交合作廠商資料回應 202
+
+  Scenario: 無效 token 被拒絕
+    Given 呼叫服務 "partner-a" 已以其憑證取得 reference token
+    When 該服務以同一憑證與無效 token 對 API 提交合作廠商資料
+    Then API 回應 401
+
+  Scenario: 目標為 partner-api 的 token 被另一個目標 API 拒絕
+    Given 呼叫服務 "partner-a" 已以其憑證取得 reference token
+    When 該服務以同一憑證和 token 對目標為 "inventory-api" 的另一個 API 提交合作廠商資料
+    Then API 回應 401
+
+  Scenario: 沒有憑證只用 client_secret 不能取得 token
+    Given 呼叫服務 "partner-a" 持有已註冊的 TLS 憑證
+    When 沒有出示憑證的呼叫端以 partner-a 的 client_id 與 client_secret 對 token 端點發出請求
+    Then token 端點拒絕並回報 "invalid_client"

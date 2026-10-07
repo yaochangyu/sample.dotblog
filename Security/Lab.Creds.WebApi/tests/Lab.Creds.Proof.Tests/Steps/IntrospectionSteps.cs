@@ -49,6 +49,13 @@ public sealed class IntrospectionSteps(ScenarioState state, TokenSteps tokenStep
         Assert.Equal(expected, cnf);
     }
 
+    [Then("introspection 回應的 exp 減 iat 恰為 {int} 秒")]
+    public void ThenLifetime(int seconds)
+    {
+        using var json = JsonDocument.Parse(_body!);
+        Assert.Equal(seconds, json.RootElement.GetProperty("exp").GetInt64() - json.RootElement.GetProperty("iat").GetInt64());
+    }
+
     [Then("introspection 端點拒絕請求")]
     public void ThenRejected()
     {

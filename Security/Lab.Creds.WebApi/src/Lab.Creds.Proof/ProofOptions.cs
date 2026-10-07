@@ -31,4 +31,7 @@ public static class ProofDefaults
 {
     public const string Audience = "partner-api";
     public const string SubmitScope = "partner.submit";
+
+    // Lab decision: opaque access tokens live 5 minutes; callers obtain a new one with Client Credentials (no refresh token).
+    public static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromMinutes(5);
 }

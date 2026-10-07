@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 
@@ -25,26 +26,34 @@ public sealed partial class GatewayClientCertificateMiddleware(RequestDelegate n
         }
     }
 
+    // Envoy v1.39.3 (SANITIZE_SET + cert:true) emits exactly one element: Hash=<sha256 hex>;Cert="<URL-encoded PEM>".
+    // Anything else is rejected: the whole value must be that single element, strictly percent-encoded,
+    // decoding to exactly one PEM certificate whose SHA-256 equals the Hash field.
     private static bool TryReadCertificate(Microsoft.Extensions.Primitives.StringValues header, out X509Certificate2 certificate)
     {
         certificate = null!;
         if (header.Count != 1) return false;
 
-        // Ambiguity (several XFCC elements or several Cert fields) is rejected rather than "first one wins".
-        var matches = CertPattern().Matches(header[0]!);
-        if (matches.Count != 1) return false;
-        var match = matches[0];
+        var match = ElementPattern().Match(header[0]!);
+        if (!match.Success) return false;
+
+        var pem = Uri.UnescapeDataString(match.Groups[2].Value);
+        if (!PemEncoding.TryFind(pem, out var fields) || !pem.AsSpan(fields.Label).SequenceEqual("CERTIFICATE")) return false;
+        if (pem.AsSpan(0, fields.Location.Start.Value).Trim().Length != 0 || pem.AsSpan(fields.Location.End.Value).Trim().Length != 0) return false;
         try
         {
-            certificate = X509Certificate2.CreateFromPem(Uri.UnescapeDataString(match.Groups[1].Value));
-            return true;
+            certificate = X509Certificate2.CreateFromPem(pem);
+            if (Convert.ToHexStringLower(SHA256.HashData(certificate.RawData)) == match.Groups[1].Value) return true;
+
+            certificate.Dispose();
+            return false;
         }
-        catch (System.Security.Cryptography.CryptographicException)
+        catch (CryptographicException)
         {
             return false;
         }
     }
 
-    [GeneratedRegex("(?:^|[;,]\\s*)Cert=\"([^\"]+)\"")]
-    private static partial Regex CertPattern();
+    [GeneratedRegex("^Hash=([0-9a-f]{64});Cert=\"((?:[A-Za-z0-9\\-._~]|%[0-9A-Fa-f]{2})+)\"\\z")]
+    private static partial Regex ElementPattern();
 }

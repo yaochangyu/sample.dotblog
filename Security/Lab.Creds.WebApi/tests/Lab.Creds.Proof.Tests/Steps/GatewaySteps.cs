@@ -21,6 +21,12 @@ public sealed class GatewaySteps(ScenarioState state)
     [When("該服務以同一憑證和 token 經 Gateway 對 API 提交合作廠商資料")]
     public Task WhenSameCertificateViaGateway() => Submit(state.ClientCertificate, state.AccessToken);
 
+    [When("該服務以同一憑證和 token 經 Gateway 提交宣稱自己是 {string} 的合作廠商資料")]
+    public Task WhenClaimsOtherIdentity(string clientId) => Submit(
+        state.ClientCertificate, state.AccessToken,
+        new Dictionary<string, string> { ["X-Client-Id"] = clientId, ["X-Forwarded-Client-Id"] = clientId },
+        body: $$"""{"partnerName":"Acme","payload":"demo","clientId":"{{clientId}}"}""");
+
     [When("攻擊者只帶 token 且不出示憑證經 Gateway 提交合作廠商資料")]
     public Task WhenNoCertificateViaGateway() => Submit(null, state.AccessToken);
 
@@ -51,16 +57,24 @@ public sealed class GatewaySteps(ScenarioState state)
         using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
         var cancellationToken = timeout.Token;
 
-        var good = $"Cert=\"{Uri.EscapeDataString(ProofEnvironment.PartnerA.ExportCertificatePem())}\"";
-        var other = $"Cert=\"{Uri.EscapeDataString(ProofEnvironment.PartnerB.ExportCertificatePem())}\"";
+        var good = EnvoyElement(ProofEnvironment.PartnerA);
+        var other = EnvoyElement(ProofEnvironment.PartnerB);
+        var goodHash = good[..good.IndexOf(';')];
+        var goodCert = good[(good.IndexOf(';') + 1)..];
         string[] values = scenario switch
         {
             "無標頭" => [],
-            "非 PEM 內容" => ["Cert=\"not-a-certificate\""],
-            "損毀的 PEM" => ["Cert=\"" + Uri.EscapeDataString("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----") + "\""],
+            "非 PEM 內容" => [goodHash + ";Cert=\"not-a-certificate\""],
+            "損毀的 PEM" => [goodHash + ";Cert=\"" + Uri.EscapeDataString("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----") + "\""],
             "缺少 Cert 欄位" => ["By=spiffe://x;Hash=abc"],
             "重複的標頭" => [good, good],
             "多個 Cert 項目" => [good + "," + other],
+            "Cert 後附加其他欄位" => [good + ";Subject=\"CN=x\""],
+            "缺少 Hash 欄位" => [goodCert],
+            "Hash 與憑證不符" => [other[..other.IndexOf(';')] + ";" + goodCert],
+            "同一 Cert 內含兩張憑證" => [goodHash + ";Cert=\"" + Uri.EscapeDataString(ProofEnvironment.PartnerA.ExportCertificatePem() + "\n" + ProofEnvironment.PartnerB.ExportCertificatePem()) + "\""],
+            "非法的百分比編碼" => [goodHash + ";Cert=\"" + Uri.EscapeDataString(ProofEnvironment.PartnerA.ExportCertificatePem()) + "%ZZ\""],
+            "Cert 值內含未編碼空白" => [goodHash + ";Cert=\" " + goodCert["Cert=\"".Length..]],
             _ => throw new ArgumentException(scenario)
         };
 
@@ -78,6 +92,10 @@ public sealed class GatewaySteps(ScenarioState state)
         _response = await client.SendAsync(request, cancellationToken);
         _body = await _response.Content.ReadAsStringAsync(cancellationToken);
     }
+
+    // The element shape Envoy v1.39.3 emits with SANITIZE_SET and cert: true.
+    private static string EnvoyElement(X509Certificate2 certificate)
+        => $"Hash={Convert.ToHexStringLower(SHA256.HashData(certificate.RawData))};Cert=\"{Uri.EscapeDataString(certificate.ExportCertificatePem())}\"";
 
     [Then("Gateway 後的 API 回應 401 且不接受請求")]
     public void ThenUnauthorizedNoLeak()
@@ -218,7 +236,7 @@ public sealed class GatewaySteps(ScenarioState state)
         Assert.Equal(clientId, json.RootElement.GetProperty("clientId").GetString());
     }
 
-    private async Task Submit(X509Certificate2? certificate, string? accessToken, IDictionary<string, string>? extraHeaders = null, Uri? baseAddress = null)
+    private async Task Submit(X509Certificate2? certificate, string? accessToken, IDictionary<string, string>? extraHeaders = null, Uri? baseAddress = null, string body = """{"partnerName":"Acme","payload":"demo"}""")
     {
         using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
         var cancellationToken = timeout.Token;
@@ -226,7 +244,7 @@ public sealed class GatewaySteps(ScenarioState state)
         using var client = ProofEnvironment.CreateClient(baseAddress ?? ProofEnvironment.GatewayUri, certificate);
         using var request = new HttpRequestMessage(HttpMethod.Post, "/partner/submissions")
         {
-            Content = new StringContent("""{"partnerName":"Acme","payload":"demo"}""", Encoding.UTF8, "application/json")
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
         };
         foreach (var (name, value) in extraHeaders ?? new Dictionary<string, string>())
         {
