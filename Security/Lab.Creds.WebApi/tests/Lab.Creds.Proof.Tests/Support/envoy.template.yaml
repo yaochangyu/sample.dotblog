@@ -1,0 +1,78 @@
+# Envoy v1.39.3 proof configuration (Ticket 01). Placeholders are filled with runtime-generated test material.
+static_resources:
+  listeners:
+  - name: ingress
+    address:
+      socket_address: { address: 0.0.0.0, port_value: 10000 }
+    filter_chains:
+    - transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          require_client_certificate: true
+          common_tls_context:
+            tls_params: { tls_minimum_protocol_version: TLSv1_2 }
+            alpn_protocols: ["http/1.1"]
+            tls_certificates:
+            - certificate_chain:
+                inline_string: |
+{{SERVER_CERT_PEM}}
+              private_key:
+                inline_string: |
+{{SERVER_KEY_PEM}}
+            validation_context:
+{{CLIENT_ALLOWLIST}}
+      filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress
+          codec_type: HTTP1
+          normalize_path: false
+          merge_slashes: false
+          path_with_escaped_slashes_action: KEEP_UNCHANGED
+          forward_client_cert_details: SANITIZE_SET
+          set_current_client_cert_details: { cert: true }
+          route_config:
+            name: proof
+            virtual_hosts:
+            - name: partner_api
+              domains: ["*"]
+              routes:
+              - match: { prefix: "/" }
+                route: { cluster: partner_api, timeout: 30s }
+          http_filters:
+          - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+  clusters:
+  - name: partner_api
+    type: STRICT_DNS
+    connect_timeout: 5s
+    load_assignment:
+      cluster_name: partner_api
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address: { address: host.docker.internal, port_value: {{API_PORT}} }
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        sni: localhost
+        common_tls_context:
+          tls_certificates:
+          - certificate_chain:
+              inline_string: |
+{{GATEWAY_CERT_PEM}}
+            private_key:
+              inline_string: |
+{{GATEWAY_KEY_PEM}}
+          validation_context:
+            trusted_ca:
+              inline_string: |
+{{ROOT_PEM}}
+            match_typed_subject_alt_names:
+            - san_type: DNS
+              matcher: { exact: localhost }

@@ -1,0 +1,44 @@
+openapi: 3.0.3
+info:
+  title: Partner submission API (Ticket 01 proof contract)
+  version: 0.1.0-proof
+  description: >
+    Minimal business contract for the proof only. OAuth endpoints (/connect/token, /connect/introspect)
+    are provided by OpenIddict and are intentionally not described here. No codegen is used.
+paths:
+  /partner/submissions:
+    post:
+      summary: 合作廠商提交資料 (protected, proof skeleton without persistence)
+      security:
+        - mtlsBoundBearer: [partner.submit]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerSubmission'
+      responses:
+        '202':
+          description: Accepted for the verified Client
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clientId: { type: string }
+                  partnerName: { type: string }
+        '401':
+          description: Missing/invalid token, missing certificate, or certificate not bound to the token
+components:
+  securitySchemes:
+    mtlsBoundBearer:
+      type: http
+      scheme: bearer
+      description: Opaque reference token bound to the caller TLS certificate (RFC 8705 cnf x5t#S256)
+  schemas:
+    PartnerSubmission:
+      type: object
+      required: [partnerName, payload]
+      properties:
+        partnerName: { type: string }
+        payload: { type: string }
