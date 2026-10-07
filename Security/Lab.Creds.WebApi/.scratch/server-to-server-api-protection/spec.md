@@ -87,7 +87,8 @@ Status: ready-for-agent
 
 Client Credentials 是取得授權的流程，不是請求簽章方法。mTLS 用戶端認證與憑證綁定 Token 是不同機制，兩者都必須成立。
 
-嚴格區分 mTLS RSA 用戶端憑證與 HTTP Message Signatures 簽章演算法，後者之具體簽章演算法及契約目前未定。Lab 第一版暫以已驗證 RSA-2048 自簽 client cert 為接入範圍，其他憑證類型（如 ECDSA、PKI 階層鏈）明確保留未驗，避免將候選或 proof 誤寫成完整功能。XFCC 解析器目前為 proof 級 regex，已實測缺少/非 PEM/損毀 PEM/缺 Cert/重複標頭/多個 Cert 皆回傳 401，正式實作須保留嚴格解析不變式（拒絕多 Cert、重複標頭、非 PEM，禁止 first-wins）。Proof worktree 27 項情境獨立通過作為 proof 證據，不代表完整 spec AC 已結或 ticket 達成；ECDSA、PKI、憑證輪替、完整 60 秒撤銷生效（含現有連線）、服務故障 fail-closed、signature/nonce/idempotency 皆保留為後續 tickets 驗收；S2、G3 及前四項 XFCC 補測非 red-first，嚴禁補造歷史。
+嚴格區分 mTLS RSA 用戶端憑證與 HTTP Message Signatures 簽章演算法，後者之具體簽章演算法及契約目前未定。Lab 第一版暫以已驗證 RSA-2048 自簽 client cert 為接入範圍，其他憑證類型（如 ECDSA、PKI 階層鏈）明確保留未驗，避免將候選或 proof 誤寫成完整功能。XFCC 解析器目前為 proof 級 regex，已實測缺少/非 PEM/損毀 PEM/缺 Cert/重複標頭/多個 Cert 皆回傳 401，正式實作須保留嚴格解析不變式（拒絕多 Cert、重複標頭、非 PEM，禁止 first-wins）。Ticket 01 之 proof 實作（commit `44c5fb97`）及固定基準 review 修正（commit `fe77ee38`，同步 `9c66b873`）已合入 integration branch。Standards 兩項硬規範已修正通過（含 CleanupRunner 單元測試），Spec 軸 0 finding；全套共 29 項測試（27 項 BDD + 2 項單元測試）通過（詳見 `src/Lab.Creds.Proof/README.md`）。本 proof 作為授權與 Gateway 接入基線之證據，不代表後續完整 spec AC 已結；ECDSA、PKI、憑證輪替、完整 60 秒撤銷生效（含現有連線）、服務故障 fail-closed、signature/nonce/idempotency 皆保留為後續 tickets 驗收；S2、G3 及前四項 XFCC 補測非 red-first，嚴禁補造歷史。
+
 
 ### 身分與信任邊界
 

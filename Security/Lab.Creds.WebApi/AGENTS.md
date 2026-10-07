@@ -17,7 +17,8 @@
   - 身分比對：API 僅在可信下游通道中由原始 client cert DER 計算 SHA-256 指紋（`x5t#S256` base64url），交由 OpenIddict 7.7.1 與 token introspection 之 `cnf.x5t#S256` 比對；不信任任何其他公開身分標頭。
   - 原始資訊保留：在 HTTP/1.1 設定下保留 Host（不改寫）、原始 target（RawTarget）、query、body 及必要簽章標頭逐字保留，不宣稱 RFC 9421 驗簽。
 - **XFCC 解析器與邊界限制**：XFCC 缺少、非 PEM、損毀 PEM、缺 Cert 欄位、重複標頭、多個 Cert 項目皆實測回傳 401；目前解析器屬 proof 級（非完整 grammar 解析），正式實作須保留嚴格解析不變式（拒絕多 Cert/重複標頭/非 PEM，禁止 first-wins）。
-- **Proof 與驗證界線**：Proof worktree 27 項獨立情境通過可作為 proof 證據，但不等於正式 fixed-baseline / code-review 完成，亦不勾選完整 spec AC 或未結案 ticket 條目；ECDSA、PKI 階層鏈、憑證輪替、60 秒完整撤銷生效（含現有連線）、服務故障 fail-closed、HTTP Message Signatures/nonce/idempotency 皆保留為後續 tickets 驗收；S2、G3 及前四項 XFCC 補測非 red-first，嚴禁補造歷史。
+- **Proof 審查與驗證界線**：Ticket 01 proof 程式碼與固定基準雙軸審查修正已由主 session 合入 integration branch（commit `44c5fb97`, `fe77ee38`, `9c66b873`）。固定基準 review 結論中 Standards 兩項硬規範（`IDbContextFactory`、CancellationToken 傳遞）已修正並經獨立驗收（含 CleanupRunner 例外保留驗證），heuristic 程式碼樣板抗辯被接受，Spec 軸 0 finding；全套共 29 項測試（27 項 BDD + 2 項單元測試）通過（詳見 `src/Lab.Creds.Proof/README.md`）。ECDSA、PKI 階層鏈、憑證輪替、60 秒完整撤銷生效（含現有連線）、服務故障 fail-closed、HTTP Message Signatures/nonce/idempotency 皆保留為後續 tickets 驗收；S2、G3 及前四項 XFCC 補測非 red-first，嚴禁補造歷史。
+
 
 
 ### 實作與程式碼審查規範

@@ -4,15 +4,15 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
 - [x] 閱讀已指定的 api.template 開發規則及其必讀指南，確認全專案採 API First 或 Code First，不自行假設。（已確認全專案採 API First，最小 OpenAPI，不做 codegen）
 - [x] 核對授權核心產品之正式版本、授權條件、維護狀態及與 ASP.NET Core 10 整合方式。（使用者已確認選定 OpenIddict 7.7.1 作為 OAuth 授權核心）
-- [ ] 以真實協定及密碼驗證路徑展示 mTLS Client Credentials 核發憑證綁定 Opaque Token、introspection 與 API 憑證綁定判斷；無憑證及不同憑證呼叫失敗。（Lab 第一版暫以已驗證 RSA-2048 自簽 client cert 為接入範圍；其他憑證類型保留未驗）
-- [ ] 證據區分正式版本支援、需整合功能與尚未支援能力，不以 dev 文件或永遠成功的替身作為可用性證明。
-- [ ] 確認 Gateway 候選與信任契約，涵蓋下游通道認證、防入口繞過、驗證資訊來源與原始簽章內容保留。（Lab 實作基線選定 Envoy v1.39.3，最小可信邊界已由 proof 驗證；但正式 code-review 未完成、proof 未提交、生產級設定未定，本項維持未勾選）
-- [ ] 取得使用者對產品選型、API 開發方式及首個示範業務操作的確認；缺乏可行方案時明確列出阻擋，不降級既定保護。
-- [ ] 記錄可重現驗證方式、已確認契約與未決事項；不手刻 OAuth 協定作為未經核准的替代品。
+- [x] 以真實協定及密碼驗證路徑展示 mTLS Client Credentials 核發憑證綁定 Opaque Token、introspection 與 API 憑證綁定判斷；無憑證及不同憑證呼叫失敗。（Lab 第一版以 RSA-2048 自簽 client cert 接入，全套 29 項測試通過）
+- [x] 證據區分正式版本支援、需整合功能與尚未支援能力，不以 dev 文件或永遠成功的替身作為可用性證明。（明確區分 OpenIddict 7.7.1 與 Envoy v1.39.3 能力，未驗項如 ECDSA、PKI、HA/SDS 清楚隔離）
+- [x] 確認 Gateway 候選與信任契約，涵蓋下游通道認證、防入口繞過、驗證資訊來源與原始簽章內容保留。（Lab 實作基線選定 Envoy v1.39.3，最小可信邊界 5 項契約實測通過，XFCC 解析器負面測試均為 401）
+- [x] 取得使用者對產品選型、API 開發方式及首個示範業務操作的確認；缺乏可行方案時明確列出阻擋，不降級既定保護。（已確認 OpenIddict 7.7.1、Envoy v1.39.3 Lab 基線、API First 最小 OpenAPI、示範端點 `/partner/submissions`）
+- [x] 記錄可重現驗證方式、已確認契約與未決事項；不手刻 OAuth 協定作為未經核准的替代品。（已於 `src/Lab.Creds.Proof/README.md`、`AGENTS.md` 與 `spec.md` 完整記錄）
 
 ## 已確認決策與邊界紀錄
 - **OAuth 授權核心**：使用者已確認採用 OpenIddict 7.7.1。
@@ -30,9 +30,19 @@
   - 身分比對：API 僅在可信下游通道中由原始 client cert DER 計算 SHA-256 指紋（`x5t#S256` base64url），交由 OpenIddict 7.7.1 與 token introspection 之 `cnf.x5t#S256` 比對。
   - 原始資訊保留：在 HTTP/1.1 設定下保留 Host（不改寫）、原始 target（RawTarget）、query、body 及必要簽章標頭逐字保留，不宣稱 RFC 9421 驗簽。
 - **XFCC 解析器與邊界限制**：XFCC 缺少標頭、非 PEM、損毀 PEM、缺少 Cert 欄位、重複標頭、多個 Cert 項目皆實測回傳 401（無身分洩漏）；目前解析器為 proof 級 regex，非完整 grammar 解析，正式實作須保留嚴格解析不變式（拒絕多 Cert/重複標頭/非 PEM，禁止 first-wins）。
-- **Proof 驗證與未結案狀態說明**：
-  - Proof worktree 27 項獨立情境已通過測試，作為 proof 證據記錄；但不將 session 絕對路徑作為唯一可重現 repo 文件。
-  - 正式 fixed-baseline / code-review 尚未完成、proof 尚未提交，因此 Ticket 01 保持未結案（`Status: ready-for-agent`），後續 tickets (02-10) 保持鎖定，不提前解鎖。
 - **未驗證與後續 Tickets 驗收項目**：
   - 60 秒完整撤銷生效機制（含現有長連線，SLA 待驗收）、服務故障 fail-closed、HTTP Message Signatures 驗簽/nonce/業務去重/憑證輪替皆保留為後續 tickets 驗收；不新增 HA/SDS/其他 scope 或重開架構。
   - 歷史誠信：S2、G3 及前四項 XFCC 補測非 red-first，嚴禁補造歷史。
+
+## Answer
+- **結案狀態**：本 Ticket 01 所有 7 項驗收條件均已達成實證與決策，依 issue tracker 標準正式結案（`Status: resolved`）。
+- **Merge Commit Pointers**：
+  - `7766a86d` 📝 docs(creds)(01): 確認 Lab 授權與 Gateway 接入基線
+  - `44c5fb97` ✨ feat(creds)(01): 建立憑證綁定 Token 與 Envoy 接入驗證
+  - `fe77ee38` ♻️ refactor(creds)(01): 修正資料存取與取消資源生命週期（Standards review 修正）
+  - `9c66b873` Merge branch 'integration/server-to-server-api-protection' into ticket/01-auth-proof
+- **可重現證據指針**：
+  - 重現說明：`src/Lab.Creds.Proof/README.md`
+  - 測試套件：`tests/Lab.Creds.Proof.Tests/`（27 項 BDD + 2 項 CleanupRunner 單元測試，共 29 測試全數通過）
+  - 審查報告：固定基準雙軸審查（Standards 2 項硬規範修正通過、Spec 0 finding）
+- **DAG 解鎖通知**：Ticket 01 結案後，相依之 Ticket 02（`Blocked by: 01`）已解鎖並成為目前 task graph 的 frontier，供主 session 接續派工。Tickets 03–10 仍依 DAG 維持各自 blocked 狀態。
