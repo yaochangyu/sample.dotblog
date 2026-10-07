@@ -59,27 +59,35 @@ Status: ready-for-agent
 
 - 業務 API 採 ASP.NET Core 10（.NET 10）。
 - 實作遵循 [api.template 開發規則](https://github.com/yaochangyu/api.template/blob/main/CLAUDE.md)，並依其導航閱讀必讀文件與工作項指南。
-- 開發新 API 端點前，確認全專案採 API First 或 Code First，不得混用；目前尚未選定。
-- 此平台決策不等於選定授權伺服器或 Gateway，也不要求這些元件使用相同技術。
+- 全專案確認採 API First，定義最小 OpenAPI 規格，不做 codegen。
+- OAuth 授權核心：使用者已確認採用 OpenIddict 7.7.1 作為集中式授權伺服器核心。
+- 資料存取採 EF Core + PostgreSQL，測試環境採隔離之 Testcontainers，規格驗收採 Reqnroll BDD（程式碼生成於 `obj/`，不追蹤 `.feature.cs`）。
+- Gateway 與 Token 接入：使用者已確認 Lab 實作基線採用 Envoy v1.39.3（`envoyproxy/envoy:v1.39.3@sha256:dd85940439de19a0b6ae8419610363ea0ad351d9a994ea007161c206ec1e1865`）作業務 API Gateway；Token 端點則由呼叫端（caller）直接以 mTLS 連線授權伺服器（不經 Gateway）。此為 Lab 選型，不等於 production 驗收。
 
 ### 已確認的選型
 
 | 面向 | 決策 |
 |---|---|
-| 授權流程 | OAuth 2.0 Client Credentials，集中式授權伺服器 |
-| Token 端點的用戶端認證 | mTLS，不新增 Client Secret |
+| 授權流程 | OAuth 2.0 Client Credentials，集中式授權伺服器（核心採用 OpenIddict 7.7.1） |
+| Token 端點接入路徑 | 呼叫端（caller）直接以 mTLS 連線授權伺服器（不經 Gateway） |
+| Token 端點的用戶端認證 | mTLS，Lab 第一版暫以已驗證 RSA-2048 自簽 client cert 接入，不新增 Client Secret；其他憑證類型保留未驗 |
 | Access Token | Opaque Token，綁定呼叫端憑證 |
 | Token 有效性 | 集中 introspection；允許符合撤銷上限的快取 |
+| 業務 API Gateway（Lab 基線） | Envoy v1.39.3 終止業務 API mTLS（Lab 選型，非 production 驗收）；Envoy→API 獨立 mTLS 且 API 固定 Gateway 憑證指紋防繞過 |
+| 憑證轉送與覆寫 | Envoy 以 `forward_client_cert_details: SANITIZE_SET` 覆寫 XFCC；API 僅在可信下游由原始 client cert DER 計算 `x5t#S256` 交由 OpenIddict 驗證；不信其他公開標頭 |
 | API Key | 不作認證或授權；有訂閱計量需求時才另外保留 |
-| 請求簽章 | HTTP Message Signatures，所有業務 API 呼叫適用 |
+| 請求簽章 | HTTP Message Signatures，所有業務 API 呼叫適用；簽章演算法未定，與 mTLS RSA 憑證獨立；HTTP/1.1 僅驗證 Host/raw target/query/body/標頭保留，不宣稱 RFC 9421 驗簽 |
 | 簽章驗證 | 最終業務 API 驗證原始呼叫端簽章 |
 | 金鑰 | mTLS 與請求簽章私鑰分開；每 Client、每環境獨立 |
 | 授權檢查 | Client 的 API／scope 白名單，加業務資料範圍檢查 |
 | 業務去重 | 穩定業務識別與 Idempotency Key，保證本地提交不重複 |
-| 撤銷時效 | 最多 60 秒內阻擋後續使用已撤銷的 Token／憑證／金鑰／服務身分 |
-| 查證故障 | 無仍在允許期限內的有效快取且無法查證時，拒絕處理 |
+| 撤銷時效 | 最多 60 秒內阻擋後續使用已撤銷的 Token／憑證／金鑰／服務身分（含既有長連線，SLA 待驗收） |
+| 查證故障 | 無仍在允許期限內的有效快取且無法查證時，拒絕處理（fail closed） |
+| 架構與測試 | API First（最小 OpenAPI，不做 codegen）、Reqnroll BDD（生成物在 `obj/` 不追蹤）、EF Core + PostgreSQL、隔離 Testcontainers |
 
 Client Credentials 是取得授權的流程，不是請求簽章方法。mTLS 用戶端認證與憑證綁定 Token 是不同機制，兩者都必須成立。
+
+嚴格區分 mTLS RSA 用戶端憑證與 HTTP Message Signatures 簽章演算法，後者之具體簽章演算法及契約目前未定。Lab 第一版暫以已驗證 RSA-2048 自簽 client cert 為接入範圍，其他憑證類型（如 ECDSA、PKI 階層鏈）明確保留未驗，避免將候選或 proof 誤寫成完整功能。XFCC 解析器目前為 proof 級 regex，已實測缺少/非 PEM/損毀 PEM/缺 Cert/重複標頭/多個 Cert 皆回傳 401，正式實作須保留嚴格解析不變式（拒絕多 Cert、重複標頭、非 PEM，禁止 first-wins）。Proof worktree 27 項情境獨立通過作為 proof 證據，不代表完整 spec AC 已結或 ticket 達成；ECDSA、PKI、憑證輪替、完整 60 秒撤銷生效（含現有連線）、服務故障 fail-closed、signature/nonce/idempotency 皆保留為後續 tickets 驗收；S2、G3 及前四項 XFCC 補測非 red-first，嚴禁補造歷史。
 
 ### 身分與信任邊界
 
@@ -87,14 +95,14 @@ Client Credentials 是取得授權的流程，不是請求簽章方法。mTLS �
 
 授權伺服器負責用戶端認證、核發 Token 與管理授權。API 的接受判斷必須涵蓋 Token、Client、憑證及請求簽章金鑰的有效狀態。
 
-允許 mTLS 在可信 Gateway 終止，但必須符合以下條件：
+業務 API mTLS 終止於可信 Gateway（Lab 實作基線選定 Envoy v1.39.3），最小可信邊界契約如下：
 
-- Gateway 驗證呼叫端憑證，並在可信邊界內完成 Token 與憑證的綁定驗證。
-- Gateway 到業務 API 的通道受保護且經過身分驗證。
-- Gateway 移除或覆寫外部請求偽造的憑證／身分資訊。
-- 業務 API 不得經由其他入口繞過上述驗證。
-- 業務 API 不得直接信任公開請求自行提供的憑證標頭。
-- 最終業務 API 仍驗證原始呼叫端的請求簽章。
+- **Caller 認證**：Envoy 驗證呼叫端憑證，使用 RSA-2048 自簽憑證 SHA-256 allowlist（`verify_certificate_hash`，不設 `ACCEPT_UNTRUSTED`）。
+- **下游通道認證與防繞過**：Envoy 到業務 API 的通道採獨立 Gateway mTLS 通道，API 以固定（pin）特定 Gateway 憑證 SHA-256 指紋，防範呼叫端直接繞過 Gateway 或非受信 Gateway 呼叫。
+- **標頭覆寫與防偽造**：Envoy 設 `forward_client_cert_details: SANITIZE_SET` + `set_current_client_cert_details: {cert: true}` 覆寫 `x-forwarded-client-cert`（XFCC），阻擋外部請求偽造身分。業務 API 不得信任任何其他轉送身分標頭（如 NGINX 樣式指紋標頭）。
+- **身分與 Token 綁定比對**：業務 API 僅在可信下游通道中由原始 client cert DER 計算 SHA-256 指紋（`x5t#S256` base64url），交由 OpenIddict 7.7.1 與 token introspection 之 `cnf.x5t#S256` 進行比對。
+- **原始請求保留**：Envoy 設 `normalize_path: false`、`merge_slashes: false`、`path_with_escaped_slashes_action: KEEP_UNCHANGED`、未設 host_rewrite，在 HTTP/1.1 下保留客戶端送出之 Host、RawTarget、query、body 與必要簽章標頭逐字保留（不宣稱 RFC 9421 驗簽）。
+- **範圍限制**：Token endpoint 採 caller 直接 mTLS 連授權伺服器（未經 Gateway）；此為 Lab 選型，生產級高可用（HA）、動態設定（SDS/xDS）、憑證輪替皆未驗證。
 
 若中介改寫被簽署的目標、標頭或內容，必須定義可驗證的處理方式；不得把改寫後的內容默認為原始呼叫端簽署的內容。
 
@@ -180,7 +188,7 @@ nonce 保存期必須涵蓋簽章可接受期間與允許的時鐘容差。
 
 好的測試驗證外部可觀察行為：請求是否被接受、錯誤是否明確、資料是否隔離、業務副作用是否只提交一次，以及撤銷是否符合 60 秒上限。不綁定內部類別、函式呼叫順序或資料表實作。
 
-目前工作目錄只有規格文件，沒有可沿用的程式碼、測試、領域詞彙表或 ADR；未對整個 repository 宣稱不存在相關先例。
+目前工作目錄已有規格文件與領域詞彙表（GLOSSARY.md），但尚無可沿用的業務實作程式碼、測試或 ADR；未對整個 repository 宣稱不存在相關先例。
 
 建議建立一個主要整合測試邊界：從呼叫端經可信 Gateway 到業務 API 的外部行為。測試環境可控制授權與撤銷狀態、查證服務故障、併發及重試，並觀察本地業務提交與追查結果。涵蓋授權伺服器介接、Gateway 驗證、API 授權／驗簽／防重放，以及本地業務去重能力。
 
@@ -226,14 +234,15 @@ nonce 保存期必須涵蓋簽章可接受期間與允許的時鐘容差。
 
 以下刻意未定，不得自行填入預設值並視為已核准：
 
-- 授權伺服器、Gateway、簽章與狀態儲存產品。
+- 授權核心已選定 OpenIddict 7.7.1，業務 API Gateway Lab 選型已定為 Envoy v1.39.3，Token endpoint 採 caller 直連 mTLS；但 Gateway 生產級配置（高可用 HA、SDS/xDS 動態設定、憑證動態輪替）及 Token endpoint 經 Gateway 路徑目前未定（未驗證）。
+- HTTP Message Signatures 簽章演算法、必要欄位、Token 綁定資訊的表示方式與中介改寫處理（獨立於 mTLS RSA 憑證，簽章演算法契約未定）。
 - Token 效期、快取配置、撤銷同步機制與容量規劃。
-- 簽章演算法、必要欄位、Token 綁定資訊的表示方式與中介改寫處理。
 - 簽章接受時間窗、時鐘容差、nonce 儲存方式及保存期。
 - 業務識別範圍、內容比對規則、Idempotency Key 保存期。
 - 處理中回應、服務錯誤與拒絕情境的具體 HTTP 狀態／回應格式。
-- 正常輪替重疊期、稽核保存期及營運流程。
+- 正常輪替重疊期、稽核保存期及營運流程；其他憑證類型（ECDSA、PKI 階層式憑證鏈等）未驗證。
 - 各 API 的最長重試期與下游冪等協定。
+- 嚴格記錄：ECDSA、PKI、金鑰輪替、完整 60 秒撤銷生效機制（含現有連線）、服務故障 fail-closed、signature/nonce/idempotency 皆不宣稱 proof 已驗；S2、G3 及前四項 XFCC 補測非 red-first，嚴禁補造歷史。
 
 ### 保證限制與參考
 
