@@ -6,7 +6,13 @@
 - **API 開發模式**：全專案採 API First，採最小 OpenAPI 規格，不做 codegen。
 - **OAuth 授權核心**：使用者已確認選定 OpenIddict 7.7.1 作為 OAuth 授權核心。
 - **Client 憑證接入範圍**：Lab 第一版暫以已驗證之 RSA-2048 自簽用戶端憑證（client cert）為接入範圍；其他憑證類型（如 ECDSA、PKI 階層鏈）保留未驗，避免將候選或 proof 誤記為完整功能。
-- **簽章演算法獨立性**：嚴格區分 mTLS RSA 憑證與 HTTP Message Signatures 演算法，HTTP Message Signatures 之簽章演算法與參數契約目前未定。
+- **HTTP Message Signatures 契約基線（Ticket 03 Lab Profile v1）**：
+  - 演算法與金鑰：採用 RFC 9421 IANA 註冊之 `ecdsa-p256-sha256`（§3.3.4），輸出格式為 IEEE P1363 `r || s`（64 bytes）。每個 Client 及各環境具備獨立 NIST P-256 簽章金鑰對，與 mTLS RSA-2048 用戶端憑證嚴格分開；`keyid` 靜態登記綁定 Client 身分，且所屬 `client_id` 必須與 Token introspection 之 `client_id` 一致，禁止動態演算法協商。
+  - 簽章結構：限定單一標籤 `sig1`，`Signature-Input` 與 `Signature` 標頭皆為單一成員；`@signature-params` 固定參數順序為 `created`、`expires`、`nonce`、`keyid`、`alg`。
+  - 基礎覆蓋元件順序：固定為 `@method`、`@authority`、`@path`、`@query`、`authorization`；`@query` 包含完整原始字串（無 query 時值為單獨 `?`，不做 percent-decode 或重排）。Token 綁定直接簽署原始 `authorization` 標頭值（禁止自訂 token hash 標頭）；日誌嚴格禁止輸出原始 Token、`Authorization` 標頭值、signature base 或簽章值。
+  - Body 與摘要：依實際接收 bytes 判斷 Body（不單依賴 `Content-Length`）；有 Body 時必加 `content-type` 與 `content-digest`（RFC 9530 SHA-256 Structured Field dictionary `:base64:`，逐 byte 核對不重序列化 JSON）。GET/HEAD 在本 Lab 無 Body；DELETE 若有 Body 須依規格加摘要；無 Body 請求不得列入 content-type / content-digest。
+  - 冪等鍵與時間窗：副作用方法（POST/PUT/PATCH/DELETE）必填並簽入 `idempotency-key`（Ticket 03 僅簽入，不宣稱去重完成）。簽章時間為 `expires = created + 60`；驗證端時鐘容差 ±30 秒（`expires > created`、`expires - created <= 60`、`created - 30 <= now <= expires + 30`，最大接受區間 120 秒）。`nonce` 採 CSPRNG 16 bytes 無 padding base64url（22 字元），每次嘗試新值；Ticket 03 僅驗證格式與時間窗，跨實例防重放與唯一性由 Ticket 04 實作。
+  - 邊界與驗證界線：RFC 9421 B.2.4 互通測試向量與 Envoy 標頭（`Authorization`、`Content-Digest`、`Signature*`）逐字保留待 Ticket 03 實測驗收；授權範圍（scope）僅源自 Token，Ticket 05 業務授權來源與模型未定（不帶入自訂 recordRange/writePolicy）；既有 5 分鐘 Token、Envoy v1.39.3、OpenIddict 7.7.1 基線維持不變。
 - **資料儲存與測試**：資料存取採 EF Core + PostgreSQL，測試邊界採隔離之 Testcontainers，規格驗收採 Reqnroll BDD（程式碼生成置於 `obj/`，不追蹤 `.feature.cs`）。
 - **Lab Gateway 選型與最小可信邊界**：
   - 使用者已確認 Lab 實作基線採用 Envoy v1.39.3（固定 digest `envoyproxy/envoy:v1.39.3@sha256:dd85940439de19a0b6ae8419610363ea0ad351d9a994ea007161c206ec1e1865`）作業務 API Gateway；此為 Lab 選型，不等於 production 驗收。

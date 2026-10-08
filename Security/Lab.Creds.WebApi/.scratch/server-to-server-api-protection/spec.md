@@ -76,7 +76,7 @@ Status: ready-for-agent
 | 業務 API Gateway（Lab 基線） | Envoy v1.39.3 終止業務 API mTLS（Lab 選型，非 production 驗收）；Envoy→API 獨立 mTLS 且 API 固定 Gateway 憑證指紋防繞過 |
 | 憑證轉送與覆寫 | Envoy 以 `forward_client_cert_details: SANITIZE_SET` 覆寫 XFCC；API 僅在可信下游由原始 client cert DER 計算 `x5t#S256` 交由 OpenIddict 驗證；不信其他公開標頭 |
 | API Key | 不作認證或授權；有訂閱計量需求時才另外保留 |
-| 請求簽章 | HTTP Message Signatures，所有業務 API 呼叫適用；簽章演算法未定，與 mTLS RSA 憑證獨立；HTTP/1.1 僅驗證 Host/raw target/query/body/標頭保留，不宣稱 RFC 9421 驗簽 |
+| 請求簽章 | HTTP Message Signatures，所有業務 API 呼叫適用；已確認採用 RFC 9421 IANA `ecdsa-p256-sha256` Lab profile v1（詳見〈請求簽章與防重放〉）；獨立 P-256 金鑰與 mTLS RSA 憑證分開 |
 | 簽章驗證 | 最終業務 API 驗證原始呼叫端簽章 |
 | 金鑰 | mTLS 與請求簽章私鑰分開；每 Client、每環境獨立 |
 | 授權檢查 | Client 的 API／scope 白名單，加業務資料範圍檢查 |
@@ -87,7 +87,7 @@ Status: ready-for-agent
 
 Client Credentials 是取得授權的流程，不是請求簽章方法。mTLS 用戶端認證與憑證綁定 Token 是不同機制，兩者都必須成立。
 
-嚴格區分 mTLS RSA 用戶端憑證與 HTTP Message Signatures 簽章演算法，後者之具體簽章演算法及契約目前未定。Lab 第一版暫以已驗證 RSA-2048 自簽 client cert 為接入範圍，其他憑證類型（如 ECDSA、PKI 階層鏈）明確保留未驗，避免將候選或 proof 誤寫成完整功能。XFCC 解析器目前為 proof 級 regex，已實測缺少/非 PEM/損毀 PEM/缺 Cert/重複標頭/多個 Cert 皆回傳 401，正式實作須保留嚴格解析不變式（拒絕多 Cert、重複標頭、非 PEM，禁止 first-wins）。Ticket 01 之 proof 實作（commit `44c5fb97`）及固定基準 review 修正（commit `fe77ee38`，同步 `9c66b873`）已合入 integration branch。Standards 兩項硬規範已修正通過（含 CleanupRunner 單元測試），Spec 軸 0 finding；全套共 29 項測試（27 項 BDD + 2 項單元測試）通過（詳見 `src/Lab.Creds.Proof/README.md`）。本 proof 作為授權與 Gateway 接入基線之證據，不代表後續完整 spec AC 已結；ECDSA、PKI、憑證輪替、完整 60 秒撤銷生效（含現有連線）、服務故障 fail-closed、signature/nonce/idempotency 皆保留為後續 tickets 驗收；S2、G3 及前四項 XFCC 補測非 red-first，嚴禁補造歷史。
+嚴格區分 mTLS RSA 用戶端憑證與 HTTP Message Signatures 簽章演算法。簽章演算法與契約已確認採用 RFC 9421 IANA 註冊之 `ecdsa-p256-sha256` Lab profile v1（IEEE P1363 格式，每 Client/環境獨立 P-256 私鑰），詳見〈請求簽章與防重放〉。Lab 第一版暫以已驗證 RSA-2048 自簽 client cert 為接入範圍，其他憑證類型（如 ECDSA、PKI 階層鏈）明確保留未驗，避免將候選或 proof 誤寫成完整功能。XFCC 解析器目前為 proof 級 regex，已實測缺少/非 PEM/損毀 PEM/缺 Cert/重複標頭/多個 Cert 皆回傳 401，正式實作須保留嚴格解析不變式（拒絕多 Cert、重複標頭、非 PEM，禁止 first-wins）。Ticket 01 之 proof 實作（commit `44c5fb97`）及固定基準 review 修正（commit `fe77ee38`，同步 `9c66b873`）已合入 integration branch。Standards 兩項硬規範已修正通過（含 CleanupRunner 單元測試），Spec 軸 0 finding；全套共 29 項測試（27 項 BDD + 2 項單元測試）通過（詳見 `src/Lab.Creds.Proof/README.md`）。本 proof 作為授權與 Gateway 接入基線之證據，不代表後續完整 spec AC 已結；ECDSA、PKI、憑證輪替、完整 60 秒撤銷生效（含現有連線）、服務故障 fail-closed、signature/nonce/idempotency 皆保留為後續 tickets 驗收；S2、G3 及前四項 XFCC 補測非 red-first，嚴禁補造歷史。
 
 
 ### 身分與信任邊界
@@ -134,23 +134,79 @@ scope 決定「可做什麼」，業務資料範圍決定「可對哪些資料�
 
 ### 請求簽章與防重放
 
-採 HTTP Message Signatures，並在實作前制定共同簽章規則，至少涵蓋：
+業務 API 全面採用 HTTP Message Signatures，已確認採用 **RFC 9421 Lab Profile v1**，規格與參數契約如下：
 
-- HTTP 方法與完整目標，包括會影響業務語意的查詢參數。
-- 有 Body 時的內容摘要，以及必要的內容型別與標頭。
-- 有副作用操作的 Idempotency Key。
-- Token 綁定資訊，防止任意替換授權脈絡。
-- 簽章時間、接受期限與每次嘗試的新 nonce。
+#### 1. 簽章演算法與金鑰架構
+- **演算法**：RFC 9421 IANA 已註冊之 `ecdsa-p256-sha256`（RFC 9421 §3.3.4，NIST P-256 搭配 SHA-256）。
+- **簽章輸出格式**：IEEE P1363 格式（`r || s`，固定 64 bytes）。在 .NET 10 採 `ECDsa.SignData(data, HashAlgorithmName.SHA256)` 與 `VerifyData`（預設輸出與驗證格式即為 `DSASignatureFormat.IeeeP1363FixedFieldConcatenation`，無需格式轉換）。
+- **金鑰隔離**：每個呼叫端 Client 及各環境均配置獨立的 NIST P-256 簽章金鑰對，與 mTLS 傳輸層 RSA-2048 用戶端憑證在結構與儲存上嚴格分離，各自獨立管理輪替與撤銷。
+- **金鑰登記與綁定**：伺服器靜態登記各 Client 之有效公鑰與 `keyid`。`keyid` 查得的登記所屬 `client_id` 必須與 Token introspection 解析之 `client_id` 完全一致。登記之演算法固定為 `ecdsa-p256-sha256`，嚴格禁止動態演算法協商（符合 RFC 9421 §7.3.6 降級防範要求）。
 
-業務 API 必須核對摘要與收到的實際 Body 相符，不能只驗證摘要欄位的簽章。
+#### 2. 簽章標頭結構與參數
+- **標籤與成員數限制**：限定單一簽章標籤 `sig1`。`Signature-Input` 與 `Signature` 標頭各僅允許包含一個成員，不接受多重簽章（不支援多 label）。
+- **標頭範例**：
+  - `Signature-Input: sig1=("@method" "@authority" "@path" "@query" "authorization");created=1775550000;expires=1775550060;nonce="dGVzdG5vbmNlMTIzNDU2";keyid="client1-k1";alg="ecdsa-p256-sha256"`
+  - `Signature: sig1=:<64-byte IEEE P1363 簽章之標準 base64>:`
+- **`@signature-params` 必填參數與固定順序**：
+  - 簽章參數固定順序為：`;created=<int>;expires=<int>;nonce="<str>";keyid="<str>";alg="ecdsa-p256-sha256"`
+  - 五項參數全部必填，且禁止出現其他額外參數；參數順序不同、缺少或多出任何參數均視為驗證失敗。
 
-驗證端必須確認簽章金鑰屬於 Token 所識別的 Client；不得混用不同 Client 各自合法的 Token、憑證與簽章。
+#### 3. 覆蓋元件（Covered Components）與請求類型定義表
+- **固定順序與完全比對**：驗證端對 covered components 列表執行嚴格順序與項目完全相等比對，不接受順序不同或未列入 profile 的組合。
+- **定義表**：
+  | 請求類型 | Covered components（依序） | 說明與約束 |
+  |---|---|---|
+  | 讀取、無 Body（GET、HEAD） | `"@method" "@authority" "@path" "@query" "authorization"` | 本 Lab 限制 GET/HEAD 不得帶 Body；若收到 Body bytes 則直接拒絕。 |
+  | 有副作用、無 Body（例如 DELETE 無 Body） | `"@method" "@authority" "@path" "@query" "authorization" "idempotency-key"` | 適用於無 Body 之 DELETE 等操作。 |
+  | 有副作用、有 Body（POST、PUT、PATCH、或 DELETE 有 Body） | `"@method" "@authority" "@path" "@query" "authorization" "content-type" "content-digest" "idempotency-key"` | 實際收到 Body bytes 時必含 content-type 與 content-digest；DELETE 若帶 Body 亦採此組合。 |
 
-nonce 的判斷與登錄必須能防止併發重放，並在所有可接受該請求的執行個體之間維持一致性。僅加入時間戳或 nonce 欄位，不代表已完成防重放。
+- **元件規則細節**：
+  - **`@method`、`@authority`、`@path`**：依 RFC 9421 §2.2 衍生元件規則產生。`@authority` 取自呼叫端連線 Host（Envoy 保留 Host 不改寫）；不簽入 `@scheme`（本專案業務 API 限定 HTTPS）。
+  - **`@query`**：一律簽入。取自完整原始 query 字串（含開頭 `?`，不做 percent-decode 或重排）；無 query 時值為單獨的 `?`（RFC 9421 §2.2.7）。嚴禁使用 `@query-param` 避免解析歧義。
+  - **`authorization`（Token 綁定）**：直接簽入原始 `Authorization` 標頭值（例如 `Bearer <token>`），逐字精確納入 signature base，不另造自訂 token-hash 標頭。
+  - **日誌安全規範**：簽入 `authorization` 標頭不會額外增加傳輸洩漏風險，但日誌記錄策略必須嚴格禁止輸出原始 Token、`Authorization` 標頭值、signature base 字串或 `Signature` 簽章值。系統日誌僅可記錄已驗證之 `keyid`、`client_id` 與驗簽結果。
+  - **Body 判定與摘要（`content-digest`、`content-type`）**：
+    - 判定 Body 有無不能單靠 `Content-Length > 0`（必須同時考量 `Transfer-Encoding: chunked` 及框架接收到的實際 Request Body 串流 byte 數）。若為 chunked 但實際內容為 0 bytes，視為無 Body。
+    - 凡實際接收 Body bytes > 0，必須具備 `content-type` 與 `content-digest`；若無 Body，則兩者均不得出現在 covered components 中。若實際有 Body 但簽章為無 Body 清單（或反之），驗證端直接拒絕。
+    - `content-digest` 遵循 RFC 9530 §2，採 Structured Field Dictionary 格式：`content-digest: sha-256=:<標準 base64>:`。摘要以收到的原始 payload bytes 計算 SHA-256（逐 byte 驗證，禁止重新序列化 JSON）。Dictionary 解析失敗、缺少 `sha-256` key 或摘要不符一律拒絕。
+    - `content-type` 逐字納入 signature base，不做正規化改寫。
+  - **`idempotency-key`**：所有具副作用方法（POST、PUT、PATCH、DELETE）必填並簽入；GET/HEAD 不使用。Ticket 03 責任僅為強制要求簽入與簽章驗證，去重狀態儲存與業務冪等語意由 Ticket 04/06 實作，Ticket 03 不宣稱完成業務去重。
 
-nonce 保存期必須涵蓋簽章可接受期間與允許的時鐘容差。
+#### 4. 時間窗、容差與 Nonce 契約
+- **簽章時間與有效期限**：
+  - 簽章產生時設定：`expires = created + 60`（簽章有效期間固定 60 秒）。
+- **驗證端時間判斷（以驗證端時鐘 `now` 為準，全部條件必須同時成立）**：
+  1. `expires > created`
+  2. `expires - created <= 60`
+  3. `now >= created - 30`（允許呼叫端與伺服器間時鐘偏差最多 30 秒）
+  4. `now <= expires + 30`
+  - **最大實際接受區間**：同一簽章在伺服器端時鐘上可被接受的總時間區間為 `[created - 30, created + 90]`，合計共 **120 秒**。Ticket 04 之 nonce 去重紀錄保存期必須至少涵蓋此 120 秒。
+- **Nonce 格式與產生**：
+  - 產生規則：使用 CSPRNG 產生 16 bytes 安全隨機值（如 `RandomNumberGenerator.GetBytes(16)`），以無 padding 之 `base64url` 編碼，字串長度恰為 22 字元。
+  - 呼叫端重試規範：每次請求嘗試（attempt）必須產生全新 nonce 並重簽。
+  - Ticket 03 驗證範圍：僅驗證 nonce 必填、格式符合 22 字元且可解碼為 16 bytes，並符合上述時間窗。Ticket 03 不進行 nonce 跨執行個體登錄或唯一性比對（跨執行個體防重放與儲存由 Ticket 04 實作）。
+- **界線聲明**：
+  - 單純具備時間窗與 nonce 欄位**不等於**已具備防重放保證。在 120 秒有效區間內重送相同合法簽章，Ticket 03 仍會接受；Ticket 03 交付成果嚴禁宣稱已完成防重放。
 
-合法重試沿用穩定業務識別與 Idempotency Key，但使用新 nonce 重新簽署。已被接受的同一份簽章重送時，應被防重放機制阻擋。
+#### 5. 驗證流程與信任邊界
+- **驗證步驟**：
+  1. 傳輸通道已通過 Envoy 入口驗證，API 驗證 Gateway mTLS 固定指紋（Ticket 01 基線）。
+  2. Access Token 經 introspection 且憑證綁定指紋 `cnf.x5t#S256` 比對通過，Token 仍在有效期限內（Ticket 02 基線）。
+  3. 檢查 `Signature-Input` 與 `Signature` 標頭：單一 `sig1` 標籤，各只有一個成員。
+  4. 解析 `@signature-params`：驗證參數順序與五項必填值，演算法固定為 `ecdsa-p256-sha256`。
+  5. 驗證時間窗：檢核 `created`、`expires` 與 `now` 是否符合 120 秒容差規則；檢核 `nonce` 為 22 字元 base64url。
+  6. 依 `keyid` 查詢伺服器端註冊金鑰：確認金鑰所屬 `client_id` 與 Token 驗出之 `client_id` 完全相符，且金鑰狀態有效。
+  7. 檢查 Covered Components：依請求方法與有無 Body 比對定義表，項目與順序必須完全一致。
+  8. 若有 Body：驗證 `content-digest` 包含 `sha-256`，重算實際 byte 摘要比對完全一致。
+  9. 組裝 signature base 並以已登記的 P-256 公鑰執行 IEEE P1363 驗簽。
+  10. 以上任一步驟失敗即回傳 401（未授權/簽章無效），終止請求且不得執行任何業務邏輯。
+- **邊界與後續實測保留**：
+  - 互通測試：Ticket 03 實作需納入 RFC 9421 Appendix B.2.4 測試案例與 B.1.3 ECC P-256 金鑰之驗證單元測試，目前未宣稱已通過。
+  - Gateway 保留標頭：Envoy v1.39.3 對 `Authorization`、`Content-Digest`、`Signature`、`Signature-Input` 等標頭之逐字保留需於 Ticket 03 整合測試中實測驗證。
+  - 授權範圍：Token 決定 scope，簽章金鑰僅代表呼叫端身分驗證。Ticket 05 之業務資料範圍授權規則與資料模型目前未定，不預設任何客製資料模型。
+- **防重放與重試關聯**：
+  - nonce 的判斷與登錄必須能防止併發重放，並在所有可接受該請求的執行個體之間維持一致性（Ticket 04 實作）。
+  - 合法重試沿用穩定業務識別與 Idempotency Key，但使用新 nonce 重新簽署。已被接受的同一份簽章重送時，應由 Ticket 04 防重放機制阻擋。
 
 ### 業務冪等與本地提交
 
@@ -235,17 +291,19 @@ nonce 保存期必須涵蓋簽章可接受期間與允許的時鐘容差。
 
 **已確認決策（Ticket 02）**：Lab Opaque Access Token 有效期為 5 分鐘；到期後呼叫端重新以 Client Credentials（mTLS）取得 Token，不新增 Refresh Token，也不以自然到期取代「撤銷後 60 秒內拒絕」的要求（撤銷仍須獨立達成，屬後續 ticket）。
 
+**已確認決策（Ticket 03 Lab Profile v1）**：HTTP Message Signatures 簽章演算法（RFC 9421 `ecdsa-p256-sha256`，IEEE P1363 64-byte 格式，每 Client/環境獨立 P-256 私鑰）、必要標頭與覆蓋元件固定順序表（`@method`、`@authority`、`@path`、`@query`、`authorization`，有 Body 時加 `content-type` 與 `content-digest`，副作用操作加 `idempotency-key`）、原始 `Authorization` 標頭逐字綁定、簽章有效時間窗（`expires = created + 60`、容差 ±30 秒、最大接受區間 120 秒）與 Nonce 格式（CSPRNG 16 bytes base64url 22 字元）已全部確認（完整規格見〈請求簽章與防重放〉）。Ticket 03 實作須實測驗收 RFC B.2.4 測試向量與 Envoy 標頭轉送，但不得宣稱防重放已完成。
+
 以下刻意未定，不得自行填入預設值並視為已核准：
 
 - 授權核心已選定 OpenIddict 7.7.1，業務 API Gateway Lab 選型已定為 Envoy v1.39.3，Token endpoint 採 caller 直連 mTLS；但 Gateway 生產級配置（高可用 HA、SDS/xDS 動態設定、憑證動態輪替）及 Token endpoint 經 Gateway 路徑目前未定（未驗證）。
-- HTTP Message Signatures 簽章演算法、必要欄位、Token 綁定資訊的表示方式與中介改寫處理（獨立於 mTLS RSA 憑證，簽章演算法契約未定）。
-- 快取配置、撤銷同步機制與容量規劃。Token 效期已由使用者確認（見下）。
-- 簽章接受時間窗、時鐘容差、nonce 儲存方式及保存期。
-- 業務識別範圍、內容比對規則、Idempotency Key 保存期。
+- 防重放之 Nonce 儲存方式、跨執行個體唯一性檢驗與去重紀錄保存期（留待 Ticket 04 確認與實作；Ticket 03 僅驗證格式與 120 秒時間窗）。
+- 業務資料範圍授權來源、授權規則與資料模型（留待 Ticket 05 確認；scope 僅源自 Token，不預設未決之自訂授權屬性）。
+- 業務識別範圍、內容比對規則、Idempotency Key 保存期與去重狀態儲存（留待 Ticket 06 定義）。
+- 快取配置、撤銷同步機制與容量規劃。Token 效期已由使用者確認（5 分鐘）。
 - 處理中回應、服務錯誤與拒絕情境的具體 HTTP 狀態／回應格式。
-- 正常輪替重疊期、稽核保存期及營運流程；其他憑證類型（ECDSA、PKI 階層式憑證鏈等）未驗證。
+- 正常輪替重疊期、稽核保存期及營運流程；其他憑證類型（ECDSA client cert、PKI 階層式憑證鏈等）未驗證。
 - 各 API 的最長重試期與下游冪等協定。
-- 嚴格記錄：ECDSA、PKI、金鑰輪替、完整 60 秒撤銷生效機制（含現有連線）、服務故障 fail-closed、signature/nonce/idempotency 皆不宣稱 proof 已驗；S2、G3 及前四項 XFCC 補測非 red-first，嚴禁補造歷史。
+- 嚴格記錄：ECDSA（mTLS 憑證）、PKI、金鑰輪替、完整 60 秒撤銷生效機制（含現有連線）、服務故障 fail-closed、Ticket 03 簽章實作驗證（含 RFC B.2.4 及 Envoy 轉送）、nonce 防重放與 idempotency 去重皆不宣稱 proof 已驗；S2、G3 及前四項 XFCC 補測非 red-first，嚴禁補造歷史。
 
 ### 保證限制與參考
 
