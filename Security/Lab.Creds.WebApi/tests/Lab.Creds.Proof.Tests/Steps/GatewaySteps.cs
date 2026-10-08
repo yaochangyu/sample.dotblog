@@ -79,11 +79,8 @@ public sealed class GatewaySteps(ScenarioState state)
         };
 
         using var client = ProofEnvironment.CreateClient(ProofEnvironment.GatewayApiUri, ProofEnvironment.Certificates.Gateway);
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/partner/submissions")
-        {
-            Content = new StringContent("{\"partnerName\":\"Acme\",\"payload\":\"demo\"}", Encoding.UTF8, "application/json")
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", state.AccessToken);
+        var call = SignedRequests.Submission(state.ClientId!, ProofEnvironment.GatewayApiUri, state.AccessToken);
+        using var request = call.Build();
         if (values.Length > 0)
         {
             request.Headers.TryAddWithoutValidation("X-Forwarded-Client-Cert", values);
@@ -129,7 +126,7 @@ public sealed class GatewaySteps(ScenarioState state)
     [When("該服務以同一憑證和 token 經 Gateway 查詢 API 所見的請求資訊")]
     public async Task WhenInspect()
     {
-        await Inspect(state.ClientCertificate, state.AccessToken, "/partner/inspect/plain", new Dictionary<string, string>(), []);
+        await Inspect(state.ClientCertificate, state.AccessToken, "/partner/inspect/plain", null);
         Assert.True(_response?.StatusCode == HttpStatusCode.OK, $"{_failure} {_response?.StatusCode} {_body}");
     }
 
@@ -162,16 +159,10 @@ public sealed class GatewaySteps(ScenarioState state)
 
     private const string RawPathAndQuery = "/partner/inspect/a%2Fb//c?x=1&y=%E4%B8%AD&x=2";
     private static readonly byte[] SignedBody = Encoding.UTF8.GetBytes("{\"partnerName\":\"Acme\",\"payload\":\"中文 body\"}");
-    private static readonly Dictionary<string, string> SignatureHeaders = new()
-    {
-        ["Content-Digest"] = "sha-256=:X48E9qOokqqrvdts8nOJRJN3OWDUoyWxBf7kbu9DBPE=:",
-        ["Signature-Input"] = "sig1=(\"@method\" \"@authority\" \"@path\" \"@query\" \"content-digest\");created=1700000000;keyid=\"partner-a\"",
-        ["Signature"] = "sig1=:dGVzdC1zaWduYXR1cmUtbm90LXZlcmlmaWVkLWluLXRoaXMtdGlja2V0:"
-    };
+    private SignedCall? _sent;
 
-    [When("該服務經 Gateway 提交帶有簽章相關標頭的請求")]
-    public Task WhenSubmitSignatureHeaders()
-        => Inspect(state.ClientCertificate, state.AccessToken, RawPathAndQuery, SignatureHeaders, SignedBody);
+    [When("該服務經 Gateway 提交帶有 RFC 9421 簽章的請求")]
+    public Task WhenSubmitSignatureHeaders() => Inspect(state.ClientCertificate, state.AccessToken, RawPathAndQuery, SignedBody);
 
     [Then("API 所見的 authority、原始路徑與查詢、本文雜湊與簽章相關標頭與送出時完全相同")]
     public void ThenPreserved()
@@ -182,31 +173,24 @@ public sealed class GatewaySteps(ScenarioState state)
         Assert.Equal($"localhost:{ProofEnvironment.GatewayUri.Port}", root.GetProperty("host").GetString());
         Assert.Equal(RawPathAndQuery, root.GetProperty("rawTarget").GetString());
         Assert.Equal(Base64UrlEncoder.Encode(SHA256.HashData(SignedBody)), root.GetProperty("bodySha256").GetString());
-        foreach (var (name, value) in SignatureHeaders)
-        {
-            Assert.Equal(value, root.GetProperty("headers").GetProperty(name.ToLowerInvariant()).GetString());
-        }
+        Assert.Equal(Base64UrlEncoder.Encode(SHA256.HashData(Encoding.UTF8.GetBytes(_sent!.Authorization!))), root.GetProperty("authorizationSha256").GetString());
+        Assert.Equal(state.ClientId + "-sig-1", root.GetProperty("verifiedKeyId").GetString());
+        var headers = root.GetProperty("headers");
+        Assert.Equal(_sent.SignatureInput, headers.GetProperty("signature-input").GetString());
+        Assert.Equal(_sent.Signature, headers.GetProperty("signature").GetString());
+        Assert.Equal(_sent.ContentDigest, headers.GetProperty("content-digest").GetString());
+        Assert.Equal(_sent.ContentType, headers.GetProperty("content-type").GetString());
+        Assert.Equal(_sent.IdempotencyKey, headers.GetProperty("idempotency-key").GetString());
     }
 
-    private async Task Inspect(
-        X509Certificate2? certificate, string? accessToken, string rawPathAndQuery,
-        IDictionary<string, string> headers, byte[] body)
+    private async Task Inspect(X509Certificate2? certificate, string? accessToken, string rawPathAndQuery, byte[]? body)
     {
         using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
         var cancellationToken = timeout.Token;
 
         using var client = ProofEnvironment.CreateClient(ProofEnvironment.GatewayUri, certificate);
-        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(rawPathAndQuery, UriKind.Relative))
-        {
-            Content = new ByteArrayContent(body)
-        };
-        request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-        foreach (var (name, value) in headers)
-        {
-            request.Headers.TryAddWithoutValidation(name, value);
-        }
-
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+        _sent = SignedRequests.Create(state.ClientId ?? "partner-a", ProofEnvironment.GatewayUri, HttpMethod.Post, rawPathAndQuery, accessToken, body);
+        using var request = _sent.Build();
         try
         {
             _response = await client.SendAsync(request, cancellationToken);
@@ -236,26 +220,20 @@ public sealed class GatewaySteps(ScenarioState state)
         Assert.Equal(clientId, json.RootElement.GetProperty("clientId").GetString());
     }
 
-    private async Task Submit(X509Certificate2? certificate, string? accessToken, IDictionary<string, string>? extraHeaders = null, Uri? baseAddress = null, string body = """{"partnerName":"Acme","payload":"demo"}""")
+    private async Task Submit(X509Certificate2? certificate, string? accessToken, IDictionary<string, string>? extraHeaders = null, Uri? baseAddress = null, string body = SignedRequests.DemoBody)
     {
         using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
         var cancellationToken = timeout.Token;
 
-        using var client = ProofEnvironment.CreateClient(baseAddress ?? ProofEnvironment.GatewayUri, certificate);
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/partner/submissions")
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json")
-        };
+        baseAddress ??= ProofEnvironment.GatewayUri;
+        using var client = ProofEnvironment.CreateClient(baseAddress, certificate);
+        var call = SignedRequests.Submission(state.ClientId ?? "partner-a", baseAddress, accessToken, body);
         foreach (var (name, value) in extraHeaders ?? new Dictionary<string, string>())
         {
-            request.Headers.TryAddWithoutValidation(name, value);
+            call.ExtraHeaders.Add(new(name, value));
         }
 
-        if (accessToken is not null)
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        }
-
+        using var request = call.Build();
         try
         {
             _response = await client.SendAsync(request, cancellationToken);

@@ -46,7 +46,7 @@ Feature: Envoy Gateway 終止 mTLS 後 API 仍以原始 Client 憑證判斷 (Tic
 
   Scenario: 經 Gateway 轉送後原始 authority、路徑、查詢、本文與簽章相關標頭未被改動
     Given 呼叫服務 "partner-a" 已以其憑證取得 reference token
-    When 該服務經 Gateway 提交帶有簽章相關標頭的請求
+    When 該服務經 Gateway 提交帶有 RFC 9421 簽章的請求
     Then API 所見的 authority、原始路徑與查詢、本文雜湊與簽章相關標頭與送出時完全相同
 
   Scenario Outline: 受信 Gateway 通道送來不合法的 XFCC 時 API 回應明確 401

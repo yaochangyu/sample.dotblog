@@ -145,16 +145,9 @@ public sealed class ApiSteps(ScenarioState state, TokenSteps tokenSteps)
         using var timeout = new CancellationTokenSource(ProofEnvironment.OperationTimeout);
         var cancellationToken = timeout.Token;
 
-        using var client = ProofEnvironment.CreateClient(baseAddress ?? ProofEnvironment.ApiUri, certificate);
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/partner/submissions")
-        {
-            Content = new StringContent("""{"partnerName":"Acme","payload":"demo"}""", Encoding.UTF8, "application/json")
-        };
-        if (accessToken is not null)
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        }
-
+        baseAddress ??= ProofEnvironment.ApiUri;
+        using var client = ProofEnvironment.CreateClient(baseAddress, certificate);
+        using var request = SignedRequests.Submission(state.ClientId ?? "partner-a", baseAddress, accessToken).Build();
         _response = await client.SendAsync(request, cancellationToken);
         _body = await _response.Content.ReadAsStringAsync(cancellationToken);
     }

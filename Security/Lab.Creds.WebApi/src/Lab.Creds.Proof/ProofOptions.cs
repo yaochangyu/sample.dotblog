@@ -1,4 +1,5 @@
 using System.Security.Cryptography.X509Certificates;
+using Lab.Creds.Proof.Signatures;
 
 namespace Lab.Creds.Proof;
 
@@ -6,7 +7,8 @@ public sealed record ProofClient(
     string ClientId,
     X509Certificate2 PublicCertificate,
     IReadOnlyList<string> Scopes,
-    bool CanIntrospect = false);
+    bool CanIntrospect = false,
+    IReadOnlyList<RegisteredSigningKey>? SigningKeys = null);
 
 public sealed record AuthServerOptions(
     X509Certificate2 ServerCertificate,
@@ -20,8 +22,10 @@ public sealed record ApiOptions(
     string IntrospectionClientId,
     X509Certificate2 IntrospectionClientCertificate,
     X509Certificate2Collection TrustedRoots,
+    string SigningKeyConnectionString,
     string Audience = ProofDefaults.Audience,
-    GatewayTrustOptions? Gateway = null);
+    GatewayTrustOptions? Gateway = null,
+    Action<ILoggingBuilder>? ConfigureLogging = null);
 
 // When set, the API accepts connections only from the trusted Gateway (mTLS) and takes the original
 // client certificate exclusively from the Gateway-set X-Forwarded-Client-Cert header.

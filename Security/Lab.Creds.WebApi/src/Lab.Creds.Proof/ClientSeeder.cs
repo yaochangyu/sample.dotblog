@@ -47,6 +47,11 @@ internal sealed class ClientSeeder(
 
             await manager.CreateAsync(descriptor, cancellationToken);
         }
+
+        // Request-signing public keys: registered per Client and kept apart from the mTLS certificate registration.
+        await using var keyContext = await contextFactory.CreateDbContextAsync(cancellationToken);
+        keyContext.SigningKeys.AddRange(options.Clients.SelectMany(client => client.SigningKeys ?? []));
+        await keyContext.SaveChangesAsync(cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

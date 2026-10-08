@@ -1,6 +1,8 @@
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using Lab.Creds.Proof;
+using Lab.Creds.Proof.Signatures;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Testcontainers.PostgreSql;
@@ -23,6 +25,13 @@ public static class ProofEnvironment
     public static X509Certificate2 PartnerB { get; private set; } = null!;
     public static X509Certificate2 Stranger { get; private set; } = null!;
     public static X509Certificate2 ApiIdentity { get; private set; } = null!;
+    public static CapturingLoggerProvider Logs { get; } = new();
+    public static TestSigningKey PartnerASigningKey { get; private set; } = null!;
+    public static TestSigningKey PartnerADisabledSigningKey { get; private set; } = null!;
+    public static TestSigningKey PartnerBSigningKey { get; private set; } = null!;
+    public static TestSigningKey UnregisteredSigningKey { get; private set; } = null!;
+    public static BusinessCallCounter ApiBusinessCalls => _api!.Services.GetRequiredService<BusinessCallCounter>();
+    public static BusinessCallCounter GatewayApiBusinessCalls => _gatewayApi!.Services.GetRequiredService<BusinessCallCounter>();
     public static Uri AuthServerUri { get; private set; } = null!;
     public static Uri ApiUri { get; private set; } = null!;
     public static Uri OtherApiUri { get; private set; } = null!;
@@ -44,6 +53,12 @@ public static class ProofEnvironment
         Stranger = Certificates.CreateClientCertificate("stranger");
         ApiIdentity = Certificates.CreateClientCertificate("partner-api");
 
+        // Runtime-generated P-256 request-signing keys, independent per Client and unrelated to the RSA mTLS keys.
+        PartnerASigningKey = new TestSigningKey("partner-a-sig-1");
+        PartnerADisabledSigningKey = new TestSigningKey("partner-a-disabled");
+        PartnerBSigningKey = new TestSigningKey("partner-b-sig-1");
+        UnregisteredSigningKey = new TestSigningKey("unregistered-key");
+
         _postgres = new PostgreSqlBuilder("postgres:16-alpine").Build();
         await _postgres.StartAsync(cancellationToken);
 
@@ -51,8 +66,12 @@ public static class ProofEnvironment
             Certificates.Server,
             _postgres.GetConnectionString(),
             [
-                new ProofClient("partner-a", TestCertificates.PublicOnly(PartnerA), [ProofDefaults.SubmitScope]),
-                new ProofClient("partner-b", TestCertificates.PublicOnly(PartnerB), [ProofDefaults.SubmitScope]),
+                new ProofClient("partner-a", TestCertificates.PublicOnly(PartnerA), [ProofDefaults.SubmitScope], SigningKeys:
+                [
+                    Register(PartnerASigningKey, "partner-a"),
+                    Register(PartnerADisabledSigningKey, "partner-a", isActive: false)
+                ]),
+                new ProofClient("partner-b", TestCertificates.PublicOnly(PartnerB), [ProofDefaults.SubmitScope], SigningKeys: [Register(PartnerBSigningKey, "partner-b")]),
                 new ProofClient(ProofDefaults.Audience, TestCertificates.PublicOnly(ApiIdentity), [], CanIntrospect: true)
             ]));
         await _authServer.StartAsync(cancellationToken);
@@ -63,7 +82,9 @@ public static class ProofEnvironment
             AuthServerUri,
             ProofDefaults.Audience,
             ApiIdentity,
-            [Certificates.Root]));
+            [Certificates.Root],
+            _postgres.GetConnectionString(),
+            ConfigureLogging: logging => logging.AddProvider(Logs)));
         await _api.StartAsync(cancellationToken);
         ApiUri = AddressOf(_api);
 
@@ -74,7 +95,9 @@ public static class ProofEnvironment
             ProofDefaults.Audience,
             ApiIdentity,
             [Certificates.Root],
-            Audience: "inventory-api"));
+            _postgres.GetConnectionString(),
+            Audience: "inventory-api",
+            ConfigureLogging: logging => logging.AddProvider(Logs)));
         await _otherApi.StartAsync(cancellationToken);
         OtherApiUri = AddressOf(_otherApi);
 
@@ -84,7 +107,9 @@ public static class ProofEnvironment
             ProofDefaults.Audience,
             ApiIdentity,
             [Certificates.Root],
-            Gateway: new GatewayTrustOptions(TestCertificates.PublicOnly(Certificates.Gateway))));
+            _postgres.GetConnectionString(),
+            Gateway: new GatewayTrustOptions(TestCertificates.PublicOnly(Certificates.Gateway)),
+            ConfigureLogging: logging => logging.AddProvider(Logs)));
         await _gatewayApi.StartAsync(cancellationToken);
         GatewayApiUri = AddressOf(_gatewayApi);
 
@@ -113,9 +138,26 @@ public static class ProofEnvironment
         if (_api is not null) steps.Add(() => _api.DisposeAsync().AsTask());
         if (_authServer is not null) steps.Add(() => _authServer.DisposeAsync().AsTask());
         if (_postgres is not null) steps.Add(() => _postgres.DisposeAsync().AsTask());
-        steps.Add(() => { Certificates?.Dispose(); return Task.CompletedTask; });
+        steps.Add(() =>
+        {
+            PartnerASigningKey?.Dispose();
+            PartnerADisabledSigningKey?.Dispose();
+            PartnerBSigningKey?.Dispose();
+            UnregisteredSigningKey?.Dispose();
+            Certificates?.Dispose();
+            return Task.CompletedTask;
+        });
         await CleanupRunner.RunAsync(steps);
     }
+
+    private static RegisteredSigningKey Register(TestSigningKey key, string clientId, bool isActive = true) => new()
+    {
+        KeyId = key.KeyId,
+        ClientId = clientId,
+        Algorithm = LabSignatureProfile.Algorithm,
+        PublicKey = key.PublicKey,
+        IsActive = isActive
+    };
 
     // Real TLS validation: the server certificate must chain to the generated test root.
     public static HttpClient CreateClient(Uri baseAddress, X509Certificate2? clientCertificate)

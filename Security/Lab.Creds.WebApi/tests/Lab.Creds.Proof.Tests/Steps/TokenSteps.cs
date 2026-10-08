@@ -69,4 +69,5 @@ public sealed class ScenarioState
     public HttpResponseMessage? TokenResponse { get; set; }
     public string? TokenBody { get; set; }
     public string? AccessToken { get; set; }
+    public string? SecondAccessToken { get; set; }
 }

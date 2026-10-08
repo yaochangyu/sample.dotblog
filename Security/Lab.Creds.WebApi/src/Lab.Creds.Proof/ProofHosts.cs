@@ -1,4 +1,6 @@
 using System.Net;
+using System.Text;
+using Lab.Creds.Proof.Signatures;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore;
 using System.Net.Security;
@@ -77,7 +79,10 @@ public static class ProofHosts
     {
         var builder = WebApplication.CreateBuilder();
         ConfigureKestrel(builder, options.ServerCertificate, options.Gateway);
+        options.ConfigureLogging?.Invoke(builder.Logging);
 
+        builder.Services.AddDbContextFactory<ProofDbContext>(db => db.UseNpgsql(options.SigningKeyConnectionString));
+        builder.Services.AddSingleton<BusinessCallCounter>();
         builder.Services.AddOpenIddict()
             .AddValidation(validation =>
             {
@@ -104,27 +109,45 @@ public static class ProofHosts
 
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseMiddleware<RequestSignatureMiddleware>();
 
-        app.MapPost("/partner/submissions", (ClaimsPrincipal user, PartnerSubmission submission) =>
-                Results.Accepted(value: new { clientId = user.GetClaim(Claims.ClientId), partnerName = submission.PartnerName }))
+        app.MapPost("/partner/submissions", (ClaimsPrincipal user, PartnerSubmission submission, BusinessCallCounter calls) =>
+            {
+                calls.Increment();
+                return Results.Accepted(value: new { clientId = user.GetClaim(Claims.ClientId), partnerName = submission.PartnerName });
+            })
             .RequireAuthorization(SubmitPolicy);
 
-        // Proof-only: reports what the API itself observed (original target, authority, body hash,
-        // signature-related headers and the SHA-256 x5t#S256 of the client certificate it validates against).
-        app.MapPost("/partner/inspect/{**rest}", async (HttpContext http) =>
+        // Minimal read / no-body demo: reports only the Client the API verified (no business data model).
+        app.MapGet("/partner/whoami", (ClaimsPrincipal user, BusinessCallCounter calls) =>
             {
+                calls.Increment();
+                return Results.Ok(new { clientId = user.GetClaim(Claims.ClientId) });
+            })
+            .RequireAuthorization(SubmitPolicy);
+
+        // Proof-only diagnostic. It sits behind exactly the same token and request-signature checks as the business
+        // endpoints (no bypass); it reports what the API itself observed: original target, authority, body hash,
+        // signature-related headers verbatim, a hash of Authorization, and the SHA-256 x5t#S256 of the validated client certificate.
+        app.MapMethods("/partner/inspect/{**rest}", ["GET", "POST", "PUT", "PATCH", "DELETE"], async (HttpContext http, BusinessCallCounter calls) =>
+            {
+                calls.Increment();
                 using var body = new MemoryStream();
                 await http.Request.Body.CopyToAsync(body, http.RequestAborted);
                 var certificate = http.Connection.ClientCertificate;
-                var headers = new[] { "content-digest", "signature-input", "signature", "content-type" }
+                var headers = new[] { "content-digest", "signature-input", "signature", "content-type", "idempotency-key" }
                     .Where(http.Request.Headers.ContainsKey)
                     .ToDictionary(name => name, name => http.Request.Headers[name].ToString());
                 return Results.Ok(new
                 {
+                    method = http.Request.Method,
                     host = http.Request.Host.Value,
                     rawTarget = http.Features.Get<IHttpRequestFeature>()!.RawTarget,
                     bodySha256 = Base64UrlEncoder.Encode(SHA256.HashData(body.ToArray())),
+                    bodyLength = body.Length,
                     headers,
+                    authorizationSha256 = Base64UrlEncoder.Encode(SHA256.HashData(Encoding.UTF8.GetBytes(http.Request.Headers.Authorization.ToString()))),
+                    verifiedKeyId = http.Items.TryGetValue(RequestSignatureMiddleware.VerifiedKeyIdItem, out var keyId) ? keyId : null,
                     clientCertificateX5tS256 = certificate is null ? null : Base64UrlEncoder.Encode(SHA256.HashData(certificate.RawData))
                 });
             })

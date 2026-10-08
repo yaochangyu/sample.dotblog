@@ -1,16 +1,40 @@
 openapi: 3.0.3
 info:
-  title: Partner submission API (Ticket 01/02 proof contract)
+  title: Partner submission API (Ticket 01/02/03 proof contract)
   version: 0.1.0-proof
   description: >
     Minimal business contract for the proof only. OAuth endpoints (/connect/token, /connect/introspect)
     are provided by OpenIddict and are intentionally not described here. No codegen is used.
 paths:
+  /partner/whoami:
+    get:
+      summary: 讀取示範（無本文）：回報由 token 驗證的 Client
+      security:
+        - mtlsBoundBearer: [partner.submit]
+      parameters:
+        - $ref: '#/components/parameters/SignatureInput'
+        - $ref: '#/components/parameters/Signature'
+      responses:
+        '200':
+          description: Signature verified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clientId: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /partner/submissions:
     post:
       summary: 合作廠商提交資料 (protected, proof skeleton without persistence)
       security:
         - mtlsBoundBearer: [partner.submit]
+      parameters:
+        - $ref: '#/components/parameters/SignatureInput'
+        - $ref: '#/components/parameters/Signature'
+        - $ref: '#/components/parameters/ContentDigest'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -28,8 +52,48 @@ paths:
                   clientId: { type: string }
                   partnerName: { type: string }
         '401':
-          description: Missing/invalid/expired token, wrong target API (audience), missing certificate, or certificate not bound to the token
+          $ref: '#/components/responses/Unauthorized'
 components:
+  parameters:
+    SignatureInput:
+      name: Signature-Input
+      in: header
+      required: true
+      description: 'RFC 9421 Lab Profile v1, single member sig1; params order created, expires, nonce, keyid, alg="ecdsa-p256-sha256". Covered components: @method @authority @path @query authorization [content-type content-digest] [idempotency-key] (GET: no body, no idempotency-key; side-effecting: idempotency-key; with body: content-type and content-digest too).'
+      schema: { type: string }
+    Signature:
+      name: Signature
+      in: header
+      required: true
+      description: 'sig1=:<base64 of 64-byte IEEE P1363 r||s ECDSA P-256 signature>:'
+      schema: { type: string }
+    ContentDigest:
+      name: Content-Digest
+      in: header
+      required: true
+      description: 'RFC 9530 sha-256=:<base64>: over the exact request body bytes.'
+      schema: { type: string }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Covered by the signature. Ticket 03 does not deduplicate on it.
+      schema: { type: string }
+  responses:
+    Unauthorized:
+      description: >
+        Missing/invalid/expired token, wrong target API (audience), missing certificate, certificate not bound to the token,
+        or an invalid request signature. Signature failures return error invalid_request_signature with a reason code
+        (signature_missing, signature_invalid, key_unknown, key_client_mismatch, key_inactive, algorithm_unsupported,
+        signature_expired, signature_not_yet_valid, signature_time_invalid, nonce_invalid, components_mismatch,
+        content_digest_mismatch, content_digest_invalid, header_missing, body_not_allowed, ...). Business logic is never reached.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string }
+              reason: { type: string }
   securitySchemes:
     mtlsBoundBearer:
       type: http
