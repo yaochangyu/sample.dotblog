@@ -11,7 +11,7 @@ public sealed record ParsedSignatureInput(
 // repeated headers are detected instead of silently merged.
 public sealed record SignatureRequestView(
     string Method,
-    string Authority,
+    string Authority, // raw Host as received; normalized only when the @authority component is derived
     string Path,
     string Query,
     IReadOnlyList<string> SignatureInput,
@@ -20,7 +20,8 @@ public sealed record SignatureRequestView(
     IReadOnlyList<string> ContentType,
     IReadOnlyList<string> ContentDigest,
     IReadOnlyList<string> IdempotencyKey,
-    ReadOnlyMemory<byte> Body);
+    ReadOnlyMemory<byte> Body,
+    string Scheme = "https");
 
 public sealed record SignatureVerification(bool Succeeded, string? Reason, string? KeyId = null)
 {

@@ -73,7 +73,7 @@ public sealed class SignedCall
         var query = split < 0 || split == PathAndQuery.Length - 1 ? "?" : PathAndQuery[split..];
         static string[] One(string? value) => value is null ? [] : [value];
         return new SignatureRequestView(
-            Method.Method, Authority.ToLowerInvariant(), path, query,
+            Method.Method, Authority, path, query,
             One(SignatureInput), One(Signature), One(Authorization), One(Body is { Length: > 0 } ? ContentType : null),
             One(ContentDigest), One(IdempotencyKey), Body ?? []);
     }
@@ -149,13 +149,20 @@ public static class RequestSigner
 
     public static string Quote(string value) => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
 
+    // Independent of the production normalizer: the signer is HTTPS-only (RFC 9421 2.2.3, default port 443).
+    private static string CanonicalAuthority(string authority)
+    {
+        var lower = authority.ToLowerInvariant();
+        return lower.EndsWith(":443", StringComparison.Ordinal) ? lower[..^4] : lower;
+    }
+
     private static string ComponentValue(SignedCall call, string component, string? authorityOverride)
     {
         var split = call.PathAndQuery.IndexOf('?');
         return component switch
         {
             "@method" => call.Method.Method,
-            "@authority" => (authorityOverride ?? call.Authority).ToLowerInvariant(),
+            "@authority" => CanonicalAuthority(authorityOverride ?? call.Authority),
             "@scheme" => "https",
             "@path" => split < 0 ? call.PathAndQuery : call.PathAndQuery[..split],
             "@query" => split < 0 || split == call.PathAndQuery.Length - 1 ? "?" : call.PathAndQuery[split..],

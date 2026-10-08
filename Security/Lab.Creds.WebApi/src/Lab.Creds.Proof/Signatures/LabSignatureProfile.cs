@@ -132,7 +132,7 @@ public static class LabSignatureProfile
     private static string ComponentValue(SignatureRequestView request, string name) => name switch
     {
         "@method" => request.Method,
-        "@authority" => request.Authority,
+        "@authority" => AuthorityNormalizer.Normalize(request.Authority, request.Scheme),
         "@path" => request.Path,
         "@query" => request.Query,
         // RFC 9421 2.1 strips only HTTP optional whitespace (SP / HTAB); other characters are signed as received.

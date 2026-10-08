@@ -95,9 +95,9 @@ public sealed class RequestSignatureMiddleware(
         var query = split < 0 || split == rawTarget.Length - 1 ? "?" : rawTarget[split..];
         string[] Lines(string name) => request.Headers.TryGetValue(name, out var values) ? values.OfType<string>().ToArray() : [];
         return new SignatureRequestView(
-            request.Method, (request.Host.Value ?? "").ToLowerInvariant(), path, query,
+            request.Method, request.Host.Value ?? "", path, query,
             Lines("Signature-Input"), Lines("Signature"), Lines("Authorization"), Lines("Content-Type"),
-            Lines("Content-Digest"), Lines("Idempotency-Key"), body);
+            Lines("Content-Digest"), Lines("Idempotency-Key"), body, request.Scheme);
     }
 
     // Only the reason code, the Client and a key id that matched a registered key are logged; never the token,

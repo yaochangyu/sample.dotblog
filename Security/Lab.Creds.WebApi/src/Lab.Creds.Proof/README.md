@@ -25,7 +25,7 @@
 # 建置（0 Warning / 0 Error）
 dotnet build tests/Lab.Creds.Proof.Tests/Lab.Creds.Proof.Tests.csproj --nologo
 
-# 執行驗證測試（全數 211 項測試通過）
+# 執行驗證測試（全數 224 項測試通過）
 dotnet test tests/Lab.Creds.Proof.Tests/Lab.Creds.Proof.Tests.csproj --nologo --no-build
 ```
 
@@ -65,18 +65,18 @@ Caller ──── mTLS (RSA-2048 自簽憑證, SHA-256 allowlist) ────
 
 ---
 
-## 5. 測試組成（共 211 測試）
+## 5. 測試組成（共 224 測試）
 
-測試套件共包含 **211 項測試**（Ticket 01／02 基線 41 項 + Ticket 03 新增 170 項；非全為 BDD）：
+測試套件共包含 **224 項測試**（Ticket 01／02 基線 41 項 + Ticket 03 新增 183 項；非全為 BDD）：
 - **88 項 Reqnroll BDD 情境**（5 + 12 + 22 + 49 = 88）：
   - 5 項 Client Credentials mTLS 情境（`ClientCredentialsMtls.feature`，含 Ticket 02 新增的 5 分鐘效期）
   - 12 項受保護 API 情境（`ProtectedApi.feature`，含 Ticket 02 新增的過期後重新取 token、無效 token、錯誤目標 API、無 client_secret 入口）
   - 22 項 Gateway Envoy 情境（`GatewayEnvoy.feature`：10 個一般情境 + 12 個 XFCC 負面 Scenario Outline 範例；含 Ticket 02 新增的 6 個嚴格 XFCC 範例與 Body／標頭身分宣稱情境；Ticket 03 起轉送保留情境改用真實簽章）
   - 49 項 Ticket 03 簽章情境（`SignedRequests.feature`：8 個合法請求形狀、1 個 whoami、1 個無簽章、29 個竄改／不合規範例、1 個他 Client 金鑰、1 個 GET 帶本文、1 個窗內重送、2 個直連 API、4 個 chunked 與空本文、1 個日誌不含機密）
-- **123 項單元測試**：
+- **136 項單元測試**：
   - 2 項 `CleanupRunnerTests.cs`（驗證受控資源清理在步驟拋出例外時仍依序執行後續清理，並完整保留原始例外與堆疊）
-  - 121 項 Ticket 03 簽章單元測試（`Unit/SignatureProfileTests.cs`）：5 項 RFC 9421 B.2.4／B.1.3 互通、43 項嚴格 Structured Field 解析、73 項 Lab Profile 驗證（時間邊界、nonce、元件、金鑰、演算法、參數、多值歧義、本文與摘要、竄改）。
-- 歷史基線（Ticket 01）為 29 項 = 27 BDD + 2 單元；Ticket 02 新增 12 項 BDD，合計 41 項；Ticket 03 新增 49 項 BDD 與 121 項單元，現況合計 211 項。
+  - 134 項 Ticket 03 簽章單元測試（`Unit/SignatureProfileTests.cs`）：5 項 RFC 9421 B.2.4／B.1.3 互通、43 項嚴格 Structured Field 解析、73 項 Lab Profile 驗證與 13 項衍生 @authority 正規化（小寫、僅省略該 scheme 預設埠；時間邊界、nonce、元件、金鑰、演算法、參數、多值歧義、本文與摘要、竄改）。
+- 歷史基線（Ticket 01）為 29 項 = 27 BDD + 2 單元；Ticket 02 新增 12 項 BDD，合計 41 項；Ticket 03 新增 49 項 BDD 與 134 項單元，現況合計 224 項。
 - **程式碼生成**：Reqnroll 生成檔案置於 `obj/`（設定 `ReqnrollUseIntermediateOutputPathForCodeBehind=true`），不追蹤 `.feature.cs` 程式碼。
 
 ---

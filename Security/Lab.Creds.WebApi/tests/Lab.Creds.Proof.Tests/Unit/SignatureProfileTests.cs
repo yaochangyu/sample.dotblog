@@ -469,4 +469,31 @@ public class LabSignatureProfileTests : IDisposable
         Assert.Equal("signature_invalid", (await Verify(plain with { Authorization = [plain.Authorization[0] + "\u00A0"] })).Reason);
         Assert.True((await Verify(plain with { Authorization = ["  " + plain.Authorization[0] + "\t"] })).Succeeded);
     }
+
+    [Theory]
+    [InlineData("API.Example.COM:443", "https", "api.example.com")]
+    [InlineData("api.example.com", "https", "api.example.com")]
+    [InlineData("API.Example.com:8443", "https", "api.example.com:8443")]
+    [InlineData("api.example.com:80", "https", "api.example.com:80")]
+    [InlineData("API.Example.com:80", "http", "api.example.com")]
+    [InlineData("api.example.com:8080", "http", "api.example.com:8080")]
+    [InlineData("api.example.com:443", "http", "api.example.com:443")]
+    [InlineData("[::1]:443", "https", "[::1]")]
+    [InlineData("[::1]", "https", "[::1]")]
+    [InlineData("[::1]:8443", "https", "[::1]:8443")]
+    public void Given_Host值_When_衍生authority_Then_符合RFC9421的正規化(string host, string scheme, string expected)
+        => Assert.Equal(expected, AuthorityNormalizer.Normalize(host, scheme));
+
+    [Theory]
+    [InlineData("Api.Example.COM:443", "api.example.com")]
+    [InlineData("api.example.com:443", "api.example.com")]
+    [InlineData("API.Example.com:8443", "api.example.com:8443")]
+    public async Task Given_明示預設埠或大寫Host_When_驗證_Then_與正規化authority一致且簽章通過(string wireHost, string canonical)
+    {
+        // Signed over the hard-coded canonical value, received with the raw Host the caller sent.
+        var signed = RequestSigner.Sign(HttpMethod.Post, canonical, "/p", "token-value", Json, _partnerA, new SignOptions { Now = Now });
+        var view = signed.ToView() with { Authority = wireHost };
+        Assert.True((await Verify(view)).Succeeded);
+        Assert.Equal("signature_invalid", (await Verify(view with { Authority = "other.example.com" })).Reason);
+    }
 }
