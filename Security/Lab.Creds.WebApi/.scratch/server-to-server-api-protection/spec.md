@@ -200,9 +200,9 @@ scope 決定「可做什麼」，業務資料範圍決定「可對哪些資料�
   8. 若有 Body：驗證 `content-digest` 包含 `sha-256`，重算實際 byte 摘要比對完全一致。
   9. 組裝 signature base 並以已登記的 P-256 公鑰執行 IEEE P1363 驗簽。
   10. 以上任一步驟失敗即回傳 401（未授權/簽章無效），終止請求且不得執行任何業務邏輯。
-- **邊界與後續實測保留**：
-  - 互通測試：Ticket 03 實作需納入 RFC 9421 Appendix B.2.4 測試案例與 B.1.3 ECC P-256 金鑰之驗證單元測試，目前未宣稱已通過。
-  - Gateway 保留標頭：Envoy v1.39.3 對 `Authorization`、`Content-Digest`、`Signature`、`Signature-Input` 等標頭之逐字保留需於 Ticket 03 整合測試中實測驗證。
+- **邊界與實證結果**：
+  - 互通測試：RFC 9421 Appendix B.2.4 測試案例以 B.1.3 ECC P-256 公鑰之驗簽已實測驗證通過（見 `tests/Lab.Creds.Proof.Tests/Unit/SignatureProfileTests.cs` 與 `src/Lab.Creds.Proof/README.md` 5.2）。
+  - Gateway 保留標頭：Envoy v1.39.3 對 `Authorization`、`Content-Digest`、`Signature`、`Signature-Input` 等標頭之逐字保留已由真實整合 BDD 測試驗證通過（見 `tests/Lab.Creds.Proof.Tests/Features/GatewayEnvoy.feature`、`tests/Lab.Creds.Proof.Tests/Features/SignedRequests.feature` 與 `src/Lab.Creds.Proof/README.md` 5.2）。
   - 授權範圍：Token 決定 scope，簽章金鑰僅代表呼叫端身分驗證。Ticket 05 之業務資料範圍授權規則與資料模型目前未定，不預設任何客製資料模型。
 - **防重放與重試關聯**：
   - nonce 的判斷與登錄必須能防止併發重放，並在所有可接受該請求的執行個體之間維持一致性（Ticket 04 實作）。
@@ -291,7 +291,7 @@ scope 決定「可做什麼」，業務資料範圍決定「可對哪些資料�
 
 **已確認決策（Ticket 02）**：Lab Opaque Access Token 有效期為 5 分鐘；到期後呼叫端重新以 Client Credentials（mTLS）取得 Token，不新增 Refresh Token，也不以自然到期取代「撤銷後 60 秒內拒絕」的要求（撤銷仍須獨立達成，屬後續 ticket）。
 
-**已確認決策（Ticket 03 Lab Profile v1）**：HTTP Message Signatures 簽章演算法（RFC 9421 `ecdsa-p256-sha256`，IEEE P1363 64-byte 格式，每 Client/環境獨立 P-256 私鑰）、必要標頭與覆蓋元件固定順序表（`@method`、`@authority`、`@path`、`@query`、`authorization`，有 Body 時加 `content-type` 與 `content-digest`，副作用操作加 `idempotency-key`）、原始 `Authorization` 標頭逐字綁定、簽章有效時間窗（`expires = created + 60`、容差 ±30 秒、最大接受區間 120 秒）與 Nonce 格式（CSPRNG 16 bytes base64url 22 字元）已全部確認（完整規格見〈請求簽章與防重放〉）。Ticket 03 實作須實測驗收 RFC B.2.4 測試向量與 Envoy 標頭轉送，但不得宣稱防重放已完成。
+**已確認決策（Ticket 03 Lab Profile v1）**：HTTP Message Signatures 簽章演算法（RFC 9421 `ecdsa-p256-sha256`，IEEE P1363 64-byte 格式，每 Client/環境獨立 P-256 私鑰）、必要標頭與覆蓋元件固定順序表（`@method`、`@authority`、`@path`、`@query`、`authorization`，有 Body 時加 `content-type` 與 `content-digest`，副作用操作加 `idempotency-key`）、原始 `Authorization` 標頭逐字綁定、簽章有效時間窗（`expires = created + 60`、容差 ±30 秒、最大接受區間 120 秒）與 Nonce 格式（CSPRNG 16 bytes base64url 22 字元）已全部確認（完整規格見〈請求簽章與防重放〉）。Ticket 03 實作已實測驗收 RFC B.2.4 測試向量與 Envoy 標頭轉送（見〈請求簽章與防重放〉），但不得宣稱防重放已完成。
 
 以下刻意未定，不得自行填入預設值並視為已核准：
 
