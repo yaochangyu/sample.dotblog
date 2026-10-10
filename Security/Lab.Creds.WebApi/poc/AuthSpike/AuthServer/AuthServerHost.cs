@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using AuthSpike.Audit;
 using AuthSpike.Certificates;
 using AuthSpike.Data;
 using AuthSpike.Hosting;
@@ -47,7 +49,7 @@ public sealed class AuthServerHost : IAsyncDisposable
     /// <summary>目前信任的公開憑證（含已核准加入者）；退役過濾由呼叫端決定。</summary>
     public IReadOnlyList<X509Certificate2> TrustedCertificates(string clientId) => _trustedCertificates[clientId];
 
-    public static async Task<AuthServerHost> StartAsync(int port, SpikeTrust trust, X509Certificate2 serverCertificate, IReadOnlyList<AuthServerClient> clients, TimeSpan accessTokenLifetime, TrustRegistry registry, VerificationKeyStore verificationKeys)
+    public static async Task<AuthServerHost> StartAsync(int port, SpikeTrust trust, X509Certificate2 serverCertificate, IReadOnlyList<AuthServerClient> clients, TimeSpan accessTokenLifetime, TrustRegistry registry, VerificationKeyStore verificationKeys, AdministrativeAuditLog administrativeAudit)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.ConfigureKestrel(kestrel => kestrel.ListenLocalhost(port, listen => listen.UseHttps(https =>
@@ -129,115 +131,50 @@ public sealed class AuthServerHost : IAsyncDisposable
             return Results.Json(new { clients = snapshot });
         });
 
-        app.MapPost("/admin/clients/{clientId}/disable", (string clientId, HttpContext httpContext) =>
+        // 管理操作稽核紀錄查詢（15 單）：只有管理員能讀取；讀取不改變信任名單，因此不寫入稽核。路徑與回應格式為 lab 暫定值，待使用者確認。
+        app.MapGet("/admin/audit-records", (HttpContext httpContext) =>
         {
             if (!IsAdministrator(httpContext, registry))
             {
                 return AdministratorRejected();
             }
 
-            if (!trustedCertificates.ContainsKey(clientId))
-            {
-                return Results.Json(new Dictionary<string, string> { ["error"] = "client_not_found" }, statusCode: StatusCodes.Status404NotFound);
-            }
-
-            registry.DisableClient(clientId);
-            return Results.Json(new { clientId, enabled = false });
+            return Results.Json(administrativeAudit.Snapshot().Select(AuditWire).ToArray());
         });
+
+        app.MapPost("/admin/clients/{clientId}/disable", (string clientId, HttpContext httpContext) =>
+            RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "client.disable", requireAdministrator: true, () =>
+                trustedCertificates.ContainsKey(clientId)
+                    ? Accepted(new AdministrativeTarget(clientId), StatusCodes.Status200OK, () =>
+                    {
+                        registry.DisableClient(clientId);
+                        return Task.FromResult(Results.Json(new { clientId, enabled = false }));
+                    })
+                    : Rejected(new AdministrativeTarget(clientId), StatusCodes.Status404NotFound, "client_not_found")));
 
         // 退役與撤銷（14 單）：只有已驗證的管理員能執行；路徑與回應格式為 lab 暫定值，待使用者確認。
         // 管理操作與管理員身分檢查先於對象存在性檢查，並與核准、拒絕共用同一決策閘門序列化。
-        app.MapPost("/admin/clients/{clientId}/certificates/{thumbprint}/retire", async (string clientId, string thumbprint, HttpContext httpContext) =>
-        {
-            if (!IsAdministrator(httpContext, registry))
-            {
-                return AdministratorRejected();
-            }
+        app.MapPost("/admin/clients/{clientId}/certificates/{thumbprint}/retire", (string clientId, string thumbprint, HttpContext httpContext) =>
+            RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "certificate.retire", requireAdministrator: true, () =>
+                DecideCertificateChange(trustedCertificates, registry, clientId, thumbprint, retire: true)));
 
-            await decisionGate.WaitAsync();
-            try
-            {
-                return await ChangeCertificateAsync(trustedCertificates, registry, clientId, thumbprint, retire: true);
-            }
-            finally
-            {
-                decisionGate.Release();
-            }
-        });
+        app.MapPost("/admin/clients/{clientId}/certificates/{thumbprint}/revoke", (string clientId, string thumbprint, HttpContext httpContext) =>
+            RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "certificate.revoke", requireAdministrator: true, () =>
+                DecideCertificateChange(trustedCertificates, registry, clientId, thumbprint, retire: false)));
 
-        app.MapPost("/admin/clients/{clientId}/certificates/{thumbprint}/revoke", async (string clientId, string thumbprint, HttpContext httpContext) =>
-        {
-            if (!IsAdministrator(httpContext, registry))
-            {
-                return AdministratorRejected();
-            }
+        app.MapPost("/admin/clients/{clientId}/signing-keys/{keyId}/retire", (string clientId, string keyId, HttpContext httpContext) =>
+            RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "signing_key.retire", requireAdministrator: true, () =>
+                DecideSigningKeyChange(trustedCertificates, registry, verificationKeys, clientId, keyId, retire: true)));
 
-            await decisionGate.WaitAsync();
-            try
-            {
-                return await ChangeCertificateAsync(trustedCertificates, registry, clientId, thumbprint, retire: false);
-            }
-            finally
-            {
-                decisionGate.Release();
-            }
-        });
-
-        app.MapPost("/admin/clients/{clientId}/signing-keys/{keyId}/retire", async (string clientId, string keyId, HttpContext httpContext) =>
-        {
-            if (!IsAdministrator(httpContext, registry))
-            {
-                return AdministratorRejected();
-            }
-
-            await decisionGate.WaitAsync();
-            try
-            {
-                return ChangeSigningKey(trustedCertificates, registry, verificationKeys, clientId, keyId, retire: true);
-            }
-            finally
-            {
-                decisionGate.Release();
-            }
-        });
-
-        app.MapPost("/admin/clients/{clientId}/signing-keys/{keyId}/revoke", async (string clientId, string keyId, HttpContext httpContext) =>
-        {
-            if (!IsAdministrator(httpContext, registry))
-            {
-                return AdministratorRejected();
-            }
-
-            await decisionGate.WaitAsync();
-            try
-            {
-                return ChangeSigningKey(trustedCertificates, registry, verificationKeys, clientId, keyId, retire: false);
-            }
-            finally
-            {
-                decisionGate.Release();
-            }
-        });
+        app.MapPost("/admin/clients/{clientId}/signing-keys/{keyId}/revoke", (string clientId, string keyId, HttpContext httpContext) =>
+            RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "signing_key.revoke", requireAdministrator: true, () =>
+                DecideSigningKeyChange(trustedCertificates, registry, verificationKeys, clientId, keyId, retire: false)));
 
         // 憑證登錄申請（12 單）：申請只含 Client 身分與公開憑證；申請本身不改變信任名單，也不能用於取得 Token。
         // 申請管道（工單、人工轉交或自助入口）不在本單範圍；此端點與欄位為 lab 暫定值，待使用者確認。
-        app.MapPost("/client-certificate-requests", (CertificateRegistrationSubmission submission) =>
-        {
-            if (submission.ClientId is null || !trustedCertificates.ContainsKey(submission.ClientId))
-            {
-                return Results.Json(new Dictionary<string, string> { ["error"] = "client_not_found" }, statusCode: StatusCodes.Status404NotFound);
-            }
-
-            if (!CertificateRegistrationRequests.TryParsePublicCertificate(submission.PublicCertificatePem, out var certificate, out var error))
-            {
-                return Results.Json(new Dictionary<string, string> { ["error"] = error }, statusCode: StatusCodes.Status400BadRequest);
-            }
-
-            var request = requests.Submit(submission.ClientId, certificate!);
-            return Results.Json(
-                new { requestId = request.RequestId, clientId = request.ClientId, status = CertificateRegistrationRequests.ToWire(request.Status) },
-                statusCode: StatusCodes.Status202Accepted);
-        });
+        app.MapPost("/client-certificate-requests", (CertificateRegistrationSubmission submission, HttpContext httpContext) =>
+            RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "certificate.submit", requireAdministrator: false, () =>
+                DecideCertificateSubmission(trustedCertificates, requests, submission)));
 
         app.MapGet("/admin/client-certificate-requests/{requestId}", (string requestId, HttpContext httpContext) =>
         {
@@ -261,94 +198,64 @@ public sealed class AuthServerHost : IAsyncDisposable
             });
         });
 
-        app.MapPost("/admin/client-certificate-requests/{requestId}/approve", async (string requestId, HttpContext httpContext) =>
-        {
-            if (!IsAdministrator(httpContext, registry))
-            {
-                return AdministratorRejected();
-            }
-
-            await decisionGate.WaitAsync();
-            try
+        app.MapPost("/admin/client-certificate-requests/{requestId}/approve", (string requestId, HttpContext httpContext) =>
+            RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "certificate.approve", requireAdministrator: true, () =>
             {
                 var request = FindRequest(requests, requestId);
                 if (request is null)
                 {
-                    return Results.Json(new Dictionary<string, string> { ["error"] = "request_not_found" }, statusCode: StatusCodes.Status404NotFound);
+                    return Rejected(new AdministrativeTarget(null), StatusCodes.Status404NotFound, "request_not_found");
                 }
 
+                var target = new AdministrativeTarget(request.ClientId, Subject: "certificate", Fingerprint: request.PublicCertificate.Thumbprint);
                 if (request.Status != CertificateRequestStatus.Pending)
                 {
-                    return RequestNotPending();
+                    return Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
                 }
 
-                // 先更新信任名單與 OpenIddict 登錄，成功後才標示已核准；失敗時申請維持待核准。
-                await ReplaceTrustedCertificatesAsync(
-                    app,
-                    clientsById,
-                    trustedCertificates,
-                    request.ClientId,
-                    [.. trustedCertificates[request.ClientId], request.PublicCertificate]);
-                requests.Decide(request.RequestId, CertificateRequestStatus.Approved);
+                return Accepted(target, StatusCodes.Status200OK, async () =>
+                {
+                    // 先更新信任名單與 OpenIddict 登錄，成功後才標示已核准；失敗時申請維持待核准。
+                    await ReplaceTrustedCertificatesAsync(
+                        app,
+                        clientsById,
+                        trustedCertificates,
+                        request.ClientId,
+                        [.. trustedCertificates[request.ClientId], request.PublicCertificate]);
+                    requests.Decide(request.RequestId, CertificateRequestStatus.Approved);
 
-                return Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "approved" });
-            }
-            finally
-            {
-                decisionGate.Release();
-            }
-        });
+                    return Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "approved" });
+                });
+            }));
 
-        app.MapPost("/admin/client-certificate-requests/{requestId}/reject", async (string requestId, HttpContext httpContext) =>
-        {
-            if (!IsAdministrator(httpContext, registry))
-            {
-                return AdministratorRejected();
-            }
-
-            await decisionGate.WaitAsync();
-            try
+        app.MapPost("/admin/client-certificate-requests/{requestId}/reject", (string requestId, HttpContext httpContext) =>
+            RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "certificate.reject", requireAdministrator: true, () =>
             {
                 var request = FindRequest(requests, requestId);
                 if (request is null)
                 {
-                    return Results.Json(new Dictionary<string, string> { ["error"] = "request_not_found" }, statusCode: StatusCodes.Status404NotFound);
+                    return Rejected(new AdministrativeTarget(null), StatusCodes.Status404NotFound, "request_not_found");
                 }
 
+                var target = new AdministrativeTarget(request.ClientId, Subject: "certificate", Fingerprint: request.PublicCertificate.Thumbprint);
                 if (request.Status != CertificateRequestStatus.Pending)
                 {
-                    return RequestNotPending();
+                    return Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
                 }
 
                 // 拒絕只改變申請狀態，不改變信任名單。
-                requests.Decide(request.RequestId, CertificateRequestStatus.Rejected);
-                return Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "rejected" });
-            }
-            finally
-            {
-                decisionGate.Release();
-            }
-        });
+                return Accepted(target, StatusCodes.Status200OK, () =>
+                {
+                    requests.Decide(request.RequestId, CertificateRequestStatus.Rejected);
+                    return Task.FromResult(Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "rejected" }));
+                });
+            }));
 
         // 簽章金鑰登錄申請（13 單）：與憑證申請分開管理；申請只含 Client 身分、keyid 與公開金鑰。待核准前不登錄驗簽金鑰，因此無法通過簽章驗證。
         // 此端點與欄位為 lab 暫定值，待使用者確認。
-        app.MapPost("/signing-key-requests", (SigningKeySubmission submission) =>
-        {
-            if (submission.ClientId is null || !trustedCertificates.ContainsKey(submission.ClientId))
-            {
-                return Results.Json(new Dictionary<string, string> { ["error"] = "client_not_found" }, statusCode: StatusCodes.Status404NotFound);
-            }
-
-            if (!SigningKeyRegistrationRequests.TryParsePublicKey(submission.KeyId, submission.PublicKeyPem, out var key, out var error))
-            {
-                return Results.Json(new Dictionary<string, string> { ["error"] = error }, statusCode: StatusCodes.Status400BadRequest);
-            }
-
-            var request = signingKeyRequests.Submit(submission.ClientId, key!);
-            return Results.Json(
-                new { requestId = request.RequestId, clientId = request.ClientId, status = CertificateRegistrationRequests.ToWire(request.Status) },
-                statusCode: StatusCodes.Status202Accepted);
-        });
+        app.MapPost("/signing-key-requests", (SigningKeySubmission submission, HttpContext httpContext) =>
+            RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "signing_key.submit", requireAdministrator: false, () =>
+                DecideSigningKeySubmission(trustedCertificates, signingKeyRequests, submission)));
 
         app.MapGet("/admin/signing-key-requests/{requestId}", (string requestId, HttpContext httpContext) =>
         {
@@ -372,69 +279,54 @@ public sealed class AuthServerHost : IAsyncDisposable
             });
         });
 
-        app.MapPost("/admin/signing-key-requests/{requestId}/approve", async (string requestId, HttpContext httpContext) =>
-        {
-            if (!IsAdministrator(httpContext, registry))
-            {
-                return AdministratorRejected();
-            }
-
-            await decisionGate.WaitAsync();
-            try
+        app.MapPost("/admin/signing-key-requests/{requestId}/approve", (string requestId, HttpContext httpContext) =>
+            RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "signing_key.approve", requireAdministrator: true, () =>
             {
                 var request = Guid.TryParse(requestId, out var id) ? signingKeyRequests.Find(id) : null;
                 if (request is null)
                 {
-                    return Results.Json(new Dictionary<string, string> { ["error"] = "request_not_found" }, statusCode: StatusCodes.Status404NotFound);
+                    return Rejected(new AdministrativeTarget(null, Subject: "signing_key"), StatusCodes.Status404NotFound, "request_not_found");
                 }
 
+                var target = new AdministrativeTarget(request.ClientId, Subject: "signing_key", KeyId: request.PublicKey.KeyId, Fingerprint: KeyFingerprint(request.PublicKey.Key));
                 if (request.Status != CertificateRequestStatus.Pending)
                 {
-                    return RequestNotPending();
+                    return Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
                 }
 
-                // 只登錄到申請它的 Client 名下，且先登錄驗簽金鑰、成功後才標示已核准。
-                verificationKeys.Register(request.ClientId, request.PublicKey);
-                signingKeyRequests.Decide(request.RequestId, CertificateRequestStatus.Approved);
+                return Accepted(target, StatusCodes.Status200OK, () =>
+                {
+                    // 只登錄到申請它的 Client 名下，且先登錄驗簽金鑰、成功後才標示已核准。
+                    verificationKeys.Register(request.ClientId, request.PublicKey);
+                    signingKeyRequests.Decide(request.RequestId, CertificateRequestStatus.Approved);
 
-                return Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "approved" });
-            }
-            finally
-            {
-                decisionGate.Release();
-            }
-        });
+                    return Task.FromResult(Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "approved" }));
+                });
+            }));
 
-        app.MapPost("/admin/signing-key-requests/{requestId}/reject", async (string requestId, HttpContext httpContext) =>
-        {
-            if (!IsAdministrator(httpContext, registry))
-            {
-                return AdministratorRejected();
-            }
-
-            await decisionGate.WaitAsync();
-            try
+        app.MapPost("/admin/signing-key-requests/{requestId}/reject", (string requestId, HttpContext httpContext) =>
+            RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "signing_key.reject", requireAdministrator: true, () =>
             {
                 var request = Guid.TryParse(requestId, out var id) ? signingKeyRequests.Find(id) : null;
                 if (request is null)
                 {
-                    return Results.Json(new Dictionary<string, string> { ["error"] = "request_not_found" }, statusCode: StatusCodes.Status404NotFound);
+                    return Rejected(new AdministrativeTarget(null, Subject: "signing_key"), StatusCodes.Status404NotFound, "request_not_found");
                 }
 
+                var target = new AdministrativeTarget(request.ClientId, Subject: "signing_key", KeyId: request.PublicKey.KeyId, Fingerprint: KeyFingerprint(request.PublicKey.Key));
                 if (request.Status != CertificateRequestStatus.Pending)
                 {
-                    return RequestNotPending();
+                    return Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
                 }
 
                 // 拒絕只改變申請狀態，不登錄驗簽金鑰。
-                signingKeyRequests.Decide(request.RequestId, CertificateRequestStatus.Rejected);
-                return Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "rejected" });
-            }
-            finally
-            {
-                decisionGate.Release();
-            }
-        });
+                return Accepted(target, StatusCodes.Status200OK, () =>
+                {
+                    signingKeyRequests.Decide(request.RequestId, CertificateRequestStatus.Rejected);
+                    return Task.FromResult(Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "rejected" }));
+                });
+            }));
+
 
         app.MapPost("/connect/token", async (HttpContext httpContext, IOpenIddictApplicationManager applications) =>
         {
@@ -504,78 +396,229 @@ public sealed class AuthServerHost : IAsyncDisposable
     /// <summary>簽章金鑰登錄申請的內容；欄位為 lab 暫定值，待使用者確認。</summary>
     private sealed record SigningKeySubmission(string? ClientId, string? KeyId, string? PublicKeyPem);
 
+    /// <summary>管理操作稽核的對象（15 單）；未知的對象欄位為 null。Subject 為 certificate 或 signing_key。</summary>
+    private sealed record AdministrativeTarget(string? ClientId, string? Subject = null, string? KeyId = null, string? Fingerprint = null);
+
+    /// <summary>
+    /// 管理操作的決策（15 單）：計算結果時不改變任何狀態；管理操作稽核寫入成功後才執行 Apply。
+    /// </summary>
+    private sealed record AdministrativeDecision(AdministrativeTarget Target, int Status, string Reason, Func<Task<IResult>> Apply);
+
+    private const string AdministratorAuthenticationRequired = "administrator_authentication_required";
+
+    private static AdministrativeDecision Accepted(AdministrativeTarget target, int status, Func<Task<IResult>> apply)
+        => new(target, status, "ok", apply);
+
+    private static AdministrativeDecision Rejected(AdministrativeTarget target, int status, string error)
+        => new(target, status, error, () => Task.FromResult(ErrorResult(status, error)));
+
     private static CertificateRegistrationRequest? FindRequest(CertificateRegistrationRequests requests, string requestId)
         => Guid.TryParse(requestId, out var id) ? requests.Find(id) : null;
-
-    private static IResult RequestNotPending()
-        => Results.Json(new Dictionary<string, string> { ["error"] = "request_not_pending" }, statusCode: StatusCodes.Status409Conflict);
 
     private static IResult ErrorResult(int statusCode, string error)
         => Results.Json(new Dictionary<string, string> { ["error"] = error }, statusCode: statusCode);
 
     /// <summary>
-    /// 管理員退役或撤銷 Client 的 mTLS 憑證（14 單）。退役需已有其他可用的替代憑證（沿用 08 單的輪替重疊規則）；撤銷不需替代憑證。
+    /// 執行一次管理操作（15 單）。先決定結果，寫入管理操作稽核成功後才套用變更；稽核寫入失敗時不套用，並以 503 audit_unavailable 明確回報。
+    /// 需要管理員身分的操作，未驗證的呼叫一律 401；稽核紀錄以「未驗證」標示，不記為已驗證管理員。
+    /// 管理操作與核准、拒絕、退役、撤銷共用同一決策閘門序列化。
+    /// </summary>
+    private static async Task<IResult> RunAdministrativeOperationAsync(
+        HttpContext httpContext,
+        TrustRegistry registry,
+        AdministrativeAuditLog audit,
+        SemaphoreSlim gate,
+        string operation,
+        bool requireAdministrator,
+        Func<AdministrativeDecision> decide)
+    {
+        await gate.WaitAsync();
+        try
+        {
+            var administrator = IsAdministrator(httpContext, registry);
+            var decision = decide();
+            if (requireAdministrator && !administrator)
+            {
+                decision = new AdministrativeDecision(
+                    decision.Target,
+                    StatusCodes.Status401Unauthorized,
+                    AdministratorAuthenticationRequired,
+                    () => Task.FromResult(AdministratorRejected()));
+            }
+
+            var record = new AdministrativeAuditRecord(
+                CorrelationId: httpContext.TraceIdentifier,
+                OccurredAt: DateTimeOffset.UtcNow,
+                Operation: operation,
+                ActorStatus: administrator ? "已驗證管理員" : "未驗證",
+                ActorThumbprint: httpContext.Connection.ClientCertificate?.Thumbprint,
+                ClientId: decision.Target.ClientId,
+                Subject: decision.Target.Subject,
+                KeyId: decision.Target.KeyId,
+                Fingerprint: decision.Target.Fingerprint,
+                Outcome: decision.Status < StatusCodes.Status400BadRequest ? "accepted" : "rejected",
+                Reason: decision.Reason,
+                ResultStatus: decision.Status);
+
+            try
+            {
+                audit.Append(record);
+            }
+            catch (AdministrativeAuditWriteFailedException)
+            {
+                return ErrorResult(StatusCodes.Status503ServiceUnavailable, "audit_unavailable");
+            }
+
+            return await decision.Apply();
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private static object AuditWire(AdministrativeAuditRecord record) => new
+    {
+        correlationId = record.CorrelationId,
+        occurredAt = record.OccurredAt,
+        operation = record.Operation,
+        actorStatus = record.ActorStatus,
+        actorThumbprint = record.ActorThumbprint,
+        clientId = record.ClientId,
+        subject = record.Subject,
+        keyId = record.KeyId,
+        fingerprint = record.Fingerprint,
+        outcome = record.Outcome,
+        reason = record.Reason,
+        resultStatus = record.ResultStatus,
+    };
+
+    /// <summary>簽章金鑰指紋（15 單）：公開金鑰 SubjectPublicKeyInfo 的 SHA-256 十六進位值，不含私鑰。</summary>
+    private static string KeyFingerprint(ECDsa key) => Convert.ToHexString(SHA256.HashData(key.ExportSubjectPublicKeyInfo()));
+
+    /// <summary>憑證登錄申請的決策（12 單）：只接受不含私鑰的公開憑證；申請本身不改變信任名單。</summary>
+    private static AdministrativeDecision DecideCertificateSubmission(
+        ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates,
+        CertificateRegistrationRequests requests,
+        CertificateRegistrationSubmission submission)
+    {
+        var clientId = submission.ClientId;
+        var target = new AdministrativeTarget(clientId, Subject: "certificate");
+        if (clientId is null || !trustedCertificates.ContainsKey(clientId))
+        {
+            return Rejected(target, StatusCodes.Status404NotFound, "client_not_found");
+        }
+
+        if (!CertificateRegistrationRequests.TryParsePublicCertificate(submission.PublicCertificatePem, out var certificate, out var error))
+        {
+            return Rejected(target, StatusCodes.Status400BadRequest, error);
+        }
+
+        return Accepted(target with { Fingerprint = certificate!.Thumbprint }, StatusCodes.Status202Accepted, () =>
+        {
+            var request = requests.Submit(clientId, certificate!);
+            return Task.FromResult(Results.Json(
+                new { requestId = request.RequestId, clientId = request.ClientId, status = CertificateRegistrationRequests.ToWire(request.Status) },
+                statusCode: StatusCodes.Status202Accepted));
+        });
+    }
+
+    /// <summary>簽章金鑰登錄申請的決策（13 單）：只含 Client 身分、keyid 與公開金鑰；待核准前不登錄驗簽金鑰。</summary>
+    private static AdministrativeDecision DecideSigningKeySubmission(
+        ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates,
+        SigningKeyRegistrationRequests signingKeyRequests,
+        SigningKeySubmission submission)
+    {
+        var clientId = submission.ClientId;
+        var target = new AdministrativeTarget(clientId, Subject: "signing_key", KeyId: submission.KeyId);
+        if (clientId is null || !trustedCertificates.ContainsKey(clientId))
+        {
+            return Rejected(target, StatusCodes.Status404NotFound, "client_not_found");
+        }
+
+        if (!SigningKeyRegistrationRequests.TryParsePublicKey(submission.KeyId, submission.PublicKeyPem, out var key, out var error))
+        {
+            return Rejected(target, StatusCodes.Status400BadRequest, error);
+        }
+
+        return Accepted(target with { Fingerprint = KeyFingerprint(key!.Key) }, StatusCodes.Status202Accepted, () =>
+        {
+            var request = signingKeyRequests.Submit(clientId, key!);
+            return Task.FromResult(Results.Json(
+                new { requestId = request.RequestId, clientId = request.ClientId, status = CertificateRegistrationRequests.ToWire(request.Status) },
+                statusCode: StatusCodes.Status202Accepted));
+        });
+    }
+
+    /// <summary>
+    /// 決定管理員退役或撤銷 Client 的 mTLS 憑證（14 單）。退役需已有其他可用的替代憑證（沿用 08 單的輪替重疊規則）；撤銷不需替代憑證。
     /// 狀態只寫入 TrustRegistry：Token 端點與業務 API 每次請求都讀取該狀態，因此既有連線上的後續請求即時被阻擋。
     /// 不從 OpenIddict JWKS 移除已退役或已撤銷的憑證：OpenIddict 不接受空的 JWKS（會使 self_signed_tls_client_auth 的 Client 更新失敗），
     /// 且已退役或已撤銷的憑證無論出現在 JWKS 與否都會被拒絕。信任名單快照只列出未退役、未撤銷的憑證。
     /// </summary>
-    private static async Task<IResult> ChangeCertificateAsync(
+    private static AdministrativeDecision DecideCertificateChange(
         ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates,
         TrustRegistry registry,
         string clientId,
         string thumbprint,
         bool retire)
     {
+        var target = new AdministrativeTarget(clientId, Subject: "certificate", Fingerprint: thumbprint);
         if (!trustedCertificates.TryGetValue(clientId, out var registered))
         {
-            return ErrorResult(StatusCodes.Status404NotFound, "client_not_found");
+            return Rejected(target, StatusCodes.Status404NotFound, "client_not_found");
         }
 
-        var target = registered.FirstOrDefault(certificate => string.Equals(certificate.Thumbprint, thumbprint, StringComparison.OrdinalIgnoreCase));
-        if (target is null)
+        var certificate = registered.FirstOrDefault(candidate => string.Equals(candidate.Thumbprint, thumbprint, StringComparison.OrdinalIgnoreCase));
+        if (certificate is null)
         {
-            return ErrorResult(StatusCodes.Status404NotFound, "certificate_not_found");
+            return Rejected(target, StatusCodes.Status404NotFound, "certificate_not_found");
         }
+
+        target = target with { Fingerprint = certificate.Thumbprint };
 
         // 已撤銷或已退役的對象不改變任何狀態，回應明確的狀態衝突。
-        if (registry.IsCertificateRevoked(target.Thumbprint))
+        if (registry.IsCertificateRevoked(certificate.Thumbprint))
         {
-            return ErrorResult(StatusCodes.Status409Conflict, "already_revoked");
+            return Rejected(target, StatusCodes.Status409Conflict, "already_revoked");
         }
 
-        if (registry.IsCertificateRetired(target.Thumbprint))
+        if (registry.IsCertificateRetired(certificate.Thumbprint))
         {
-            return ErrorResult(StatusCodes.Status409Conflict, "already_retired");
+            return Rejected(target, StatusCodes.Status409Conflict, "already_retired");
         }
 
         // 登錄狀態以憑證指紋為鍵；同一指紋若也登錄於其他 Client，退役或撤銷會波及其他 Client，因此拒絕。
-        if (trustedCertificates.Any(pair => pair.Key != clientId && pair.Value.Any(certificate => string.Equals(certificate.Thumbprint, thumbprint, StringComparison.OrdinalIgnoreCase))))
+        if (trustedCertificates.Any(pair => pair.Key != clientId && pair.Value.Any(candidate => string.Equals(candidate.Thumbprint, thumbprint, StringComparison.OrdinalIgnoreCase))))
         {
-            return ErrorResult(StatusCodes.Status409Conflict, "certificate_shared");
+            return Rejected(target, StatusCodes.Status409Conflict, "certificate_shared");
         }
 
-        if (retire && !registered.Any(certificate => !string.Equals(certificate.Thumbprint, thumbprint, StringComparison.OrdinalIgnoreCase) && !registry.IsCertificateBlocked(certificate.Thumbprint)))
+        if (retire && !registered.Any(candidate => !string.Equals(candidate.Thumbprint, thumbprint, StringComparison.OrdinalIgnoreCase) && !registry.IsCertificateBlocked(candidate.Thumbprint)))
         {
-            return ErrorResult(StatusCodes.Status409Conflict, "replacement_required");
+            return Rejected(target, StatusCodes.Status409Conflict, "replacement_required");
         }
 
-        if (retire)
+        return Accepted(target, StatusCodes.Status200OK, () =>
         {
-            registry.RetireCertificate(target.Thumbprint);
-        }
-        else
-        {
-            registry.RevokeCertificate(target.Thumbprint);
-        }
+            if (retire)
+            {
+                registry.RetireCertificate(certificate.Thumbprint);
+            }
+            else
+            {
+                registry.RevokeCertificate(certificate.Thumbprint);
+            }
 
-        return Results.Json(new { clientId, thumbprint = target.Thumbprint, status = retire ? "retired" : "revoked" });
+            return Task.FromResult(Results.Json(new { clientId, thumbprint = certificate.Thumbprint, status = retire ? "retired" : "revoked" }));
+        });
     }
 
     /// <summary>
-    /// 管理員退役或撤銷 Client 的請求簽章金鑰（14 單）。退役需已有其他可用的替代金鑰（沿用 08 單的輪替重疊規則）；
+    /// 決定管理員退役或撤銷 Client 的請求簽章金鑰（14 單）。退役需已有其他可用的替代金鑰（沿用 08 單的輪替重疊規則）；
     /// 撤銷不需替代金鑰。狀態寫入 TrustRegistry，業務 API 每次請求都讀取，因此既有連線上的後續請求即時被阻擋。
     /// </summary>
-    private static IResult ChangeSigningKey(
+    private static AdministrativeDecision DecideSigningKeyChange(
         ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates,
         TrustRegistry registry,
         VerificationKeyStore verificationKeys,
@@ -583,47 +626,53 @@ public sealed class AuthServerHost : IAsyncDisposable
         string keyId,
         bool retire)
     {
+        var target = new AdministrativeTarget(clientId, Subject: "signing_key", KeyId: keyId);
         if (!trustedCertificates.ContainsKey(clientId))
         {
-            return ErrorResult(StatusCodes.Status404NotFound, "client_not_found");
+            return Rejected(target, StatusCodes.Status404NotFound, "client_not_found");
         }
 
         // 已撤銷或已退役的金鑰仍保留於驗簽登錄中，因此先確認歸屬，再依狀態回應衝突。
-        if (!verificationKeys.TryGet(clientId, keyId, out _))
+        if (!verificationKeys.TryGet(clientId, keyId, out var key))
         {
-            return ErrorResult(StatusCodes.Status404NotFound, "signing_key_not_found");
+            return Rejected(target, StatusCodes.Status404NotFound, "signing_key_not_found");
         }
+
+        target = target with { Fingerprint = KeyFingerprint(key!.Key) };
 
         if (registry.IsSigningKeyRevoked(keyId))
         {
-            return ErrorResult(StatusCodes.Status409Conflict, "already_revoked");
+            return Rejected(target, StatusCodes.Status409Conflict, "already_revoked");
         }
 
         if (registry.IsSigningKeyRetired(keyId))
         {
-            return ErrorResult(StatusCodes.Status409Conflict, "already_retired");
+            return Rejected(target, StatusCodes.Status409Conflict, "already_retired");
         }
 
         if (verificationKeys.IsKeyIdSharedWithOtherClient(clientId, keyId))
         {
-            return ErrorResult(StatusCodes.Status409Conflict, "signing_key_shared");
+            return Rejected(target, StatusCodes.Status409Conflict, "signing_key_shared");
         }
 
         if (retire && !verificationKeys.KeyIdsOf(clientId).Any(candidate => candidate != keyId && !registry.IsSigningKeyBlocked(candidate)))
         {
-            return ErrorResult(StatusCodes.Status409Conflict, "replacement_required");
+            return Rejected(target, StatusCodes.Status409Conflict, "replacement_required");
         }
 
-        if (retire)
+        return Accepted(target, StatusCodes.Status200OK, () =>
         {
-            registry.RetireSigningKey(keyId);
-        }
-        else
-        {
-            registry.RevokeSigningKey(keyId);
-        }
+            if (retire)
+            {
+                registry.RetireSigningKey(keyId);
+            }
+            else
+            {
+                registry.RevokeSigningKey(keyId);
+            }
 
-        return Results.Json(new { clientId, keyId, status = retire ? "retired" : "revoked" });
+            return Task.FromResult(Results.Json(new { clientId, keyId, status = retire ? "retired" : "revoked" }));
+        });
     }
 
     /// <summary>管理員身分只看出示的 mTLS 憑證是否登錄為管理員角色；與業務 API 的 Token 查證各自獨立。</summary>
@@ -634,7 +683,7 @@ public sealed class AuthServerHost : IAsyncDisposable
     }
 
     private static IResult AdministratorRejected()
-        => Results.Json(new Dictionary<string, string> { ["error"] = "administrator_authentication_required" }, statusCode: StatusCodes.Status401Unauthorized);
+        => Results.Json(new Dictionary<string, string> { ["error"] = AdministratorAuthenticationRequired }, statusCode: StatusCodes.Status401Unauthorized);
 
     /// <summary>
     /// 以指定的公開憑證集合取代 Client 登錄的 JWKS（08 單）：登錄新憑證為新增一筆，退役舊憑證則自集合移除。

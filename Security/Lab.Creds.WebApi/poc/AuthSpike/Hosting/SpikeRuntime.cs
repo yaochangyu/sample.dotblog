@@ -63,6 +63,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
         TimeSpan verificationCacheLifetime,
         OrderStore orders,
         SecurityAuditLog auditLog,
+        AdministrativeAuditLog administrativeAuditLog,
         string environmentName)
     {
         Trust = trust;
@@ -75,6 +76,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
         Registry = registry;
         Orders = orders;
         AuditLog = auditLog;
+        AdministrativeAuditLog = administrativeAuditLog;
         UnregisteredSelfSignedCertificate = unregisteredSelfSignedCertificate;
         OtherCaCertificate = otherCaCertificate;
         AdministratorCertificate = administratorCertificate;
@@ -115,6 +117,9 @@ public sealed class SpikeRuntime : IAsyncDisposable
 
     /// <summary>安全稽核紀錄（與防重放及訂單儲存分開；主要與第二個執行個體共用）。</summary>
     public SecurityAuditLog AuditLog { get; }
+
+    /// <summary>管理操作稽核紀錄（15 單）：與呼叫者安全稽核分開保存；只由授權伺服器的管理端點寫入與查詢。</summary>
+    public AdministrativeAuditLog AdministrativeAuditLog { get; }
 
     /// <summary>第二個建立訂單 API 執行個體（僅在需要跨執行個體情境時啟動）。</summary>
     public OrdersApiHost? SecondaryOrdersApi { get; private set; }
@@ -176,6 +181,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
             }
         }
 
+        var administrativeAuditLog = new AdministrativeAuditLog();
         var authServer = await AuthServerHost.StartAsync(
             authServerPort,
             trust,
@@ -183,7 +189,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
             registeredClients,
             accessTokenLifetime ?? DefaultAccessTokenLifetime,
             registry,
-            verificationKeys);
+            verificationKeys,
+            administrativeAuditLog);
         // 管理員角色只在組合根登錄，授權伺服器與業務 API 皆讀取同一份信任狀態。
         registry.RegisterAdministratorCertificate(administratorCertificate.Thumbprint);
 
@@ -220,6 +227,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
             cacheLifetime,
             orders,
             auditLog,
+            administrativeAuditLog,
             environmentName);
     }
 
