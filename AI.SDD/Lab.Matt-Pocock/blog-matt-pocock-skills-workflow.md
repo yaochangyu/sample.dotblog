@@ -1,5 +1,5 @@
 ---
-title: 拆解 Matt Pocock 的 Engineering Skills：從環境配置到高階 TDD 與架構演進的完整工作流程
+title: 導入 Matt Pocock 的 Engineering Skills：從規格提煉到 TDD 落地實戰
 abstract: <p>前面幾篇我們已經演練過 OpenSpec 與 Spec-Kit，體驗過規格驅動開發的威力。這次來試試 Matt Pocock 開源的 <a target="_blank" rel="noopener noreferrer" href="https://github.com/mattpocock/skills">skills</a>，這是一套將需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸程式碼審查與架構深化完整封裝的 AI 工程技能庫。這裡我以「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。</p>
 keywords: SDD,Specification-Driven Development,Vibe Coding
 categories: Vibe Coding
@@ -10,7 +10,7 @@ postStatus:
 dontInferFeaturedImage: false
 stripH1Header: true
 ---
-# 拆解 Matt Pocock 的 Engineering Skills：從環境配置到高階 TDD 與架構演進的完整工作流程
+# 導入 Matt Pocock 的 Engineering Skills：從規格提煉到 TDD 落地實戰
 
 前面幾篇我們已經演練過 OpenSpec 與 Spec-Kit，體驗過規格驅動開發的威力。這次來試試 Matt Pocock 開源的 [skills](https://github.com/mattpocock/skills)，這是一套將軟體工程規範（需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸程式碼審查與架構深化）完整封裝起來的 AI 技能庫。這裡我以電商系統的「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。
 
