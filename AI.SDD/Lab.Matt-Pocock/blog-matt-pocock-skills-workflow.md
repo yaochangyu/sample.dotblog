@@ -70,7 +70,7 @@ flowchart TD
 
 #### 提示詞範例（Prompt）
 
-直接在對話框中輸入指令：
+直接在對話方塊中輸入指令：
 
 ```text
 /setup-matt-pocock-skills
@@ -619,4 +619,4 @@ Tests       9 passed (9)
 
 ---
 
-完整程式碼位置: https://github.com/yaochangyu/sample.dotblog/tree/master/AI.SDD/Lab.Matt-Pocock
+完整代碼位置: https://github.com/yaochangyu/sample.dotblog/tree/master/AI.SDD/Lab.Matt-Pocock
