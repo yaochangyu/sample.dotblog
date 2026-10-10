@@ -19,13 +19,19 @@
 
 在直接動手前，先看一下 Matt Pocock 這套技能庫的設計哲學。傳統使用 AI 輔助開發的痛點在於：人類給的需求太模糊，AI 只能憑空猜測細節；實作時又習慣一口氣寫完整個模組，等到測試失敗時才發現架構方向完全偏掉；即使程式碼上線了，也缺乏系統性的手段檢視架構是否腐化。
 
-這套技能庫不是單向的線性流程，而是構建了一套「功能交付內軌」與「架構演進外軌」相互呼應的雙軌閉環架構：
+這套技能庫不是單向的線性流程，而是構建了一套涵蓋「功能交付內軌」、「架構演進外軌」以及「異常診斷中繼軌」的全生命週期閉環：
 
 ```mermaid
 flowchart TD
     subgraph OuterLoop ["外軌：持續架構演進迴圈 (Architecture Evolution)"]
         R0["專案落地運作與迭代"] --> R1["/improve-codebase-architecture<br>掃描熱點與淺模組，產出 HTML 報告"]
         R1 --> R2["挑選候選方案進行 /grilling 盤問"]
+    end
+
+    subgraph DiagLoop ["中繼軌：異常排查紀律 (Diagnosing Bugs)"]
+        D0["線上例外 / 測試紅燈 / 效能衰退"] --> D1["/diagnosing-bugs<br>拒絕肉眼盲猜，建立秒級紅燈反饋迴圈"]
+        D1 --> D2["最小化重現 ＋ 提出可證偽假說"]
+        D2 --> D3["單變數插樁 ＋ 接縫回歸測試修復"]
     end
 
     subgraph InnerLoop ["內軌：高階功能交付流水線 (Feature Delivery Loop)"]
@@ -36,16 +42,20 @@ flowchart TD
     end
 
     R2 --> F2
+    D3 --> F4
     F4 --> R0
+    R0 -.-> D0
 
     G["底層設計哲學：codebase-design<br>Deep Modules, Seam 測試接縫, Leverage, Locality"] -.-> F2
     G -.-> F3
     G -.-> R1
+    G -.-> D3
 ```
 
 - **底層基石（codebase-design）**：提供統一的模組設計辭典與哲學。追求「深模組（Deep Module）」——極簡的公開介面封裝大量複雜度，並以公開接縫（Seam）作為唯一測試表面。
 - **內軌（功能交付鏈）**：從環境配置、邊界盤問、規格制定、工單切片，到多代理在 Git Worktree 裡並行跑 TDD，最後以雙軸審查驗收。
 - **外軌（架構演進鏈）**：系統上線一段時間後，利用 `improve-codebase-architecture` 主動掃描代碼摩擦力與淺模組，生成視覺化 HTML 報告，驅動下一輪重構。
+- **中繼診斷軌（diagnosing-bugs）**：系統遭遇線上例外、偶發 Bug 或效能驟降時，嚴格遵守六階段科學診斷紀律，在建立可驗證的紅燈反饋迴圈前絕不盲猜代碼。
 
 接下來我們以「購物車折價券計算模組」為真實案例，一步步把這套雙軌流程完整走過一遍。
 
@@ -497,13 +507,96 @@ flowchart LR
 
 ---
 
+### 9. 系統異常與效能衰退的科學排查（/diagnosing-bugs）
+
+當系統上線運轉後，難免會遇到線上回報「偶發性計算錯誤（Flaky Bug）」、「噴出例外（Throwing）」或「效能衰退（Performance Regression）」。面對這類棘手問題，傳統 AI 最常見的壞習慣就是：一拿到錯誤訊息，立刻開啟相關檔案，憑肉眼直覺「猜測」可能的原因並隨意修改代碼。這種盲猜式除錯往往只會越改越糟。
+
+Matt Pocock 體系中的 `/diagnosing-bugs` 是一套極度嚴謹的**科學診斷紀律**。它的核心鋼鐵準則是：**在尚未建立出「秒級、確定性、一鍵可跑」的紅燈重現指令（Feedback Loop）之前，嚴禁跳入代碼盲猜假說！**
+
+這裡以我們折價券模組在線上遇到的真實故障為例：
+線上回報當購物車遇到多張小額券與百分比券疊加時，實付金額偶發計算出小於 0 的極小浮點數殘留（例如 `-0.000000001`），導致金流付款閘道校驗失敗。
+
+#### 提示詞範例（Prompt）
+
+```text
+/diagnosing-bugs 線上回報購物車在特定多券抵扣時，calculateDiscount 傳出的實付金額偶發為小於 0 的微小負數。
+請依照六階段診斷紀律進行排查，先建立反饋迴圈，嚴禁看 code 盲猜。
+```
+
+AI 隨即會依循六大階段有條不紊地推進：
+
+#### 階段 1 與 2：建立秒級紅燈迴圈並最小化（Build a feedback loop & Minimise）
+AI 不會直接改代碼，而是先在測試接縫處建立一個確定能抓到此 Bug 的測試案例，並砍掉所有無關參數，只保留造成錯誤的最小承重牆資料：
+
+```typescript
+// tests/regression-flaky-negative.spec.ts
+import { describe, it, expect } from "vitest";
+import { calculateDiscount } from "../src/coupon-calculator";
+
+describe("Regression: 浮點數微小負數溢出重現迴圈", () => {
+  it("_01_極限折扣組合不應產生負數浮點數殘留()", () => {
+    // 最小重現資料（承重牆條件：小數點折抵剛好觸發 IEEE 754 精度誤差）
+    const cart = { subtotal: 99.99 };
+    const coupons = [
+      { id: "c1", type: "PERCENTAGE", rate: 0.1, threshold: 0 },
+      { id: "c2", type: "FIXED", amount: 89.991, threshold: 0 },
+    ];
+
+    const result = calculateDiscount(cart, coupons);
+
+    // 嚴格斷言：實付金額必須為完全精確的 0，不能為微小負數
+    expect(result.finalPayableAmount).toBeGreaterThanOrEqual(0);
+    expect(Object.is(result.finalPayableAmount, -0)).toBe(false);
+  });
+});
+```
+
+執行此反饋迴圈，精準目睹紅燈報錯：
+
+```text
+FAIL tests/regression-flaky-negative.spec.ts
+AssertionError: expected -0 to not be -0 // 或 -1e-11 to be greater than or equal to 0
+```
+
+#### 階段 3：提出可證偽假說（Hypothesise）
+在確認紅燈後，AI 會列出 3 個具備可證偽性的假說，並向開發者確認：
+1. **假說 1**：IEEE 754 浮點數相減誤差導致 `cart.subtotal - finalDiscount` 產生微小負數殘留，且原生 `Math.max(0, ...)` 未能攔截 `-0`。
+2. **假說 2**：折價券排序演算法在面對權重相同時順序漂移。
+3. **假說 3**：`Math.min` 上限保護取值順序發生時序競爭。
+
+#### 階段 4 與 5：單變數插樁驗證與接縫修復（Instrument & Fix）
+在關鍵邊界加入帶有唯一識別碼的臨時探針 `[DEBUG-b1c4]`，確認假說 1 完全成立。接著在不修改測試的前提下，於 `src/coupon-calculator.ts` 給出最小精準修復：
+
+```typescript
+// src/coupon-calculator.ts 修復片段：以精確數值修正邊界
+const rawPayable = cart.subtotal - finalDiscount;
+// 消除 IEEE 754 負零 (-0) 與微小浮點數殘留
+const payable = rawPayable <= 0.000001 ? 0 : Math.round(rawPayable * 100) / 100;
+```
+
+再次執行重現迴圈與完整測試套件：
+
+```text
+PASS tests/regression-flaky-negative.spec.ts
+✓ _01_極限折扣組合不應產生負數浮點數殘留 (1ms)
+
+Test Files  2 passed (2)
+Tests       9 passed (9)
+```
+
+#### 階段 6：清理還原（Cleanup）
+單一指令搜尋並移除所有 `[DEBUG-b1c4]` 標記，確認原始重現腳本全綠，並將「假說 1 成立（IEEE 754 浮點數負零邊界修正）」作為關鍵紀錄寫入 Git 提交訊息。
+
+---
+
 ## 心得
 
 - 這套工作流程把傳統「隨意叫 AI 寫扣」的隨機性，收斂成一套具備工程約束的現代流水線。
 - 從 `/setup-matt-pocock-skills` 固化環境與工單格式開始，到 `/grill-with-docs` 的多輪邊界盤問，可以在動手前先淘汰掉 80% 的理解偏差。
 - `codebase-design` 提供了一套清晰的判斷準則，告別無意義的淺模組（Shallow Modules），堅持以深接縫（Deep Seams）作為唯一測試表面，解決了傳統單元測試容易脆弱碎裂的長年痛點。
 - `/to-spec` 與 `/to-tickets` 將巨型需求拆成有依賴關係的任務圖（Task Graph），而 `/implement-spec` 則扮演自動化調度大腦，透過 Git Worktree 隔離並行驅動 `/tdd`，展現了現代多代理架構的威力。
-- 落地後再搭配 `/improve-codebase-architecture` 定期主動體檢，生成 HTML Before/After 視覺化報告，讓架構重構不再憑直覺摸黑進行，非常適合作為團隊導入 AI SDD（Spec-Driven Development）的標竿範本。
+- 落地後再搭配 `/improve-codebase-architecture` 定期主動體檢，生成 HTML Before/After 視覺化報告，讓架構重構不再憑直覺摸黑進行。
+- 面對系統異常與效能衰退時，`/diagnosing-bugs` 的六階段紀律強迫 AI 在建立秒級紅燈迴圈前「絕對不准瞎猜看 code」，是保障大型系統穩定維運的終極安全網。
 
 ---
 
