@@ -1,6 +1,6 @@
 # [AI.SDD] 拆解 Matt Pocock 的 Engineering Skills：從環境配置到高階 TDD 與架構演進的完整工作流程
 
-讓 AI 寫程式碼很容易，但要讓 AI 在複雜系統中寫出架構正確、邊界清楚且具備測試保護的程式碼，光靠一句「幫我實作這個功能」往往只會換來滿地幻覺與難以維護的技術債。Matt Pocock 開源的 [skills](https://github.com/mattpocock/skills) 提出了一套極具工程嚴謹度的規範，把軟體工程中的需求盤問、領域建模、規格提煉、垂直切片、多代理編排實作、TDD 紅綠循環、雙軸代碼審查與主動架構深化，封裝成一整套可重複執行的閉環技能鏈。這篇文章會從最初的環境配置開始，以電商系統的「購物車折價券折扣計算與抵扣模組」作為真實情境，逐步拆解這套工作流的運作機制與 Prompt 實戰範例。
+在開發過程中，直接叫 AI 寫程式碼往往很爽快，但如果不給予任何工程約束，多半只會換來滿地幻覺與難以維護的技術債。Matt Pocock 開源的 [skills](https://github.com/mattpocock/skills)，指的是一套將軟體工程規範（需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸代碼審查與架構深化）封裝起來的 AI 技能庫。這裡我以電商系統的「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。
 
 ---
 
@@ -11,15 +11,15 @@
 - 測試框架：Vitest 3.0.0 / TypeScript 5.7.0
 - AI 輔助工具：Claude Code / Antigravity CLI
 - 依賴套件庫：[mattpocock/skills](https://github.com/mattpocock/skills)
-（註：以上為建議版本，非強制）
+（註：此為建議版本，非強制）
 
 ---
 
-## 核心概念：現代軟體工程雙軌閉環
+## 核心概念：軟體工程全生命週期閉環
 
-在直接動手前，先看一下 Matt Pocock 這套技能庫的設計哲學。傳統使用 AI 輔助開發的痛點在於：人類給的需求太模糊，AI 只能憑空猜測細節；實作時又習慣一口氣寫完整個模組，等到測試失敗時才發現架構方向完全偏掉；即使程式碼上線了，也缺乏系統性的手段檢視架構是否腐化。
+在動手實作前，先來看一下這套技能庫的架構邏輯。以往叫 AI 開發的盲點在於：需求給得太模糊，AI 只能憑空瞎猜；動手時又一口氣寫一大包程式碼，等到單元測試紅一片時才發現方向偏掉了；更別說程式碼上線後，缺乏系統性手段檢查架構是否腐化。
 
-這套技能庫不是單向的線性流程，而是構建了一套涵蓋「功能交付內軌」、「架構演進外軌」以及「異常診斷中繼軌」的全生命週期閉環：
+這套技能庫構建了一套涵蓋「功能交付內軌」、「架構演進外軌」以及「異常診斷中繼軌」的完整閉環：
 
 ```mermaid
 flowchart TD
@@ -52,12 +52,13 @@ flowchart TD
     G -.-> D3
 ```
 
-- **底層基石（codebase-design）**：提供統一的模組設計辭典與哲學。追求「深模組（Deep Module）」——極簡的公開介面封裝大量複雜度，並以公開接縫（Seam）作為唯一測試表面。
-- **內軌（功能交付鏈）**：從環境配置、邊界盤問、規格制定、工單切片，到多代理在 Git Worktree 裡並行跑 TDD，最後以雙軸審查驗收。
-- **外軌（架構演進鏈）**：系統上線一段時間後，利用 `improve-codebase-architecture` 主動掃描代碼摩擦力與淺模組，生成視覺化 HTML 報告，驅動下一輪重構。
-- **中繼診斷軌（diagnosing-bugs）**：系統遭遇線上例外、偶發 Bug 或效能驟降時，嚴格遵守六階段科學診斷紀律，在建立可驗證的紅燈反饋迴圈前絕不盲猜代碼。
+這裡可以拆解為四個維度：
+- **底層哲學（codebase-design）**：追求「深模組 (Deep Module)」——以極簡的公開介面封裝大量內部複雜度，並堅持公開接縫 (Seam) 就是唯一的測試表面。
+- **內軌（功能交付鏈）**：從環境配置、邊界盤問、規格制定、工單切片，到背景子代理在獨立 Git Worktree 裡並行跑 TDD，最後以雙軸審查驗收。
+- **外軌（架構演進鏈）**：系統上線一段時間後，利用 `improve-codebase-architecture` 掃描代碼摩擦力與淺模組，產出視覺化 HTML 報告，驅動下一輪重構。
+- **中繼軌（diagnosing-bugs）**：線上噴錯、偶發失敗或效能衰退時，嚴格遵守六階段科學診斷紀律，在建立可一鍵重現的紅燈迴圈前，絕對不看 code 盲猜。
 
-接下來我們以「購物車折價券計算模組」為真實案例，一步步把這套雙軌流程完整走過一遍。
+接下來我們以「購物車折價券計算模組」為例，把每一步驟的操作走過一遍。
 
 ---
 
@@ -65,15 +66,17 @@ flowchart TD
 
 ### 1. 初始化環境規範（/setup-matt-pocock-skills）
 
-任何工程技能在運作前，都必須先知道「工單要記在哪裡」以及「領域文件放在哪裡」。`/setup-matt-pocock-skills` 是一個引導式的初始化技能，它會主動探測專案結構，確認使用 GitHub Issues、GitLab 還是本地 Markdown 作為追蹤器，並在專案中建立 `docs/agents/` 目錄。
+在任何工程技能運作前，首先必須讓 AI 知道「工單要記在哪裡」以及「領域文件放在哪裡」。`/setup-matt-pocock-skills` 是一個互動式的引導技能，它會主動檢查專案結構，確認使用 GitHub Issues、GitLab 還是本地 Markdown 當作追蹤器，並在專案中建立 `docs/agents/` 目錄。
 
 #### 提示詞範例（Prompt）
+
+直接在對話框中輸入指令：
 
 ```text
 /setup-matt-pocock-skills
 ```
 
-執行後，AI 會自動檢查當前專案的 remote 與檔案結構，並提出確認選項：
+執行後，AI 會檢查當前環境並列出建議設定：
 
 ```text
 我已檢查專案環境：
@@ -88,9 +91,9 @@ Section C (Domain docs): 建議採用「單一上下文（single-context）」�
 是否同意此配置並寫入 docs/agents/？
 ```
 
-使用者回答確認後，AI 會在 `CLAUDE.md`（或 `AGENTS.md`）中寫入 `## Agent skills` 區塊，並建立以下標準設定檔：
-- `docs/agents/issue-tracker.md`：定義工單的讀寫路徑與格式
-- `docs/agents/domain.md`：定義領域辭典與架構決策紀錄（ADR）的維護規則
+若沒有問題就可以往下一步。使用者確認後，AI 會在 `CLAUDE.md` 寫入 `## Agent skills` 區塊，並建立設定檔：
+- `docs/agents/issue-tracker.md`：定義工單的儲存路徑與格式
+- `docs/agents/domain.md`：定義領域名詞與架構決策紀錄 (ADR) 的維護規則
 
 NOTE：這個步驟在每個專案只需執行一次，之後所有的工程技能都會自動依循這些設定檔運作。至於團隊若有整合專案看板（例如 GitHub Projects、GitLab Issue Board、Jira，或是本地以 Markdown 維護的進度看板），非常建議直接在 `docs/agents/issue-tracker.md` 裡明確約定狀態推進的生命週期：
 - **開始實作時**：在動手前先將該張工單的狀態由「待處理 (Todo)」更新為「進行中 (In Progress)」（在 Markdown 看板中標記為 `🟦 進行中`）。
@@ -102,9 +105,11 @@ NOTE：這個步驟在每個專案只需執行一次，之後所有的工程技�
 
 ### 2. 需求磨礪與領域建模（/grill-with-docs）
 
-當我們需要開發新功能時，最忌諱直接叫 AI 寫扣。`/grill-with-docs` 結合了 `grilling`（無情盤問）與 `domain-modeling`（領域建模）。AI 會把需求拆解為「設計樹（Design Tree）」，每一次只針對當前已經能決策的「前沿問題（Frontier）」發動輪次（Rounds）提問，並在釐清專有名詞後，即時寫入 `GLOSSARY.md` 與架構決策紀錄（ADR）。
+當要開發新功能時，最忌諱直接叫 AI 寫扣。`/grill-with-docs` 結合了 `grilling`（無情盤問）與 `domain-modeling`（領域建模）。這裡 AI 會把需求拆解成「設計樹 (Design Tree)」，一次只針對當前已經能決策的「前沿問題 (Frontier)」發動輪次 (Rounds) 提問，並在釐清專有名詞後，即時寫入 `GLOSSARY.md` 與架構決策紀錄 (ADR)。
 
 #### 提示詞範例（Prompt）
+
+向 AI 提出新需求並要求進行邊界盤問：
 
 ```text
 /grill-with-docs 我要在購物車結帳流程中加入折價券折扣計算模組。
@@ -130,7 +135,7 @@ AI 隨即會鎖定未釐清的邊界，整理出第一輪前沿問題：
 ➡️ 建議選擇 A。這符合消費者的結帳體驗，總計金額不可為負數。
 ```
 
-當我們回覆確認後，AI 會立即就地更新根目錄下的 `GLOSSARY.md`，把模糊用語收斂為明確定義：
+回覆確認選項後，AI 會立刻更新根目錄下的 `GLOSSARY.md`，把模糊用語收斂成精確定義：
 
 ```markdown
 # 領域辭典 (Domain Glossary)
@@ -148,21 +153,21 @@ AI 隨即會鎖定未釐清的邊界，整理出第一輪前沿問題：
 扣除所有折扣後，買方最終必須支付的金額。計算下限固定為 0 元，不可為負數。
 ```
 
-同時，因為折扣順序屬於難以逆轉的業務規則，AI 會在 `docs/adr/0001-coupon-calculation-order.md` 建立決策紀錄，明確寫下選擇先折百分比、後扣現折的原因與權衡代價。
+除此之外，由於折扣計算順序屬於不可逆的重大業務規則，AI 會在 `docs/adr/0001-coupon-calculation-order.md` 建立決策紀錄，明確記下選擇「先打折、後折現」的背後權衡。
 
 ---
 
 ### 3. 提煉規格與鎖定深接縫（/to-spec 結合 codebase-design）
 
-盤問對齊完畢後，上下文已經累積足夠的業務共識。這時候呼叫 `/to-spec`，AI 會立刻終止盤問模式，純粹將先前的共識提煉為結構化規格書。
+盤問對齊完畢後，上下文已經累積了具體共識。這時候呼叫 `/to-spec`，AI 會終止盤問模式，純粹將討論提煉成結構化規格書。
 
-這裡最關鍵的是引入了 `codebase-design` 的哲學：**拒絕淺模組（Shallow Module），定義高槓桿的深接縫（Deep Seam）**。
+這裡最關鍵的是融入了 `codebase-design` 的理念：**拒絕淺模組 (Shallow Module)，定義高槓桿的深接縫 (Deep Seam)**。
 
 #### 淺模組（Shallow Module）反模式範例
-如果沒有良好設計，AI 或開發者常會寫出以下淺模組，把複雜度洩漏給外部呼叫端：
+如果沒有做好封裝，很容易寫出下面這種把內部細節全部裸露在外的淺模組，調用端必須自己處理排序與驗證，測試也非常容易脆裂：
 
 ```typescript
-// 反模式：淺模組（呼叫端需要知道太多細節，測試也容易碎裂）
+// 反模式：淺模組（調用端負擔極重，測試容易碎裂）
 export class CouponService {
   validateThreshold(coupon: Coupon, cartTotal: number): boolean { /* ... */ }
   sortCouponsByOrder(coupons: Coupon[]): Coupon[] { /* ... */ }
@@ -173,7 +178,7 @@ export class CouponService {
 ```
 
 #### 深模組（Deep Module）設計標準
-依據 `codebase-design`，介面應該是「簡單的小介面，內部封裝巨大的複雜度」，並且公開介面就是唯一的測試接縫（The interface is the test surface）：
+依據 `codebase-design` 的原則，模組應該具備極小的介面，內部封裝完整的業務複雜度，並且這個公開介面就是唯一的測試表面（The interface is the test surface）：
 
 ```typescript
 // 正確模式：深模組（單一進入點，高內聚，內部複雜度完全封裝）
@@ -181,6 +186,8 @@ export function calculateDiscount(cart: CartSnapshot, coupons: Coupon[]): Calcul
 ```
 
 #### 提示詞範例（Prompt）
+
+指示 AI 提煉規格並指明公開接縫：
 
 ```text
 /to-spec 請根據剛才討論出的折扣計算規則與 ADR 決策，
@@ -205,35 +212,37 @@ AI 產出的規格書結構如下：
 ## Implementation Decisions
 - 核心運算為無狀態純函式（Pure Function）。
 - 輸入格式：CartSnapshot 物件與 Coupon 陣列。
-- 輸出格式：包含折扣明細（Breakdown）與實付金額（FinalPayableAmount）的運算結果物件。
+- 輸出格式：包含折扣明細（breakdowns）與實付金額（finalPayableAmount）的運算結果物件。
 - 不在此模組直接存取資料庫或外部 API，外部狀態於上游組裝。
 
 ## Testing Decisions (Seams)
 - 測試接縫（Seam）：以公開介面 `calculateDiscount` 作為唯一觀測邊界。
-- 嚴禁針對內部輔助函式（如私有排序或門檻判斷邏輯）單獨撰寫單元測試，避免重構時破壞測試。
+- 嚴禁針對內部輔助函式單獨撰寫單元測試，避免重構時破壞測試。
 
 ## Out of Scope
 - 折價券序號（Coupon Code）的領取限制與領取次數檢查（由領券服務負責）。
 - 金流付款閘道串接。
 ```
 
-規格產生後，AI 會自動將其儲存於追蹤器中，準備進入工單切片。
+規格生成後會存放在追蹤器中，若沒有問題就可以往下一步。
 
 ---
 
 ### 4. 垂直切片工單（/to-tickets）
 
-規格書有了，傳統作法往往會橫向切分成：一張工單寫型別、一張寫驗證、一張寫計算、一張寫測試。這種水平切層（Horizontal Slicing）正是導致整合時頻繁出錯的主因。
+規格書有了之後，傳統習慣往往會水平切分：一張工單開資料表、一張寫介面、一張寫商業邏輯、一張寫單元測試。這種水平切層（Horizontal Slicing）正是整合時常常噴錯的主因。
 
-Matt Pocock 的 `/to-tickets` 強制要求使用貫穿切片（Tracer-bullet Vertical Slices）：每一張工單都必須貫穿輸入到輸出，完成時能獨立通過測試並被驗證，並且必須明確宣告阻塞關係（Blocked by）。
+Matt Pocock 的 `/to-tickets` 強制要求採用貫穿切片（Tracer-bullet Vertical Slices）：每一張工單都必須貫穿輸入到輸出，完成時能獨立通過測試，並且必須明確宣告依賴阻擋鏈（Blocked by）。
 
 #### 提示詞範例（Prompt）
+
+指示 AI 拆解垂直工單：
 
 ```text
 /to-tickets 請將上述規格拆解成垂直切片工單。
 ```
 
-AI 會列出切片草案並請我們確認：
+AI 會列出工單拆解草案：
 
 ```markdown
 工單拆解提案：
@@ -251,27 +260,31 @@ AI 會列出切片草案並請我們確認：
    - Blocked by: Ticket 02
 ```
 
-確認後，AI 會在 `.scratch/coupon-engine/issues/` 目錄下建立工單檔案，形成一張具備依賴關係的任務相依圖（Task Graph）。
+確認後，AI 會在 `.scratch/coupon-engine/issues/` 目錄下建立獨立工單檔案，形成一張具備依賴關係的任務圖 (Task Graph)。
 
 ---
 
 ### 5. 編排多代理自動化實作（/implement-spec）
 
-在有了 Spec 與 Tickets 後，我們不需要手動一張一張工單複製貼上給 AI 做。`/implement-spec` 是整個實作階段的**總指揮官（Orchestrator）**。它的核心職責是：
+在拿到 Spec 與工單任務圖後，不需要人類手動一張一張工單餵給 AI。`/implement-spec` 是整個實作階段的**總指揮官（Orchestrator）**。
+
+它的核心流程如下：
 1. 讀取 Spec 與 Tickets，解析整個 Task Graph。
-2. 建立專屬的整合分支（Integration Branch，例如 `feat/coupon-discount-engine`）。
-3. 識別出當前沒有被阻塞的工單前沿（Frontier），在背景為每個工單建立獨立的 Git Worktree。
-4. 派出 **Implementer 子代理（Subagent）** 進入各自的 Worktree，並在內部自動掛載 `/tdd` 技能執行編碼。
+2. 開出一條專屬的整合分支（Integration Branch，例如 `feat/coupon-discount-engine`）。
+3. 找出目前未被阻塞的工單前沿 (Frontier)，在背景為每張工單建立獨立的 Git Worktree。
+4. 派出 **Implementer 子代理** 進入各自的 Worktree，並在內部自動掛載 `/tdd` 技能寫測試與寫 code。
 5. 工單完成後，由 **Merger 子代理** 合併回整合分支，推進 Frontier，自動解鎖下一批工單。
-6. 全部工單交付後，自動在整合分支上觸發 `/code-review` 進行雙軸審查。
+6. 全部工單交付完畢後，自動在整合分支上觸發 `/code-review` 進行雙軸審查。
 
 #### 提示詞範例（Prompt）
+
+直接命令 AI 啟動整套編排實作：
 
 ```text
 /implement-spec 請依照 .scratch/coupon-engine/ 的 spec 與 tickets，在整合分支上實作整個功能。
 ```
 
-AI 接收到指令後的執行編排流程如下：
+AI 接收到指令後的背景調度流程：
 
 ```text
 [Orchestrator] 讀取任務相依圖，當前 Frontier: [Ticket 01]
@@ -283,22 +296,22 @@ AI 接收到指令後的執行編排流程如下：
 [Orchestrator] Frontier 推進，解鎖 [Ticket 02]，建立 .worktrees/ticket-02...
 ```
 
-透過這種架構，所有實作都在乾淨隔離的 Worktree 中進行，主工作目錄不會被污染，更能達到高度自治與並行交付。
+透過這種架構，所有程式碼改動都在乾淨隔離的 Worktree 裡進行，主工作目錄不會被弄亂，並行交付非常俐落。
 
 ---
 
 ### 6. 深入單工單的測試驅動交付（/tdd）
 
-在 `/implement-spec` 調度 Implementer 子代理實作每張工單時，底層嚴格執行的正是 `/tdd` 規約。`/tdd` 要求遵循紅綠循環（Red-Green Loop）：
-1. 在預先約定的公開接縫（Seam）撰寫失敗的測試（Red）。
-2. 只寫剛剛好能讓測試變綠的最小實作代碼（Green）。
-3. 嚴禁在未亮紅燈前憑空增加假設或預先編寫未被測試覆蓋的功能。
+在 `/implement-spec` 調度 Implementer 子代理實作每張工單時，底層嚴格執行的正是 `/tdd` 規約。這裡要求嚴格遵循紅綠循環（Red-Green Loop）：
+1. 在公開接縫 (Seam) 先寫失敗的測試（Red）。
+2. 只寫剛剛好能讓測試變綠的最小實作程式碼（Green）。
+3. 嚴禁在測試亮紅燈前憑空增加假設或預先編寫未被測試覆蓋的功能。
 
 這裡以 Implementer 子代理在處理 Ticket 01 時的具體代碼為例。
 
 #### 步驟 1：紅燈測試
 
-在公開接縫 `calculateDiscount` 建立規格測試。
+以下程式碼示範在公開接縫 `calculateDiscount` 建立規格測試：
 
 ```typescript
 // tests/coupon-calculator.spec.ts
@@ -341,7 +354,7 @@ Error: Cannot find module '../src/coupon-calculator'
 
 #### 步驟 2：綠燈最小實作
 
-接下來編寫最小實作，讓測試剛好通過，不寫任何多餘邏輯。
+以下程式碼編寫最小實作，讓測試剛好通過，不寫任何多餘邏輯：
 
 ```typescript
 // src/coupon-calculator.ts
@@ -386,7 +399,7 @@ export function calculateDiscount(
 }
 ```
 
-再次執行測試：
+再次執行測試確認結果：
 
 ```text
 PASS tests/coupon-calculator.spec.ts
@@ -403,13 +416,15 @@ Tests       2 passed (2)
 
 ### 7. 雙軸代碼審查（/code-review）
 
-當 `/implement-spec` 把所有切片工單全部合併到整合分支後，流程會自動觸發 `/code-review` 進行最終驗收。
+當所有切片工單實作完畢並合併到整合分支後，流程會自動觸發 `/code-review` 進行最終驗收。
 
-這個技能最獨特之處在於「雙軸獨立審查（Two-axis review）」。它會平行派出兩個子代理（Sub-agents），分別針對兩個獨立維度進行審查，避免兩者相互掩蓋：
+這個技能最獨特之處在於「雙軸獨立審查（Two-axis review）」。它會平行派出兩個子代理，分別針對兩個維度進行審查，避免相互掩蓋：
 1. **Standards 軸**：檢查代碼是否符合專案編碼標準，並依據 Martin Fowler 的 12 種經典壞味道（Code Smells，例如 Primitive Obsession、Feature Envy、Shotgun Surgery）進行健檢。
-2. **Spec 軸**：比對先前的規格書與 Git Diff，檢查是否有漏做的驗收條件，或者未經允許的額外功能（Scope Creep）。
+2. **Spec 軸**：比對規格書與 Git Diff，檢查是否有漏做的驗收條件，或者未經允許的額外功能（Scope Creep）。
 
 #### 提示詞範例（Prompt）
+
+審查整合分支相對於主幹的變更：
 
 ```text
 /code-review main...integration/coupon-engine
@@ -419,7 +434,7 @@ Tests       2 passed (2)
 
 ```markdown
 ## Standards (編碼規範與壞味道審查)
-- [Heuristic - Primitive Obsession]: `src/coupon-calculator.ts` 中的金額與小數計算目前直接使用原生 `number` 形態。建議在後續重構中封裝為專屬的貨幣數值型別，避免浮點數精度誤差。
+- [Heuristic - Primitive Obsession]: `src/coupon-calculator.ts` 中的金額與小數計算目前直接使用原生 `number` 型別。建議在後續重構中封裝為專屬的貨幣數值型別，避免浮點數精度誤差。
 - [Pass]: 函式介面簡潔，符合高內聚與單一職責，未發現 Feature Envy 或 Mysterious Name。
 
 ## Spec (規格符合度審查)
@@ -433,7 +448,7 @@ Tests       2 passed (2)
 - Spec: 0 項違規（完全符合原定規格）
 ```
 
-審查完成後，若有小問題會由單一子代理就地修復，確認無阻礙問題後清理 Worktrees，並將整合分支合併或建立 Pull Request。
+審查確認沒有阻礙問題後，清理 Worktrees，並將整合分支合併或建立 Pull Request。
 
 NOTE：依照規範，Git 提交訊息嚴禁包含 Co-authored-by 標記。
 
@@ -441,14 +456,16 @@ NOTE：依照規範，Git 提交訊息嚴禁包含 Co-authored-by 標記。
 
 ### 8. 落地後的主動架構深化（/improve-codebase-architecture）
 
-功能上線幾週後，往往會有新需求接踵而來：增加了「全館免運券」、「會員點數折抵」以及「紅利折現」。這時很多團隊的代碼開始出現摩擦力——折價券邏輯寫在結帳模組，免運券寫在物流模組，點數折抵寫在會員模組，彼此之間產生了散彈式修改（Shotgun Surgery）。
+功能上線幾週後，隨著需求陸續增加，系統又追加了「全館免運券」、「會員點數折抵」以及「紅利折現」。這時很多專案的代碼開始出現摩擦力——折價券邏輯寫在結帳模組，免運券寫在物流模組，點數折抵寫在會員模組，彼此之間產生了散彈式修改（Shotgun Surgery）。
 
-這就是 `/improve-codebase-architecture` 大顯身手的時機！它不會瞎猜，而是：
-1. 掃描 Git Commit 歷史，找出近期變更最頻繁的代碼熱點（Hot spots）。
-2. 對模組進行「刪除測試（Deletion Test）」：如果刪掉某個中介模組，複雜度只會分散到各處還是會集中？
+這就是 `/improve-codebase-architecture` 派上用場的時候了。它不會瞎猜，而是：
+1. 掃描 Git Commit 歷史，找出近期變更最頻繁的代碼熱點 (Hot spots)。
+2. 對模組進行「刪除測試 (Deletion Test)」：如果刪掉某個中介模組，複雜度只會分散到各處還是會集中？
 3. **在作業系統暫存區生成一份視覺化的 HTML 報告**（整合 Tailwind CSS 與 Mermaid），給出 Before / After 架構對比。
 
 #### 提示詞範例（Prompt）
+
+啟動架構健檢掃描：
 
 ```text
 /improve-codebase-architecture
@@ -464,13 +481,13 @@ NOTE：依照規範，Git 提交訊息嚴禁包含 Co-authored-by 標記。
 
 #### HTML 報告中的診斷內容範例
 
-報告中會精準列出候選重構項目（Candidate Card）：
+報告中會精準列出候選重構項目：
 
 ```markdown
 ### 候選項目 1：購物車優惠結算淺模組深化 (Recommendation: Strong)
 - 涉及檔案: `src/coupon-calculator.ts`, `src/shipping-discount.ts`, `src/points-deduction.ts`
 - 問題描述 (Problem):
-  結帳流程呼叫端需要依序呼叫三個不同的淺模組，並手動在外部處理「點數與折價券互斥」以及「免運門檻與實付金額連動」的邊界邏輯。局部性（Locality）極差，任何優惠規則調整都會導致呼叫端破碎。
+  結帳流程調用端需要依序調用三個不同的淺模組，並手動在外部處理「點數與折價券互斥」以及「免運門檻與實付金額連動」的邊界邏輯。局部性 (Locality) 極差，任何優惠規則調整都會導致調用端破碎。
 - 改善方案 (Solution):
   建立深模組 `CartCheckoutPricingEngine`，將折價券、運費券、點數折抵收斂至單一深接縫，外部只需傳入購物車與優惠清單，內部一次完成所有相依排程與折抵運算。
 ```
@@ -493,7 +510,7 @@ flowchart LR
     end
 ```
 
-當我們在 HTML 報告中選定「候選項目 1」後，AI 會直接無縫啟動 `/grilling` 盤問迴圈，引導我們完成決策：
+在 HTML 報告中挑選候選方案後，AI 會無縫啟動 `/grilling` 盤問迴圈，引導敲定重構決策：
 
 ```text
 ❓ Q1 - 優惠互斥權重 (Discount Priority):
@@ -503,20 +520,22 @@ flowchart LR
 確認後將自動更新 GLOSSARY.md 並建立 ADR-0002，接著進入 /to-spec 產生重構規格！
 ```
 
-如此一來，外軌的架構健檢便完美回流到內軌的規格與 TDD 交付鏈，形成了真正的永續架構演進！
+如此一來，外軌的架構健檢便完美回流到內軌的規格與 TDD 交付鏈，形成了真正的永續架構演進。
 
 ---
 
 ### 9. 系統異常與效能衰退的科學排查（/diagnosing-bugs）
 
-當系統上線運轉後，難免會遇到線上回報「偶發性計算錯誤（Flaky Bug）」、「噴出例外（Throwing）」或「效能衰退（Performance Regression）」。面對這類棘手問題，傳統 AI 最常見的壞習慣就是：一拿到錯誤訊息，立刻開啟相關檔案，憑肉眼直覺「猜測」可能的原因並隨意修改代碼。這種盲猜式除錯往往只會越改越糟。
+當系統上線運轉後，難免會遇到線上回報「偶發性計算錯誤 (Flaky Bug)」、「噴出例外 (Throwing)」或「效能衰退 (Performance Regression)」。面對這類棘手問題，傳統 AI 最常見的壞習慣就是：一拿到錯誤日誌，立刻開啟相關檔案，憑肉眼直覺「猜測」可能的原因並隨意修改代碼。這種盲猜式除錯往往只會越改越糟。
 
-Matt Pocock 體系中的 `/diagnosing-bugs` 是一套極度嚴謹的**科學診斷紀律**。它的核心鋼鐵準則是：**在尚未建立出「秒級、確定性、一鍵可跑」的紅燈重現指令（Feedback Loop）之前，嚴禁跳入代碼盲猜假說！**
+Matt Pocock 體系中的 `/diagnosing-bugs` 是一套極度嚴謹的**科學診斷紀律**。它的核心鋼鐵準則是：**在尚未建立出「秒級、確定性、一鍵可跑」的紅燈重現指令 (Feedback Loop) 之前，嚴禁跳入代碼盲猜假說！**
 
 這裡以我們折價券模組在線上遇到的真實故障為例：
-線上回報當購物車遇到多張小額券與百分比券疊加時，實付金額偶發計算出小於 0 的極小浮點數殘留（例如 `-0.000000001`），導致金流付款閘道校驗失敗。
+線上回報當購物車遇到多張小額券與百分比券疊加時，實付金額偶發計算出小於 0 的極小浮點數殘留（例如 `-0.000000001`），結果實付金額算成負數，金流付款直接噴掉了啦!!!
 
 #### 提示詞範例（Prompt）
+
+指示 AI 啟動科學排查流程：
 
 ```text
 /diagnosing-bugs 線上回報購物車在特定多券抵扣時，calculateDiscount 傳出的實付金額偶發為小於 0 的微小負數。
@@ -600,4 +619,4 @@ Tests       9 passed (9)
 
 ---
 
-完整代碼位置: https://github.com/mattpocock/skills
+完整代碼位置: https://github.com/yaochangyu/sample.dotblog/tree/master/AI.SDD/Lab.Matt-Pocock
