@@ -6,6 +6,7 @@
 - **狀態儲存為程序內物件**：`OrderStore`、`NonceReplayStore`、`TrustRegistry` 以程序內 `Dictionary` 加 `lock` 實作，不是 EF InMemory，也不是跨程序儲存。「多執行個體」以同一程序內共用物件模擬，因此 60 秒撤銷與防重放的一致性只在單程序內驗證，不代表跨機器或跨程序部署的實測。
 - **不採分層與框架慣例**：未採 Controller → Handler → Repository 分層，也未採 Result Pattern 與 Serilog；診斷輸出為 ASP.NET 框架的 Console 記錄。
 - **不做 Gateway**：呼叫端直接呼叫業務 API，由業務 API 以 TLS 連線憑證自行驗證。Gateway 相關驗收項目在 issue 中標為「略過（非完成）」，對應 `@ignore` Scenario 保留為未來契約。
+- **管理介面**：授權伺服器以 `/admin/*` 端點提供信任名單讀取、Client 停用、憑證與簽章金鑰登錄申請的核准與拒絕、退役與撤銷，以及管理操作稽核查詢（`GET /admin/audit-records`，測試縫）。管理員以專屬自簽 mTLS 憑證驗證，憑證由 lab 啟動時產生並登錄為管理角色。路徑、申請欄位、回應格式與稽核保存期皆為 lab 暫定值，待使用者確認。限制：信任名單、登錄申請與稽核紀錄皆為**程序內**儲存，只在**單程序**內驗證；未提供持久化、跨程序一致性、多人覆核與管理員憑證頒發流程，正式採用前須逐項補齊。
 - **自簽 mTLS**：只用自簽用戶端憑證（`self_signed_tls_client_auth`），不做 CA 型 `tls_client_auth`；憑證每次啟動在記憶體產生，OpenIddict 金鑰為 ephemeral。
 
 沿用的已核准決定不變：Token 效期 300 秒、HTTP Message Signatures 規則、撤銷上限 60 秒。
