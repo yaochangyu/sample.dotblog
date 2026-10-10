@@ -34,4 +34,24 @@ public sealed class VerificationKeyStore
             return key is not null;
         }
     }
+
+    /// <summary>指定 Client 已登錄的 keyId（含重疊期與已退役者）；供管理員退役時確認是否仍有可用的替代金鑰（14 單）。</summary>
+    public IReadOnlyList<string> KeyIdsOf(string clientId)
+    {
+        lock (_gate)
+        {
+            return _keysByClient.TryGetValue(clientId, out var keys)
+                ? keys.Select(candidate => candidate.KeyId).ToList()
+                : [];
+        }
+    }
+
+    /// <summary>keyId 是否也登錄於其他 Client；簽章金鑰的撤銷與退役以 keyId 為鍵，共用時會波及其他 Client（14 單）。</summary>
+    public bool IsKeyIdSharedWithOtherClient(string clientId, string keyId)
+    {
+        lock (_gate)
+        {
+            return _keysByClient.Any(pair => pair.Key != clientId && pair.Value.Any(candidate => candidate.KeyId == keyId));
+        }
+    }
 }

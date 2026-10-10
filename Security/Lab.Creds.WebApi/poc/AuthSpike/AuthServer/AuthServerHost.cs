@@ -120,7 +120,11 @@ public sealed class AuthServerHost : IAsyncDisposable
                 {
                     clientId = pair.Key,
                     enabled = registry.IsClientEnabled(pair.Key),
-                    certificateThumbprints = pair.Value.Select(certificate => certificate.Thumbprint).ToArray(),
+                    // 已退役或已撤銷的憑證不列入信任名單（14 單）；JWKS 保留的項目仍由 TrustRegistry 擋下。
+                    certificateThumbprints = pair.Value
+                        .Where(certificate => !registry.IsCertificateBlocked(certificate.Thumbprint))
+                        .Select(certificate => certificate.Thumbprint)
+                        .ToArray(),
                 });
             return Results.Json(new { clients = snapshot });
         });
@@ -139,6 +143,80 @@ public sealed class AuthServerHost : IAsyncDisposable
 
             registry.DisableClient(clientId);
             return Results.Json(new { clientId, enabled = false });
+        });
+
+        // 退役與撤銷（14 單）：只有已驗證的管理員能執行；路徑與回應格式為 lab 暫定值，待使用者確認。
+        // 管理操作與管理員身分檢查先於對象存在性檢查，並與核准、拒絕共用同一決策閘門序列化。
+        app.MapPost("/admin/clients/{clientId}/certificates/{thumbprint}/retire", async (string clientId, string thumbprint, HttpContext httpContext) =>
+        {
+            if (!IsAdministrator(httpContext, registry))
+            {
+                return AdministratorRejected();
+            }
+
+            await decisionGate.WaitAsync();
+            try
+            {
+                return await ChangeCertificateAsync(trustedCertificates, registry, clientId, thumbprint, retire: true);
+            }
+            finally
+            {
+                decisionGate.Release();
+            }
+        });
+
+        app.MapPost("/admin/clients/{clientId}/certificates/{thumbprint}/revoke", async (string clientId, string thumbprint, HttpContext httpContext) =>
+        {
+            if (!IsAdministrator(httpContext, registry))
+            {
+                return AdministratorRejected();
+            }
+
+            await decisionGate.WaitAsync();
+            try
+            {
+                return await ChangeCertificateAsync(trustedCertificates, registry, clientId, thumbprint, retire: false);
+            }
+            finally
+            {
+                decisionGate.Release();
+            }
+        });
+
+        app.MapPost("/admin/clients/{clientId}/signing-keys/{keyId}/retire", async (string clientId, string keyId, HttpContext httpContext) =>
+        {
+            if (!IsAdministrator(httpContext, registry))
+            {
+                return AdministratorRejected();
+            }
+
+            await decisionGate.WaitAsync();
+            try
+            {
+                return ChangeSigningKey(trustedCertificates, registry, verificationKeys, clientId, keyId, retire: true);
+            }
+            finally
+            {
+                decisionGate.Release();
+            }
+        });
+
+        app.MapPost("/admin/clients/{clientId}/signing-keys/{keyId}/revoke", async (string clientId, string keyId, HttpContext httpContext) =>
+        {
+            if (!IsAdministrator(httpContext, registry))
+            {
+                return AdministratorRejected();
+            }
+
+            await decisionGate.WaitAsync();
+            try
+            {
+                return ChangeSigningKey(trustedCertificates, registry, verificationKeys, clientId, keyId, retire: false);
+            }
+            finally
+            {
+                decisionGate.Release();
+            }
         });
 
         // 憑證登錄申請（12 單）：申請只含 Client 身分與公開憑證；申請本身不改變信任名單，也不能用於取得 Token。
@@ -431,6 +509,122 @@ public sealed class AuthServerHost : IAsyncDisposable
 
     private static IResult RequestNotPending()
         => Results.Json(new Dictionary<string, string> { ["error"] = "request_not_pending" }, statusCode: StatusCodes.Status409Conflict);
+
+    private static IResult ErrorResult(int statusCode, string error)
+        => Results.Json(new Dictionary<string, string> { ["error"] = error }, statusCode: statusCode);
+
+    /// <summary>
+    /// 管理員退役或撤銷 Client 的 mTLS 憑證（14 單）。退役需已有其他可用的替代憑證（沿用 08 單的輪替重疊規則）；撤銷不需替代憑證。
+    /// 狀態只寫入 TrustRegistry：Token 端點與業務 API 每次請求都讀取該狀態，因此既有連線上的後續請求即時被阻擋。
+    /// 不從 OpenIddict JWKS 移除已退役或已撤銷的憑證：OpenIddict 不接受空的 JWKS（會使 self_signed_tls_client_auth 的 Client 更新失敗），
+    /// 且已退役或已撤銷的憑證無論出現在 JWKS 與否都會被拒絕。信任名單快照只列出未退役、未撤銷的憑證。
+    /// </summary>
+    private static async Task<IResult> ChangeCertificateAsync(
+        ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates,
+        TrustRegistry registry,
+        string clientId,
+        string thumbprint,
+        bool retire)
+    {
+        if (!trustedCertificates.TryGetValue(clientId, out var registered))
+        {
+            return ErrorResult(StatusCodes.Status404NotFound, "client_not_found");
+        }
+
+        var target = registered.FirstOrDefault(certificate => string.Equals(certificate.Thumbprint, thumbprint, StringComparison.OrdinalIgnoreCase));
+        if (target is null)
+        {
+            return ErrorResult(StatusCodes.Status404NotFound, "certificate_not_found");
+        }
+
+        // 已撤銷或已退役的對象不改變任何狀態，回應明確的狀態衝突。
+        if (registry.IsCertificateRevoked(target.Thumbprint))
+        {
+            return ErrorResult(StatusCodes.Status409Conflict, "already_revoked");
+        }
+
+        if (registry.IsCertificateRetired(target.Thumbprint))
+        {
+            return ErrorResult(StatusCodes.Status409Conflict, "already_retired");
+        }
+
+        // 登錄狀態以憑證指紋為鍵；同一指紋若也登錄於其他 Client，退役或撤銷會波及其他 Client，因此拒絕。
+        if (trustedCertificates.Any(pair => pair.Key != clientId && pair.Value.Any(certificate => string.Equals(certificate.Thumbprint, thumbprint, StringComparison.OrdinalIgnoreCase))))
+        {
+            return ErrorResult(StatusCodes.Status409Conflict, "certificate_shared");
+        }
+
+        if (retire && !registered.Any(certificate => !string.Equals(certificate.Thumbprint, thumbprint, StringComparison.OrdinalIgnoreCase) && !registry.IsCertificateBlocked(certificate.Thumbprint)))
+        {
+            return ErrorResult(StatusCodes.Status409Conflict, "replacement_required");
+        }
+
+        if (retire)
+        {
+            registry.RetireCertificate(target.Thumbprint);
+        }
+        else
+        {
+            registry.RevokeCertificate(target.Thumbprint);
+        }
+
+        return Results.Json(new { clientId, thumbprint = target.Thumbprint, status = retire ? "retired" : "revoked" });
+    }
+
+    /// <summary>
+    /// 管理員退役或撤銷 Client 的請求簽章金鑰（14 單）。退役需已有其他可用的替代金鑰（沿用 08 單的輪替重疊規則）；
+    /// 撤銷不需替代金鑰。狀態寫入 TrustRegistry，業務 API 每次請求都讀取，因此既有連線上的後續請求即時被阻擋。
+    /// </summary>
+    private static IResult ChangeSigningKey(
+        ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates,
+        TrustRegistry registry,
+        VerificationKeyStore verificationKeys,
+        string clientId,
+        string keyId,
+        bool retire)
+    {
+        if (!trustedCertificates.ContainsKey(clientId))
+        {
+            return ErrorResult(StatusCodes.Status404NotFound, "client_not_found");
+        }
+
+        // 已撤銷或已退役的金鑰仍保留於驗簽登錄中，因此先確認歸屬，再依狀態回應衝突。
+        if (!verificationKeys.TryGet(clientId, keyId, out _))
+        {
+            return ErrorResult(StatusCodes.Status404NotFound, "signing_key_not_found");
+        }
+
+        if (registry.IsSigningKeyRevoked(keyId))
+        {
+            return ErrorResult(StatusCodes.Status409Conflict, "already_revoked");
+        }
+
+        if (registry.IsSigningKeyRetired(keyId))
+        {
+            return ErrorResult(StatusCodes.Status409Conflict, "already_retired");
+        }
+
+        if (verificationKeys.IsKeyIdSharedWithOtherClient(clientId, keyId))
+        {
+            return ErrorResult(StatusCodes.Status409Conflict, "signing_key_shared");
+        }
+
+        if (retire && !verificationKeys.KeyIdsOf(clientId).Any(candidate => candidate != keyId && !registry.IsSigningKeyBlocked(candidate)))
+        {
+            return ErrorResult(StatusCodes.Status409Conflict, "replacement_required");
+        }
+
+        if (retire)
+        {
+            registry.RetireSigningKey(keyId);
+        }
+        else
+        {
+            registry.RevokeSigningKey(keyId);
+        }
+
+        return Results.Json(new { clientId, keyId, status = retire ? "retired" : "revoked" });
+    }
 
     /// <summary>管理員身分只看出示的 mTLS 憑證是否登錄為管理員角色；與業務 API 的 Token 查證各自獨立。</summary>
     private static bool IsAdministrator(HttpContext httpContext, TrustRegistry registry)
