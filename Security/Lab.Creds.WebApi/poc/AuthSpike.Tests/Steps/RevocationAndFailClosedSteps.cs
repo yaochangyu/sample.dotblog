@@ -26,7 +26,7 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
     private static readonly TimeSpan RevocationThreshold = TimeSpan.FromSeconds(60);
 
     /// <summary>@short-cache 環境的 Token 查證快取上限（與 SpikeHooks 一致）。</summary>
-    private static readonly TimeSpan ShortCacheLifetime = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan ShortCacheLifetime = TimeSpan.FromSeconds(4);
 
     private readonly Dictionary<string, Guid> _orders = new();
     private HttpClient? _client;
@@ -38,6 +38,7 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
     private DateTimeOffset? _secondaryRejectAt;
     private int? _portBeforeRevoke;
     private int? _portAfterRevoke;
+    private TimeSpan _lastElapsed;
     private HttpStatusCode? _lastStatus;
     private string _lastBody = string.Empty;
     private readonly List<ApiResponse> _queryResults = [];
@@ -120,7 +121,9 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
     {
         (DateTimeOffset.UtcNow < _cachePopulatedAt!.Value.Add(ShortCacheLifetime))
             .Should().BeTrue("測試時間已超出查證快取期限，無法驗證快取內行為");
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var (status, body) = await QueryAsync(Runtime.OrdersApi.Port);
+        _lastElapsed = stopwatch.Elapsed;
         _lastStatus = status;
         _lastBody = body;
     }
@@ -209,6 +212,12 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
     public void ThenCachedQueryAllowed()
     {
         _lastStatus.Should().Be(HttpStatusCode.OK, _lastBody);
+    }
+
+    [Then("快取命中的查詢未等待授權伺服器而在 {int} 秒內完成")]
+    public void ThenCachedQueryDidNotWaitForAuthServer(int seconds)
+    {
+        _lastElapsed.Should().BeLessThan(TimeSpan.FromSeconds(seconds), "快取命中不應向已停止的授權伺服器 introspection（其重試退避約 15 秒）");
     }
 
     [Then("所有查詢回應為 503 且錯誤代碼為 {string}")]

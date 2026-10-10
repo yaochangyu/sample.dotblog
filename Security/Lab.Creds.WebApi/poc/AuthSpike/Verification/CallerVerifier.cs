@@ -6,6 +6,7 @@ using AuthSpike.Trust;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using OpenIddict.Abstractions;
+using OpenIddict.Validation.AspNetCore;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace AuthSpike.Verification;
@@ -58,7 +59,7 @@ public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime)
             AuthenticateResult result;
             try
             {
-                result = await context.AuthenticateAsync();
+                result = await context.AuthenticateAsync(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
             }
             catch (Exception)
             {

@@ -50,7 +50,7 @@
 ### lab 暫定、待使用者確認
 
 - 查證快取上限 10 秒（`SpikeRuntime.DefaultVerificationCacheLifetime`）。
-- `@short-cache` 測試環境使用 30 秒快取。原因：授權伺服器停止後，測試用的 `HttpClient` 會在首個請求約 15 秒後才送達業務 API（每次皆約 15 至 17 秒；無憑證的 `HttpClient` 與原始 TLS 探測皆無此延遲）。原因未查明，列為待釐清項目；快取加長僅為讓快取命中的測試穩定。
+- `@short-cache` 測試環境使用 4 秒快取（曾因下述「授權伺服器停止後每個請求延遲約 15 秒」暫拉長為 30 秒，根因修正後已還原）。
 - 故障錯誤代碼 `verification_unavailable` 與 503 回應格式（lab 暫定，待 API 設計確認）。
 - 撤銷以進程內管理操作進行，不新增管理 UI（正式管理方式待使用者核准）。
 
@@ -86,10 +86,21 @@ cd poc
 dotnet test AuthSpike.Tests/AuthSpike.Tests.csproj
 ```
 
+### 授權伺服器停止後請求延遲約 15 秒：根因與證據
+
+- 根因：業務 API 以 `AddAuthentication(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)` 設定了預設驗證 scheme，ASP.NET Core 的驗證中介軟體因此在每個請求進入 `CallerVerifier` 之前就先自動向授權伺服器 introspection，使查證快取形同虛設（快取命中仍會 introspection，結果被丟棄）。授權伺服器停止後，OpenIddict 7 的 System.Net.Http 預設重試（指數退避）依序在 +0、+1、+2、+4、+8 秒重試連線被拒，約 15 秒後才失敗，之後請求才進入閘門，所以「首個請求約 15 秒才抵達」。與 mTLS、憑證鏈、撤銷檢查、IPv6/IPv4 解析無關（連線被拒為即時）。
+- 證據（暫時加入的時間戳日誌與 EventListener，已移除）：
+  - 同一條 TCP 連線（來源埠不變）上，Kestrel `RequestStart` 為 11:26:24.350，但閘門日誌 11:26:39.372；其間 `POST /connect/introspect` 重試時間為 24.353、25.360、27.361、31.363、約 39.37，每次 `ConnectFailed 10061`（Connection refused，耗時約 1 毫秒），間隔 1、2、4、8 秒。
+  - 用戶端 `HttpClient` 伺服器憑證驗證耗時 0 至 1 毫秒，且沒有新建 TLS 連線；卡住的是伺服器端 introspection，不是用戶端。
+  - 修正前（4 秒快取）快取命中的查詢耗時約 15 秒並得到 503；修正後同一查詢耗時約 30 毫秒並得到 200。
+- 修正：不設定預設 Authenticate scheme（僅設定 Challenge 與 Forbid scheme 維持 401/403 行為），`CallerVerifier` 在快取未命中時才明確指定 scheme 呼叫 `AuthenticateAsync`。快取命中不再呼叫授權伺服器。
+- 行為性 Scenario：@short-cache 情境新增「快取命中的查詢未等待授權伺服器而在 2 秒內完成」，修正前失敗、修正後連跑 3 次通過。
+- 仍存在（非本次範圍）：快取未命中且授權伺服器不可用時，單一請求需等約 15 秒重試後才回 503；是否縮短重試（`SetHttpResiliencePipeline`）待使用者決定。
+
 ### 未決事項與阻擋
 
 - 無阻擋。上述 lab 暫定值已實作並標註，待使用者確認。
-- 待釐清（不阻擋）：授權伺服器停止後測試用 `HttpClient` 的約 15 秒首個請求延遲原因。
+- 已查明並修正：授權伺服器停止後約 15 秒的請求延遲，根因見下節。
 
 ### 查證故障判定補強（code review 補修）
 

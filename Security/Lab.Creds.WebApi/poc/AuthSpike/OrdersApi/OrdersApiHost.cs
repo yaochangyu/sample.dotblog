@@ -89,7 +89,14 @@ public sealed class OrdersApiHost : IAsyncDisposable
                 options.UseAspNetCore();
             });
 
-        builder.Services.AddAuthentication(OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme);
+        // 刻意不設定 DefaultAuthenticateScheme：否則 ASP.NET Core 的驗證中介軟體會對每個請求自動向授權伺服器 introspection，
+        // 使 CallerVerifier 的查證快取失效，並在授權伺服器停止時讓每個請求先等完 OpenIddict 的重試退避（約 15 秒）。
+        // introspection 只由 CallerVerifier 在快取未命中時明確觸發（指定 scheme）。
+        builder.Services.AddAuthentication(options =>
+        {
+            options.DefaultChallengeScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+            options.DefaultForbidScheme = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme;
+        });
 
         // scope 白名單：Token 有效但缺少該操作所需的 scope 時回應 403（業務資料範圍另於 handler 檢查）。
         builder.Services.AddAuthorizationBuilder()
