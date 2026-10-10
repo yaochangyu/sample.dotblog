@@ -52,14 +52,6 @@ flowchart TD
     G -.-> D3
 ```
 
-![全生命週期三軌閉環架構圖](docs/assets/lifecycle-architecture.png)
-
-> 💡 **精緻互動架構圖（視覺化詳情）**：
-> - 靜態高解析圖表如上圖（基於 `/diagram-design` 規範生成）。
-> - 線上互動探索版本由 `/archify` 生成，支援深淺色主題切換、主路徑 Trace 動態追蹤與三視角引導：
->   👉 [開啟全生命週期三軌閉環架構圖 (可互動 HTML)](file:///mnt/d/lab/sample.dotblog/AI.SDD/Lab.Matt-Pocock/docs/assets/lifecycle-architecture.html)
->   （架構規格檔位於 [lifecycle-architecture.candidate.json](file:///mnt/d/lab/sample.dotblog/AI.SDD/Lab.Matt-Pocock/docs/assets/lifecycle-architecture.candidate.json)）
-
 這裡可以拆解為四個維度：
 - **底層哲學（codebase-design）**：追求「深模組 (Deep Module)」——以極簡的公開介面封裝大量內部複雜度，並堅持公開接縫 (Seam) 就是唯一的測試表面。
 - **內軌（功能交付鏈）**：從環境配置、邊界盤問、規格制定、工單切片，到背景子代理在獨立 Git Worktree 裡並行跑 TDD，最後以雙軸審查驗收。
@@ -517,13 +509,6 @@ flowchart LR
         DeepEngine --> InnerLogic["內部私有封裝:<br>1. 折價券順序計算<br>2. 運費折抵規則<br>3. 點數抵扣與邊界防護"]
     end
 ```
-
-![淺模組分散呼叫 vs 深模組單一接縫對比圖](docs/assets/module-deepening-comparison.png)
-
-> 💡 **精緻結構對比圖（視覺化詳情）**：
-> - 靜態高解析圖表如上圖（基於 `/diagram-design` 規範生成）。
-> - 遵循社論排版規範、4px 網格正交拐角與直觀色彩層次，可直接開啟完整 SVG HTML 檢視：
->   👉 [開啟模組深化架構對比圖 (自包含 HTML)](file:///mnt/d/lab/sample.dotblog/AI.SDD/Lab.Matt-Pocock/docs/assets/module-deepening-comparison.html)
 
 在 HTML 報告中挑選候選方案後，AI 會無縫啟動 `/grilling` 盤問迴圈，引導敲定重構決策：
 
