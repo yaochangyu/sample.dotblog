@@ -42,7 +42,7 @@ flowchart TD
     end
 
     subgraph DeliveryLoop ["功能交付迴圈 (Delivery Loop)"]
-        F0["階段 0：環境配置<br>/setup-matt-pocock-skills"] --> F1["階段 1：邊界對齊<br>/grill-with-docs"]
+        F0["階段 0：安裝與環境配置<br>npx skills add ＋ /setup-matt-pocock-skills"] --> F1["階段 1：邊界對齊<br>/grill-with-docs"]
         F1 --> F2["階段 2：規格提煉<br>/to-spec 與 /to-tickets"]
         F2 --> F3["階段 3：多代理編排實作<br>/implement-spec 驅動 /tdd"]
         F3 --> F4["階段 4：雙軸程式碼審查<br>/code-review"]
@@ -71,7 +71,29 @@ flowchart TD
 
 ## 實作流程與 Prompt 實戰拆解
 
-### 1. 初始化環境規範（/setup-matt-pocock-skills）
+### 1. 安裝技能庫（npx skills add）
+
+工欲善其事，必先利其器。在使用任何 Matt Pocock 的工程技能前，第一步是將這套技能庫安裝到目前專案或 AI 工具環境中。
+
+Matt Pocock 提供了基於 [skills.sh](https://skills.sh) 的安裝工具，只要透過 `npx skills add` 就能一鍵將技能下載並註冊到指定的 Agent：
+
+#### 終端機安裝指令
+
+```bash
+# 透過 skills CLI 安裝 Matt Pocock 的 Engineering Skills
+npx skills add mattpocock/skills
+```
+
+執行後會進入互動式選單：
+1. **選擇 Agent 類型**：CLI 會列出支援的 Agent（如 Claude Code、Cursor、Windsurf、Codex、Gemini CLI 等）。若在指令中加上 `-a <agent>`（例如 `-a claude-code` 或 `-a cursor`），則可直接指定。
+2. **勾選欲安裝的技能**：在清單中勾選所需模組，請務必包含 `setup-matt-pocock-skills`、`grill-with-docs`、`to-spec`、`to-tickets`、`tdd` 與 `code-review` 等核心技能。
+3. **專案或全域安裝**：預設會將技能設定寫入專案目錄；若希望所有專案共用，可加上 `-g` 進行全域安裝。
+
+完成安裝後，即可在 AI 工具中直接調用對應的 Slash Commands！
+
+---
+
+### 2. 初始化環境規範（/setup-matt-pocock-skills）
 
 在任何工程技能運作前，首先必須讓 AI 知道「工單要記在哪裡」以及「領域文件放在哪裡」。`/setup-matt-pocock-skills` 是一個互動式的引導技能，它會主動檢查專案結構，確認使用 GitHub Issues、GitLab 還是本地 Markdown 當作追蹤器，並在專案中建立 `docs/agents/` 目錄。
 
@@ -110,7 +132,7 @@ NOTE：這個步驟在每個專案只需執行一次，之後所有的工程技�
 
 ---
 
-### 2. 需求磨礪與領域建模（/grill-with-docs）
+### 3. 需求磨礪與領域建模（/grill-with-docs）
 
 當要開發新功能時，最忌諱直接叫 AI 寫扣。`/grill-with-docs` 結合了 `grilling`（無情盤問）與 `domain-modeling`（領域建模）。這裡 AI 會把需求拆解成「設計樹 (Design Tree)」，一次只針對當前已經能決策的「前沿問題 (Frontier)」發動輪次 (Rounds) 提問，並在釐清專有名詞後，即時寫入 `GLOSSARY.md` 與架構決策紀錄 (ADR)。
 
@@ -164,7 +186,7 @@ AI 隨即會鎖定未釐清的邊界，整理出第一輪前沿問題：
 
 ---
 
-### 3. 提煉規格與鎖定深接縫（/to-spec 結合 codebase-design）
+### 4. 提煉規格與鎖定深接縫（/to-spec 結合 codebase-design）
 
 盤問對齊完畢後，上下文已經累積了具體共識。這時候呼叫 `/to-spec`，AI 會終止盤問模式，純粹將討論提煉成結構化規格書。
 
@@ -237,7 +259,7 @@ AI 產出的規格書結構如下：
 
 ---
 
-### 4. 垂直切片工單（/to-tickets）
+### 5. 垂直切片工單（/to-tickets）
 
 規格書有了之後，傳統習慣往往會水平切分：一張工單開資料表、一張寫介面、一張寫商業邏輯、一張寫單元測試。這種水平切層（Horizontal Slicing）正是整合時常常噴錯的主因。
 
@@ -273,7 +295,7 @@ AI 會列出工單拆解草案：
 
 ---
 
-### 5. 編排多代理自動化實作（/implement-spec）
+### 6. 編排多代理自動化實作（/implement-spec）
 
 在拿到 Spec 與工單任務圖後，不需要人類手動一張一張工單餵給 AI。`/implement-spec` 是整個實作階段的**總指揮官（Orchestrator）**。
 
@@ -309,7 +331,7 @@ AI 接收到指令後的背景調度流程：
 
 ---
 
-### 6. 深入單工單的測試驅動交付（/tdd）
+### 7. 深入單工單的測試驅動交付（/tdd）
 
 在 `/implement-spec` 調度 Implementer 子代理實作每張工單時，底層嚴格執行的正是 `/tdd` 規約。這裡要求嚴格遵循紅綠循環（Red-Green Loop）：  
 1. 在公開接縫 (Seam) 先寫失敗的測試（Red）。  
@@ -423,7 +445,7 @@ Tests       2 passed (2)
 
 ---
 
-### 7. 雙軸程式碼審查（/code-review）
+### 8. 雙軸程式碼審查（/code-review）
 
 當所有切片工單實作完畢並合併到整合分支後，流程會自動觸發 `/code-review` 進行最終驗收。
 
@@ -463,7 +485,7 @@ NOTE：依照規範，Git 提交訊息嚴禁包含 Co-authored-by 標記。
 
 ---
 
-### 8. 落地後的主動架構深化（/improve-codebase-architecture）
+### 9. 落地後的主動架構深化（/improve-codebase-architecture）
 
 功能上線幾週後，隨著需求陸續增加，系統又追加了「全館免運券」、「會員點數折抵」以及「紅利折現」。這時很多專案的程式碼開始出現摩擦力——折價券邏輯寫在結帳模組，免運券寫在物流模組，點數折抵寫在會員模組，彼此之間產生了散彈式修改（Shotgun Surgery）。
 
@@ -533,7 +555,7 @@ flowchart LR
 
 ---
 
-### 9. 系統異常與效能衰退的科學排查（/diagnosing-bugs）
+### 10. 系統異常與效能衰退的科學排查（/diagnosing-bugs）
 
 當系統上線運轉後，難免會遇到線上回報「偶發性計算錯誤 (Flaky Bug)」、「噴出例外 (Throwing)」或「效能衰退 (Performance Regression)」。面對這類棘手問題，傳統 AI 最常見的壞習慣就是：一拿到錯誤日誌，立刻開啟相關檔案，憑肉眼直覺「猜測」可能的原因並隨意修改程式碼。這種盲猜式除錯往往只會越改越糟。
 
