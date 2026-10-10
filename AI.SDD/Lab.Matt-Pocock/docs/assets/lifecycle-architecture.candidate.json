@@ -1,0 +1,105 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Matt Pocock 工程技能鏈：全生命週期三軌閉環",
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "inner-loop",
+        "label": "內軌：高階功能交付流水線",
+        "focus": ["f0_setup", "f1_grill", "f2_spec", "f3_implement", "f4_review", "r0_live"],
+        "note": "從環境配置、對齊邊界到 TDD 實作與雙軸審查驗收。"
+      },
+      {
+        "id": "outer-loop",
+        "label": "外軌：持續架構演進迴圈",
+        "focus": ["r0_live", "r1_arch", "r2_grill", "f2_spec"],
+        "note": "掃描熱點與淺模組，盤問對齊後無縫回流至規格提煉。"
+      },
+      {
+        "id": "diag-loop",
+        "label": "中繼軌：異常排查紀律",
+        "focus": ["r0_live", "d0_issue", "d1_diagnose", "d2_repro", "d3_fix", "f4_review"],
+        "note": "拒絕盲猜，秒級紅燈迴圈最小化重現，單變數修復後雙軸審查驗收。"
+      }
+    ],
+    "output": "docs/assets/lifecycle-architecture.html"
+  },
+  "lanes": [
+    { "id": "outer", "label": "外軌：架構演進 (Outer Loop)" },
+    { "id": "inner", "label": "內軌：功能交付 (Inner Loop)" },
+    { "id": "diag", "label": "中繼軌：異常排查 (Diagnostic Loop)", "variant": "exception" },
+    { "id": "foundation", "label": "底層哲學：深模組接縫 (Foundation)" }
+  ],
+  "phases": [
+    { "id": "p_intake", "label": "環境與探索", "fromCol": 0, "toCol": 1 },
+    { "id": "p_spec", "label": "對齊與規格", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "p_delivery", "label": "實作與演進", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["f0_setup", "f1_grill", "f2_spec", "f3_implement", "f4_review", "r0_live"],
+  "nodes": [
+    { "id": "f0_setup", "lane": "inner", "col": 0, "type": "backend", "label": "階段 0: 環境配置", "sublabel": "setup-matt-pocock-skills", "tag": "全專案一次", "width": 140 },
+    { "id": "f1_grill", "lane": "inner", "col": 1, "type": "frontend", "label": "階段 1: 邊界對齊", "sublabel": "grill-with-docs 盤問", "width": 140 },
+    { "id": "f2_spec", "lane": "inner", "col": 2, "type": "backend", "label": "階段 2: 規格提煉", "sublabel": "to-spec + to-tickets", "tag": "垂直切片", "width": 140 },
+    { "id": "f3_implement", "lane": "inner", "col": 3, "type": "messagebus", "label": "階段 3: 編排與 TDD", "sublabel": "implement-spec 驅動 tdd", "width": 140 },
+    { "id": "f4_review", "lane": "inner", "col": 4, "type": "security", "label": "階段 4: 雙軸審查", "sublabel": "code-review 規範與規格", "tag": "雙軸嚴格把關", "width": 140 },
+    { "id": "r0_live", "lane": "inner", "col": 5, "type": "cloud", "label": "落地運作與迭代", "sublabel": "正式環境運行", "width": 140 },
+
+    { "id": "r1_arch", "lane": "outer", "col": 4, "type": "backend", "label": "架構摩擦力健檢", "sublabel": "improve-architecture", "tag": "掃描淺模組", "width": 140 },
+    { "id": "r2_grill", "lane": "outer", "col": 3, "type": "frontend", "label": "重構方案盤問", "sublabel": "grilling 消除歧義", "width": 140 },
+
+    { "id": "d0_issue", "lane": "diag", "col": 1, "type": "security", "label": "線上例外/衰退", "sublabel": "錯誤回報與偶發失敗", "width": 140 },
+    { "id": "d1_diagnose", "lane": "diag", "col": 2, "type": "messagebus", "label": "科學排查紀律", "sublabel": "diagnosing-bugs", "tag": "秒級反饋迴圈", "width": 140 },
+    { "id": "d2_repro", "lane": "diag", "col": 3, "type": "backend", "label": "可證偽假說", "sublabel": "最小重現與單變數插樁", "width": 140 },
+    { "id": "d3_fix", "lane": "diag", "col": 4, "type": "security", "label": "接縫回歸修復", "sublabel": "單變數驗證綠燈", "width": 140 },
+
+    { "id": "g_design", "lane": "foundation", "col": 2, "type": "database", "label": "codebase-design", "sublabel": "Deep Modules & Seams", "tag": "核心底層哲學", "width": 140 }
+  ],
+  "edges": [
+    { "id": "e_f0_f1", "from": "f0_setup", "to": "f1_grill", "variant": "default" },
+    { "id": "e_f1_f2", "from": "f1_grill", "to": "f2_spec", "variant": "emphasis" },
+    { "id": "e_f2_f3", "from": "f2_spec", "to": "f3_implement", "variant": "emphasis" },
+    { "id": "e_f3_f4", "from": "f3_implement", "to": "f4_review", "variant": "emphasis" },
+    { "id": "e_f4_r0", "from": "f4_review", "to": "r0_live", "variant": "default" },
+
+    { "id": "e_r0_r1", "from": "r0_live", "to": "r1_arch", "label": "架構掃描", "variant": "dashed", "fromSide": "top", "toSide": "right", "role": "return" },
+    { "id": "e_r1_r2", "from": "r1_arch", "to": "r2_grill", "variant": "default" },
+    { "id": "e_r2_f2", "from": "r2_grill", "to": "f2_spec", "label": "提煉重構工單", "variant": "emphasis", "fromSide": "bottom", "toSide": "top" },
+
+    { "id": "e_r0_d0", "from": "r0_live", "to": "d0_issue", "label": "異常回報", "variant": "dashed" },
+    { "id": "e_d0_d1", "from": "d0_issue", "to": "d1_diagnose", "variant": "security" },
+    { "id": "e_d1_d2", "from": "d1_diagnose", "to": "d2_repro", "variant": "default" },
+    { "id": "e_d2_d3", "from": "d2_repro", "to": "d3_fix", "variant": "default" },
+    { "id": "e_d3_f4", "from": "d3_fix", "to": "f4_review", "label": "雙軸驗收", "variant": "emphasis" },
+
+    { "id": "e_g_f2", "from": "g_design", "to": "f2_spec", "variant": "dashed" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "內軌 (Inner Loop)",
+      "items": [
+        "階段 0~4 嚴格推進：從盤問對齊、垂直切片到 TDD 實作",
+        "雙軸審查（Standards 規範軸 + Spec 規格軸）確保程式碼品質"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "外軌與中繼軌 (Outer & Diag)",
+      "items": [
+        "外軌：improve-codebase-architecture 掃描淺模組，驅動重構迴圈",
+        "中繼軌：diagnosing-bugs 拒絕盲猜，秒級紅燈迴圈最小化重現"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "底層哲學 (Foundation)",
+      "items": [
+        "codebase-design 貫穿全程：打造高槓桿的深模組 (Deep Modules)",
+        "唯一的測試接縫 (Seam)：拒絕私有外洩，保護重構自由度"
+      ]
+    }
+  ]
+}

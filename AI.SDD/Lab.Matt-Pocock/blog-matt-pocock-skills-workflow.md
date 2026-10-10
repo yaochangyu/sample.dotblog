@@ -1,6 +1,6 @@
 # [AI.SDD] 拆解 Matt Pocock 的 Engineering Skills：從環境配置到高階 TDD 與架構演進的完整工作流程
 
-在開發過程中，直接叫 AI 寫程式碼往往很爽快，但如果不給予任何工程約束，多半只會換來滿地幻覺與難以維護的技術債。Matt Pocock 開源的 [skills](https://github.com/mattpocock/skills)，指的是一套將軟體工程規範（需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸代碼審查與架構深化）封裝起來的 AI 技能庫。這裡我以電商系統的「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。
+在開發過程中，直接叫 AI 寫程式碼往往很爽快，但如果不給予任何工程約束，多半只會換來滿地幻覺與難以維護的技術債。Matt Pocock 開源的 [skills](https://github.com/mattpocock/skills)，指的是一套將軟體工程規範（需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸程式碼審查與架構深化）封裝起來的 AI 技能庫。這裡我以電商系統的「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。
 
 ---
 
@@ -38,7 +38,7 @@ flowchart TD
         F0["階段 0：環境配置<br>/setup-matt-pocock-skills"] --> F1["階段 1：邊界對齊<br>/grill-with-docs"]
         F1 --> F2["階段 2：規格提煉<br>/to-spec 與 /to-tickets"]
         F2 --> F3["階段 3：多代理編排實作<br>/implement-spec 驅動 /tdd"]
-        F3 --> F4["階段 4：雙軸代碼審查<br>/code-review"]
+        F3 --> F4["階段 4：雙軸程式碼審查<br>/code-review"]
     end
 
     R2 --> F2
@@ -52,10 +52,15 @@ flowchart TD
     G -.-> D3
 ```
 
+> 💡 **精緻互動架構圖（Archify 視覺化）**：
+> 本文提供由 `/archify` 生成的獨立可互動 HTML 架構圖（支援深淺色主題切換、主路徑追蹤動態與引導式視角）：
+> 👉 [開啟全生命週期三軌閉環架構圖 (HTML)](file:///mnt/d/lab/sample.dotblog/AI.SDD/Lab.Matt-Pocock/docs/assets/lifecycle-architecture.html)
+> （規格檔位於 [lifecycle-architecture.candidate.json](file:///mnt/d/lab/sample.dotblog/AI.SDD/Lab.Matt-Pocock/docs/assets/lifecycle-architecture.candidate.json)）
+
 這裡可以拆解為四個維度：
 - **底層哲學（codebase-design）**：追求「深模組 (Deep Module)」——以極簡的公開介面封裝大量內部複雜度，並堅持公開接縫 (Seam) 就是唯一的測試表面。
 - **內軌（功能交付鏈）**：從環境配置、邊界盤問、規格制定、工單切片，到背景子代理在獨立 Git Worktree 裡並行跑 TDD，最後以雙軸審查驗收。
-- **外軌（架構演進鏈）**：系統上線一段時間後，利用 `improve-codebase-architecture` 掃描代碼摩擦力與淺模組，產出視覺化 HTML 報告，驅動下一輪重構。
+- **外軌（架構演進鏈）**：系統上線一段時間後，利用 `improve-codebase-architecture` 掃描程式碼摩擦力與淺模組，產出視覺化 HTML 報告，驅動下一輪重構。
 - **中繼軌（diagnosing-bugs）**：線上噴錯、偶發失敗或效能衰退時，嚴格遵守六階段科學診斷紀律，在建立可一鍵重現的紅燈迴圈前，絕對不看 code 盲猜。
 
 接下來我們以「購物車折價券計算模組」為例，把每一步驟的操作走過一遍。
@@ -164,10 +169,10 @@ AI 隨即會鎖定未釐清的邊界，整理出第一輪前沿問題：
 這裡最關鍵的是融入了 `codebase-design` 的理念：**拒絕淺模組 (Shallow Module)，定義高槓桿的深接縫 (Deep Seam)**。
 
 #### 淺模組（Shallow Module）反模式範例
-如果沒有做好封裝，很容易寫出下面這種把內部細節全部裸露在外的淺模組，調用端必須自己處理排序與驗證，測試也非常容易脆裂：
+如果沒有做好封裝，很容易寫出下面這種把內部細節全部裸露在外的淺模組，呼叫端必須自己處理排序與驗證，測試也非常容易脆裂：
 
 ```typescript
-// 反模式：淺模組（調用端負擔極重，測試容易碎裂）
+// 反模式：淺模組（呼叫端負擔極重，測試容易碎裂）
 export class CouponService {
   validateThreshold(coupon: Coupon, cartTotal: number): boolean { /* ... */ }
   sortCouponsByOrder(coupons: Coupon[]): Coupon[] { /* ... */ }
@@ -307,7 +312,7 @@ AI 接收到指令後的背景調度流程：
 2. 只寫剛剛好能讓測試變綠的最小實作程式碼（Green）。
 3. 嚴禁在測試亮紅燈前憑空增加假設或預先編寫未被測試覆蓋的功能。
 
-這裡以 Implementer 子代理在處理 Ticket 01 時的具體代碼為例。
+這裡以 Implementer 子代理在處理 Ticket 01 時的具體程式碼為例。
 
 #### 步驟 1：紅燈測試
 
@@ -410,16 +415,16 @@ Test Files  1 passed (1)
 Tests       2 passed (2)
 ```
 
-測試通過後，Implementer 子代理即完成該工單任務，由 Merger 子代理將代碼合併回整合分支。
+測試通過後，Implementer 子代理即完成該工單任務，由 Merger 子代理將程式碼合併回整合分支。
 
 ---
 
-### 7. 雙軸代碼審查（/code-review）
+### 7. 雙軸程式碼審查（/code-review）
 
 當所有切片工單實作完畢並合併到整合分支後，流程會自動觸發 `/code-review` 進行最終驗收。
 
 這個技能最獨特之處在於「雙軸獨立審查（Two-axis review）」。它會平行派出兩個子代理，分別針對兩個維度進行審查，避免相互掩蓋：
-1. **Standards 軸**：檢查代碼是否符合專案編碼標準，並依據 Martin Fowler 的 12 種經典壞味道（Code Smells，例如 Primitive Obsession、Feature Envy、Shotgun Surgery）進行健檢。
+1. **Standards 軸**：檢查程式碼是否符合專案編碼標準，並依據 Martin Fowler 的 12 種經典壞味道（Code Smells，例如 Primitive Obsession、Feature Envy、Shotgun Surgery）進行健檢。
 2. **Spec 軸**：比對規格書與 Git Diff，檢查是否有漏做的驗收條件，或者未經允許的額外功能（Scope Creep）。
 
 #### 提示詞範例（Prompt）
@@ -456,10 +461,10 @@ NOTE：依照規範，Git 提交訊息嚴禁包含 Co-authored-by 標記。
 
 ### 8. 落地後的主動架構深化（/improve-codebase-architecture）
 
-功能上線幾週後，隨著需求陸續增加，系統又追加了「全館免運券」、「會員點數折抵」以及「紅利折現」。這時很多專案的代碼開始出現摩擦力——折價券邏輯寫在結帳模組，免運券寫在物流模組，點數折抵寫在會員模組，彼此之間產生了散彈式修改（Shotgun Surgery）。
+功能上線幾週後，隨著需求陸續增加，系統又追加了「全館免運券」、「會員點數折抵」以及「紅利折現」。這時很多專案的程式碼開始出現摩擦力——折價券邏輯寫在結帳模組，免運券寫在物流模組，點數折抵寫在會員模組，彼此之間產生了散彈式修改（Shotgun Surgery）。
 
 這就是 `/improve-codebase-architecture` 派上用場的時候了。它不會瞎猜，而是：
-1. 掃描 Git Commit 歷史，找出近期變更最頻繁的代碼熱點 (Hot spots)。
+1. 掃描 Git Commit 歷史，找出近期變更最頻繁的程式碼熱點 (Hot spots)。
 2. 對模組進行「刪除測試 (Deletion Test)」：如果刪掉某個中介模組，複雜度只會分散到各處還是會集中？
 3. **在作業系統暫存區生成一份視覺化的 HTML 報告**（整合 Tailwind CSS 與 Mermaid），給出 Before / After 架構對比。
 
@@ -474,7 +479,7 @@ NOTE：依照規範，Git 提交訊息嚴禁包含 Co-authored-by 標記。
 執行後，AI 輸出報告路徑並在瀏覽器中開啟：
 
 ```text
-已完成代碼庫熱點與架構摩擦力掃描！
+已完成程式碼庫熱點與架構摩擦力掃描！
 報告已產生於: /tmp/architecture-review-20261010.html
 正在為您開啟瀏覽器檢視...
 ```
@@ -487,7 +492,7 @@ NOTE：依照規範，Git 提交訊息嚴禁包含 Co-authored-by 標記。
 ### 候選項目 1：購物車優惠結算淺模組深化 (Recommendation: Strong)
 - 涉及檔案: `src/coupon-calculator.ts`, `src/shipping-discount.ts`, `src/points-deduction.ts`
 - 問題描述 (Problem):
-  結帳流程調用端需要依序調用三個不同的淺模組，並手動在外部處理「點數與折價券互斥」以及「免運門檻與實付金額連動」的邊界邏輯。局部性 (Locality) 極差，任何優惠規則調整都會導致調用端破碎。
+  結帳流程呼叫端需要依序呼叫三個不同的淺模組，並手動在外部處理「點數與折價券互斥」以及「免運門檻與實付金額連動」的邊界邏輯。局部性 (Locality) 極差，任何優惠規則調整都會導致呼叫端破碎。
 - 改善方案 (Solution):
   建立深模組 `CartCheckoutPricingEngine`，將折價券、運費券、點數折抵收斂至單一深接縫，外部只需傳入購物車與優惠清單，內部一次完成所有相依排程與折抵運算。
 ```
@@ -510,6 +515,10 @@ flowchart LR
     end
 ```
 
+> 💡 **精緻結構對比圖（Diagram Design 視覺化）**：
+> 本文提供由 `/diagram-design` 生成的自包含高解析 SVG+HTML 架構對比圖（遵循社論排版規範、精確 4px 網格正交拐角與重點色彩語義）：
+> 👉 [開啟模組深化架構對比圖 (HTML)](file:///mnt/d/lab/sample.dotblog/AI.SDD/Lab.Matt-Pocock/docs/assets/module-deepening-comparison.html)
+
 在 HTML 報告中挑選候選方案後，AI 會無縫啟動 `/grilling` 盤問迴圈，引導敲定重構決策：
 
 ```text
@@ -526,9 +535,9 @@ flowchart LR
 
 ### 9. 系統異常與效能衰退的科學排查（/diagnosing-bugs）
 
-當系統上線運轉後，難免會遇到線上回報「偶發性計算錯誤 (Flaky Bug)」、「噴出例外 (Throwing)」或「效能衰退 (Performance Regression)」。面對這類棘手問題，傳統 AI 最常見的壞習慣就是：一拿到錯誤日誌，立刻開啟相關檔案，憑肉眼直覺「猜測」可能的原因並隨意修改代碼。這種盲猜式除錯往往只會越改越糟。
+當系統上線運轉後，難免會遇到線上回報「偶發性計算錯誤 (Flaky Bug)」、「噴出例外 (Throwing)」或「效能衰退 (Performance Regression)」。面對這類棘手問題，傳統 AI 最常見的壞習慣就是：一拿到錯誤日誌，立刻開啟相關檔案，憑肉眼直覺「猜測」可能的原因並隨意修改程式碼。這種盲猜式除錯往往只會越改越糟。
 
-Matt Pocock 體系中的 `/diagnosing-bugs` 是一套極度嚴謹的**科學診斷紀律**。它的核心鋼鐵準則是：**在尚未建立出「秒級、確定性、一鍵可跑」的紅燈重現指令 (Feedback Loop) 之前，嚴禁跳入代碼盲猜假說！**
+Matt Pocock 體系中的 `/diagnosing-bugs` 是一套極度嚴謹的**科學診斷紀律**。它的核心鋼鐵準則是：**在尚未建立出「秒級、確定性、一鍵可跑」的紅燈重現指令 (Feedback Loop) 之前，嚴禁跳入程式碼盲猜假說！**
 
 這裡以我們折價券模組在線上遇到的真實故障為例：
 線上回報當購物車遇到多張小額券與百分比券疊加時，實付金額偶發計算出小於 0 的極小浮點數殘留（例如 `-0.000000001`），結果實付金額算成負數，金流付款直接噴掉了啦!!!
@@ -545,7 +554,7 @@ Matt Pocock 體系中的 `/diagnosing-bugs` 是一套極度嚴謹的**科學診�
 AI 隨即會依循六大階段有條不紊地推進：
 
 #### 階段 1 與 2：建立秒級紅燈迴圈並最小化（Build a feedback loop & Minimise）
-AI 不會直接改代碼，而是先在測試接縫處建立一個確定能抓到此 Bug 的測試案例，並砍掉所有無關參數，只保留造成錯誤的最小承重牆資料：
+AI 不會直接改程式碼，而是先在測試接縫處建立一個確定能抓到此 Bug 的測試案例，並砍掉所有無關參數，只保留造成錯誤的最小承重牆資料：
 
 ```typescript
 // tests/regression-flaky-negative.spec.ts
@@ -619,4 +628,4 @@ Tests       9 passed (9)
 
 ---
 
-完整代碼位置: https://github.com/yaochangyu/sample.dotblog/tree/master/AI.SDD/Lab.Matt-Pocock
+完整程式碼位置: https://github.com/yaochangyu/sample.dotblog/tree/master/AI.SDD/Lab.Matt-Pocock
