@@ -1,5 +1,6 @@
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
+using AuthSpike.Audit;
 using AuthSpike.Hosting;
 using AuthSpike.Replay;
 using AuthSpike.Signing;
@@ -55,7 +56,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
         NonceReplayStore replayStore,
         TrustRegistry registry,
         TimeSpan verificationCacheLifetime,
-        OrderStore orders)
+        OrderStore orders,
+        SecurityAuditLog audit)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.ConfigureKestrel(kestrel => kestrel.ListenLocalhost(port, listen => listen.UseHttps(https =>
@@ -67,6 +69,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
         })));
 
         builder.Services.AddSingleton(orders);
+        builder.Services.AddSingleton(audit);
         builder.Services.AddOpenIddict()
             .AddValidation(options =>
             {
@@ -98,6 +101,26 @@ public sealed class OrdersApiHost : IAsyncDisposable
         instance._callers = new CallerVerifier(registry, verificationCacheLifetime);
         var callers = instance._callers;
 
+        // 稽核信封：回應帶 X-Correlation-Id；若請求未經任何決策點（例如 scope 不足被授權中介軟體拒絕），回應後補記 denied。
+        app.Use(async (context, next) =>
+        {
+            if (!context.Request.Path.StartsWithSegments("/orders"))
+            {
+                await next();
+                return;
+            }
+
+            context.Response.Headers["X-Correlation-Id"] = context.TraceIdentifier;
+            await next();
+
+            if (!CallerAudit.IsDecided(context)
+                && !CallerAudit.TryRecord(context, audit, "denied", $"status_{context.Response.StatusCode}", unverifiedTokenClientId: AuthenticatedClientId(context))
+                && !context.Response.HasStarted)
+            {
+                await WriteAuditUnavailableAsync(context);
+            }
+        });
+
         // 呼叫者查證先於授權與簽章：未通過查證的請求不進入 scope 檢查與業務處理。
         app.Use(async (context, next) =>
         {
@@ -108,21 +131,35 @@ public sealed class OrdersApiHost : IAsyncDisposable
             }
 
             var (outcome, principal) = await callers.VerifyAsync(context);
-            switch (outcome)
+            if (outcome == CallerOutcome.Verified)
             {
-                case CallerOutcome.Verified:
-                    context.User = principal!;
-                    await next();
-                    return;
-                case CallerOutcome.Unavailable:
-                    // 查證服務暫時無法連線且無有效快取：明確回報服務錯誤，不放行、不進入業務副作用。
-                    context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-                    await context.Response.WriteAsJsonAsync(new { error = "verification_unavailable" });
-                    return;
-                default:
-                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    return;
+                context.User = principal!;
+                await next();
+                return;
             }
+
+            if (outcome == CallerOutcome.Unavailable)
+            {
+                // 查證服務暫時無法連線且無有效快取：明確回報服務錯誤，不放行、不進入業務副作用。
+                if (!CallerAudit.TryRecord(context, audit, "unavailable", "caller_verification_unavailable"))
+                {
+                    await WriteAuditUnavailableAsync(context);
+                    return;
+                }
+
+                context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                await context.Response.WriteAsJsonAsync(new { error = "verification_unavailable" });
+                return;
+            }
+
+            // 認證失敗：principal（若有）僅為宣稱身分，標為未驗證。
+            if (!CallerAudit.TryRecord(context, audit, "rejected", "caller_rejected", unverifiedTokenClientId: principal?.GetClaim(Claims.ClientId)))
+            {
+                await WriteAuditUnavailableAsync(context);
+                return;
+            }
+
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
         });
 
         app.UseAuthorization();
@@ -137,21 +174,45 @@ public sealed class OrdersApiHost : IAsyncDisposable
                 return;
             }
 
-            var outcome = await verifier.VerifyAsync(context, context.User.GetClaim(Claims.ClientId) ?? string.Empty);
-            switch (outcome)
+            var clientId = context.User.GetClaim(Claims.ClientId) ?? string.Empty;
+            var outcome = await verifier.VerifyAsync(context, clientId);
+            if (outcome == SignatureOutcome.Accepted)
             {
-                case SignatureOutcome.Accepted:
-                    await next();
+                // 紀錄先於業務處理寫入；寫入失敗則不進入業務副作用。
+                var keyId = signatureKeys.TryGetValue(clientId, out var key) ? key.KeyId : null;
+                if (!CallerAudit.TryRecord(context, audit, "accepted", "signature_verified", verifiedClientId: clientId, signatureKeyId: keyId))
+                {
+                    await WriteAuditUnavailableAsync(context);
                     return;
-                case SignatureOutcome.ReplayStateUnavailable:
-                    // 防重放狀態無法可靠讀寫：明確回報服務錯誤，不放行、不進入業務副作用。
-                    context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
-                    await context.Response.WriteAsJsonAsync(new { error = "replay_state_unavailable" });
-                    return;
-                default:
-                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                    return;
+                }
+
+                await next();
+                return;
             }
+
+            if (outcome == SignatureOutcome.ReplayStateUnavailable)
+            {
+                // 防重放狀態無法可靠讀寫：明確回報服務錯誤，不放行、不進入業務副作用。
+                if (!CallerAudit.TryRecord(context, audit, "unavailable", "replay_state_unavailable", unverifiedTokenClientId: clientId))
+                {
+                    await WriteAuditUnavailableAsync(context);
+                    return;
+                }
+
+                context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                await context.Response.WriteAsJsonAsync(new { error = "replay_state_unavailable" });
+                return;
+            }
+
+            // 驗簽失敗或重放：請求宣稱的 Client 標為未驗證。
+            var reason = outcome == SignatureOutcome.Replayed ? "signature_replayed" : "signature_rejected";
+            if (!CallerAudit.TryRecord(context, audit, "rejected", reason, unverifiedTokenClientId: clientId))
+            {
+                await WriteAuditUnavailableAsync(context);
+                return;
+            }
+
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
         });
 
         app.MapPost("/orders", (CreateOrderRequest request, OrderStore store, HttpContext httpContext) =>
@@ -190,6 +251,16 @@ public sealed class OrdersApiHost : IAsyncDisposable
         await app.StartAsync();
         return instance;
     }
+
+    /// <summary>稽核紀錄無法寫入：以 503 明確回報，不得放行、不得假報成功。</summary>
+    private static Task WriteAuditUnavailableAsync(HttpContext context)
+    {
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        return context.Response.WriteAsJsonAsync(new { error = "audit_unavailable" });
+    }
+
+    private static string? AuthenticatedClientId(HttpContext context)
+        => context.User.Identity?.IsAuthenticated == true ? context.User.GetClaim(Claims.ClientId) : null;
 
     private static GetOrderResponse ToResponse(Guid orderId, string clientId, StoredOrder order)
         => new(orderId, clientId, order.Request.Item, order.Request.Quantity, order.Status);

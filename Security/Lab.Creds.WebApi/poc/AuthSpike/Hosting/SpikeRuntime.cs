@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using AuthSpike.AuthServer;
+using AuthSpike.Audit;
 using AuthSpike.Certificates;
 using AuthSpike.OrdersApi;
 using AuthSpike.Replay;
@@ -49,7 +50,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
         NonceReplayStore replayStore,
         TrustRegistry registry,
         TimeSpan verificationCacheLifetime,
-        OrderStore orders)
+        OrderStore orders,
+        SecurityAuditLog auditLog)
     {
         Trust = trust;
         _clientCertificates = clientCertificates;
@@ -60,6 +62,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
         ReplayStore = replayStore;
         Registry = registry;
         Orders = orders;
+        AuditLog = auditLog;
         UnregisteredSelfSignedCertificate = unregisteredSelfSignedCertificate;
         OtherCaCertificate = otherCaCertificate;
         AuthServer = authServer;
@@ -86,6 +89,9 @@ public sealed class SpikeRuntime : IAsyncDisposable
 
     /// <summary>訂單資料（主要與第二個執行個體共用，模擬共用的業務資料庫）。</summary>
     public OrderStore Orders { get; }
+
+    /// <summary>安全稽核紀錄（與防重放及訂單儲存分開；主要與第二個執行個體共用）。</summary>
+    public SecurityAuditLog AuditLog { get; }
 
     /// <summary>第二個建立訂單 API 執行個體（僅在需要跨執行個體情境時啟動）。</summary>
     public OrdersApiHost? SecondaryOrdersApi { get; private set; }
@@ -151,6 +157,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
             pair => new SignatureKey(pair.Value.KeyId, ECDsa.Create(pair.Value.Key.ExportParameters(includePrivateParameters: false))));
         var replayStore = new NonceReplayStore();
         var orders = new OrderStore();
+        var auditLog = new SecurityAuditLog();
         var ordersApi = await OrdersApiHost.StartAsync(
             ordersApiPort,
             trust,
@@ -162,7 +169,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
             replayStore,
             registry,
             cacheLifetime,
-            orders);
+            orders,
+            auditLog);
 
         return new SpikeRuntime(
             trust,
@@ -177,7 +185,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
             replayStore,
             registry,
             cacheLifetime,
-            orders);
+            orders,
+            auditLog);
     }
 
     /// <summary>啟動第二個建立訂單 API 執行個體，與主要執行個體共用防重放儲存、驗簽金鑰、撤銷狀態與訂單資料。</summary>
@@ -194,7 +203,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
             ReplayStore,
             Registry,
             _verificationCacheLifetime,
-            Orders);
+            Orders,
+            AuditLog);
         return SecondaryOrdersApi;
     }
 

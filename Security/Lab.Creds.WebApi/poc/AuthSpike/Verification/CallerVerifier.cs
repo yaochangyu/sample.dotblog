@@ -86,7 +86,8 @@ public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime)
         var clientId = principal.GetClaim(Claims.ClientId);
         if (clientId is null || !registry.IsClientEnabled(clientId) || registry.IsCertificateRevoked(thumbprint))
         {
-            return (CallerOutcome.Rejected, null);
+            // 查證已通過但 Client 或憑證已停用：principal 僅供稽核標示為未驗證的宣稱身分，業務處理不採信。
+            return (CallerOutcome.Rejected, principal);
         }
 
         return (CallerOutcome.Verified, principal);
