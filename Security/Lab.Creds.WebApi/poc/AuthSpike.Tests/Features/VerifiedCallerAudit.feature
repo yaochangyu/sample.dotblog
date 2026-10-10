@@ -16,7 +16,7 @@ Feature: 安全追查已驗證呼叫者
     Then 稽核呼叫端最近一次請求回應 201
     And 最近一次請求的稽核紀錄結果為 "accepted"，原因為 "signature_verified"
     And 最近一次請求的稽核紀錄已驗證 Client 為 "orders-client"
-    And 最近一次請求的稽核紀錄簽章金鑰識別為 "orders-client-sig-1"
+    And 最近一次請求的稽核紀錄簽章金鑰識別為 "orders-client-lab-sig-1"
     And 最近一次請求的稽核紀錄操作為 "POST /orders"
     And 最近一次請求的稽核紀錄憑證指紋與 "orders-client" 用戶端憑證一致
     And 最近一次請求的稽核紀錄的關聯識別與回應 X-Correlation-Id 相同

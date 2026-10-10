@@ -52,7 +52,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
         Uri authorizationServer,
         string resourceClientId,
         X509Certificate2 resourceClientCertificate,
-        IReadOnlyDictionary<string, SignatureKey> signatureKeys,
+        VerificationKeyStore signatureKeys,
         NonceReplayStore replayStore,
         TrustRegistry registry,
         TimeSpan verificationCacheLifetime,
@@ -175,12 +175,12 @@ public sealed class OrdersApiHost : IAsyncDisposable
             }
 
             var clientId = context.User.GetClaim(Claims.ClientId) ?? string.Empty;
-            var outcome = await verifier.VerifyAsync(context, clientId);
+            var signature = await verifier.VerifyAsync(context, clientId);
+            var outcome = signature.Outcome;
             if (outcome == SignatureOutcome.Accepted)
             {
                 // 紀錄先於業務處理寫入；寫入失敗則不進入業務副作用。
-                var keyId = signatureKeys.TryGetValue(clientId, out var key) ? key.KeyId : null;
-                if (!CallerAudit.TryRecord(context, audit, "accepted", "signature_verified", verifiedClientId: clientId, signatureKeyId: keyId))
+                if (!CallerAudit.TryRecord(context, audit, "accepted", "signature_verified", verifiedClientId: clientId, signatureKeyId: signature.KeyId))
                 {
                     await WriteAuditUnavailableAsync(context);
                     return;

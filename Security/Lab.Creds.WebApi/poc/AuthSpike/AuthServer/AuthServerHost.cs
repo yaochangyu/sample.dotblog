@@ -23,13 +23,15 @@ namespace AuthSpike.AuthServer;
 public sealed class AuthServerHost : IAsyncDisposable
 {
     private readonly WebApplication _app;
+    private readonly IReadOnlyDictionary<string, AuthServerClient> _clients;
     private bool _stopped;
     private bool _disposed;
 
-    private AuthServerHost(WebApplication app, int port)
+    private AuthServerHost(WebApplication app, int port, IReadOnlyList<AuthServerClient> clients)
     {
         _app = app;
         Port = port;
+        _clients = clients.ToDictionary(client => client.ClientId);
     }
 
     public int Port { get; }
@@ -104,7 +106,7 @@ public sealed class AuthServerHost : IAsyncDisposable
             var clientId = await applications.GetClientIdAsync(application);
             // 停用的 Client 或已撤銷的 mTLS 憑證不再核發 Token（既有 Token 的接受判斷另由業務 API 檢查）。
             var presented = httpContext.Connection.ClientCertificate;
-            if (!registry.IsClientEnabled(clientId!) || presented is null || registry.IsCertificateRevoked(presented.Thumbprint))
+            if (!registry.IsClientEnabled(clientId!) || presented is null || registry.IsCertificateBlocked(presented.Thumbprint))
             {
                 return Results.Json(new Dictionary<string, string> { ["error"] = Errors.InvalidClient }, statusCode: StatusCodes.Status401Unauthorized);
             }
@@ -141,32 +143,53 @@ public sealed class AuthServerHost : IAsyncDisposable
                     continue;
                 }
 
-                // 只授予該 Client 核准的 scope 權限；未授予的 scope 由 OpenIddict 拒絕。
-                var permissions = new HashSet<string>
-                {
-                    Permissions.Endpoints.Token,
-                    Permissions.Endpoints.Introspection,
-                    Permissions.GrantTypes.ClientCredentials,
-                };
-                permissions.UnionWith(client.Scopes.Select(scope => Permissions.Prefixes.Scope + scope));
-
-                var descriptor = new OpenIddictApplicationDescriptor
-                {
-                    ClientId = client.ClientId,
-                    ClientType = ClientTypes.Confidential,
-                    DisplayName = client.ClientId,
-                    JsonWebKeySet = new JsonWebKeySet
-                    {
-                        Keys = { JsonWebKeyConverter.ConvertFromX509SecurityKey(new X509SecurityKey(SpikeCertificates.PublicPart(client.PublicCertificate))) }
-                    },
-                };
-                descriptor.Permissions.UnionWith(permissions);
-                await manager.CreateAsync(descriptor);
+                await manager.CreateAsync(BuildDescriptor(client, [client.PublicCertificate]));
             }
         }
 
         await app.StartAsync();
-        return new AuthServerHost(app, port);
+        return new AuthServerHost(app, port, clients);
+    }
+
+    /// <summary>
+    /// 以指定的公開憑證集合取代 Client 登錄的 JWKS（08 單）：登錄新憑證為新增一筆，退役舊憑證則自集合移除。
+    /// 集合內每張憑證都能通過該 Client 的 self_signed_tls_client_auth 並取得綁定該憑證的 Token。
+    /// </summary>
+    public async Task SetClientCertificatesAsync(string clientId, IReadOnlyList<X509Certificate2> publicCertificates)
+    {
+        using var scope = _app.Services.CreateScope();
+        var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
+        var application = await manager.FindByClientIdAsync(clientId)
+            ?? throw new InvalidOperationException($"找不到 Client {clientId}。");
+        await manager.UpdateAsync(application, BuildDescriptor(_clients[clientId], publicCertificates));
+    }
+
+    private static OpenIddictApplicationDescriptor BuildDescriptor(AuthServerClient client, IEnumerable<X509Certificate2> publicCertificates)
+    {
+        // 只授予該 Client 核准的 scope 權限；未授予的 scope 由 OpenIddict 拒絕。
+        var permissions = new HashSet<string>
+        {
+            Permissions.Endpoints.Token,
+            Permissions.Endpoints.Introspection,
+            Permissions.GrantTypes.ClientCredentials,
+        };
+        permissions.UnionWith(client.Scopes.Select(scope => Permissions.Prefixes.Scope + scope));
+
+        var jwks = new JsonWebKeySet();
+        foreach (var certificate in publicCertificates)
+        {
+            jwks.Keys.Add(JsonWebKeyConverter.ConvertFromX509SecurityKey(new X509SecurityKey(SpikeCertificates.PublicPart(certificate))));
+        }
+
+        var descriptor = new OpenIddictApplicationDescriptor
+        {
+            ClientId = client.ClientId,
+            ClientType = ClientTypes.Confidential,
+            DisplayName = client.ClientId,
+            JsonWebKeySet = jwks,
+        };
+        descriptor.Permissions.UnionWith(permissions);
+        return descriptor;
     }
 
     /// <summary>模擬查證服務故障：停止接受連線（之後 introspection 與 Token 端點都無法連線）。</summary>

@@ -23,46 +23,44 @@ public enum SignatureOutcome
     ReplayStateUnavailable,
 }
 
+/// <summary>簽章驗證結果；KeyId 為簽章所用金鑰（已通過簽章比對時才有值），供稽核紀錄使用。</summary>
+public sealed record SignatureResult(SignatureOutcome Outcome, string? KeyId);
+
 /// <summary>
 /// 業務 API 端：驗證原始呼叫端的 HTTP Message Signature，並以共用 nonce 儲存做跨執行個體防重放。
 /// 只使用已驗證 Token 所識別的 Client 登錄之簽章金鑰；不採信請求自行宣稱的金鑰或身分。
 /// 時間窗與保存期（lab 暫定，待使用者確認）：created 不超前超過 30 秒、有效期（expires - created）不超過 60 秒、
 /// 未達 expires 才接受；nonce 保存至 expires 加 30 秒。
 /// </summary>
-public sealed class SignedRequestVerifier(IReadOnlyDictionary<string, SignatureKey> keysByClient, NonceReplayStore replayStore, TrustRegistry registry)
+public sealed class SignedRequestVerifier(VerificationKeyStore keys, NonceReplayStore replayStore, TrustRegistry registry)
 {
     private static readonly TimeSpan ClockSkew = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan MaxValidity = TimeSpan.FromSeconds(60);
 
-    public async Task<SignatureOutcome> VerifyAsync(HttpContext context, string verifiedClientId)
+    public async Task<SignatureResult> VerifyAsync(HttpContext context, string verifiedClientId)
     {
         var accepted = await ValidateSignatureAsync(context, verifiedClientId);
         if (accepted is null)
         {
-            return SignatureOutcome.Rejected;
+            return new SignatureResult(SignatureOutcome.Rejected, null);
         }
 
         try
         {
             // 防重放在簽章與時間窗通過之後、業務副作用之前登錄，確保重放不會進入業務處理。
             var registered = replayStore.TryRegister(verifiedClientId, accepted.Nonce, accepted.Expires + ClockSkew);
-            return registered ? SignatureOutcome.Accepted : SignatureOutcome.Replayed;
+            return new SignatureResult(registered ? SignatureOutcome.Accepted : SignatureOutcome.Replayed, accepted.KeyId);
         }
         catch (ReplayStateUnavailableException)
         {
-            return SignatureOutcome.ReplayStateUnavailable;
+            return new SignatureResult(SignatureOutcome.ReplayStateUnavailable, accepted.KeyId);
         }
     }
 
-    private sealed record AcceptedSignature(string Nonce, DateTimeOffset Expires);
+    private sealed record AcceptedSignature(string Nonce, DateTimeOffset Expires, string KeyId);
 
     private async Task<AcceptedSignature?> ValidateSignatureAsync(HttpContext context, string verifiedClientId)
     {
-        if (!keysByClient.TryGetValue(verifiedClientId, out var signatureKey))
-        {
-            return null;
-        }
-
         var headers = context.Request.Headers;
         var signatureInput = headers["Signature-Input"].ToString();
         var signatureHeader = headers["Signature"].ToString();
@@ -83,13 +81,13 @@ public sealed class SignedRequestVerifier(IReadOnlyDictionary<string, SignatureK
         }
 
         // keyid 必須是「已驗證 Client」登錄的金鑰，混用其他 Client 的合法金鑰一律拒絕。
-        if (!fields.TryGetValue("keyid", out var keyId) || keyId != signatureKey.KeyId)
+        if (!fields.TryGetValue("keyid", out var keyId) || !keys.TryGet(verifiedClientId, keyId, out var signatureKey) || signatureKey is null)
         {
             return null;
         }
 
-        // 已撤銷的簽章金鑰即使屬於已驗證 Client 也不被接受。
-        if (registry.IsSigningKeyRevoked(keyId))
+        // 已撤銷（洩漏）或已退役（正常輪替結束）的簽章金鑰即使屬於已驗證 Client 也不被接受。
+        if (registry.IsSigningKeyBlocked(keyId))
         {
             return null;
         }
@@ -146,7 +144,7 @@ public sealed class SignedRequestVerifier(IReadOnlyDictionary<string, SignatureK
         }
 
         return VerifySignature(signatureKey, signatureHeader, components, values, parameters)
-            ? new AcceptedSignature(nonce, expires)
+            ? new AcceptedSignature(nonce, expires, keyId)
             : null;
     }
 

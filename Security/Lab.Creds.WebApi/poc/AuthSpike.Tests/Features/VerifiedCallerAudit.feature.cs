@@ -192,7 +192,7 @@ namespace AuthSpike.Tests.Features
     await testRunner.AndAsync("最近一次請求的稽核紀錄已驗證 Client 為 \"orders-client\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 19
-    await testRunner.AndAsync("最近一次請求的稽核紀錄簽章金鑰識別為 \"orders-client-sig-1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("最近一次請求的稽核紀錄簽章金鑰識別為 \"orders-client-lab-sig-1\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 20
     await testRunner.AndAsync("最近一次請求的稽核紀錄操作為 \"POST /orders\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
