@@ -10,6 +10,9 @@ info:
     簽章規則為 lab 提案，待使用者確認（見 03 單）。
     防重放（見 04 單，lab 暫定待使用者確認）：簽章 created 不超前超過 30 秒、有效期（expires - created）不超過 60 秒、未達 expires 才接受；同一 Client 的 nonce 只能被接受一次，跨建立訂單 API 執行個體一致；重放回應 401。
     防重放狀態無法可靠讀寫時回應 503（error: replay_state_unavailable），且不進入業務副作用。防重放不等於業務冪等（業務去重屬 06 單）。
+    撤銷（見 07 單）：Client 停用、mTLS 憑證撤銷、簽章金鑰撤銷或 Token 撤銷後，各驗證端於 60 秒內拒絕後續請求（回應 401，含既有連線）。
+    停用 Client 或輪替憑證不會使既有 Token 被 introspection 判為無效；接受判斷另檢查 Client、憑證與簽章金鑰的有效狀態。撤銷不回滾已提交的訂單。
+    查證服務無法連線且沒有時效內有效的快取時回應 503（error: verification_unavailable），不回應 401、不進入業務副作用；快取到期不因查證失敗而延長。
     操作權限：Token 須含該操作所需的 scope（orders.read 讀取、orders.write 建立與取消）；缺少時回應 403。
     資料範圍：讀取與取消只限已驗證 Client 自己建立的訂單，他人訂單回應 404；Body、查詢參數與路徑宣稱的 clientId 一律忽略。
     授權資料來源為授權伺服器對各 Client 的核准 scope 登錄（lab 內記憶體登錄，見 05 單）。
@@ -44,7 +47,7 @@ paths:
         '403':
           description: Token 有效但缺少 orders.write scope
         '503':
-          description: 防重放狀態暫時無法可靠讀寫；不建立訂單，請於稍後以新 nonce 重新簽署後重試
+          description: 查證服務暫時無法驗證（error: verification_unavailable）或防重放狀態暫時無法可靠讀寫（error: replay_state_unavailable）；不建立訂單，請於稍後重試
   /orders/{orderId}:
     get:
       operationId: getOrder
@@ -72,7 +75,7 @@ paths:
         '404':
           description: 訂單不存在，或不屬於已驗證 Client（業務資料範圍檢查）
         '503':
-          description: 防重放狀態暫時無法可靠讀寫；不回應業務資料
+          description: 查證服務暫時無法驗證（error: verification_unavailable）或防重放狀態暫時無法可靠讀寫；不回應業務資料
   /orders/{orderId}/cancel:
     post:
       operationId: cancelOrder
@@ -107,7 +110,7 @@ paths:
         '404':
           description: 訂單不存在，或不屬於已驗證 Client；他人訂單不會被修改
         '503':
-          description: 防重放狀態暫時無法可靠讀寫；訂單不會被取消
+          description: 查證服務暫時無法驗證（error: verification_unavailable）或防重放狀態暫時無法可靠讀寫；訂單不會被取消
 components:
   securitySchemes:
     bearerAuth:
