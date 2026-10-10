@@ -16,7 +16,8 @@ namespace AuthSpike.Tests.Steps;
 [Binding]
 public sealed class ClientAndDataAuthorizationSteps
 {
-    private const string OrderJson = """{"item":"book","quantity":1}""";
+    /// <summary>每次取用都產生新的業務識別（orderReference），使各 Scenario 建立的訂單互不去重（06 單）。</summary>
+    private static string OrderJson() => $$"""{"orderReference":"{{Guid.NewGuid():N}}","item":"book","quantity":1}""";
     private const string IssueRelativePath = ".scratch/server-to-server-api-protection/issues/05-client-and-data-authorization.md";
     private const string ContractRelativePath = "poc/AuthSpike/doc/openapi.yml";
 
@@ -63,13 +64,13 @@ public sealed class ClientAndDataAuthorizationSteps
     [When("呼叫端 {string} 建立訂單 {string}")]
     public async Task CallerCreatesOrder(string clientId, string name)
     {
-        await CreateOrderAsync(clientId, name, "/orders", OrderJson);
+        await CreateOrderAsync(clientId, name, "/orders", OrderJson());
     }
 
     [When("呼叫端 {string} 建立訂單 {string}，Body 與查詢參數宣稱 clientId 為 {string}")]
     public async Task CallerCreatesOrderWithClaimedClientId(string clientId, string name, string claimedClientId)
     {
-        var body = $$"""{"item":"book","quantity":1,"clientId":"{{claimedClientId}}"}""";
+        var body = $$"""{"orderReference":"{{Guid.NewGuid():N}}","item":"book","quantity":1,"clientId":"{{claimedClientId}}"}""";
         await CreateOrderAsync(clientId, name, $"/orders?clientId={claimedClientId}", body);
     }
 

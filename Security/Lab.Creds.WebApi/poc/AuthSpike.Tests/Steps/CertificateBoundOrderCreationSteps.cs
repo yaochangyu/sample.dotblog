@@ -15,7 +15,8 @@ namespace AuthSpike.Tests.Steps;
 [Binding]
 public sealed class CertificateBoundOrderCreationSteps
 {
-    private const string OrderJson = """{"item":"book","quantity":1}""";
+    /// <summary>每次取用都產生新的業務識別（orderReference），使各 Scenario 建立的訂單互不去重（06 單）。</summary>
+    private static string OrderJson() => $$"""{"orderReference":"{{Guid.NewGuid():N}}","item":"book","quantity":1}""";
     private const string ForgedCertHeader = "X-Client-Cert-Sha256";
     private const string ClientIdHeader = "X-Client-Id";
 
@@ -66,20 +67,20 @@ public sealed class CertificateBoundOrderCreationSteps
     [When("持有 Token 的呼叫端以 {string} 送出建立訂單請求，Body 與 X-Client-Id 標頭宣稱為 {string}")]
     public async Task WhenTokenHolderClaimsOtherClientIdentity(string certificateName, string claimedClientId)
     {
-        var body = $$"""{"item":"book","quantity":1,"clientId":"{{claimedClientId}}"}""";
+        var body = $$"""{"orderReference":"{{Guid.NewGuid():N}}","item":"book","quantity":1,"clientId":"{{claimedClientId}}"}""";
         await SendOrderAsync(ResolveCertificate(certificateName), _accessToken, body, [new(ClientIdHeader, claimedClientId)]);
     }
 
     [When("持有無效 Token 的呼叫端以 {string} 送出建立訂單請求")]
     public async Task WhenInvalidTokenHolderCreatesOrder(string certificateName)
     {
-        await SendOrderAsync(ResolveCertificate(certificateName), "forged-token-not-issued", OrderJson, []);
+        await SendOrderAsync(ResolveCertificate(certificateName), "forged-token-not-issued", OrderJson(), []);
     }
 
     [When("呼叫端以 API Key 送出建立訂單請求")]
     public async Task WhenApiKeyCallerCreatesOrder()
     {
-        await SendOrderAsync(certificate: null, bearer: null, OrderJson, [new("X-Api-Key", "lab-api-key-without-trust")]);
+        await SendOrderAsync(certificate: null, bearer: null, OrderJson(), [new("X-Api-Key", "lab-api-key-without-trust")]);
     }
 
     [When("持有 Token 的呼叫端以 {string} 送出建立訂單請求，並附帶偽造的 X-Client-Cert-Sha256 標頭，標頭值為 {string} 憑證指紋")]
@@ -327,7 +328,7 @@ public sealed class CertificateBoundOrderCreationSteps
         var headers = forgedHeaderValue is null
             ? Array.Empty<KeyValuePair<string, string>>()
             : new[] { new KeyValuePair<string, string>(ForgedCertHeader, forgedHeaderValue) };
-        return SendOrderAsync(certificate, _accessToken, OrderJson, headers);
+        return SendOrderAsync(certificate, _accessToken, OrderJson(), headers);
     }
 
     private async Task SendOrderAsync(

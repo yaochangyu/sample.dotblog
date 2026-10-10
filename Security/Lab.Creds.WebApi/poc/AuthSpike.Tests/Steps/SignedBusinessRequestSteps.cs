@@ -17,7 +17,8 @@ namespace AuthSpike.Tests.Steps;
 [Binding]
 public sealed class SignedBusinessRequestSteps
 {
-    private const string OrderJson = """{"item":"book","quantity":1}""";
+    /// <summary>每次取用都產生新的業務識別（orderReference），使各 Scenario 建立的訂單互不去重（06 單）。</summary>
+    private static string OrderJson() => $$"""{"orderReference":"{{Guid.NewGuid():N}}","item":"book","quantity":1}""";
     private const string IssueRelativePath = ".scratch/server-to-server-api-protection/issues/03-signed-business-requests.md";
 
     private string? _token;
@@ -124,7 +125,7 @@ public sealed class SignedBusinessRequestSteps
                 request.Content.Headers.TryAddWithoutValidation("Content-Type", "text/plain; charset=utf-8");
                 break;
             case "Body":
-                ReplaceBodyKeepingSignedHeaders(request, OrderJson.Replace("\"quantity\":1", "\"quantity\":9"));
+                ReplaceBodyKeepingSignedHeaders(request, OrderJson().Replace("\"quantity\":1", "\"quantity\":9"));
                 break;
             case "授權 Token":
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await RequestTokenAsync(SpikeRuntime.OrdersClientId));
@@ -225,7 +226,7 @@ public sealed class SignedBusinessRequestSteps
     {
         var request = new HttpRequestMessage(HttpMethod.Post, OrdersUri())
         {
-            Content = new StringContent(OrderJson, Encoding.UTF8, "application/json"),
+            Content = new StringContent(OrderJson(), Encoding.UTF8, "application/json"),
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
         request.Headers.TryAddWithoutValidation("Idempotency-Key", Guid.NewGuid().ToString());

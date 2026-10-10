@@ -125,7 +125,7 @@ public sealed class VerifiedCallerAuditSteps
     {
         var request = new HttpRequestMessage(HttpMethod.Post, OrdersUri())
         {
-            Content = new StringContent("""{"item":"book","quantity":1}""", Encoding.UTF8, "application/json"),
+            Content = new StringContent($$"""{"orderReference":"{{Guid.NewGuid():N}}","item":"book","quantity":1}""", Encoding.UTF8, "application/json"),
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "invalid-token-value");
         request.Headers.TryAddWithoutValidation("Idempotency-Key", Guid.NewGuid().ToString());
@@ -394,7 +394,7 @@ public sealed class VerifiedCallerAuditSteps
 
     private HttpRequestMessage BuildCreateRequest(string item)
     {
-        var json = JsonSerializer.Serialize(new { item, quantity = 1 });
+        var json = JsonSerializer.Serialize(new { orderReference = Guid.NewGuid().ToString("N"), item, quantity = 1 });
         var request = new HttpRequestMessage(HttpMethod.Post, OrdersUri())
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json"),

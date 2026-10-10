@@ -215,14 +215,41 @@ public sealed class OrdersApiHost : IAsyncDisposable
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
         });
 
-        app.MapPost("/orders", (CreateOrderRequest request, OrderStore store, HttpContext httpContext) =>
+        // 建立訂單（06 單）：穩定業務識別 orderReference 決定業務操作是否相同；Idempotency-Key 只定位請求嘗試。
+        app.MapPost("/orders", async (CreateOrderRequest request, OrderStore store, HttpContext httpContext) =>
             {
                 // 已驗證呼叫者取自 introspection 結果；Body 與外部標頭宣稱的身分一律忽略。
                 var clientId = httpContext.User.GetClaim(Claims.ClientId)
                     ?? throw new InvalidOperationException("Verified client_id is missing.");
-                var orderId = store.Add(clientId, request);
-                Interlocked.Increment(ref instance._created);
-                return Results.Created($"/orders/{orderId}", new CreateOrderResponse(orderId, clientId));
+                if (string.IsNullOrWhiteSpace(request.OrderReference) || request.OrderReference.Length > 64)
+                {
+                    return Results.BadRequest(new { error = "order_reference_invalid" });
+                }
+
+                var idempotencyKey = httpContext.Request.Headers["Idempotency-Key"].ToString();
+                if (string.IsNullOrWhiteSpace(idempotencyKey))
+                {
+                    return Results.BadRequest(new { error = "idempotency_key_required" });
+                }
+
+                var result = await store.CreateOnceAsync(clientId, idempotencyKey, request, DateTimeOffset.UtcNow);
+                switch (result.Outcome)
+                {
+                    case CreateOutcome.Created:
+                        Interlocked.Increment(ref instance._created);
+                        return Results.Created($"/orders/{result.OrderId}", new CreateOrderResponse(result.OrderId!.Value, clientId));
+                    case CreateOutcome.Replayed:
+                        httpContext.Response.Headers["Idempotent-Replayed"] = "true";
+                        return Results.Created($"/orders/{result.OrderId}", new CreateOrderResponse(result.OrderId!.Value, clientId));
+                    case CreateOutcome.InProgress:
+                        return Results.Json(new { error = "operation_in_progress", status = "processing" }, statusCode: StatusCodes.Status409Conflict);
+                    case CreateOutcome.KeyConflict:
+                        return Results.UnprocessableEntity(new { error = "idempotency_key_conflict" });
+                    case CreateOutcome.IdentityConflict:
+                        return Results.UnprocessableEntity(new { error = "order_reference_conflict" });
+                    default:
+                        return Results.Json(new { error = "business_commit_unavailable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
+                }
             })
             .RequireAuthorization(WriteScope);
 

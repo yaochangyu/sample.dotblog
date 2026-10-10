@@ -25,8 +25,8 @@ namespace AuthSpike.Tests.Features
         private static string[] featureTags = ((string[])(null));
         
         private static global::Reqnroll.FeatureInfo featureInfo = new global::Reqnroll.FeatureInfo(new global::System.Globalization.CultureInfo("en-US"), "Features", "跨執行個體防重放並支援合法重簽重試", "  依 04 單驗收項目，確認同一份簽章即使併發送往不同建立訂單 API 執行個體，也只會被接受一次；\n  合法重試沿用業務識別與 Idempotency Key" +
-                "，改用新 nonce 重新簽署後可通過請求保護。\n  防重放與業務冪等是不同保證：本 feature 不宣稱業務去重已完成（屬 06 單）。\n  本 lab 不" +
-                "實作 Gateway，呼叫端直接呼叫業務 API。", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
+                "，改用新 nonce 重新簽署後可通過請求保護。\n  防重放與業務冪等是不同保證：業務去重已由 06 單實作，本 feature 的重試情境改為驗證重試不重複建" +
+                "立訂單（06 單）。\n  本 lab 不實作 Gateway，呼叫端直接呼叫業務 API。", global::Reqnroll.ProgrammingLanguage.CSharp, featureTags, InitializeCucumberMessages());
         
         private global::Xunit.Abstractions.ITestOutputHelper _testOutputHelper;
         
@@ -603,7 +603,7 @@ namespace AuthSpike.Tests.Features
     await testRunner.ThenAsync("最近一次請求回應 201", ((string)(null)), ((global::Reqnroll.Table)(null)), "Then ");
 #line hidden
 #line 101
-    await testRunner.AndAsync("兩個執行個體建立訂單總數為 2", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
+    await testRunner.AndAsync("兩個執行個體建立訂單總數為 1", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");
 #line hidden
 #line 102
     await testRunner.AndAsync("04 單的實作紀錄包含 \"業務去重屬 06 單\"", ((string)(null)), ((global::Reqnroll.Table)(null)), "And ");

@@ -16,7 +16,8 @@ namespace AuthSpike.Tests.Steps;
 [Binding]
 public sealed class ReplayProtectionAndRetrySteps
 {
-    private const string OrderJson = """{"item":"book","quantity":1}""";
+    /// <summary>每次取用都產生新的業務識別（orderReference），使各 Scenario 建立的訂單互不去重（06 單）。</summary>
+    private static string OrderJson() => $$"""{"orderReference":"{{Guid.NewGuid():N}}","item":"book","quantity":1}""";
     private const string IssueRelativePath = ".scratch/server-to-server-api-protection/issues/04-replay-protection-and-retry.md";
 
     private readonly Dictionary<string, string> _tokens = new();
@@ -116,7 +117,9 @@ public sealed class ReplayProtectionAndRetrySteps
     [When("簽章呼叫端 {string} 以相同 Idempotency-Key {string} 與新 nonce 重新簽署並重試")]
     public async Task WhenCallerRetriesWithNewNonce(string clientId, string idempotencyKey)
     {
-        _latestTemplate = await BuildSignedNowAsync(clientId, idempotencyKey);
+        var body = await _latestTemplate!.Content!.ReadAsStringAsync();
+        var now = DateTimeOffset.UtcNow;
+        _latestTemplate = await BuildSignedCreateAsync(clientId, idempotencyKey, now, now.AddSeconds(60), NewNonce(), body);
         _latestClientId = clientId;
         await SendTemplateAsync(clientId, _latestTemplate, Runtime.OrdersApi.Port);
     }
@@ -264,11 +267,12 @@ public sealed class ReplayProtectionAndRetrySteps
         string idempotencyKey,
         DateTimeOffset created,
         DateTimeOffset expires,
-        string nonce)
+        string nonce,
+        string? body = null)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, OrdersUri(Runtime.OrdersApi.Port))
         {
-            Content = new StringContent(OrderJson, Encoding.UTF8, "application/json"),
+            Content = new StringContent(body ?? OrderJson(), Encoding.UTF8, "application/json"),
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await TokenAsync(clientId));
         request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);

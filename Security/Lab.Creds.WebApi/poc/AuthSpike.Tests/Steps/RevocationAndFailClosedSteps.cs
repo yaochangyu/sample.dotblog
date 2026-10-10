@@ -17,7 +17,8 @@ namespace AuthSpike.Tests.Steps;
 public sealed class RevocationAndFailClosedSteps : IDisposable
 {
     private const string ClientId = "orders-client";
-    private const string OrderJson = """{"item":"book","quantity":1}""";
+    /// <summary>每次取用都產生新的業務識別（orderReference），使各 Scenario 建立的訂單互不去重（06 單）。</summary>
+    private static string OrderJson() => $$"""{"orderReference":"{{Guid.NewGuid():N}}","item":"book","quantity":1}""";
     private const string IssueRelativePath = ".scratch/server-to-server-api-protection/issues/07-revocation-and-fail-closed.md";
     private const string OpenApiRelativePath = "poc/AuthSpike/doc/openapi.yml";
 
@@ -336,7 +337,7 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
         var now = DateTimeOffset.UtcNow;
         var request = new HttpRequestMessage(HttpMethod.Post, OrdersUri(Runtime.OrdersApi.Port, "orders"))
         {
-            Content = new StringContent(OrderJson, Encoding.UTF8, "application/json"),
+            Content = new StringContent(OrderJson(), Encoding.UTF8, "application/json"),
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
         request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
