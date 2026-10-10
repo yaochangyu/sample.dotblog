@@ -12,3 +12,24 @@ Feature: 授權伺服器選型與建立訂單 API First 契約
     Then 建立訂單 API 回應 201
     And 回應 Location 標頭以 "/orders/" 開頭
     And 回應 orderId 為契約定義的 uuid 格式
+
+  Scenario Outline: 管理介面與登錄申請端點已列入 API First 契約
+    Then 建立訂單契約檔包含 "<路徑>"
+
+    Examples:
+      | 路徑                                                                 |
+      | /admin/trust-list                                                    |
+      | /admin/audit-records                                                 |
+      | /admin/clients/{clientId}/disable                                    |
+      | /admin/clients/{clientId}/certificates/{thumbprint}/retire           |
+      | /admin/clients/{clientId}/certificates/{thumbprint}/revoke           |
+      | /admin/clients/{clientId}/signing-keys/{keyId}/retire                |
+      | /admin/clients/{clientId}/signing-keys/{keyId}/revoke                |
+      | /client-certificate-requests                                         |
+      | /admin/client-certificate-requests/{requestId}                       |
+      | /admin/client-certificate-requests/{requestId}/approve               |
+      | /admin/client-certificate-requests/{requestId}/reject                |
+      | /signing-key-requests                                                |
+      | /admin/signing-key-requests/{requestId}                              |
+      | /admin/signing-key-requests/{requestId}/approve                      |
+      | /admin/signing-key-requests/{requestId}/reject                       |

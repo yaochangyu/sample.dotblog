@@ -128,6 +128,307 @@ paths:
           description: 訂單不存在，或不屬於已驗證 Client；他人訂單不會被修改
         '503':
           description: "查證服務暫時無法驗證（error: verification_unavailable）、防重放狀態暫時無法可靠讀寫或稽核紀錄無法寫入（error: audit_unavailable）；訂單不會被取消"
+  # 以下為授權伺服器的登錄與管理介面（11、12、13、14、15 單）。路徑、欄位與回應格式為 lab 暫定值，待使用者確認。
+  # 驗證方式：申請端點不需驗證（申請管道待確認，見 ADR 0001）；管理端點只接受已登錄為管理角色的 mTLS 用戶端憑證（非 Bearer Token），其他呼叫一律 401。
+  /client-certificate-requests:
+    post:
+      operationId: submitClientCertificateRequest
+      summary: 提交憑證登錄申請（只含公開憑證；申請本身不改變信任名單，也不能用於取得 Token）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CertificateRegistrationSubmission'
+      responses:
+        '202':
+          description: 申請已受理，狀態為 pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationRequestAccepted'
+        '400':
+          description: "申請內容不合法（error: invalid_certificate）或含私鑰（error: private_key_not_allowed）"
+        '404':
+          description: "找不到 Client（error: client_not_found）"
+        '503':
+          description: "稽核紀錄無法寫入（error: audit_unavailable）；申請不被受理"
+  /signing-key-requests:
+    post:
+      operationId: submitSigningKeyRequest
+      summary: 提交簽章金鑰登錄申請（只含 keyId 與公開金鑰；待核准前不通過簽章驗證）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SigningKeySubmission'
+      responses:
+        '202':
+          description: 申請已受理，狀態為 pending
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationRequestAccepted'
+        '400':
+          description: "申請內容不合法（error: invalid_public_key）或含私鑰（error: private_key_not_allowed）"
+        '404':
+          description: "找不到 Client（error: client_not_found）"
+        '503':
+          description: "稽核紀錄無法寫入（error: audit_unavailable）；申請不被受理"
+  /admin/trust-list:
+    get:
+      operationId: getTrustList
+      summary: 讀取信任名單（管理員）
+      responses:
+        '200':
+          description: 各 Client 的信任名單；已退役或已撤銷的憑證不列入
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrustListResponse'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+  /admin/audit-records:
+    get:
+      operationId: listAdministrativeAuditRecords
+      summary: 查詢管理操作稽核紀錄（管理員；讀取不寫入稽核）
+      responses:
+        '200':
+          description: 管理操作稽核紀錄；不含私鑰與原始 Token
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdministrativeAuditRecord'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+  /admin/clients/{clientId}/disable:
+    post:
+      operationId: disableClient
+      summary: 停用 Client（管理員；未經 Spec 要求的管理操作，保留為 lab 暫定，待使用者確認）
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+      responses:
+        '200':
+          description: Client 已停用
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientDisabledResponse'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+        '404':
+          description: "找不到 Client（error: client_not_found）"
+        '503':
+          description: "稽核紀錄無法寫入（error: audit_unavailable）；Client 不被停用"
+  /admin/clients/{clientId}/certificates/{thumbprint}/retire:
+    post:
+      operationId: retireClientCertificate
+      summary: 退役 Client 的 mTLS 憑證（管理員；需已有可用的替代憑證）
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/Thumbprint'
+      responses:
+        '200':
+          description: 憑證已退役
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateChangeResponse'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+        '404':
+          description: "找不到 Client（error: client_not_found）或憑證（error: certificate_not_found）"
+        '409':
+          description: "狀態衝突：已撤銷（already_revoked）、已退役（already_retired）、與其他 Client 共用（certificate_shared）或無替代憑證（replacement_required）"
+        '503':
+          description: "稽核紀錄無法寫入（error: audit_unavailable）；狀態不變"
+  /admin/clients/{clientId}/certificates/{thumbprint}/revoke:
+    post:
+      operationId: revokeClientCertificate
+      summary: 撤銷 Client 的 mTLS 憑證（管理員；不需替代憑證，各驗證端於 60 秒內拒絕）
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/Thumbprint'
+      responses:
+        '200':
+          description: 憑證已撤銷
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateChangeResponse'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+        '404':
+          description: "找不到 Client（error: client_not_found）或憑證（error: certificate_not_found）"
+        '409':
+          description: "狀態衝突：已撤銷（already_revoked）、已退役（already_retired）或與其他 Client 共用（certificate_shared）"
+        '503':
+          description: "稽核紀錄無法寫入（error: audit_unavailable）；狀態不變"
+  /admin/clients/{clientId}/signing-keys/{keyId}/retire:
+    post:
+      operationId: retireClientSigningKey
+      summary: 退役 Client 的簽章金鑰（管理員；需已有可用的替代金鑰）
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/KeyId'
+      responses:
+        '200':
+          description: 簽章金鑰已退役
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningKeyChangeResponse'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+        '404':
+          description: "找不到 Client（error: client_not_found）或金鑰（error: signing_key_not_found）"
+        '409':
+          description: "狀態衝突：已撤銷（already_revoked）、已退役（already_retired）、與其他 Client 共用（signing_key_shared）或無替代金鑰（replacement_required）"
+        '503':
+          description: "稽核紀錄無法寫入（error: audit_unavailable）；狀態不變"
+  /admin/clients/{clientId}/signing-keys/{keyId}/revoke:
+    post:
+      operationId: revokeClientSigningKey
+      summary: 撤銷 Client 的簽章金鑰（管理員；不需替代金鑰，各驗證端於 60 秒內拒絕）
+      parameters:
+        - $ref: '#/components/parameters/ClientId'
+        - $ref: '#/components/parameters/KeyId'
+      responses:
+        '200':
+          description: 簽章金鑰已撤銷
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningKeyChangeResponse'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+        '404':
+          description: "找不到 Client（error: client_not_found）或金鑰（error: signing_key_not_found）"
+        '409':
+          description: "狀態衝突：已撤銷（already_revoked）、已退役（already_retired）或與其他 Client 共用（signing_key_shared）"
+        '503':
+          description: "稽核紀錄無法寫入（error: audit_unavailable）；狀態不變"
+  /admin/client-certificate-requests/{requestId}:
+    get:
+      operationId: getCertificateRegistrationRequest
+      summary: 查詢憑證登錄申請狀態（管理員）
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: 申請狀態
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificateRequestStatusResponse'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+        '404':
+          description: "找不到申請（error: request_not_found）"
+  /admin/client-certificate-requests/{requestId}/approve:
+    post:
+      operationId: approveCertificateRegistrationRequest
+      summary: 核准憑證登錄申請（管理員；核准後才進入信任名單）
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: 申請已核准，憑證已進入信任名單
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationRequestDecision'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+        '404':
+          description: "找不到申請（error: request_not_found）"
+        '409':
+          description: "申請非待核准（request_not_pending）或同一指紋已在任一 Client 的信任名單（certificate_already_registered）；信任名單不變"
+        '503':
+          description: "稽核紀錄無法寫入（error: audit_unavailable）；申請維持待核准"
+  /admin/client-certificate-requests/{requestId}/reject:
+    post:
+      operationId: rejectCertificateRegistrationRequest
+      summary: 拒絕憑證登錄申請（管理員；不改變信任名單）
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: 申請已拒絕
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationRequestDecision'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+        '404':
+          description: "找不到申請（error: request_not_found）"
+        '409':
+          description: "申請非待核准（error: request_not_pending）"
+        '503':
+          description: "稽核紀錄無法寫入（error: audit_unavailable）；申請維持待核准"
+  /admin/signing-key-requests/{requestId}:
+    get:
+      operationId: getSigningKeyRegistrationRequest
+      summary: 查詢簽章金鑰登錄申請狀態（管理員）
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: 申請狀態
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningKeyRequestStatusResponse'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+        '404':
+          description: "找不到申請（error: request_not_found）"
+  /admin/signing-key-requests/{requestId}/approve:
+    post:
+      operationId: approveSigningKeyRegistrationRequest
+      summary: 核准簽章金鑰登錄申請（管理員；只登錄到申請它的 Client 名下）
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: 申請已核准，金鑰已登錄為驗簽金鑰
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationRequestDecision'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+        '404':
+          description: "找不到申請（error: request_not_found）"
+        '409':
+          description: "申請非待核准（request_not_pending）或 keyId 已登錄於任一 Client（signing_key_id_in_use）；驗簽登錄不變"
+        '503':
+          description: "稽核紀錄無法寫入（error: audit_unavailable）；申請維持待核准"
+  /admin/signing-key-requests/{requestId}/reject:
+    post:
+      operationId: rejectSigningKeyRegistrationRequest
+      summary: 拒絕簽章金鑰登錄申請（管理員；不登錄驗簽金鑰）
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: 申請已拒絕
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationRequestDecision'
+        '401':
+          description: "未經管理員驗證（error: administrator_authentication_required）"
+        '404':
+          description: "找不到申請（error: request_not_found）"
+        '409':
+          description: "申請非待核准（error: request_not_pending）"
+        '503':
+          description: "稽核紀錄無法寫入（error: audit_unavailable）；申請維持待核准"
 components:
   securitySchemes:
     bearerAuth:
@@ -173,3 +474,185 @@ components:
         status:
           type: string
           enum: [active, cancelled]
+    CertificateRegistrationSubmission:
+      type: object
+      required: [clientId, publicCertificatePem]
+      description: 只含 Client 身分與公開憑證（PEM）；含私鑰的內容一律拒絕（private_key_not_allowed）。
+      properties:
+        clientId:
+          type: string
+        publicCertificatePem:
+          type: string
+    SigningKeySubmission:
+      type: object
+      required: [clientId, keyId, publicKeyPem]
+      description: 只含 Client 身分、keyId 與 ECDSA P-256 公開金鑰（SubjectPublicKeyInfo PEM）；含私鑰的內容一律拒絕。
+      properties:
+        clientId:
+          type: string
+        keyId:
+          type: string
+        publicKeyPem:
+          type: string
+    RegistrationRequestAccepted:
+      type: object
+      required: [requestId, clientId, status]
+      properties:
+        requestId:
+          type: string
+        clientId:
+          type: string
+        status:
+          type: string
+          enum: [pending]
+    RegistrationRequestDecision:
+      type: object
+      required: [requestId, clientId, status]
+      properties:
+        requestId:
+          type: string
+        clientId:
+          type: string
+        status:
+          type: string
+          enum: [approved, rejected]
+    CertificateRequestStatusResponse:
+      type: object
+      required: [requestId, clientId, thumbprint, status]
+      properties:
+        requestId:
+          type: string
+        clientId:
+          type: string
+        thumbprint:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+    SigningKeyRequestStatusResponse:
+      type: object
+      required: [requestId, clientId, keyId, status]
+      properties:
+        requestId:
+          type: string
+        clientId:
+          type: string
+        keyId:
+          type: string
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+    TrustListResponse:
+      type: object
+      required: [clients]
+      properties:
+        clients:
+          type: array
+          items:
+            type: object
+            required: [clientId, enabled, certificateThumbprints]
+            properties:
+              clientId:
+                type: string
+              enabled:
+                type: boolean
+              certificateThumbprints:
+                type: array
+                description: 未退役、未撤銷的憑證指紋。
+                items:
+                  type: string
+    AdministrativeAuditRecord:
+      type: object
+      description: 管理操作稽核紀錄；只含指紋，不含私鑰、原始 Token 或完整 Body。
+      properties:
+        correlationId:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        operation:
+          type: string
+          example: certificate.approve
+        actorStatus:
+          type: string
+          enum: [已驗證管理員, 未驗證]
+        actorThumbprint:
+          type: string
+          nullable: true
+        clientId:
+          type: string
+          nullable: true
+        subject:
+          type: string
+          nullable: true
+          enum: [certificate, signing_key]
+        keyId:
+          type: string
+          nullable: true
+        fingerprint:
+          type: string
+          nullable: true
+        outcome:
+          type: string
+          enum: [accepted, rejected]
+        reason:
+          type: string
+        resultStatus:
+          type: integer
+    ClientDisabledResponse:
+      type: object
+      required: [clientId, enabled]
+      properties:
+        clientId:
+          type: string
+        enabled:
+          type: boolean
+          enum: [false]
+    CertificateChangeResponse:
+      type: object
+      required: [clientId, thumbprint, status]
+      properties:
+        clientId:
+          type: string
+        thumbprint:
+          type: string
+        status:
+          type: string
+          enum: [retired, revoked]
+    SigningKeyChangeResponse:
+      type: object
+      required: [clientId, keyId, status]
+      properties:
+        clientId:
+          type: string
+        keyId:
+          type: string
+        status:
+          type: string
+          enum: [retired, revoked]
+  parameters:
+    ClientId:
+      name: clientId
+      in: path
+      required: true
+      schema:
+        type: string
+    Thumbprint:
+      name: thumbprint
+      in: path
+      required: true
+      description: 憑證 SHA-1 指紋（十六進位）。
+      schema:
+        type: string
+    KeyId:
+      name: keyId
+      in: path
+      required: true
+      schema:
+        type: string
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema:
+        type: string

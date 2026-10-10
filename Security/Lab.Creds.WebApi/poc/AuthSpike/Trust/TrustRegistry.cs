@@ -14,6 +14,13 @@ public sealed class TrustRegistry
     private readonly ConcurrentDictionary<string, byte> _retiredCertificates = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, byte> _revokedSigningKeys = new();
     private readonly ConcurrentDictionary<string, byte> _retiredSigningKeys = new();
+    private readonly ConcurrentDictionary<string, byte> _administratorCertificates = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>登錄管理員專屬的 mTLS 憑證（11 單，lab 暫定：啟動時由組合根登錄）。管理員身分與 Client 身分分開，不得登錄為 Client。</summary>
+    public void RegisterAdministratorCertificate(string thumbprint) => _administratorCertificates[thumbprint] = 0;
+
+    /// <summary>出示的 mTLS 憑證是否已登錄為管理員角色；管理介面只以此判斷管理員身分。</summary>
+    public bool IsAdministratorCertificate(string thumbprint) => _administratorCertificates.ContainsKey(thumbprint);
 
     public void DisableClient(string clientId) => _disabledClients[clientId] = 0;
 

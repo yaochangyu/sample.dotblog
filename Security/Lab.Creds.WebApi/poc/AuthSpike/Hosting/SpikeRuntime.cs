@@ -53,6 +53,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
         Dictionary<string, List<SignatureKey>> signatureKeys,
         X509Certificate2 unregisteredSelfSignedCertificate,
         X509Certificate2 otherCaCertificate,
+        X509Certificate2 administratorCertificate,
         AuthServerHost authServer,
         OrdersApiHost ordersApi,
         X509Certificate2 serverCertificate,
@@ -62,6 +63,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
         TimeSpan verificationCacheLifetime,
         OrderStore orders,
         SecurityAuditLog auditLog,
+        AdministrativeAuditLog administrativeAuditLog,
         string environmentName)
     {
         Trust = trust;
@@ -74,8 +76,10 @@ public sealed class SpikeRuntime : IAsyncDisposable
         Registry = registry;
         Orders = orders;
         AuditLog = auditLog;
+        AdministrativeAuditLog = administrativeAuditLog;
         UnregisteredSelfSignedCertificate = unregisteredSelfSignedCertificate;
         OtherCaCertificate = otherCaCertificate;
+        AdministratorCertificate = administratorCertificate;
         AuthServer = authServer;
         OrdersApi = ordersApi;
         EnvironmentName = environmentName;
@@ -92,6 +96,12 @@ public sealed class SpikeRuntime : IAsyncDisposable
     /// <summary>由其他根 CA 簽發的用戶端憑證（非自簽、非本 spike 登錄的方式）。</summary>
     public X509Certificate2 OtherCaCertificate { get; }
 
+    /// <summary>
+    /// 管理員專屬的 mTLS 用戶端憑證（11 單，lab 暫定：每個執行環境啟動時產生並登錄為管理員角色）。
+    /// 不是任何 Client 的憑證，不能取得業務 Token 或呼叫業務 API；Client 憑證也不能呼叫管理介面。
+    /// </summary>
+    public X509Certificate2 AdministratorCertificate { get; }
+
     public AuthServerHost AuthServer { get; }
 
     public OrdersApiHost OrdersApi { get; }
@@ -107,6 +117,9 @@ public sealed class SpikeRuntime : IAsyncDisposable
 
     /// <summary>安全稽核紀錄（與防重放及訂單儲存分開；主要與第二個執行個體共用）。</summary>
     public SecurityAuditLog AuditLog { get; }
+
+    /// <summary>管理操作稽核紀錄（15 單）：與呼叫者安全稽核分開保存；只由授權伺服器的管理端點寫入與查詢。</summary>
+    public AdministrativeAuditLog AdministrativeAuditLog { get; }
 
     /// <summary>第二個建立訂單 API 執行個體（僅在需要跨執行個體情境時啟動）。</summary>
     public OrdersApiHost? SecondaryOrdersApi { get; private set; }
@@ -141,6 +154,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
         var unregistered = SpikeCertificates.CreateSelfSignedClientCertificate("unregistered-client");
         var otherRoot = SpikeCertificates.CreateRootCertificateAuthority("Other Root CA");
         var otherCa = SpikeCertificates.IssueCaSignedClientCertificate(otherRoot, OrdersClientId);
+        // 管理員專屬憑證：每個環境獨立，與任何 Client 憑證分開（11 單）。
+        var administratorCertificate = SpikeCertificates.CreateSelfSignedClientCertificate($"administrator-{environmentName}");
 
         // 授權伺服器只登錄示範 Client 與資源端 orders-api；每個 Client 只核准自己的 scope 白名單。
         // orders-partner-client 與 orders-client 持有相同 scope，用來驗證相同 scope 仍不能越權。
@@ -154,15 +169,9 @@ public sealed class SpikeRuntime : IAsyncDisposable
 
         var registry = new TrustRegistry();
         var cacheLifetime = verificationCacheLifetime ?? DefaultVerificationCacheLifetime;
-        var authServer = await AuthServerHost.StartAsync(
-            authServerPort,
-            trust,
-            serverCertificate,
-            registeredClients,
-            accessTokenLifetime ?? DefaultAccessTokenLifetime,
-            registry);
 
         // 業務 API 只持有公開部分，並以 Client 與 KeyId 查找已驗證 Client 自己登錄的金鑰。
+        // 初始金鑰為環境啟動時的基準配置；之後的新金鑰須經管理員核准才登錄（13 單）。
         var verificationKeys = new VerificationKeyStore();
         foreach (var (clientId, keys) in signatureKeys)
         {
@@ -171,6 +180,19 @@ public sealed class SpikeRuntime : IAsyncDisposable
                 verificationKeys.Register(clientId, PublicPart(key));
             }
         }
+
+        var administrativeAuditLog = new AdministrativeAuditLog();
+        var authServer = await AuthServerHost.StartAsync(
+            authServerPort,
+            trust,
+            serverCertificate,
+            registeredClients,
+            accessTokenLifetime ?? DefaultAccessTokenLifetime,
+            registry,
+            verificationKeys,
+            administrativeAuditLog);
+        // 管理員角色只在組合根登錄，授權伺服器與業務 API 皆讀取同一份信任狀態。
+        registry.RegisterAdministratorCertificate(administratorCertificate.Thumbprint);
 
         var replayStore = new NonceReplayStore();
         var orders = new OrderStore();
@@ -195,6 +217,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
             signatureKeys,
             unregistered,
             otherCa,
+            administratorCertificate,
             authServer,
             ordersApi,
             serverCertificate,
@@ -204,6 +227,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
             cacheLifetime,
             orders,
             auditLog,
+            administrativeAuditLog,
             environmentName);
     }
 
@@ -234,7 +258,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
     public async Task RegisterClientCertificateAsync(string clientId, X509Certificate2 certificate)
     {
         _clientCertificates[clientId].Add(certificate);
-        await AuthServer.SetClientCertificatesAsync(clientId, ActiveAuthServerCertificates(clientId));
+        await AuthServer.SetClientCertificatesAsync(clientId, [.. ActiveAuthServerCertificates(clientId), certificate]);
     }
 
     /// <summary>退役舊 mTLS 用戶端憑證（08 單）：必須已有其他可用的替代憑證；退役後授權伺服器與業務 API 都不再接受。</summary>
@@ -275,9 +299,9 @@ public sealed class SpikeRuntime : IAsyncDisposable
         Registry.RetireSigningKey(key.KeyId);
     }
 
-    /// <summary>授權伺服器登錄的 mTLS 公開憑證：所有未退役者（含重疊期的新舊憑證）。</summary>
+    /// <summary>授權伺服器目前信任的 mTLS 公開憑證中未退役者（含重疊期的新舊憑證，以及已核准加入的憑證）。</summary>
     private List<X509Certificate2> ActiveAuthServerCertificates(string clientId)
-        => _clientCertificates[clientId].Where(certificate => !Registry.IsCertificateRetired(certificate.Thumbprint)).ToList();
+        => AuthServer.TrustedCertificates(clientId).Where(certificate => !Registry.IsCertificateRetired(certificate.Thumbprint)).ToList();
 
     private static SignatureKey CreateSignatureKey(string clientId, string environmentName, string generation)
         => new($"{clientId}-{environmentName}-sig-{generation}", ECDsa.Create(ECCurve.NamedCurves.nistP256));

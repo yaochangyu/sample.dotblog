@@ -44,6 +44,12 @@ public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime)
         }
 
         var thumbprint = certificate.Thumbprint;
+        if (registry.IsAdministratorCertificate(thumbprint))
+        {
+            // 管理員憑證不是業務呼叫者（11 單）：不得用於業務 API，也不進入快取或 introspection。
+            return (CallerOutcome.Rejected, null);
+        }
+
         var key = CacheKey(token, thumbprint);
         var now = DateTimeOffset.UtcNow;
 
