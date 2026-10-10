@@ -47,7 +47,7 @@ public sealed class ReplayProtectionAndRetrySteps
     public async Task WhenOrderSentWithTimeParameters(string clientId, string condition)
     {
         var now = DateTimeOffset.UtcNow;
-        var nonce = NewNonce();
+        var nonce = SignedHttp.NewNonce();
         var (created, expires, dropCreated) = condition switch
         {
             "created 超前 25 秒" => (now.AddSeconds(25), now.AddSeconds(85), false),
@@ -119,7 +119,7 @@ public sealed class ReplayProtectionAndRetrySteps
     {
         var body = await _latestTemplate!.Content!.ReadAsStringAsync();
         var now = DateTimeOffset.UtcNow;
-        _latestTemplate = await BuildSignedCreateAsync(clientId, idempotencyKey, now, now.AddSeconds(60), NewNonce(), body);
+        _latestTemplate = await BuildSignedCreateAsync(clientId, idempotencyKey, now, now.AddSeconds(60), SignedHttp.NewNonce(), body);
         _latestClientId = clientId;
         await SendTemplateAsync(clientId, _latestTemplate, Runtime.OrdersApi.Port);
     }
@@ -201,8 +201,6 @@ public sealed class ReplayProtectionAndRetrySteps
         IssueText.Should().Contain(expected);
     }
 
-    private static string NewNonce() => Guid.NewGuid().ToString("N");
-
     private static Uri OrdersUri(int port) => new($"https://localhost:{port}/orders");
 
     private static string RepoRoot
@@ -245,7 +243,7 @@ public sealed class ReplayProtectionAndRetrySteps
             return cached;
         }
 
-        using var client = CreateHttpClient(Runtime.ClientCertificate(clientId));
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(clientId));
         using var response = await client.PostAsync(
             new Uri(Runtime.AuthServer.Issuer, "connect/token"),
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -270,20 +268,22 @@ public sealed class ReplayProtectionAndRetrySteps
         string nonce,
         string? body = null)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, OrdersUri(Runtime.OrdersApi.Port))
-        {
-            Content = new StringContent(body ?? OrderJson(), Encoding.UTF8, "application/json"),
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await TokenAsync(clientId));
-        request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
-        await BusinessRequestSigner.SignAsync(request, Runtime.SigningKey(clientId), created, expires, nonce);
-        return request;
+        return await SignedHttp.BuildSignedAsync(
+            HttpMethod.Post,
+            OrdersUri(Runtime.OrdersApi.Port),
+            await TokenAsync(clientId),
+            Runtime.SigningKey(clientId),
+            body ?? OrderJson(),
+            idempotencyKey,
+            created,
+            expires,
+            nonce);
     }
 
     private Task<HttpRequestMessage> BuildSignedNowAsync(string clientId, string idempotencyKey)
     {
         var now = DateTimeOffset.UtcNow;
-        return BuildSignedCreateAsync(clientId, idempotencyKey, now, now.AddSeconds(60), NewNonce());
+        return BuildSignedCreateAsync(clientId, idempotencyKey, now, now.AddSeconds(60), SignedHttp.NewNonce());
     }
 
     private async Task RaceAsync(string clientId, HttpRequestMessage template, int[] ports)
@@ -298,53 +298,16 @@ public sealed class ReplayProtectionAndRetrySteps
     {
         _latestTemplate = template;
         _latestClientId = clientId;
-        (_status, _responseBody) = await SendOnceAsync(clientId, template, port);
+        var response = await SendOnceAsync(clientId, template, port);
+        _status = response.Status;
+        _responseBody = response.Body;
     }
 
     /// <summary>以新連線送出；port 與主要執行個體不同時，沿用主要執行個體的公開目標（Host），模擬經同一入口的多個執行個體。</summary>
-    private static async Task<(HttpStatusCode Status, string Body)> SendOnceAsync(string clientId, HttpRequestMessage template, int port)
+    private static async Task<ApiResponse> SendOnceAsync(string clientId, HttpRequestMessage template, int port)
     {
-        using var request = await CloneAsync(template, port);
-        using var client = CreateHttpClient(Runtime.ClientCertificate(clientId));
-        using var response = await client.SendAsync(request);
-        return (response.StatusCode, await response.Content.ReadAsStringAsync());
-    }
-
-    private static async Task<HttpRequestMessage> CloneAsync(HttpRequestMessage source, int port)
-    {
-        var primaryPort = Runtime.OrdersApi.Port;
-        var clone = new HttpRequestMessage(source.Method, OrdersUri(port));
-        foreach (var header in source.Headers)
-        {
-            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
-        }
-
-        if (port != primaryPort)
-        {
-            clone.Headers.Host = $"localhost:{primaryPort}";
-        }
-
-        if (source.Content is not null)
-        {
-            clone.Content = new ByteArrayContent(await source.Content.ReadAsByteArrayAsync());
-            foreach (var header in source.Content.Headers)
-            {
-                clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
-            }
-        }
-
-        return clone;
-    }
-
-    /// <summary>每次呼叫都使用新連線，確保 TLS 用戶端憑證依本次呼叫決定。</summary>
-    private static HttpClient CreateHttpClient(X509Certificate2 certificate)
-    {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = Runtime.Trust.ServerCertificateValidator,
-            ClientCertificateOptions = ClientCertificateOption.Manual,
-        };
-        handler.ClientCertificates.Add(certificate);
-        return new HttpClient(handler, disposeHandler: true);
+        using var request = await SignedHttp.CloneAsync(template, port, Runtime.OrdersApi.Port);
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(clientId));
+        return await SignedHttp.SendAsync(client, request);
     }
 }

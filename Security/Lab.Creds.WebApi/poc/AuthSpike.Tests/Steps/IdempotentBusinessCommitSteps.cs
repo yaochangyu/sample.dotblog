@@ -29,10 +29,10 @@ public sealed class IdempotentBusinessCommitSteps
     private string? _token;
     private Attempt? _firstAttempt;
     private Attempt? _lastAttempt;
-    private (HttpStatusCode Status, string Body, bool Replayed)? _last;
-    private Task<(HttpStatusCode Status, string Body, bool Replayed)>? _background;
+    private ApiResponse? _last;
+    private Task<ApiResponse>? _background;
     private CommitHold? _hold;
-    private List<(HttpStatusCode Status, string Body)> _race = [];
+    private List<ApiResponse> _race = [];
     private string? _firstOrderId;
     private string? _lastOrderId;
     private int _recordCount;
@@ -104,7 +104,7 @@ public sealed class IdempotentBusinessCommitSteps
         var secondary = Runtime.SecondaryOrdersApi!.Port;
         var results = await Task.WhenAll(attempts.Select((attempt, index) =>
             SendAsync(attempt, index % 2 == 0 ? primary : secondary)));
-        _race = results.Select(result => (result.Status, result.Body)).ToList();
+        _race = results.ToList();
     }
 
     [When("簽章呼叫端以相同 Idempotency-Key 與新 nonce 重送上一筆訂單")]
@@ -156,25 +156,25 @@ public sealed class IdempotentBusinessCommitSteps
     public void ThenLastOrderRequestReturns(int statusCode)
     {
         _last.Should().NotBeNull("尚未送出任何訂單請求");
-        _last!.Value.Status.Should().Be((HttpStatusCode)statusCode, _last.Value.Body);
+        _last!.Status.Should().Be((HttpStatusCode)statusCode, _last.Body);
     }
 
     [Then("最近一次訂單請求的錯誤代碼為 {string}")]
     public void ThenLastOrderErrorCodeIs(string code)
     {
-        ReadJson(_last!.Value.Body).GetProperty("error").GetString().Should().Be(code);
+        ReadJson(_last!.Body).GetProperty("error").GetString().Should().Be(code);
     }
 
     [Then("最近一次訂單請求的處理狀態為 {string}")]
     public void ThenLastOrderStatusIs(string status)
     {
-        ReadJson(_last!.Value.Body).GetProperty("status").GetString().Should().Be(status);
+        ReadJson(_last!.Body).GetProperty("status").GetString().Should().Be(status);
     }
 
     [Then("最近一次訂單請求標示為重播")]
     public void ThenLastOrderIsReplayed()
     {
-        _last!.Value.Replayed.Should().BeTrue("重播的既有結果應帶 Idempotent-Replayed 標頭");
+        _last!.Replayed.Should().BeTrue("重播的既有結果應帶 Idempotent-Replayed 標頭");
     }
 
     [Then("重播回應的訂單編號與首次建立相同")]
@@ -287,7 +287,6 @@ public sealed class IdempotentBusinessCommitSteps
         File.ReadAllText(Path.Combine(RepoRoot, OpenApiRelativePath)).Should().Contain(expected);
     }
 
-    private static string NewNonce() => Guid.NewGuid().ToString("N");
 
     private static string OrderBody(string reference, string item, int quantity)
         => JsonSerializer.Serialize(new { orderReference = reference, item, quantity });
@@ -326,7 +325,7 @@ public sealed class IdempotentBusinessCommitSteps
     private async Task<Attempt> NewAttemptAsync(string key, string body)
     {
         var token = await EnsureTokenAsync();
-        return new Attempt(token, key, body, NewNonce(), DateTimeOffset.UtcNow);
+        return new Attempt(token, key, body, SignedHttp.NewNonce(), DateTimeOffset.UtcNow);
     }
 
     private static Attempt Renewed(Attempt attempt, string? key = null, string? token = null)
@@ -334,7 +333,7 @@ public sealed class IdempotentBusinessCommitSteps
         {
             Key = key ?? attempt.Key,
             Token = token ?? attempt.Token,
-            Nonce = NewNonce(),
+            Nonce = SignedHttp.NewNonce(),
             Created = DateTimeOffset.UtcNow,
         };
 
@@ -358,16 +357,18 @@ public sealed class IdempotentBusinessCommitSteps
     }
 
     /// <summary>以目前參數簽署並送出；送往第二個執行個體時沿用主要執行個體的公開目標（Host），與 04 單相同。</summary>
-    private static async Task<(HttpStatusCode Status, string Body, bool Replayed)> SendAsync(Attempt attempt, int port)
+    private static async Task<ApiResponse> SendAsync(Attempt attempt, int port)
     {
         var primaryPort = Runtime.OrdersApi.Port;
-        using var request = new HttpRequestMessage(HttpMethod.Post, OrdersUri(primaryPort))
-        {
-            Content = new StringContent(attempt.Body, Encoding.UTF8, "application/json"),
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", attempt.Token);
-        request.Headers.TryAddWithoutValidation("Idempotency-Key", attempt.Key);
-        await BusinessRequestSigner.SignAsync(request, Runtime.SigningKey(ClientId), attempt.Created, attempt.Created.AddSeconds(60), attempt.Nonce);
+        using var request = await SignedHttp.BuildSignedAsync(
+            HttpMethod.Post,
+            OrdersUri(primaryPort),
+            attempt.Token,
+            Runtime.SigningKey(ClientId),
+            attempt.Body,
+            attempt.Key,
+            attempt.Created,
+            nonce: attempt.Nonce);
 
         if (port != primaryPort)
         {
@@ -375,27 +376,21 @@ public sealed class IdempotentBusinessCommitSteps
             request.Headers.Host = $"localhost:{primaryPort}";
         }
 
-        using var client = CreateHttpClient(Runtime.ClientCertificate(ClientId));
-        using var response = await client.SendAsync(request);
-        var replayed = response.Headers.TryGetValues("Idempotent-Replayed", out var values) && values.Contains("true");
-        return (response.StatusCode, await response.Content.ReadAsStringAsync(), replayed);
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(ClientId));
+        return await SignedHttp.SendAsync(client, request);
     }
 
-    private static async Task<(HttpStatusCode Status, string Body)> QueryOrderAsync(string orderId)
+    private static async Task<ApiResponse> QueryOrderAsync(string orderId)
     {
         var token = await RequestTokenAsync();
-        var now = DateTimeOffset.UtcNow;
-        using var request = new HttpRequestMessage(HttpMethod.Get, OrdersUri(Runtime.OrdersApi.Port, $"/orders/{orderId}"));
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        await BusinessRequestSigner.SignAsync(request, Runtime.SigningKey(ClientId), now, now.AddSeconds(60), NewNonce());
-        using var client = CreateHttpClient(Runtime.ClientCertificate(ClientId));
-        using var response = await client.SendAsync(request);
-        return (response.StatusCode, await response.Content.ReadAsStringAsync());
+        using var request = await SignedHttp.BuildSignedAsync(HttpMethod.Get, OrdersUri(Runtime.OrdersApi.Port, $"/orders/{orderId}"), token, Runtime.SigningKey(ClientId));
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(ClientId));
+        return await SignedHttp.SendAsync(client, request);
     }
 
     private static async Task<string> RequestTokenAsync()
     {
-        using var client = CreateHttpClient(Runtime.ClientCertificate(ClientId));
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(ClientId));
         using var response = await client.PostAsync(
             new Uri(Runtime.AuthServer.Issuer, "connect/token"),
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -407,17 +402,5 @@ public sealed class IdempotentBusinessCommitSteps
         var body = await response.Content.ReadAsStringAsync();
         response.IsSuccessStatusCode.Should().BeTrue(body);
         return ReadJson(body).GetProperty("access_token").GetString()!;
-    }
-
-    /// <summary>每次呼叫都使用新連線，確保 TLS 用戶端憑證依本次呼叫決定。</summary>
-    private static HttpClient CreateHttpClient(X509Certificate2 certificate)
-    {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = Runtime.Trust.ServerCertificateValidator,
-            ClientCertificateOptions = ClientCertificateOption.Manual,
-        };
-        handler.ClientCertificates.Add(certificate);
-        return new HttpClient(handler, disposeHandler: true);
     }
 }

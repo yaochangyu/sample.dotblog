@@ -105,7 +105,7 @@ public sealed class VerifiedCallerAuditSteps
     {
         var request = BuildCreateRequest(DefaultItem);
         var now = DateTimeOffset.UtcNow;
-        await BusinessRequestSigner.SignAsync(request, Runtime.SigningKey(keyOwner), now, now.AddSeconds(60), NewNonce());
+        await BusinessRequestSigner.SignAsync(request, Runtime.SigningKey(keyOwner), now, now.AddSeconds(60), SignedHttp.NewNonce());
         await SendAsync(request);
     }
 
@@ -383,7 +383,6 @@ public sealed class VerifiedCallerAuditSteps
         return JsonSerializer.Serialize(records);
     }
 
-    private static string NewNonce() => Guid.NewGuid().ToString("N");
 
     private static string RepoRoot
     {
@@ -412,7 +411,7 @@ public sealed class VerifiedCallerAuditSteps
 
     private HttpRequestMessage BuildCreateRequest(string item)
     {
-        var json = JsonSerializer.Serialize(new { orderReference = Guid.NewGuid().ToString("N"), item, quantity = 1 });
+        var json = JsonSerializer.Serialize(new { orderReference = SignedHttp.NewNonce(), item, quantity = 1 });
         var request = new HttpRequestMessage(HttpMethod.Post, OrdersUri())
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json"),
@@ -423,10 +422,7 @@ public sealed class VerifiedCallerAuditSteps
     }
 
     private static Task SignAsync(HttpRequestMessage request, string clientId)
-    {
-        var now = DateTimeOffset.UtcNow;
-        return BusinessRequestSigner.SignAsync(request, Runtime.SigningKey(clientId), now, now.AddSeconds(60), NewNonce());
-    }
+        => SignedHttp.SignNowAsync(request, Runtime.SigningKey(clientId));
 
     private async Task SendAsync(HttpRequestMessage request)
     {
@@ -434,7 +430,7 @@ public sealed class VerifiedCallerAuditSteps
         _lastSignatureInput = request.Headers.TryGetValues("Signature-Input", out var inputs) ? inputs.Single() : null;
         _lastSignature = request.Headers.TryGetValues("Signature", out var signatures) ? signatures.Single() : null;
 
-        using var client = CreateHttpClient(Runtime.ClientCertificate(_tokenClientId));
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(_tokenClientId));
         using var response = await client.SendAsync(request);
         _status = response.StatusCode;
         _responseBody = await response.Content.ReadAsStringAsync();
@@ -458,7 +454,7 @@ public sealed class VerifiedCallerAuditSteps
 
     private static async Task<string> RequestTokenAsync(string clientId)
     {
-        using var client = CreateHttpClient(Runtime.ClientCertificate(clientId));
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(clientId));
         using var response = await client.PostAsync(
             new Uri(Runtime.AuthServer.Issuer, "connect/token"),
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -472,15 +468,4 @@ public sealed class VerifiedCallerAuditSteps
         return document.RootElement.GetProperty("access_token").GetString()!;
     }
 
-    /// <summary>每次呼叫都使用新連線，確保 TLS 用戶端憑證依本次呼叫決定。</summary>
-    private static HttpClient CreateHttpClient(X509Certificate2 certificate)
-    {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = Runtime.Trust.ServerCertificateValidator,
-            ClientCertificateOptions = ClientCertificateOption.Manual,
-        };
-        handler.ClientCertificates.Add(certificate);
-        return new HttpClient(handler, disposeHandler: true);
-    }
 }

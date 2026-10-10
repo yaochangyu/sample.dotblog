@@ -64,7 +64,7 @@ public sealed class SignedRequestVerifier(VerificationKeyStore keys, NonceReplay
         var headers = context.Request.Headers;
         var signatureInput = headers["Signature-Input"].ToString();
         var signatureHeader = headers["Signature"].ToString();
-        if (!TryParseSignatureInput(signatureInput, out var components, out var parameters, out var fields))
+        if (!SignatureInputParser.TryParse(signatureInput, out var components, out var parameters, out var fields))
         {
             return null;
         }
@@ -92,7 +92,7 @@ public sealed class SignedRequestVerifier(VerificationKeyStore keys, NonceReplay
             return null;
         }
 
-        if (!TryReadTime(fields, "created", out var created) || !TryReadTime(fields, "expires", out var expires)
+        if (!SignatureInputParser.TryReadTime(fields, "created", out var created) || !SignatureInputParser.TryReadTime(fields, "expires", out var expires)
             || !fields.TryGetValue("nonce", out var nonce) || string.IsNullOrEmpty(nonce))
         {
             return null;
@@ -180,78 +180,5 @@ public sealed class SignedRequestVerifier(VerificationKeyStore keys, NonceReplay
         {
             return false;
         }
-    }
-
-    /// <summary>解析 Signature-Input（sig1=(...);k=v;...），parameters 為 label 之後的原文，即簽署時的 @signature-params。</summary>
-    private static bool TryParseSignatureInput(
-        string header,
-        out List<string> components,
-        out string parameters,
-        out Dictionary<string, string> fields)
-    {
-        components = [];
-        parameters = string.Empty;
-        fields = [];
-
-        var prefix = $"{HttpMessageSignature.Label}=";
-        if (!header.StartsWith(prefix, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        parameters = header[prefix.Length..];
-        if (!parameters.StartsWith('('))
-        {
-            return false;
-        }
-
-        var close = parameters.IndexOf(')');
-        if (close < 0)
-        {
-            return false;
-        }
-
-        foreach (var item in parameters[1..close].Split(' ', StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (item.Length < 3 || item[0] != '"' || item[^1] != '"')
-            {
-                return false;
-            }
-
-            components.Add(item[1..^1]);
-        }
-
-        foreach (var part in parameters[(close + 1)..].Split(';', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var separator = part.IndexOf('=');
-            if (separator <= 0)
-            {
-                return false;
-            }
-
-            fields[part[..separator]] = part[(separator + 1)..].Trim('"');
-        }
-
-        return true;
-    }
-
-    private static bool TryReadTime(IReadOnlyDictionary<string, string> fields, string name, out DateTimeOffset time)
-    {
-        time = default;
-        return fields.TryGetValue(name, out var raw)
-            && long.TryParse(raw, out var seconds)
-            && TryFromUnix(seconds, out time);
-    }
-
-    private static bool TryFromUnix(long seconds, out DateTimeOffset time)
-    {
-        time = default;
-        if (seconds < DateTimeOffset.MinValue.ToUnixTimeSeconds() || seconds > DateTimeOffset.MaxValue.ToUnixTimeSeconds())
-        {
-            return false;
-        }
-
-        time = DateTimeOffset.FromUnixTimeSeconds(seconds);
-        return true;
     }
 }

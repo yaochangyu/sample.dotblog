@@ -218,7 +218,7 @@ public sealed class CertificateBoundOrderCreationSteps
     [When("呼叫端以 {string} 的 client_id 附帶 client_secret 且不附憑證向授權伺服器要求 Token")]
     public async Task WhenClientRequestsTokenWithClientSecret(string clientId)
     {
-        using var client = CreateHttpClient(certificate: null);
+        using var client = SignedHttp.CreateClient(Runtime, certificate: null);
         using var response = await client.PostAsync(
             new Uri(Runtime.AuthServer.Issuer, "connect/token"),
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -304,7 +304,7 @@ public sealed class CertificateBoundOrderCreationSteps
             ? SpikeRuntime.OrdersClientId
             : certificateName;
 
-        using var client = CreateHttpClient(ResolveCertificate(certificateName));
+        using var client = SignedHttp.CreateClient(Runtime, ResolveCertificate(certificateName));
         using var response = await client.PostAsync(
             new Uri(Runtime.AuthServer.Issuer, "connect/token"),
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -337,7 +337,7 @@ public sealed class CertificateBoundOrderCreationSteps
         string body,
         IEnumerable<KeyValuePair<string, string>> headers)
     {
-        using var client = CreateHttpClient(certificate);
+        using var client = SignedHttp.CreateClient(Runtime, certificate);
         using var request = new HttpRequestMessage(HttpMethod.Post, new Uri($"https://localhost:{Runtime.OrdersApi.Port}/orders"))
         {
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
@@ -358,7 +358,7 @@ public sealed class CertificateBoundOrderCreationSteps
         if (bearer is not null)
         {
             var now = DateTimeOffset.UtcNow;
-            await BusinessRequestSigner.SignAsync(request, Runtime.SigningKey(SpikeRuntime.OrdersClientId), now, now.AddSeconds(60), Guid.NewGuid().ToString("N"));
+            await BusinessRequestSigner.SignAsync(request, Runtime.SigningKey(SpikeRuntime.OrdersClientId), now, now.AddSeconds(60), SignedHttp.NewNonce());
         }
 
         using var response = await client.SendAsync(request);
@@ -369,7 +369,7 @@ public sealed class CertificateBoundOrderCreationSteps
 
     private async Task IntrospectAsync(X509Certificate2? certificate)
     {
-        using var client = CreateHttpClient(certificate);
+        using var client = SignedHttp.CreateClient(Runtime, certificate);
         using var response = await client.PostAsync(
             new Uri(Runtime.AuthServer.Issuer, "connect/introspect"),
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -383,21 +383,6 @@ public sealed class CertificateBoundOrderCreationSteps
         _introspectionBody = await response.Content.ReadAsStringAsync();
     }
 
-    /// <summary>每次呼叫都使用新連線，確保 TLS 用戶端憑證依本次呼叫決定。</summary>
-    private static HttpClient CreateHttpClient(X509Certificate2? certificate)
-    {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = Runtime.Trust.ServerCertificateValidator,
-            ClientCertificateOptions = ClientCertificateOption.Manual,
-        };
-        if (certificate is not null)
-        {
-            handler.ClientCertificates.Add(certificate);
-        }
-
-        return new HttpClient(handler, disposeHandler: true);
-    }
 
     private static string Base64UrlThumbprint(X509Certificate2 certificate)
         => Convert.ToBase64String(SHA256.HashData(certificate.RawData))

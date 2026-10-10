@@ -89,13 +89,7 @@ public sealed class IntrospectionFaultSteps : IAsyncDisposable
     [When("呼叫端持任意 Token 查詢訂單")]
     public async Task WhenCallerQueriesOrder()
     {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = Runtime.Trust.ServerCertificateValidator,
-            ClientCertificateOptions = ClientCertificateOption.Manual,
-        };
-        handler.ClientCertificates.Add(Runtime.ClientCertificate(AuthSpike.Hosting.SpikeRuntime.OrdersClientId));
-        using var client = new HttpClient(handler, disposeHandler: true);
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(AuthSpike.Hosting.SpikeRuntime.OrdersClientId));
         var request = new HttpRequestMessage(HttpMethod.Get, $"https://localhost:{_ordersApi!.Port}/orders/{Guid.NewGuid()}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "any-token-value");
         using var response = await client.SendAsync(request);

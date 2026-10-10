@@ -25,7 +25,7 @@ public sealed class CompleteProtectionAcceptanceSteps
     private static SpikeRuntime Runtime => SpikeEnvironment.Runtime;
 
     /// <summary>每個 Scenario 使用不同的後綴，避免同一執行環境內的業務識別與 Idempotency Key 互相碰撞。</summary>
-    private readonly string _scope = Guid.NewGuid().ToString("N")[..8];
+    private readonly string _scope = SignedHttp.NewNonce()[..8];
 
     private readonly Dictionary<string, string> _tokens = new();
     private string? _orderId;
@@ -375,10 +375,7 @@ public sealed class CompleteProtectionAcceptanceSteps
     }
 
     private static Task SignAsync(HttpRequestMessage request, string clientId)
-    {
-        var now = DateTimeOffset.UtcNow;
-        return BusinessRequestSigner.SignAsync(request, Runtime.SigningKey(clientId), now, now.AddSeconds(60), Guid.NewGuid().ToString("N"));
-    }
+        => SignedHttp.SignNowAsync(request, Runtime.SigningKey(clientId));
 
     private async Task SendAsync(HttpRequestMessage request, string clientId)
     {
@@ -387,7 +384,7 @@ public sealed class CompleteProtectionAcceptanceSteps
             _lastSignedCreate = await SnapshotAsync(request, clientId);
         }
 
-        using var client = CreateHttpClient(Runtime.ClientCertificate(clientId));
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(clientId));
         using var response = await client.SendAsync(request);
         _status = response.StatusCode;
         _responseBody = await response.Content.ReadAsStringAsync();
@@ -440,7 +437,7 @@ public sealed class CompleteProtectionAcceptanceSteps
 
     private static async Task<string> RequestTokenAsync(string clientId)
     {
-        using var client = CreateHttpClient(Runtime.ClientCertificate(clientId));
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(clientId));
         using var response = await client.PostAsync(
             new Uri(Runtime.AuthServer.Issuer, "connect/token"),
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -455,17 +452,6 @@ public sealed class CompleteProtectionAcceptanceSteps
         return document.RootElement.GetProperty("access_token").GetString()!;
     }
 
-    /// <summary>每次呼叫都使用新連線，確保 TLS 用戶端憑證依本次呼叫決定。</summary>
-    private static HttpClient CreateHttpClient(X509Certificate2 certificate)
-    {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = Runtime.Trust.ServerCertificateValidator,
-            ClientCertificateOptions = ClientCertificateOption.Manual,
-        };
-        handler.ClientCertificates.Add(certificate);
-        return new HttpClient(handler, disposeHandler: true);
-    }
 }
 
 /// <summary>

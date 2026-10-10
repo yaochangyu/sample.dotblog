@@ -48,7 +48,9 @@ public sealed class ClientAndDataAuthorizationSteps
     [When("呼叫端 {string} 要求授權範圍 {string} 的 Token")]
     public async Task WhenCallerRequestsScopedToken(string clientId, string scope)
     {
-        (_tokenStatus, _tokenBody) = await RequestTokenAsync(clientId, scope);
+        var response = await RequestTokenAsync(clientId, scope);
+        _tokenStatus = response.Status;
+        _tokenBody = response.Body;
     }
 
     [Then("授權伺服器拒絕授權範圍要求，錯誤為 {string}")]
@@ -184,18 +186,17 @@ public sealed class ClientAndDataAuthorizationSteps
             request.Headers.TryAddWithoutValidation("X-Client-Id", spoofedClientId);
         }
 
-        var now = DateTimeOffset.UtcNow;
-        await BusinessRequestSigner.SignAsync(request, Runtime.SigningKey(clientId), now, now.AddSeconds(60), Guid.NewGuid().ToString("N"));
+        await SignedHttp.SignNowAsync(request, Runtime.SigningKey(clientId));
 
-        using var client = CreateHttpClient(Runtime.ClientCertificate(clientId));
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(clientId));
         using var response = await client.SendAsync(request);
         _lastStatus = response.StatusCode;
         _lastBody = await response.Content.ReadAsStringAsync();
     }
 
-    private static async Task<(HttpStatusCode Status, string Body)> RequestTokenAsync(string clientId, string scope)
+    private static async Task<ApiResponse> RequestTokenAsync(string clientId, string scope)
     {
-        using var client = CreateHttpClient(Runtime.ClientCertificate(clientId));
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(clientId));
         using var response = await client.PostAsync(
             new Uri(Runtime.AuthServer.Issuer, "connect/token"),
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -205,18 +206,7 @@ public sealed class ClientAndDataAuthorizationSteps
                 ["scope"] = scope,
             }));
 
-        return (response.StatusCode, await response.Content.ReadAsStringAsync());
+        return new ApiResponse(response.StatusCode, await response.Content.ReadAsStringAsync());
     }
 
-    /// <summary>每次呼叫都使用新連線，確保 TLS 用戶端憑證依本次呼叫決定。</summary>
-    private static HttpClient CreateHttpClient(X509Certificate2 certificate)
-    {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = Runtime.Trust.ServerCertificateValidator,
-            ClientCertificateOptions = ClientCertificateOption.Manual,
-        };
-        handler.ClientCertificates.Add(certificate);
-        return new HttpClient(handler, disposeHandler: true);
-    }
 }

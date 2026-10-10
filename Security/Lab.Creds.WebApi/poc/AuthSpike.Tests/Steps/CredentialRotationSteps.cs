@@ -183,7 +183,7 @@ public sealed class CredentialRotationSteps : IDisposable
     [When("呼叫端以尚未登錄的新簽章金鑰送出查詢訂單 {string}")]
     public async Task WhenCallerQueriesWithUnregisteredKey(string orderName)
     {
-        (_lastStatus, _lastBody) = await QueryOrderAsync(_current!, _pendingKey!, orderName);
+        RememberLast(await QueryOrderAsync(_current!, _pendingKey!, orderName));
     }
 
     [When("呼叫端以目前 mTLS 憑證向授權伺服器要求 Token")]
@@ -217,20 +217,20 @@ public sealed class CredentialRotationSteps : IDisposable
     [When("呼叫端以目前配置查詢訂單 {string}")]
     public async Task WhenCallerQueriesWithCurrentCredentials(string orderName)
     {
-        (_lastStatus, _lastBody) = await QueryOrderAsync(_current!, _current!.SigningKey, orderName);
+        RememberLast(await QueryOrderAsync(_current!, _current!.SigningKey, orderName));
     }
 
     [When("呼叫端以既有配置查詢訂單 {string}")]
     public async Task WhenCallerQueriesWithOriginalCredentials(string orderName)
     {
-        (_lastStatus, _lastBody) = await QueryOrderAsync(_original!, _original!.SigningKey, orderName);
+        RememberLast(await QueryOrderAsync(_original!, _original!.SigningKey, orderName));
     }
 
     [When("呼叫端以既有 Token 搭配目前配置查詢訂單 {string}")]
     public async Task WhenCallerQueriesWithOriginalTokenAndCurrentCredentials(string orderName)
     {
         var mixed = _current! with { Token = _original!.Token };
-        (_lastStatus, _lastBody) = await QueryOrderAsync(mixed, mixed.SigningKey, orderName);
+        RememberLast(await QueryOrderAsync(mixed, mixed.SigningKey, orderName));
     }
 
     [When("呼叫端以 {string} 環境的 mTLS 憑證向該環境授權伺服器要求 Token")]
@@ -248,7 +248,7 @@ public sealed class CredentialRotationSteps : IDisposable
     {
         var key = RuntimeOf(environmentName).SigningKey(ClientId);
         var caller = _current!;
-        (_lastStatus, _lastBody) = await CreateOrderRawAsync(caller with { SigningKey = key });
+        RememberLast(await CreateOrderRawAsync(caller with { SigningKey = key }));
     }
 
     [When("疑似洩漏時撤銷 {string}")]
@@ -439,11 +439,11 @@ public sealed class CredentialRotationSteps : IDisposable
     private void Measure(string configuration, DateTimeOffset rejectedAt)
     {
         var elapsed = rejectedAt - _revokedAt!.Value;
-        Console.WriteLine($"[08 測量] {configuration}：洩漏撤銷起點 {_revokedAt:O}，首次拒絕 {rejectedAt:O}，耗時 {elapsed.TotalSeconds:F2} 秒（門檻 {LeakThresholdDescription}）");
+        Console.WriteLine($"[洩漏撤銷延遲] {configuration}：洩漏撤銷起點 {_revokedAt:O}，首次拒絕 {rejectedAt:O}，耗時 {elapsed.TotalSeconds:F2} 秒（門檻 {LeakThresholdDescription}）");
         elapsed.Should().BeLessThanOrEqualTo(RevocationThreshold);
     }
 
-    private async Task<DateTimeOffset> PollUntilRejectedAsync(Func<Task<(HttpStatusCode Status, string Body)>> query)
+    private async Task<DateTimeOffset> PollUntilRejectedAsync(Func<Task<ApiResponse>> query)
     {
         var deadline = _revokedAt!.Value.Add(RevocationThreshold);
         while (true)
@@ -464,6 +464,12 @@ public sealed class CredentialRotationSteps : IDisposable
         }
     }
 
+    private void RememberLast(ApiResponse response)
+    {
+        _lastStatus = response.Status;
+        _lastBody = response.Body;
+    }
+
     private async Task CreateOrderAsync(Caller caller, string orderName)
     {
         var (status, body) = await CreateOrderRawAsync(caller);
@@ -474,38 +480,38 @@ public sealed class CredentialRotationSteps : IDisposable
         _orders[orderName] = document.RootElement.GetProperty("orderId").GetGuid();
     }
 
-    private async Task<(HttpStatusCode Status, string Body)> CreateOrderRawAsync(Caller caller)
+    private async Task<ApiResponse> CreateOrderRawAsync(Caller caller)
     {
-        var now = DateTimeOffset.UtcNow;
-        using var request = new HttpRequestMessage(HttpMethod.Post, OrdersUri(caller.Runtime.OrdersApi.Port, "orders"))
-        {
-            Content = new StringContent($$"""{"orderReference":"{{Guid.NewGuid():N}}","item":"book","quantity":1}""", Encoding.UTF8, "application/json"),
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", caller.Token);
-        request.Headers.TryAddWithoutValidation("Idempotency-Key", Guid.NewGuid().ToString());
-        await BusinessRequestSigner.SignAsync(request, caller.SigningKey, now, now.AddSeconds(60), NewNonce());
+        var json = $$"""{"orderReference":"{{Guid.NewGuid():N}}","item":"book","quantity":1}""";
+        using var request = await SignedHttp.BuildSignedAsync(
+            HttpMethod.Post,
+            OrdersUri(caller.Runtime.OrdersApi.Port, "orders"),
+            caller.Token,
+            caller.SigningKey,
+            json,
+            Guid.NewGuid().ToString());
         return await SendAsync(request, caller);
     }
 
-    private async Task<(HttpStatusCode Status, string Body)> QueryOrderAsync(Caller caller, SignatureKey key, string orderName)
+    private async Task<ApiResponse> QueryOrderAsync(Caller caller, SignatureKey key, string orderName)
     {
-        var now = DateTimeOffset.UtcNow;
-        using var request = new HttpRequestMessage(HttpMethod.Get, OrdersUri(caller.Runtime.OrdersApi.Port, $"orders/{_orders[orderName]}"));
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", caller.Token);
-        await BusinessRequestSigner.SignAsync(request, key, now, now.AddSeconds(60), NewNonce());
+        using var request = await SignedHttp.BuildSignedAsync(
+            HttpMethod.Get,
+            OrdersUri(caller.Runtime.OrdersApi.Port, $"orders/{_orders[orderName]}"),
+            caller.Token,
+            key);
         return await SendAsync(request, caller);
     }
 
-    private static async Task<(HttpStatusCode Status, string Body)> SendAsync(HttpRequestMessage request, Caller caller)
+    private static async Task<ApiResponse> SendAsync(HttpRequestMessage request, Caller caller)
     {
-        using var client = CreateClient(caller.Runtime, caller.Certificate);
-        using var response = await client.SendAsync(request);
-        return (response.StatusCode, await response.Content.ReadAsStringAsync());
+        using var client = SignedHttp.CreateClient(caller.Runtime, caller.Certificate);
+        return await SignedHttp.SendAsync(client, request);
     }
 
     private static async Task<(bool Issued, string? Token)> RequestTokenAsync(SpikeRuntime runtime, X509Certificate2 certificate)
     {
-        using var client = CreateClient(runtime, certificate);
+        using var client = SignedHttp.CreateClient(runtime, certificate);
         using var response = await client.PostAsync(
             new Uri(runtime.AuthServer.Issuer, "connect/token"),
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -522,19 +528,6 @@ public sealed class CredentialRotationSteps : IDisposable
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         return (true, document.RootElement.GetProperty("access_token").GetString());
     }
-
-    private static HttpClient CreateClient(SpikeRuntime runtime, X509Certificate2 certificate)
-    {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = runtime.Trust.ServerCertificateValidator,
-            ClientCertificateOptions = ClientCertificateOption.Manual,
-        };
-        handler.ClientCertificates.Add(certificate);
-        return new HttpClient(handler, disposeHandler: true);
-    }
-
-    private static string NewNonce() => Guid.NewGuid().ToString("N");
 
     private static Uri OrdersUri(int port, string path) => new($"https://localhost:{port}/{path}");
 

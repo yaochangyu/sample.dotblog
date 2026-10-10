@@ -40,7 +40,7 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
     private int? _portAfterRevoke;
     private HttpStatusCode? _lastStatus;
     private string _lastBody = string.Empty;
-    private readonly List<(HttpStatusCode Status, string Body)> _queryResults = [];
+    private readonly List<ApiResponse> _queryResults = [];
 
     private static SpikeRuntime Runtime => SpikeEnvironment.Runtime;
 
@@ -145,14 +145,14 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
     public async Task WhenOrderSentAfterAuthServerStopped(string clientId, string idempotencyKey)
     {
         var template = await BuildSignedOrderAsync(idempotencyKey);
-        (_lastStatus, _lastBody) = await SendAsync(template, Runtime.OrdersApi.Port);
+        RememberLast(await SendAsync(template, Runtime.OrdersApi.Port));
     }
 
     [When("簽章呼叫端 {string} 以 Idempotency-Key {string} 送出建立訂單請求")]
     public async Task WhenOrderSentWithIdempotencyKey(string clientId, string idempotencyKey)
     {
         var template = await BuildSignedOrderAsync(idempotencyKey);
-        (_lastStatus, _lastBody) = await SendAsync(template, Runtime.OrdersApi.Port);
+        RememberLast(await SendAsync(template, Runtime.OrdersApi.Port));
     }
 
     [Then("撤銷後的查詢請求於 60 秒內回應 401")]
@@ -189,7 +189,7 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
     [Then("授權伺服器對既有 Token 的 introspection 仍為 active")]
     public async Task ThenIntrospectionStillActive()
     {
-        using var client = CreateClient(Runtime.ClientCertificate(SpikeRuntime.ResourceClientId));
+        using var client = SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(SpikeRuntime.ResourceClientId));
         using var response = await client.PostAsync(
             new Uri(Runtime.AuthServer.Issuer, "connect/introspect"),
             new FormUrlEncodedContent(new Dictionary<string, string>
@@ -284,7 +284,7 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
     private void Measure(string endpoint, DateTimeOffset rejectedAt)
     {
         var elapsed = rejectedAt - _revokedAt!.Value;
-        Console.WriteLine($"[07 測量] {endpoint}：撤銷起點 {_revokedAt:O}，首次拒絕 {rejectedAt:O}，耗時 {elapsed.TotalSeconds:F2} 秒");
+        Console.WriteLine($"[撤銷生效延遲] {endpoint}：撤銷起點 {_revokedAt:O}，首次拒絕 {rejectedAt:O}，耗時 {elapsed.TotalSeconds:F2} 秒");
         elapsed.Should().BeLessThanOrEqualTo(RevocationThreshold);
     }
 
@@ -315,6 +315,12 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
         }
     }
 
+    private void RememberLast(ApiResponse response)
+    {
+        _lastStatus = response.Status;
+        _lastBody = response.Body;
+    }
+
     private async Task CreateOrderAsync(string orderName)
     {
         var template = await BuildSignedOrderAsync(Guid.NewGuid().ToString());
@@ -325,43 +331,26 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
         _orders[orderName] = _currentOrderId;
     }
 
-    private async Task<(HttpStatusCode Status, string Body)> QueryAsync(int port)
+    private async Task<ApiResponse> QueryAsync(int port)
     {
         var template = await BuildSignedQueryTemplateAsync(_currentOrderId);
         return await SendAsync(template, port);
     }
 
-    private async Task<HttpRequestMessage> BuildSignedQueryTemplateAsync(Guid orderId)
-    {
-        var now = DateTimeOffset.UtcNow;
-        var request = new HttpRequestMessage(HttpMethod.Get, OrdersUri(Runtime.OrdersApi.Port, $"orders/{orderId}"));
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
-        await BusinessRequestSigner.SignAsync(request, Runtime.SigningKey(ClientId), now, now.AddSeconds(60), NewNonce());
-        return request;
-    }
+    private Task<HttpRequestMessage> BuildSignedQueryTemplateAsync(Guid orderId)
+        => SignedHttp.BuildSignedAsync(HttpMethod.Get, OrdersUri(Runtime.OrdersApi.Port, $"orders/{orderId}"), _token, Runtime.SigningKey(ClientId));
 
-    private async Task<HttpRequestMessage> BuildSignedOrderAsync(string idempotencyKey)
-    {
-        var now = DateTimeOffset.UtcNow;
-        var request = new HttpRequestMessage(HttpMethod.Post, OrdersUri(Runtime.OrdersApi.Port, "orders"))
-        {
-            Content = new StringContent(OrderJson(), Encoding.UTF8, "application/json"),
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _token);
-        request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
-        await BusinessRequestSigner.SignAsync(request, Runtime.SigningKey(ClientId), now, now.AddSeconds(60), NewNonce());
-        return request;
-    }
+    private Task<HttpRequestMessage> BuildSignedOrderAsync(string idempotencyKey)
+        => SignedHttp.BuildSignedAsync(HttpMethod.Post, OrdersUri(Runtime.OrdersApi.Port, "orders"), _token, Runtime.SigningKey(ClientId), OrderJson(), idempotencyKey);
 
     /// <summary>以持久連線送出；port 與主要執行個體不同時沿用主要執行個體的公開目標（Host），模擬經同一入口的多個執行個體。</summary>
-    private async Task<(HttpStatusCode Status, string Body)> SendAsync(HttpRequestMessage template, int port)
+    private async Task<ApiResponse> SendAsync(HttpRequestMessage template, int port)
     {
-        using var request = await CloneAsync(template, port);
-        using var response = await PersistentClient().SendAsync(request);
-        return (response.StatusCode, await response.Content.ReadAsStringAsync());
+        using var request = await SignedHttp.CloneAsync(template, port, Runtime.OrdersApi.Port);
+        return await SignedHttp.SendAsync(PersistentClient(), request);
     }
 
-    private HttpClient PersistentClient() => _client ??= CreateClient(Runtime.ClientCertificate(ClientId));
+    private HttpClient PersistentClient() => _client ??= SignedHttp.CreateClient(Runtime, Runtime.ClientCertificate(ClientId));
 
     private async Task<string> RequestTokenAsync()
     {
@@ -379,50 +368,11 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
         return document.RootElement.GetProperty("access_token").GetString()!;
     }
 
-    private static HttpClient CreateClient(X509Certificate2 certificate)
-    {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = Runtime.Trust.ServerCertificateValidator,
-            ClientCertificateOptions = ClientCertificateOption.Manual,
-        };
-        handler.ClientCertificates.Add(certificate);
-        return new HttpClient(handler, disposeHandler: true);
-    }
-
-    private static async Task<HttpRequestMessage> CloneAsync(HttpRequestMessage source, int port)
-    {
-        var primaryPort = Runtime.OrdersApi.Port;
-        var clone = new HttpRequestMessage(source.Method, new UriBuilder(source.RequestUri!) { Port = port }.Uri);
-        foreach (var header in source.Headers)
-        {
-            clone.Headers.TryAddWithoutValidation(header.Key, header.Value);
-        }
-
-        if (port != primaryPort)
-        {
-            clone.Headers.Host = $"localhost:{primaryPort}";
-        }
-
-        if (source.Content is not null)
-        {
-            clone.Content = new ByteArrayContent(await source.Content.ReadAsByteArrayAsync());
-            foreach (var header in source.Content.Headers)
-            {
-                clone.Content.Headers.TryAddWithoutValidation(header.Key, header.Value);
-            }
-        }
-
-        return clone;
-    }
-
     private static string ErrorCodeOf(string body)
     {
         using var document = JsonDocument.Parse(body);
         return document.RootElement.GetProperty("error").GetString()!;
     }
-
-    private static string NewNonce() => Guid.NewGuid().ToString("N");
 
     private static Uri OrdersUri(int port, string path) => new($"https://localhost:{port}/{path}");
 

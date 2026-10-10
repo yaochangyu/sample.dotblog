@@ -9,3 +9,7 @@
 - **自簽 mTLS**：只用自簽用戶端憑證（`self_signed_tls_client_auth`），不做 CA 型 `tls_client_auth`；憑證每次啟動在記憶體產生，OpenIddict 金鑰為 ephemeral。
 
 沿用的已核准決定不變：Token 效期 300 秒、HTTP Message Signatures 規則、撤銷上限 60 秒。
+
+刻意保留的結構（程式碼異味檢視後決定不拆）：
+- **`SpikeRuntime` 維持單一組合根**：它同時負責啟動與憑證／簽章金鑰輪替，但輪替操作與啟動共用同一組私有字典與登錄狀態，拆開需引入額外共享物件並改動大量測試呼叫點，風險大於效益；`SignedRequestVerifier` 則已把 Signature-Input 解析抽出為 `SignatureInputParser`。
+- **`SpikeTrust`、`SpikeDbContext` 保留**：前者是所有 HTTPS 端點與測試共用的信任根驗證，後者是 OpenIddict EF Core 儲存區所需的具名 DbContext，皆非無用的間接層。
