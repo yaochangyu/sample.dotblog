@@ -53,6 +53,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
         Dictionary<string, List<SignatureKey>> signatureKeys,
         X509Certificate2 unregisteredSelfSignedCertificate,
         X509Certificate2 otherCaCertificate,
+        X509Certificate2 administratorCertificate,
         AuthServerHost authServer,
         OrdersApiHost ordersApi,
         X509Certificate2 serverCertificate,
@@ -76,6 +77,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
         AuditLog = auditLog;
         UnregisteredSelfSignedCertificate = unregisteredSelfSignedCertificate;
         OtherCaCertificate = otherCaCertificate;
+        AdministratorCertificate = administratorCertificate;
         AuthServer = authServer;
         OrdersApi = ordersApi;
         EnvironmentName = environmentName;
@@ -91,6 +93,12 @@ public sealed class SpikeRuntime : IAsyncDisposable
 
     /// <summary>由其他根 CA 簽發的用戶端憑證（非自簽、非本 spike 登錄的方式）。</summary>
     public X509Certificate2 OtherCaCertificate { get; }
+
+    /// <summary>
+    /// 管理員專屬的 mTLS 用戶端憑證（11 單，lab 暫定：每個執行環境啟動時產生並登錄為管理員角色）。
+    /// 不是任何 Client 的憑證，不能取得業務 Token 或呼叫業務 API；Client 憑證也不能呼叫管理介面。
+    /// </summary>
+    public X509Certificate2 AdministratorCertificate { get; }
 
     public AuthServerHost AuthServer { get; }
 
@@ -141,6 +149,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
         var unregistered = SpikeCertificates.CreateSelfSignedClientCertificate("unregistered-client");
         var otherRoot = SpikeCertificates.CreateRootCertificateAuthority("Other Root CA");
         var otherCa = SpikeCertificates.IssueCaSignedClientCertificate(otherRoot, OrdersClientId);
+        // 管理員專屬憑證：每個環境獨立，與任何 Client 憑證分開（11 單）。
+        var administratorCertificate = SpikeCertificates.CreateSelfSignedClientCertificate($"administrator-{environmentName}");
 
         // 授權伺服器只登錄示範 Client 與資源端 orders-api；每個 Client 只核准自己的 scope 白名單。
         // orders-partner-client 與 orders-client 持有相同 scope，用來驗證相同 scope 仍不能越權。
@@ -161,6 +171,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
             registeredClients,
             accessTokenLifetime ?? DefaultAccessTokenLifetime,
             registry);
+        // 管理員角色只在組合根登錄，授權伺服器與業務 API 皆讀取同一份信任狀態。
+        registry.RegisterAdministratorCertificate(administratorCertificate.Thumbprint);
 
         // 業務 API 只持有公開部分，並以 Client 與 KeyId 查找已驗證 Client 自己登錄的金鑰。
         var verificationKeys = new VerificationKeyStore();
@@ -195,6 +207,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
             signatureKeys,
             unregistered,
             otherCa,
+            administratorCertificate,
             authServer,
             ordersApi,
             serverCertificate,

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AuthSpike.Certificates;
@@ -24,14 +25,16 @@ public sealed class AuthServerHost : IAsyncDisposable
 {
     private readonly WebApplication _app;
     private readonly IReadOnlyDictionary<string, AuthServerClient> _clients;
+    private readonly ConcurrentDictionary<string, IReadOnlyList<string>> _registeredThumbprints;
     private bool _stopped;
     private bool _disposed;
 
-    private AuthServerHost(WebApplication app, int port, IReadOnlyList<AuthServerClient> clients)
+    private AuthServerHost(WebApplication app, int port, IReadOnlyList<AuthServerClient> clients, ConcurrentDictionary<string, IReadOnlyList<string>> registeredThumbprints)
     {
         _app = app;
         Port = port;
         _clients = clients.ToDictionary(client => client.ClientId);
+        _registeredThumbprints = registeredThumbprints;
     }
 
     public int Port { get; }
@@ -89,6 +92,43 @@ public sealed class AuthServerHost : IAsyncDisposable
 
         var audiences = clients.ToDictionary(client => client.ClientId, client => client.Audience);
         var approvedScopes = clients.ToDictionary(client => client.ClientId, client => client.Scopes);
+        var registeredThumbprints = new ConcurrentDictionary<string, IReadOnlyList<string>>(
+            clients.Select(client => new KeyValuePair<string, IReadOnlyList<string>>(client.ClientId, [client.PublicCertificate.Thumbprint])));
+
+        // 管理介面（11 單）：路徑與回應格式為 lab 暫定值，待使用者確認。只接受已登錄為管理員角色的 mTLS 憑證；其他呼叫一律 401。
+        app.MapGet("/admin/trust-list", (HttpContext httpContext) =>
+        {
+            if (!IsAdministrator(httpContext, registry))
+            {
+                return AdministratorRejected();
+            }
+
+            var snapshot = registeredThumbprints
+                .OrderBy(pair => pair.Key, StringComparer.Ordinal)
+                .Select(pair => new
+                {
+                    clientId = pair.Key,
+                    enabled = registry.IsClientEnabled(pair.Key),
+                    certificateThumbprints = pair.Value,
+                });
+            return Results.Json(new { clients = snapshot });
+        });
+
+        app.MapPost("/admin/clients/{clientId}/disable", (string clientId, HttpContext httpContext) =>
+        {
+            if (!IsAdministrator(httpContext, registry))
+            {
+                return AdministratorRejected();
+            }
+
+            if (!registeredThumbprints.ContainsKey(clientId))
+            {
+                return Results.Json(new Dictionary<string, string> { ["error"] = "client_not_found" }, statusCode: StatusCodes.Status404NotFound);
+            }
+
+            registry.DisableClient(clientId);
+            return Results.Json(new { clientId, enabled = false });
+        });
 
         app.MapPost("/connect/token", async (HttpContext httpContext, IOpenIddictApplicationManager applications) =>
         {
@@ -106,7 +146,8 @@ public sealed class AuthServerHost : IAsyncDisposable
             var clientId = await applications.GetClientIdAsync(application);
             // 停用的 Client 或已撤銷的 mTLS 憑證不再核發 Token（既有 Token 的接受判斷另由業務 API 檢查）。
             var presented = httpContext.Connection.ClientCertificate;
-            if (!registry.IsClientEnabled(clientId!) || presented is null || registry.IsCertificateBlocked(presented.Thumbprint))
+            // 管理員憑證不是 Client 憑證，不得取得業務 Token（11 單）。
+            if (!registry.IsClientEnabled(clientId!) || presented is null || registry.IsCertificateBlocked(presented.Thumbprint) || registry.IsAdministratorCertificate(presented.Thumbprint))
             {
                 return Results.Json(new Dictionary<string, string> { ["error"] = Errors.InvalidClient }, statusCode: StatusCodes.Status401Unauthorized);
             }
@@ -148,8 +189,18 @@ public sealed class AuthServerHost : IAsyncDisposable
         }
 
         await app.StartAsync();
-        return new AuthServerHost(app, port, clients);
+        return new AuthServerHost(app, port, clients, registeredThumbprints);
     }
+
+    /// <summary>管理員身分只看出示的 mTLS 憑證是否登錄為管理員角色；與業務 API 的 Token 查證各自獨立。</summary>
+    private static bool IsAdministrator(HttpContext httpContext, TrustRegistry registry)
+    {
+        var certificate = httpContext.Connection.ClientCertificate;
+        return certificate is not null && registry.IsAdministratorCertificate(certificate.Thumbprint);
+    }
+
+    private static IResult AdministratorRejected()
+        => Results.Json(new Dictionary<string, string> { ["error"] = "administrator_authentication_required" }, statusCode: StatusCodes.Status401Unauthorized);
 
     /// <summary>
     /// 以指定的公開憑證集合取代 Client 登錄的 JWKS（08 單）：登錄新憑證為新增一筆，退役舊憑證則自集合移除。
@@ -162,6 +213,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         var application = await manager.FindByClientIdAsync(clientId)
             ?? throw new InvalidOperationException($"找不到 Client {clientId}。");
         await manager.UpdateAsync(application, BuildDescriptor(_clients[clientId], publicCertificates));
+        _registeredThumbprints[clientId] = publicCertificates.Select(certificate => certificate.Thumbprint).ToArray();
     }
 
     private static OpenIddictApplicationDescriptor BuildDescriptor(AuthServerClient client, IEnumerable<X509Certificate2> publicCertificates)
