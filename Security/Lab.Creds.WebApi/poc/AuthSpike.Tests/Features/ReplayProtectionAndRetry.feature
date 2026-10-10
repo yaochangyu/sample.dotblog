@@ -10,6 +10,7 @@ Feature: 跨執行個體防重放並支援合法重簽重試
     And 已登錄服務 "billing-client" 與其用戶端憑證
     And 簽章呼叫端 "orders-client" 已以 mTLS 取得 Token
 
+  @record
   Scenario: 簽章時間窗與防重放儲存參數已記錄為 lab 暫定值
     Then 04 單第 1 項驗收已勾選
     And 04 單的實作紀錄包含 "lab 暫定、待使用者確認"

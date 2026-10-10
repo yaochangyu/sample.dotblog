@@ -8,6 +8,7 @@ Feature: 業務 API 驗證原始呼叫端的 HTTP 請求簽章
     And 已登錄服務 "billing-client" 與其用戶端憑證
     And 簽章呼叫端 "orders-client" 已以 mTLS 取得 Token
 
+  @record
   Scenario: 共同簽章規則已由使用者核准並記錄
     Then 03 單第 1 項驗收已勾選
     And 03 單狀態為 "resolved"
@@ -103,6 +104,7 @@ Feature: 業務 API 驗證原始呼叫端的 HTTP 請求簽章
     And 03 單的實作紀錄包含 "未完成防重放"
     And 03 單第 8 項驗收已勾選
 
+  @record
   Scenario: Gateway 項目標註為本 lab 不實作且略過
-    Then 03 單第 7 項驗收已勾選
+    Then 03 單第 7 項驗收標為略過而非完成
     And 03 單的實作紀錄包含 "本 lab 不實作，略過"

@@ -6,11 +6,13 @@ Feature: 完整接入流程與規格驗收
   Background:
     Given 授權伺服器與建立訂單 API 已啟動
 
+  @record
   Scenario: 10 單的驗收項目與 BDD 情境對應表完整
     Given 10 單的實作紀錄可讀取
     Then 10 單的 "驗收項目" 對應表列出 9 列
     And 10 單的 "驗收項目" 對應表中每個情境名稱都存在於 feature 檔
 
+  @record
   Scenario: 母規格 AC-01 至 AC-14 列出對應情境與可重現證據
     Given 10 單的實作紀錄可讀取
     Then 10 單的 "AC" 對應表列出 14 列
@@ -97,6 +99,7 @@ Feature: 完整接入流程與規格驗收
     And 診斷輸出不含本次取得的 access_token
     And 診斷輸出不含簽章標頭值與私鑰標記
 
+  @record
   Scenario: 重現說明涵蓋 Client 登錄、憑證與簽章配置、取得 Token、呼叫、重試、輪替與洩漏撤銷
     Given 10 單的實作紀錄可讀取
     Then 10 單的實作紀錄包含 "Client 登錄"
@@ -108,6 +111,7 @@ Feature: 完整接入流程與規格驗收
     And 10 單的實作紀錄包含 "洩漏撤銷"
     And 10 單的實作紀錄包含 "dotnet test"
 
+  @record
   Scenario: 已確認產品參數與未完成事項有紀錄，且不以示範代替生產保證
     Given 10 單的實作紀錄可讀取
     Then 10 單的實作紀錄包含 "OpenIddict 7.7.1"
@@ -116,6 +120,7 @@ Feature: 完整接入流程與規格驗收
     And 10 單的實作紀錄包含 "不宣稱跨系統 exactly-once"
     And 10 單的實作紀錄包含 "不代表生產容量"
 
+  @record
   Scenario: 建置與測試的實際執行結果已記錄
     Given 10 單的實作紀錄可讀取
     Then 10 單的實作紀錄包含 "dotnet build"
@@ -123,10 +128,12 @@ Feature: 完整接入流程與規格驗收
     And 10 單的實作紀錄包含 "dotnet test"
     And 10 單的實作紀錄包含 "Passed!"
 
+  @record
   Scenario: 實作紀錄與文件不含真實私鑰或憑證內容
     Given 10 單的實作紀錄可讀取
     Then 10 單的實作紀錄不包含 "-----BEGIN"
 
+  @record
   Scenario: 10 單所有驗收項目已勾選且狀態為 resolved
     Given 10 單的實作紀錄可讀取
     Then 10 單狀態為 "resolved"

@@ -43,9 +43,11 @@ public sealed class ProtectedOrderCallRecordSteps
         IssueText.Should().Contain("- [x] mTLS 用戶端認證成功才核發綁定該憑證的短效 Opaque Token；Token 效期已由使用者核准為 300 秒。");
     }
 
-    [Then("02 單 Gateway 項目已勾選")]
-    public void ThenGatewayCheckboxIsChecked()
+    [Then("02 單 Gateway 項目標為略過而非完成")]
+    public void ThenGatewayCheckboxIsSkipped()
     {
-        IssueText.Should().Contain("- [x] Gateway 下游通道經過認證");
+        var line = IssueText.Split('\n').Single(l => l.Contains("Gateway 下游通道經過認證"));
+        line.Should().StartWith("- [ ] ~~Gateway 下游通道經過認證");
+        line.Should().Contain("本 lab 不實作，略過（非完成）");
     }
 }

@@ -171,6 +171,14 @@ public sealed class RevocationAndFailClosedSteps : IDisposable
         Measure("第二個執行個體", rejectedAt);
     }
 
+    [Then("實際測得的撤銷延遲小於 60 秒")]
+    public void ThenMeasuredRevocationDelayBelowThreshold()
+    {
+        _revokedAt.Should().NotBeNull();
+        _firstRejectAt.Should().NotBeNull();
+        (_firstRejectAt!.Value - _revokedAt!.Value).Should().BeLessThan(RevocationThreshold);
+    }
+
     [Then("後續查詢請求使用的連線與撤銷前相同")]
     public void ThenFollowUpUsesSameConnection()
     {

@@ -9,11 +9,13 @@ Feature: 選型決策與接入契約紀錄可追溯
     And 授權伺服器的 client_credentials 與 mTLS 用戶端認證由 OpenIddict 啟用
     And 授權伺服器未使用 Client Secret
 
+  @record
   Scenario: OpenIddict 候選的正式版本與發佈時間有紀錄
     Then 實作紀錄包含 "正式版本：7.7.1"
     And 實作紀錄包含 "發佈於 2026-09-17"
     And 實作紀錄包含 "非預覽版"
 
+  @record
   Scenario: OpenIddict 候選的維護狀態有紀錄
     Then 實作紀錄包含 "2026 年內持續釋出"
 
@@ -33,28 +35,34 @@ Feature: 選型決策與接入契約紀錄可追溯
     Then 實作紀錄包含 "首個示範業務操作：建立訂單"
     And 建立訂單契約檔以 POST /orders 定義 createOrder
 
+  @record
   Scenario: 證據依支援等級分類
     Then 實作紀錄包含 "已實際驗證（BDD 通過）"
     And 實作紀錄包含 "需整合、尚未驗證成功"
     And 實作紀錄包含 "未驗證"
 
+  @record
   Scenario: PKI 用戶端認證不被宣稱為已支援
     Then 實作紀錄包含 "本 spike 不宣稱支援"
 
+  @record
   Scenario: 證據不以 dev 文件作為可用性證明
     Then 實作紀錄包含 "僅用於定位用法"
     And 實作紀錄包含 "可用性以上述實際執行為準"
 
+  @record
   Scenario: 驗證方式可重現
     Then 實作紀錄包含 "dotnet test AuthSpike.Tests/AuthSpike.Tests.csproj"
 
+  @record
   Scenario: 已確認契約與未決事項有紀錄
     Then 實作紀錄包含 "已確認的契約（spike 範圍）"
     And 實作紀錄包含 "未決事項與阻擋"
 
+  @record
   Scenario: Gateway 項目標註為本 lab 不實作且不阻擋
     Then 實作紀錄包含 "Gateway 候選與信任契約（本 lab 不實作，略過，不阻擋）"
-    And 01 單 Gateway 驗收項目已勾選
+    And 01 單 Gateway 驗收項目標為略過而非完成
 
   Scenario: 本 lab 不經 Gateway，業務 API 直接以 TLS 連線憑證驗證
     Given 已登錄服務 "orders-client" 與其用戶端憑證

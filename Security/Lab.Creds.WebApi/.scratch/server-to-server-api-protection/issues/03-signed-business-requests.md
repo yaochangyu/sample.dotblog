@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — 呼叫服務取得 Token 並經可信入口呼叫 API。
 
-**Status:** resolved（共同簽章規則已由使用者核准；所有驗收項目已達成，Gateway 項目依 lab 範圍略過）
+**Status:** resolved（共同簽章規則已由使用者核准；除略過項外已達成；Gateway 項目本 lab 不實作，標為略過，非完成）
 
 - [x] 取得共同 HTTP Message Signatures 規則與演算法的確認，明訂必要欄位、Token 綁定資訊表示及中介改寫處理。
 - [x] 所有示範業務 API 呼叫必須簽章；無 Body 請求仍驗證方法、目標與必要欄位。
@@ -12,7 +12,7 @@
 - [x] 涵蓋完整業務目標、會影響語意的查詢參數、必要標頭、適用時的 Idempotency Key 及 Token 綁定資訊。
 - [x] 簽章使用不同於 mTLS 的私鑰，並確認簽章金鑰屬於已驗證 Token 識別的同一 Client。
 - [x] 缺少簽章、內容或目標遭竄改、替換授權脈絡、混用不同 Client 合法金鑰時拒絕。
-- [x] Gateway 不破壞簽章驗證脈絡；若有改寫，以已確認契約保留可驗證的原始資訊，不信任外部自稱的原始欄位。
+- [ ] ~~Gateway 不破壞簽章驗證脈絡；若有改寫，以已確認契約保留可驗證的原始資訊，不信任外部自稱的原始欄位。~~ 本 lab 不實作，略過（非完成）。
 - [x] 使用實際簽署與驗證的整合情境證明合法請求可通過及竄改請求被拒絕，不宣稱 nonce 防重放已完成。
 
 對應驗收：AC-03 的簽章金鑰部分、AC-07。
@@ -32,7 +32,7 @@
   - 參數：`created`、`expires`、`keyid`、`alg`、`nonce`；接受窗為 created 不超前 30 秒、expires 60 秒（自簽發起算），且未超過 expires（使用者已核准）。
   - Token 綁定：簽章涵蓋 `authorization` 標頭，替換 Token 即簽章失效。
   - 金鑰歸屬：`keyid` 必須為已驗證 Token 的 `client_id` 所登錄的金鑰，否則拒絕。
-- 驗證位置：業務 API 於 Token 驗證（UseAuthorization）之後以中介層驗證簽章；未實作 Gateway（第 7 項略過）。
+- 驗證位置：業務 API 於 Token 驗證（UseAuthorization）之後以中介層驗證簽章；未實作 Gateway（第 7 項略過，非完成）。
 - 呼叫端簽章與業務 API 驗證共用 `poc/AuthSpike/Signing/HttpMessageSignature.cs`。
 
 ### 未完成與明確範圍限制
@@ -54,8 +54,12 @@
 | 4 完整目標、查詢參數、必要標頭、Idempotency Key、Token 綁定 | `已簽章的查詢參數被改動被拒絕`、`改動已簽署的 目標／Idempotency-Key 標頭／Content-Type 標頭／授權 Token 被拒絕`（Scenario Outline） |
 | 5 簽章金鑰與 mTLS 私鑰分開，且屬於已驗證 Client | `簽章金鑰與 mTLS 用戶端憑證私鑰分開`、`持有 orders-client Token 但以 billing-client 簽章金鑰簽署被拒絕` |
 | 6 缺少簽章、竄改、替換授權脈絡、混用金鑰拒絕 | `缺少必要簽章標頭被拒絕`（Scenario Outline）、`已逾期的簽章被拒絕`、以及第 4、5 項的負向 Scenario |
-| 7 Gateway（本 lab 不實作，略過） | `Gateway 項目標註為本 lab 不實作且略過` |
+| 7 Gateway（略過，非完成） | `Gateway 項目標註為本 lab 不實作且略過`（紀錄型證據，只證明標註為略過） |
 | 8 實際簽署與驗證的整合情境，不宣稱 nonce 防重放 | `實際簽署與驗證的整合情境區分合法與竄改請求` |
+
+**紀錄型證據（`@record`，非行為驗證）**：下列 Scenario 只檢查本紀錄的文字或勾選狀態，屬紀錄型證據，標籤為 `@record`，不冒充行為驗證：
+- 共同簽章規則已由使用者核准並記錄
+- Gateway 項目標註為本 lab 不實作且略過
 
 ### 驗證方式（可重現）
 

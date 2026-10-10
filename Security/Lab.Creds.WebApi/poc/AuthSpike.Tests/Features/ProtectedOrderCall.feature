@@ -30,6 +30,7 @@ Feature: 呼叫服務取得 Token 並呼叫建立訂單 API 的保護邊界
     Then 授權伺服器核發 access_token
     And 授權伺服器核發的 Token 效期為 300 秒
 
+  @record
   Scenario: Token 效期的確認狀態有紀錄
     Given 02 單的實作紀錄可讀取
     Then 02 單的實作紀錄包含 "Token 效期：300 秒（使用者已核准）"
@@ -76,10 +77,11 @@ Feature: 呼叫服務取得 Token 並呼叫建立訂單 API 的保護邊界
     Then 建立訂單 API 回應 201
     And 回應 clientId 為 "orders-client"
 
+  @record
   Scenario: Gateway 下游通道項目標註為本 lab 不實作且略過
     Given 02 單的實作紀錄可讀取
     Then 02 單的實作紀錄包含 "本 lab 不實作，略過"
-    And 02 單 Gateway 項目已勾選
+    And 02 單 Gateway 項目標為略過而非完成
 
   @ignore
   Scenario: Gateway 下游通道經認證並覆寫偽造的驗證標頭（本 lab 不實作）
@@ -87,6 +89,7 @@ Feature: 呼叫服務取得 Token 並呼叫建立訂單 API 的保護邊界
     When 呼叫端繞過 Gateway 直接送出建立訂單請求
     Then 業務 API 拒絕不可信的入口標頭
 
+  @record
   Scenario: 示範流程可重現且明確標示尚未具備的保護
     Given 02 單的實作紀錄可讀取
     Then 02 單的實作紀錄包含 "dotnet test AuthSpike.Tests/AuthSpike.Tests.csproj"

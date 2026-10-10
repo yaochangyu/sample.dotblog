@@ -4,13 +4,13 @@
 
 **Blocked by:** None (can start immediately).
 
-**Status:** resolved
+**Status:** resolved（除略過項外已達成；Gateway 項目本 lab 不實作，標為略過，非完成）
 
 - [x] 閱讀已指定的 api.template 開發規則及其必讀指南，確認全專案採 API First 或 Code First，不自行假設。
 - [x] 將 OpenIddict 視為候選而非已選定產品；核對候選的正式版本、授權條件、維護狀態及與 ASP.NET Core 10 整合方式。
 - [x] 以真實協定及密碼驗證路徑展示 mTLS Client Credentials 核發憑證綁定 Opaque Token、introspection 與 API 憑證綁定判斷；無憑證及不同憑證呼叫失敗。
 - [x] 證據區分正式版本支援、需整合功能與尚未支援能力，不以 dev 文件或永遠成功的替身作為可用性證明。
-- [x] 確認 Gateway 候選與信任契約（本 lab 不實作，略過，不阻擋；見下方未決事項）。
+- [ ] ~~確認 Gateway 候選與信任契約~~ 本 lab 不實作，略過（非完成）；不阻擋，見下方未決事項。
 - [x] 取得使用者對產品選型、API 開發方式及首個示範業務操作的確認；缺乏可行方案時明確列出阻擋，不降級既定保護。
 - [x] 記錄可重現驗證方式、已確認契約與未決事項；不手刻 OAuth 協定作為未經核准的替代品。
 
@@ -70,9 +70,20 @@ dotnet run --project AuthSpike/AuthSpike.csproj   # 另可手動啟動，Ctrl+C 
 | 2 OpenIddict 候選核對 | `OpenIddict 候選為正式版本並以 ASP.NET Core 10 執行`、`OpenIddict 候選的正式版本與發佈時間有紀錄`、`OpenIddict 候選的維護狀態有紀錄`、`OpenIddict 套件授權條件為 Apache-2.0`、`OpenIddict 候選與 ASP.NET Core 10 整合` |
 | 3 mTLS 憑證綁定 Opaque Token | `無法取得 Token 的呼叫端`、`綁定憑證取得不透明 Token`、`同一憑證搭配 Token 成功建立訂單`、`偷到 Token 但憑證不符無法建立訂單` |
 | 4 支援證據分級 | `證據依支援等級分類`、`PKI 用戶端認證不被宣稱為已支援`、`證據不以 dev 文件作為可用性證明` |
-| 5 Gateway（本 lab 不實作） | `Gateway 項目標註為本 lab 不實作且不阻擋`（紀錄）；`Gateway 終止 mTLS 並以信任契約轉送`（`@ignore`，略過） |
+| 5 Gateway（略過，非完成） | `Gateway 項目標註為本 lab 不實作且不阻擋`（紀錄型證據，只證明標註為略過）；`Gateway 終止 mTLS 並以信任契約轉送`（`@ignore`，略過） |
 | 6 產品選型與示範操作確認 | `授權伺服器採使用者確認的 OpenIddict 候選`、`首個示範業務操作為建立訂單` |
 | 7 可重現方式與未決事項 | `驗證方式可重現`、`已確認契約與未決事項有紀錄` |
+
+**紀錄型證據（`@record`，非行為驗證）**：下列 Scenario 只檢查本紀錄的文字或勾選狀態，屬紀錄型證據，標籤為 `@record`，不冒充行為驗證：
+- OpenIddict 候選的正式版本與發佈時間有紀錄
+- OpenIddict 候選的維護狀態有紀錄
+- 證據依支援等級分類
+- PKI 用戶端認證不被宣稱為已支援
+- 證據不以 dev 文件作為可用性證明
+- 驗證方式可重現
+- 已確認契約與未決事項有紀錄
+- Gateway 項目標註為本 lab 不實作且不阻擋
+
 - 未實作：Idempotency、簽章、nonce、業務去重與追查紀錄（屬 issue 02–09）。
 
 ### 產出檔案

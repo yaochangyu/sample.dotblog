@@ -189,6 +189,14 @@ public sealed class SignedBusinessRequestSteps
         CheckboxAt(index).Should().StartWith("- [x] ");
     }
 
+    [Then("03 單第 {int} 項驗收標為略過而非完成")]
+    public void ThenIssueCheckboxIsSkipped(int index)
+    {
+        var line = CheckboxAt(index);
+        line.Should().StartWith("- [ ] ~~");
+        line.Should().Contain("本 lab 不實作，略過（非完成）");
+    }
+
     [Then("03 單的實作紀錄包含 {string}")]
     public void ThenIssueRecordContains(string expected)
     {

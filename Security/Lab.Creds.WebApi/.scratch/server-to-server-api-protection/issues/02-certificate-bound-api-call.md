@@ -4,7 +4,7 @@
 
 **Blocked by:** 01 — 確認 auth 技術選型與接入契約。
 
-**Status:** resolved（Token 效期已由使用者核准 300 秒；所有驗收項目已達成，Gateway 項目依 lab 範圍略過）
+**Status:** resolved（Token 效期已由使用者核准 300 秒；除略過項外已達成；Gateway 項目本 lab 不實作，標為略過，非完成）
 
 - [x] 採用 01 核准方案與開發方式，建立呼叫端 → 業務 API 的主要整合測試邊界（本 lab 不經 Gateway，見下方 Gateway 項目）。
 - [x] 每個示範呼叫服務使用獨立 Client 與用戶端憑證；不以 API Key 或 Client Secret 提供替代認證入口。
@@ -12,7 +12,7 @@
 - [x] Token 到期後可重新取得；缺少或無效憑證不能取得 Token。
 - [x] 經受保護且已認證的 introspection 介面判斷 Token 有效性、有效期限、目標 API 與憑證綁定，不只看 active。
 - [x] 只持有 Token、使用不同 Client 的憑證、錯誤目標 API 或無效 Token 時拒絕呼叫。
-- [x] Gateway 下游通道經過認證，外部偽造的驗證資訊被移除或覆寫，業務 API 不能繞過入口。（本 lab 不實作，略過，不阻擋；由業務 API 直接以 TLS 連線憑證自行驗證）
+- [ ] ~~Gateway 下游通道經過認證，外部偽造的驗證資訊被移除或覆寫，業務 API 不能繞過入口。~~ 本 lab 不實作，略過（非完成）；不阻擋，由業務 API 直接以 TLS 連線憑證自行驗證。
 - [x] 合法呼叫建立已驗證 Client 身分，不採信 Body 或外部標頭自行宣稱的身分。
 - [x] 示範流程與測試可重現，明確說明此階段尚未具備簽章、防重放及完整業務授權。
 
@@ -62,10 +62,15 @@ dotnet test AuthSpike.Tests/AuthSpike.Tests.csproj
 | 4 到期重取、缺少或無效憑證不能取得 Token | `Token 到期後拒絕呼叫並可重新取得`、`無法取得 Token 的呼叫端`（既有） |
 | 5 introspection 受保護且判斷完整 | `未附用戶端憑證的呼叫端不能查詢 Token 內省`、`內省回報有效、有效期限、目標 API 與綁定憑證`、`綁定憑證取得不透明 Token`（既有） |
 | 6 拒絕只持有 Token、他 Client 憑證、錯誤目標、無效 Token | `偷到 Token 但憑證不符無法建立訂單`（既有）、`其他目標 API 的 Token 不能呼叫建立訂單 API`、`無效 Token 不能呼叫建立訂單 API` |
-| 7 Gateway（本 lab 不實作） | `Gateway 下游通道項目標註為本 lab 不實作且略過`；`Gateway 下游通道經認證並覆寫偽造的驗證標頭`（`@ignore`，略過）；`API 不信任公開請求自行提供的憑證標頭`（既有） |
+| 7 Gateway（略過，非完成） | `Gateway 下游通道項目標註為本 lab 不實作且略過`（紀錄型證據，只證明標註為略過）；`Gateway 下游通道經認證並覆寫偽造的驗證標頭`（`@ignore`，略過）；`API 不信任公開請求自行提供的憑證標頭`（既有） |
 | 8 已驗證 Client 身分 | `建立訂單的 clientId 為已驗證 Client，不採信 Body 或外部標頭` |
 | 9 可重現與範圍限制 | `示範流程可重現且明確標示尚未具備的保護` |
 
+**紀錄型證據（`@record`，非行為驗證）**：下列 Scenario 只檢查本紀錄的文字或勾選狀態，屬紀錄型證據，標籤為 `@record`，不冒充行為驗證：
+- Token 效期的確認狀態有紀錄
+- Gateway 下游通道項目標註為本 lab 不實作且略過
+- 示範流程可重現且明確標示尚未具備的保護
+
 ### 未決事項與阻擋
 
-- 無。Token 效期已由使用者核准（300 秒），checkbox 3 已勾選，本單結案（resolved）。
+- 無。Token 效期已由使用者核准（300 秒），checkbox 3 已勾選；第 7 項 Gateway 為略過（非完成），其餘項目已達成，本單結案（resolved）。

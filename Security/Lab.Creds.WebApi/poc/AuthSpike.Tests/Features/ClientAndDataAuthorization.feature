@@ -77,6 +77,7 @@ Feature: 業務 API 依已驗證 Client 限制可執行操作與業務資料範�
     And 呼叫端 "orders-client" 查詢訂單 "甲方訂單" 的狀態為 "cancelled"
     And 05 單第 6 項驗收已勾選
 
+  @record
   Scenario: 授權資料來源、契約與正向及越權整合情境可重現
     Then 05 單的實作紀錄包含 "授權資料來源"
     And 建立訂單契約檔包含 "/orders/{orderId}/cancel"
@@ -84,6 +85,7 @@ Feature: 業務 API 依已驗證 Client 限制可執行操作與業務資料範�
     And 05 單的實作紀錄包含 "越權"
     And 05 單第 7 項驗收已勾選
 
+  @record
   Scenario: 本票為受控測試環境驗證，不視為正式接入完成
     Then 05 單的實作紀錄包含 "受控測試環境"
     And 05 單的實作紀錄包含 "不視為正式接入完成"

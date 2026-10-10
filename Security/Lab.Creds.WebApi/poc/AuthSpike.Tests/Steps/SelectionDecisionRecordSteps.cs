@@ -94,9 +94,11 @@ public sealed class SelectionDecisionRecordSteps
         contract.Should().Contain("operationId: createOrder");
     }
 
-    [Then("01 單 Gateway 驗收項目已勾選")]
-    public void ThenGatewayCheckboxIsChecked()
+    [Then("01 單 Gateway 驗收項目標為略過而非完成")]
+    public void ThenGatewayCheckboxIsSkipped()
     {
-        IssueText.Should().Contain("- [x] 確認 Gateway 候選與信任契約");
+        var line = IssueText.Split('\n').Single(l => l.Contains("確認 Gateway 候選與信任契約") && l.StartsWith("- ["));
+        line.Should().StartWith("- [ ] ~~確認 Gateway 候選與信任契約~~");
+        line.Should().Contain("本 lab 不實作，略過（非完成）");
     }
 }
