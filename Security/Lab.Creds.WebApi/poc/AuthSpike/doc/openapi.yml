@@ -106,6 +106,12 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: 有 Body 的 POST 之簽章規則須涵蓋此標頭（見上方說明，10 單補充）。取消操作本身不以此標頭做業務去重，僅變更訂單狀態。
+          schema:
+            type: string
       requestBody:
         required: true
         content:
