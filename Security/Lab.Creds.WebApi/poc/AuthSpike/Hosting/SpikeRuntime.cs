@@ -247,7 +247,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
     public async Task RegisterClientCertificateAsync(string clientId, X509Certificate2 certificate)
     {
         _clientCertificates[clientId].Add(certificate);
-        await AuthServer.SetClientCertificatesAsync(clientId, ActiveAuthServerCertificates(clientId));
+        await AuthServer.SetClientCertificatesAsync(clientId, [.. ActiveAuthServerCertificates(clientId), certificate]);
     }
 
     /// <summary>退役舊 mTLS 用戶端憑證（08 單）：必須已有其他可用的替代憑證；退役後授權伺服器與業務 API 都不再接受。</summary>
@@ -288,9 +288,9 @@ public sealed class SpikeRuntime : IAsyncDisposable
         Registry.RetireSigningKey(key.KeyId);
     }
 
-    /// <summary>授權伺服器登錄的 mTLS 公開憑證：所有未退役者（含重疊期的新舊憑證）。</summary>
+    /// <summary>授權伺服器目前信任的 mTLS 公開憑證中未退役者（含重疊期的新舊憑證，以及已核准加入的憑證）。</summary>
     private List<X509Certificate2> ActiveAuthServerCertificates(string clientId)
-        => _clientCertificates[clientId].Where(certificate => !Registry.IsCertificateRetired(certificate.Thumbprint)).ToList();
+        => AuthServer.TrustedCertificates(clientId).Where(certificate => !Registry.IsCertificateRetired(certificate.Thumbprint)).ToList();
 
     private static SignatureKey CreateSignatureKey(string clientId, string environmentName, string generation)
         => new($"{clientId}-{environmentName}-sig-{generation}", ECDsa.Create(ECCurve.NamedCurves.nistP256));

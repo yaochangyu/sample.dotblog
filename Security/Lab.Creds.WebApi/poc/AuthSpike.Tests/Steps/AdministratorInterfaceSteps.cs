@@ -192,7 +192,7 @@ public sealed class AdministratorInterfaceSteps
         Runtime.OrdersApi.OrderCount.Should().Be(_ordersBefore);
     }
 
-    private static async Task<ApiResponse> SendAdminAsync(X509Certificate2? certificate, HttpMethod method, string path)
+    internal static async Task<ApiResponse> SendAdminAsync(X509Certificate2? certificate, HttpMethod method, string path)
     {
         using var client = SignedHttp.CreateClient(Runtime, certificate);
         using var request = new HttpRequestMessage(method, new Uri($"https://localhost:{Runtime.AuthServer.Port}/{path}"));
@@ -200,7 +200,7 @@ public sealed class AdministratorInterfaceSteps
     }
 
     /// <summary>以管理員憑證讀取信任名單原始回應；管理員驗證本身也在此被檢查（必須 200）。</summary>
-    private static async Task<string> TrustListBodyAsync()
+    internal static async Task<string> TrustListBodyAsync()
     {
         var response = await SendAdminAsync(Runtime.AdministratorCertificate, HttpMethod.Get, AdminTrustListPath);
         response.Status.Should().Be(HttpStatusCode.OK, response.Body);
@@ -215,7 +215,7 @@ public sealed class AdministratorInterfaceSteps
             .Clone();
     }
 
-    private static List<string> RegisteredThumbprints(string body)
+    internal static List<string> RegisteredThumbprints(string body)
     {
         using var document = JsonDocument.Parse(body);
         return document.RootElement.GetProperty("clients").EnumerateArray()
@@ -224,7 +224,7 @@ public sealed class AdministratorInterfaceSteps
             .ToList();
     }
 
-    private static async Task<(bool Issued, string? Token)> RequestTokenAsync(X509Certificate2? certificate, string clientId)
+    internal static async Task<(bool Issued, string? Token)> RequestTokenAsync(X509Certificate2? certificate, string clientId)
     {
         using var client = SignedHttp.CreateClient(Runtime, certificate);
         using var response = await client.PostAsync(

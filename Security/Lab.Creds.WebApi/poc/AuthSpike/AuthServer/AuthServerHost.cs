@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using AuthSpike.Certificates;
 using AuthSpike.Data;
 using AuthSpike.Hosting;
+using AuthSpike.Registration;
 using AuthSpike.Trust;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -25,21 +26,25 @@ public sealed class AuthServerHost : IAsyncDisposable
 {
     private readonly WebApplication _app;
     private readonly IReadOnlyDictionary<string, AuthServerClient> _clients;
-    private readonly ConcurrentDictionary<string, IReadOnlyList<string>> _registeredThumbprints;
+    /// <summary>每個 Client 目前信任的公開憑證（信任名單），與 OpenIddict 登錄的 JWKS 同步更新。</summary>
+    private readonly ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> _trustedCertificates;
     private bool _stopped;
     private bool _disposed;
 
-    private AuthServerHost(WebApplication app, int port, IReadOnlyList<AuthServerClient> clients, ConcurrentDictionary<string, IReadOnlyList<string>> registeredThumbprints)
+    private AuthServerHost(WebApplication app, int port, IReadOnlyList<AuthServerClient> clients, ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates)
     {
         _app = app;
         Port = port;
         _clients = clients.ToDictionary(client => client.ClientId);
-        _registeredThumbprints = registeredThumbprints;
+        _trustedCertificates = trustedCertificates;
     }
 
     public int Port { get; }
 
     public Uri Issuer => new($"https://localhost:{Port}/");
+
+    /// <summary>目前信任的公開憑證（含已核准加入者）；退役過濾由呼叫端決定。</summary>
+    public IReadOnlyList<X509Certificate2> TrustedCertificates(string clientId) => _trustedCertificates[clientId];
 
     public static async Task<AuthServerHost> StartAsync(int port, SpikeTrust trust, X509Certificate2 serverCertificate, IReadOnlyList<AuthServerClient> clients, TimeSpan accessTokenLifetime, TrustRegistry registry)
     {
@@ -92,8 +97,12 @@ public sealed class AuthServerHost : IAsyncDisposable
 
         var audiences = clients.ToDictionary(client => client.ClientId, client => client.Audience);
         var approvedScopes = clients.ToDictionary(client => client.ClientId, client => client.Scopes);
-        var registeredThumbprints = new ConcurrentDictionary<string, IReadOnlyList<string>>(
-            clients.Select(client => new KeyValuePair<string, IReadOnlyList<string>>(client.ClientId, [client.PublicCertificate.Thumbprint])));
+        var trustedCertificates = new ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>>(
+            clients.Select(client => new KeyValuePair<string, IReadOnlyList<X509Certificate2>>(client.ClientId, [client.PublicCertificate])));
+        var clientsById = clients.ToDictionary(client => client.ClientId);
+        var requests = new CertificateRegistrationRequests();
+        // 核准與拒絕序列化：避免同一申請被併發核准兩次，或核准與拒絕同時生效。
+        var decisionGate = new SemaphoreSlim(1, 1);
 
         // 管理介面（11 單）：路徑與回應格式為 lab 暫定值，待使用者確認。只接受已登錄為管理員角色的 mTLS 憑證；其他呼叫一律 401。
         app.MapGet("/admin/trust-list", (HttpContext httpContext) =>
@@ -103,13 +112,13 @@ public sealed class AuthServerHost : IAsyncDisposable
                 return AdministratorRejected();
             }
 
-            var snapshot = registeredThumbprints
+            var snapshot = trustedCertificates
                 .OrderBy(pair => pair.Key, StringComparer.Ordinal)
                 .Select(pair => new
                 {
                     clientId = pair.Key,
                     enabled = registry.IsClientEnabled(pair.Key),
-                    certificateThumbprints = pair.Value,
+                    certificateThumbprints = pair.Value.Select(certificate => certificate.Thumbprint).ToArray(),
                 });
             return Results.Json(new { clients = snapshot });
         });
@@ -121,13 +130,124 @@ public sealed class AuthServerHost : IAsyncDisposable
                 return AdministratorRejected();
             }
 
-            if (!registeredThumbprints.ContainsKey(clientId))
+            if (!trustedCertificates.ContainsKey(clientId))
             {
                 return Results.Json(new Dictionary<string, string> { ["error"] = "client_not_found" }, statusCode: StatusCodes.Status404NotFound);
             }
 
             registry.DisableClient(clientId);
             return Results.Json(new { clientId, enabled = false });
+        });
+
+        // 憑證登錄申請（12 單）：申請只含 Client 身分與公開憑證；申請本身不改變信任名單，也不能用於取得 Token。
+        // 申請管道（工單、人工轉交或自助入口）不在本單範圍；此端點與欄位為 lab 暫定值，待使用者確認。
+        app.MapPost("/client-certificate-requests", (CertificateRegistrationSubmission submission) =>
+        {
+            if (submission.ClientId is null || !trustedCertificates.ContainsKey(submission.ClientId))
+            {
+                return Results.Json(new Dictionary<string, string> { ["error"] = "client_not_found" }, statusCode: StatusCodes.Status404NotFound);
+            }
+
+            if (!CertificateRegistrationRequests.TryParsePublicCertificate(submission.PublicCertificatePem, out var certificate, out var error))
+            {
+                return Results.Json(new Dictionary<string, string> { ["error"] = error }, statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            var request = requests.Submit(submission.ClientId, certificate!);
+            return Results.Json(
+                new { requestId = request.RequestId, clientId = request.ClientId, status = CertificateRegistrationRequests.ToWire(request.Status) },
+                statusCode: StatusCodes.Status202Accepted);
+        });
+
+        app.MapGet("/admin/client-certificate-requests/{requestId}", (string requestId, HttpContext httpContext) =>
+        {
+            if (!IsAdministrator(httpContext, registry))
+            {
+                return AdministratorRejected();
+            }
+
+            var request = FindRequest(requests, requestId);
+            if (request is null)
+            {
+                return Results.Json(new Dictionary<string, string> { ["error"] = "request_not_found" }, statusCode: StatusCodes.Status404NotFound);
+            }
+
+            return Results.Json(new
+            {
+                requestId = request.RequestId,
+                clientId = request.ClientId,
+                thumbprint = request.PublicCertificate.Thumbprint,
+                status = CertificateRegistrationRequests.ToWire(request.Status),
+            });
+        });
+
+        app.MapPost("/admin/client-certificate-requests/{requestId}/approve", async (string requestId, HttpContext httpContext) =>
+        {
+            if (!IsAdministrator(httpContext, registry))
+            {
+                return AdministratorRejected();
+            }
+
+            await decisionGate.WaitAsync();
+            try
+            {
+                var request = FindRequest(requests, requestId);
+                if (request is null)
+                {
+                    return Results.Json(new Dictionary<string, string> { ["error"] = "request_not_found" }, statusCode: StatusCodes.Status404NotFound);
+                }
+
+                if (request.Status != CertificateRequestStatus.Pending)
+                {
+                    return RequestNotPending();
+                }
+
+                // 先更新信任名單與 OpenIddict 登錄，成功後才標示已核准；失敗時申請維持待核准。
+                await ReplaceTrustedCertificatesAsync(
+                    app,
+                    clientsById,
+                    trustedCertificates,
+                    request.ClientId,
+                    [.. trustedCertificates[request.ClientId], request.PublicCertificate]);
+                requests.Decide(request.RequestId, CertificateRequestStatus.Approved);
+
+                return Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "approved" });
+            }
+            finally
+            {
+                decisionGate.Release();
+            }
+        });
+
+        app.MapPost("/admin/client-certificate-requests/{requestId}/reject", async (string requestId, HttpContext httpContext) =>
+        {
+            if (!IsAdministrator(httpContext, registry))
+            {
+                return AdministratorRejected();
+            }
+
+            await decisionGate.WaitAsync();
+            try
+            {
+                var request = FindRequest(requests, requestId);
+                if (request is null)
+                {
+                    return Results.Json(new Dictionary<string, string> { ["error"] = "request_not_found" }, statusCode: StatusCodes.Status404NotFound);
+                }
+
+                if (request.Status != CertificateRequestStatus.Pending)
+                {
+                    return RequestNotPending();
+                }
+
+                // 拒絕只改變申請狀態，不改變信任名單。
+                requests.Decide(request.RequestId, CertificateRequestStatus.Rejected);
+                return Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "rejected" });
+            }
+            finally
+            {
+                decisionGate.Release();
+            }
         });
 
         app.MapPost("/connect/token", async (HttpContext httpContext, IOpenIddictApplicationManager applications) =>
@@ -189,8 +309,17 @@ public sealed class AuthServerHost : IAsyncDisposable
         }
 
         await app.StartAsync();
-        return new AuthServerHost(app, port, clients, registeredThumbprints);
+        return new AuthServerHost(app, port, clients, trustedCertificates);
     }
+
+    /// <summary>管理員核准或拒絕申請時使用的登錄內容；欄位為 lab 暫定值，待使用者確認。</summary>
+    private sealed record CertificateRegistrationSubmission(string? ClientId, string? PublicCertificatePem);
+
+    private static CertificateRegistrationRequest? FindRequest(CertificateRegistrationRequests requests, string requestId)
+        => Guid.TryParse(requestId, out var id) ? requests.Find(id) : null;
+
+    private static IResult RequestNotPending()
+        => Results.Json(new Dictionary<string, string> { ["error"] = "request_not_pending" }, statusCode: StatusCodes.Status409Conflict);
 
     /// <summary>管理員身分只看出示的 mTLS 憑證是否登錄為管理員角色；與業務 API 的 Token 查證各自獨立。</summary>
     private static bool IsAdministrator(HttpContext httpContext, TrustRegistry registry)
@@ -206,14 +335,23 @@ public sealed class AuthServerHost : IAsyncDisposable
     /// 以指定的公開憑證集合取代 Client 登錄的 JWKS（08 單）：登錄新憑證為新增一筆，退役舊憑證則自集合移除。
     /// 集合內每張憑證都能通過該 Client 的 self_signed_tls_client_auth 並取得綁定該憑證的 Token。
     /// </summary>
-    public async Task SetClientCertificatesAsync(string clientId, IReadOnlyList<X509Certificate2> publicCertificates)
+    public Task SetClientCertificatesAsync(string clientId, IReadOnlyList<X509Certificate2> publicCertificates)
+        => ReplaceTrustedCertificatesAsync(_app, _clients, _trustedCertificates, clientId, publicCertificates);
+
+    /// <summary>更新指定 Client 的信任名單與 OpenIddict JWKS；只改動該 Client 的登錄，不影響其他 Client。</summary>
+    private static async Task ReplaceTrustedCertificatesAsync(
+        WebApplication app,
+        IReadOnlyDictionary<string, AuthServerClient> clients,
+        ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates,
+        string clientId,
+        IReadOnlyList<X509Certificate2> publicCertificates)
     {
-        using var scope = _app.Services.CreateScope();
+        using var scope = app.Services.CreateScope();
         var manager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
         var application = await manager.FindByClientIdAsync(clientId)
             ?? throw new InvalidOperationException($"找不到 Client {clientId}。");
-        await manager.UpdateAsync(application, BuildDescriptor(_clients[clientId], publicCertificates));
-        _registeredThumbprints[clientId] = publicCertificates.Select(certificate => certificate.Thumbprint).ToArray();
+        await manager.UpdateAsync(application, BuildDescriptor(clients[clientId], publicCertificates));
+        trustedCertificates[clientId] = publicCertificates.ToArray();
     }
 
     private static OpenIddictApplicationDescriptor BuildDescriptor(AuthServerClient client, IEnumerable<X509Certificate2> publicCertificates)
