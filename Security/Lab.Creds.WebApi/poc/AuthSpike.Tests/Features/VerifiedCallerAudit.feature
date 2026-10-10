@@ -20,6 +20,7 @@ Feature: 安全追查已驗證呼叫者
     And 最近一次請求的稽核紀錄操作為 "POST /orders"
     And 最近一次請求的稽核紀錄憑證指紋與 "orders-client" 用戶端憑證一致
     And 最近一次請求的稽核紀錄的關聯識別與回應 X-Correlation-Id 相同
+    And 最近一次請求的稽核紀錄最終業務結果為 201
 
   @audit
   Scenario: 未簽章的請求不被記為已驗證，宣稱的 Client 標示為未驗證
@@ -52,6 +53,7 @@ Feature: 安全追查已驗證呼叫者
     And 稽核呼叫端重送同一份已簽章的建立訂單請求
     Then 稽核呼叫端最近一次請求回應 401
     And 最近一次請求的稽核紀錄結果為 "rejected"，原因為 "signature_replayed"
+    And 最近一次請求的稽核紀錄最終業務結果為 401
     And 最近一次請求的稽核紀錄沒有已驗證 Client
     And 最近一次請求的稽核紀錄未驗證的 Token Client 為 "orders-client"
 
@@ -76,9 +78,19 @@ Feature: 安全追查已驗證呼叫者
     When 稽核呼叫端以 "orders-api" 持無 orders 授權範圍的 Token 送出建立訂單請求
     Then 稽核呼叫端最近一次請求回應 403
     And 最近一次請求的稽核紀錄結果為 "denied"，原因為 "status_403"
+    And 最近一次請求的稽核紀錄最終業務結果為 403
     And 最近一次請求的稽核紀錄沒有已驗證 Client
     And 最近一次請求的稽核紀錄未驗證的 Token Client 為 "orders-api"
     And 最近一次回應不含原始 Token、Signature 或 Signature-Input 標頭值與簽章基底
+
+  @audit
+  Scenario: 業務處理的最終結果（422 冪等鍵衝突）也記入同一筆稽核紀錄
+    When 稽核呼叫端以 "orders-client" 送出已簽章的建立訂單請求，業務識別為 "audit-ref-422"，Idempotency-Key 為 "audit-key-422-a"
+    And 稽核呼叫端以 "orders-client" 送出已簽章的建立訂單請求，業務識別為 "audit-ref-422-other"，Idempotency-Key 為 "audit-key-422-a"
+    Then 稽核呼叫端最近一次請求回應 422
+    And 最近一次請求的稽核紀錄結果為 "accepted"，原因為 "signature_verified"
+    And 最近一次請求的稽核紀錄最終業務結果為 422
+    And 稽核紀錄全部不含 "audit-ref-422-other"
 
   @audit
   Scenario: 稽核紀錄與防重放儲存分開管理，保存期與存取規則已記錄為 lab 暫定

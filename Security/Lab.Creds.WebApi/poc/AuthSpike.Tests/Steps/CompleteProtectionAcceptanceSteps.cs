@@ -107,6 +107,15 @@ public sealed class CompleteProtectionAcceptanceSteps
         await SendAsync(request, clientId);
     }
 
+    [When("接入呼叫端以 {string} 簽章取消上一筆訂單，不附 Idempotency-Key")]
+    public async Task WhenCallerCancelsSignedOrderWithoutIdempotencyKey(string clientId)
+    {
+        var request = BuildCancelRequest(clientId);
+        request.Headers.Remove("Idempotency-Key");
+        await SignAsync(request, clientId);
+        await SendAsync(request, clientId);
+    }
+
     [When("接入呼叫端以 {string} 簽章取消訂單，但目標改為其他訂單編號")]
     public async Task WhenCallerCancelsWithChangedTarget(string clientId)
     {

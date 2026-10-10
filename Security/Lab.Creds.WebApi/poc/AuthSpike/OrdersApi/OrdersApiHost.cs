@@ -111,6 +111,13 @@ public sealed class OrdersApiHost : IAsyncDisposable
             }
 
             context.Response.Headers["X-Correlation-Id"] = context.TraceIdentifier;
+
+            // 回應開始送出時狀態碼已定案：先補記最終業務結果，呼叫端收到回應時紀錄已完整。
+            context.Response.OnStarting(() =>
+            {
+                audit.CompleteResult(context.TraceIdentifier, context.Response.StatusCode);
+                return Task.CompletedTask;
+            });
             await next();
 
             if (!CallerAudit.IsDecided(context)
@@ -179,7 +186,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
             var outcome = signature.Outcome;
             if (outcome == SignatureOutcome.Accepted)
             {
-                // 紀錄先於業務處理寫入；寫入失敗則不進入業務副作用。
+                // 紀錄先於業務處理寫入；寫入失敗則不進入業務副作用。最終業務結果於回應送出時補記（見上方稽核信封）。
                 if (!CallerAudit.TryRecord(context, audit, "accepted", "signature_verified", verifiedClientId: clientId, signatureKeyId: signature.KeyId))
                 {
                     await WriteAuditUnavailableAsync(context);

@@ -54,6 +54,16 @@ Feature: 完整接入流程與規格驗收
     Then 接入回應為 200
     And 接入回應的狀態為 "cancelled"
 
+  Scenario: 取消訂單天生冪等，不附 Idempotency-Key 的已簽章取消請求也成功，重複取消結果相同
+    Given 接入呼叫端 "orders-client" 以 mTLS 取得 Token
+    And 接入呼叫端以 "orders-client" 簽章送出建立訂單 "cancel-ref-3"，Idempotency-Key 為 "cancel-key-3"
+    When 接入呼叫端以 "orders-client" 簽章取消上一筆訂單，不附 Idempotency-Key
+    Then 接入回應為 200
+    And 接入回應的狀態為 "cancelled"
+    When 接入呼叫端以 "orders-client" 簽章取消上一筆訂單，不附 Idempotency-Key
+    Then 接入回應為 200
+    And 接入回應的狀態為 "cancelled"
+
   Scenario: 已簽署的取消訂單改動目標被拒絕且訂單保持原狀
     Given 接入呼叫端 "orders-client" 以 mTLS 取得 Token
     And 接入呼叫端以 "orders-client" 簽章送出建立訂單 "cancel-ref-2"，Idempotency-Key 為 "cancel-key-2"

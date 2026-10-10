@@ -13,16 +13,27 @@ public static class HttpMessageSignature
     public const string Algorithm = "ecdsa-p256-sha256";
     public const string DigestAlgorithm = "sha-256";
 
-    /// <summary>有 Body 的請求（POST）必須涵蓋的元件；涵蓋方法、完整目標、查詢參數、Token 綁定、內容摘要／型別與 Idempotency Key。</summary>
+    /// <summary>建立訂單（POST /orders）必須涵蓋的元件；涵蓋方法、完整目標、查詢參數、Token 綁定、內容摘要／型別與 Idempotency Key。</summary>
     public static readonly string[] ComponentsWithBody =
         ["@method", "@target-uri", "@query", "authorization", "content-type", "content-digest", "idempotency-key"];
+
+    /// <summary>其他有 Body 的 POST（例如取消訂單）必須涵蓋的元件；取消天生冪等，不需 Idempotency Key。</summary>
+    public static readonly string[] ComponentsWithBodyNoKey =
+        ["@method", "@target-uri", "@query", "authorization", "content-type", "content-digest"];
 
     /// <summary>無 Body 的請求（GET）必須涵蓋的元件。</summary>
     public static readonly string[] ComponentsWithoutBody =
         ["@method", "@target-uri", "@query", "authorization"];
 
-    public static string[] RequiredComponents(string method)
-        => string.Equals(method, HttpMethod.Post.Method, StringComparison.OrdinalIgnoreCase) ? ComponentsWithBody : ComponentsWithoutBody;
+    public static string[] RequiredComponents(string method, string path)
+    {
+        if (!string.Equals(method, HttpMethod.Post.Method, StringComparison.OrdinalIgnoreCase))
+        {
+            return ComponentsWithoutBody;
+        }
+
+        return path.TrimEnd('/').Equals("/orders", StringComparison.OrdinalIgnoreCase) ? ComponentsWithBody : ComponentsWithBodyNoKey;
+    }
 
     public static string ContentDigest(ReadOnlySpan<byte> body)
         => $"{DigestAlgorithm}=:{Convert.ToBase64String(SHA256.HashData(body))}:";

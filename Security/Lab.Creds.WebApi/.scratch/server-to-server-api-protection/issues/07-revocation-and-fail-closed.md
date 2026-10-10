@@ -87,3 +87,8 @@ dotnet test AuthSpike.Tests/AuthSpike.Tests.csproj
 
 - 無阻擋。上述 lab 暫定值已實作並標註，待使用者確認。
 - 待釐清（不阻擋）：授權伺服器停止後測試用 `HttpClient` 的約 15 秒首個請求延遲原因。
+
+### 查證故障判定補強（code review 補修）
+
+- `CallerVerifier` 對 `AuthenticateAsync` 拋出的任何例外一律視為 verification_unavailable（503，fail closed），不再只限網路層例外；OpenIddict 回報的 `server_error`（introspection 回 5xx、非 JSON、空內容）同樣是 503。只有授權伺服器明確回應 Token inactive 才是 401。
+- Scenario：`introspection 回應 <情境> 時回 503 而非 401`（IntrospectionFault.feature，以假授權伺服器回 502、500、壞 JSON、空內容為 503，inactive 為 401）。這些情境在補強前已為 503，屬回歸保護；逾時情境未納入（OpenIddict 預設逾時 100 秒，測試成本過高），由任何例外皆 503 的規則涵蓋。

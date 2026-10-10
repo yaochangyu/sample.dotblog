@@ -67,6 +67,18 @@ public sealed class VerifiedCallerAuditSteps
         await SendAsync(request);
     }
 
+    [When("稽核呼叫端以 {string} 送出已簽章的建立訂單請求，業務識別為 {string}，Idempotency-Key 為 {string}")]
+    public async Task WhenAuditCallerCreatesSignedOrderWithReference(string clientId, string orderReference, string idempotencyKey)
+    {
+        var request = BuildCreateRequest(DefaultItem);
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(new { orderReference, item = DefaultItem, quantity = 1 }), Encoding.UTF8, "application/json");
+        request.Headers.Remove("Idempotency-Key");
+        request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
+        await SignAsync(request, clientId);
+        await SendAsync(request);
+    }
+
     [When("稽核呼叫端以 {string} 未簽章送出建立訂單請求，並附帶 X-Client-Id 標頭 {string}")]
     public async Task WhenAuditCallerCreatesUnsignedOrder(string clientId, string presentedClientId)
     {
@@ -167,6 +179,12 @@ public sealed class VerifiedCallerAuditSteps
         var record = LastRecord();
         record.Outcome.Should().Be(outcome);
         record.Reason.Should().Be(reason);
+    }
+
+    [Then("最近一次請求的稽核紀錄最終業務結果為 {int}")]
+    public void ThenLastRecordResultStatusIs(int statusCode)
+    {
+        LastRecord().ResultStatus.Should().Be(statusCode);
     }
 
     [Then("最近一次請求的稽核紀錄已驗證 Client 為 {string}")]

@@ -16,7 +16,7 @@ public static class BusinessRequestSigner
         DateTimeOffset expires,
         string nonce)
     {
-        var components = HttpMessageSignature.RequiredComponents(request.Method.Method);
+        var components = HttpMessageSignature.RequiredComponents(request.Method.Method, request.RequestUri!.AbsolutePath);
         var values = new Dictionary<string, string>
         {
             ["@method"] = request.Method.Method,
@@ -34,7 +34,10 @@ public static class BusinessRequestSigner
 
             values["content-type"] = request.Content.Headers.GetValues("Content-Type").Single();
             values["content-digest"] = digest;
-            values["idempotency-key"] = request.Headers.GetValues("Idempotency-Key").Single();
+            if (components.Contains("idempotency-key"))
+            {
+                values["idempotency-key"] = request.Headers.GetValues("Idempotency-Key").Single();
+            }
         }
 
         var parameters = HttpMessageSignature.SignatureParams(components, signatureKey.KeyId, created, expires, nonce);

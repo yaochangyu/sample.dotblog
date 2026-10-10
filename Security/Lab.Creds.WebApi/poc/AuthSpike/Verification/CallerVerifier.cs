@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Net.Http;
-using System.Net.Sockets;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -62,14 +60,15 @@ public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime)
             {
                 result = await context.AuthenticateAsync();
             }
-            catch (Exception exception) when (IsUnavailable(exception))
+            catch (Exception)
             {
+                // 查證過程拋出任何例外（連線、逾時、回應格式錯誤等）都無法確認 Token 有效或無效，一律 fail closed 為 503。
                 return (CallerOutcome.Unavailable, null);
             }
 
             if (!result.Succeeded)
             {
-                // 授權伺服器無法連線時，OpenIddict 以 server_error 表示查證服務不可用，而非 Token 無效。
+                // 授權伺服器無法連線或回應異常（5xx、非 JSON、空內容）時，OpenIddict 以 server_error 表示查證服務不可用，而非 Token 無效。
                 return IsServerError(result) ? (CallerOutcome.Unavailable, null) : (CallerOutcome.Rejected, null);
             }
 
@@ -104,18 +103,4 @@ public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime)
     /// <summary>OpenIddict 在查證服務無法取得回應時設定的錯誤代碼（屬性鍵 .error）。</summary>
     private static bool IsServerError(AuthenticateResult result)
         => result.Properties?.Items.TryGetValue(".error", out var error) == true && error == Errors.ServerError;
-
-    /// <summary>查證服務無法連線（網路層錯誤或逾時）時視為暫時無法查證，而非 Token 無效。</summary>
-    private static bool IsUnavailable(Exception exception)
-    {
-        for (var current = exception; current is not null; current = current.InnerException)
-        {
-            if (current is HttpRequestException or SocketException or TimeoutException or TaskCanceledException)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

@@ -69,7 +69,7 @@ public sealed class SignedRequestVerifier(VerificationKeyStore keys, NonceReplay
             return null;
         }
 
-        var required = HttpMessageSignature.RequiredComponents(context.Request.Method);
+        var required = HttpMessageSignature.RequiredComponents(context.Request.Method, context.Request.Path.Value ?? string.Empty);
         if (components.Count != required.Length || !required.All(components.Contains))
         {
             return null;
@@ -135,7 +135,10 @@ public sealed class SignedRequestVerifier(VerificationKeyStore keys, NonceReplay
 
             values["content-type"] = headers["Content-Type"].ToString();
             values["content-digest"] = digest;
-            values["idempotency-key"] = headers["Idempotency-Key"].ToString();
+            if (required.Contains("idempotency-key"))
+            {
+                values["idempotency-key"] = headers["Idempotency-Key"].ToString();
+            }
         }
 
         if (required.Any(component => !values.TryGetValue(component, out var value) || value.Length == 0))

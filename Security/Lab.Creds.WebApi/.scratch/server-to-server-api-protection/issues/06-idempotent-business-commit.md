@@ -109,3 +109,9 @@
 - 「當機」以注入故障模擬（寫入前中止、寫入後回應遺失），不是真實程序終止。
 - 下游或跨系統 exactly-once 不在範圍內。
 - 本單無 Gateway 驗收項目（Gateway 不在本 lab 範圍）。
+
+### 取消訂單不要求 Idempotency-Key（code review 補修）
+
+- 查證：取消訂單（`POST /orders/{orderId}/cancel`）把訂單狀態設為 cancelled，天生冪等；handler 本就不讀 Idempotency-Key，也沒有去重語意，強制要求只增加呼叫端負擔。
+- 決定：取消訂單不再要求 Idempotency-Key。簽章規則改為只有建立訂單（`POST /orders`）涵蓋 `idempotency-key`；取消訂單涵蓋 `content-digest` 與 `content-type`。openapi.yml 同步移除 cancel 的 Idempotency-Key 標頭。
+- Scenario：`取消訂單天生冪等，不附 Idempotency-Key 的已簽章取消請求也成功，重複取消結果相同`（CompleteProtectionAcceptance.feature）。
