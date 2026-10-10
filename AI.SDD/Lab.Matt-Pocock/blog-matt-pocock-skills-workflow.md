@@ -1,6 +1,6 @@
 ---
 title: 導入 Matt Pocock 的 Engineering Skills：從規格提煉到 TDD 落地實戰
-abstract: <p>前面幾篇我們已經演練過 OpenSpec 與 Spec-Kit，體驗過規格驅動開發的威力。這次來試試 Matt Pocock 開源的 <a target="_blank" rel="noopener noreferrer" href="https://github.com/mattpocock/skills">skills</a>，這是一套將需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸程式碼審查與架構深化完整封裝的 AI 工程技能庫。這裡我以「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。</p>
+abstract: <p>前面幾篇我們已經演練過 OpenSpec 與 Spec-Kit，體驗過規格驅動開發的威力。這次來試試 Matt Pocock 開源的 <a target="_blank" rel="noopener noreferrer" href="https://github.com/mattpocock/skills">skills</a>，這是一套將需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸程式碼審查與架構深化完整封裝的 AI 工程技能庫。這裡我以「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。</p><figure class="image"><img style="aspect-ratio:1376/768;" src="https://dotblogsfile.blob.core.windows.net/user/余小章/a7d16385-3160-40bb-9c62-5724d620ac28/1791648038.png.png" width="1376" height="768"></figure>
 keywords: SDD,Specification-Driven Development,Vibe Coding
 categories: Vibe Coding
 weblogName: 余小章 @ 大內殿堂
@@ -508,7 +508,7 @@ NOTE：依照規範，Git 提交訊息嚴禁包含 Co-authored-by 標記。
 
 #### 結構對比圖（Before vs After）
 
-```
+```mermaid
 flowchart LR
     subgraph BeforeMode ["Before: 淺模組分散呼叫 (高摩擦力)"]
         Caller["結帳呼叫端 (Checkout Controller)"]
@@ -637,4 +637,6 @@ Tests       9 passed (9)
 
 ---
 
-完整程式碼位置: https://github.com/yaochangyu/sample.dotblog/tree/master/AI.SDD/Lab.Matt-Pocock
+## 完整程式碼位置
+
+https://github.com/yaochangyu/sample.dotblog/tree/master/AI.SDD/Lab.Matt-Pocock
