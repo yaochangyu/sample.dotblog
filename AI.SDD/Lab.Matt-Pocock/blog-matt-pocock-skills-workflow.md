@@ -1,8 +1,8 @@
 ---
 title: '[AI.SDD] 拆解 Matt Pocock 的 Engineering Skills：從環境配置到高階 TDD 與架構演進的完整工作流程'
-abstract: <p>在開發過程中，直接叫 AI 寫程式碼往往很爽快，但如果不給予任何工程約束，多半只會換來滿地幻覺與難以維護的技術債。Matt Pocock 開源的 <a href="https://github.com/mattpocock/skills">skills</a>，指的是一套將軟體工程規範（需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸程式碼審查與架構深化）封裝起來的 AI 技能庫。這裡我以電商系統的「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。</p>
-keywords: 
-categories: 
+abstract: <p>前面幾篇我們已經演練過 OpenSpec 與 Spec-Kit，體驗過規格驅動開發的威力。這次來試試 Matt Pocock 開源的 <a href="https://github.com/mattpocock/skills">skills</a>，這是一套將需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸程式碼審查與架構深化完整封裝的 AI 工程技能庫。這裡我以「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。</p>
+keywords: Vibe Coding,SDD,Specification-Driven Development
+categories: Vibe Coding
 weblogName: 余小章 @ 大內殿堂
 postId: a7d16385-3160-40bb-9c62-5724d620ac28
 postDate: 2026-10-10T22:53:57.0000000
@@ -12,7 +12,7 @@ stripH1Header: true
 ---
 # [AI.SDD] 拆解 Matt Pocock 的 Engineering Skills：從環境配置到高階 TDD 與架構演進的完整工作流程
 
-在開發過程中，直接叫 AI 寫程式碼往往很爽快，但如果不給予任何工程約束，多半只會換來滿地幻覺與難以維護的技術債。Matt Pocock 開源的 [skills](https://github.com/mattpocock/skills)，指的是一套將軟體工程規範（需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸程式碼審查與架構深化）封裝起來的 AI 技能庫。這裡我以電商系統的「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。
+前面幾篇我們已經演練過 OpenSpec 與 Spec-Kit，體驗過規格驅動開發的威力。這次來試試 Matt Pocock 開源的 [skills](https://github.com/mattpocock/skills)，這是一套將軟體工程規範（需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸程式碼審查與架構深化）完整封裝起來的 AI 技能庫。這裡我以電商系統的「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。
 
 ---
 
@@ -31,22 +31,22 @@ stripH1Header: true
 
 在動手實作前，先來看一下這套技能庫的架構邏輯。以往叫 AI 開發的盲點在於：需求給得太模糊，AI 只能憑空瞎猜；動手時又一口氣寫一大包程式碼，等到單元測試紅一片時才發現方向偏掉了；更別說程式碼上線後，缺乏系統性手段檢查架構是否腐化。
 
-這套技能庫構建了一套涵蓋「功能交付迴圈 (Delivery Loop)」、「架構重構迴圈 (Evolution Loop)」以及「故障排查迴圈 (Diagnosis Loop)」的完整閉環：
+這套技能庫構建了一套涵蓋「功能交付內軌」、「架構演進外軌」以及「異常診斷中繼軌」的完整閉環：
 
 ```mermaid
 flowchart TD
-    subgraph ArchLoop ["架構重構迴圈 (Evolution Loop)"]
+    subgraph OuterLoop ["外軌：持續架構演進迴圈 (Architecture Evolution)"]
         R0["專案落地運作與迭代"] --> R1["/improve-codebase-architecture<br>掃描熱點與淺模組，產出 HTML 報告"]
         R1 --> R2["挑選候選方案進行 /grilling 盤問"]
     end
 
-    subgraph DiagLoop ["故障排查迴圈 (Diagnosis Loop)"]
+    subgraph DiagLoop ["中繼軌：異常排查紀律 (Diagnosing Bugs)"]
         D0["線上例外 / 測試紅燈 / 效能衰退"] --> D1["/diagnosing-bugs<br>拒絕肉眼盲猜，建立秒級紅燈反饋迴圈"]
         D1 --> D2["最小化重現 ＋ 提出可證偽假說"]
         D2 --> D3["單變數插樁 ＋ 接縫回歸測試修復"]
     end
 
-    subgraph DeliveryLoop ["功能交付迴圈 (Delivery Loop)"]
+    subgraph InnerLoop ["內軌：高階功能交付流水線 (Feature Delivery Loop)"]
         F0["階段 0：環境配置<br>/setup-matt-pocock-skills"] --> F1["階段 1：邊界對齊<br>/grill-with-docs"]
         F1 --> F2["階段 2：規格提煉<br>/to-spec 與 /to-tickets"]
         F2 --> F3["階段 3：多代理編排實作<br>/implement-spec 驅動 /tdd"]
@@ -66,9 +66,9 @@ flowchart TD
 
 這裡可以拆解為四個維度：
 - **底層哲學（codebase-design）**：追求「深模組 (Deep Module)」——以極簡的公開介面封裝大量內部複雜度，並堅持公開接縫 (Seam) 就是唯一的測試表面。
-- **功能交付迴圈（日常開發）**：從環境配置、邊界盤問、規格制定、工單切片，到背景子代理在獨立 Git Worktree 裡並行跑 TDD，最後以雙軸審查驗收。
-- **架構重構迴圈（技術債消除）**：系統上線一段時間後，利用 `improve-codebase-architecture` 掃描程式碼摩擦力與淺模組，產出視覺化 HTML 報告，驅動下一輪重構。
-- **故障排查迴圈（異常修復）**：線上噴錯、偶發失敗或效能衰退時，嚴格遵守六階段科學診斷紀律，在建立可一鍵重現的紅燈迴圈前，絕對不看 code 盲猜。
+- **內軌（功能交付鏈）**：從環境配置、邊界盤問、規格制定、工單切片，到背景子代理在獨立 Git Worktree 裡並行跑 TDD，最後以雙軸審查驗收。
+- **外軌（架構演進鏈）**：系統上線一段時間後，利用 `improve-codebase-architecture` 掃描程式碼摩擦力與淺模組，產出視覺化 HTML 報告，驅動下一輪重構。
+- **中繼軌（diagnosing-bugs）**：線上噴錯、偶發失敗或效能衰退時，嚴格遵守六階段科學診斷紀律，在建立可一鍵重現的紅燈迴圈前，絕對不看 code 盲猜。
 
 接下來我們以「購物車折價券計算模組」為例，把每一步驟的操作走過一遍。
 
@@ -82,7 +82,7 @@ flowchart TD
 
 #### 提示詞範例（Prompt）
 
-直接在對話方塊中輸入指令：
+直接在對話框中輸入指令：
 
 ```text
 /setup-matt-pocock-skills
@@ -532,7 +532,7 @@ flowchart LR
 確認後將自動更新 GLOSSARY.md 並建立 ADR-0002，接著進入 /to-spec 產生重構規格！
 ```
 
-如此一來，架構重構迴圈便完美回流到日常的功能交付鏈，形成了真正的永續架構演進。
+如此一來，外軌的架構健檢便完美回流到內軌的規格與 TDD 交付鏈，形成了真正的永續架構演進。
 
 ---
 
@@ -631,4 +631,4 @@ Tests       9 passed (9)
 
 ---
 
-完整代碼位置: https://github.com/yaochangyu/sample.dotblog/tree/master/AI.SDD/Lab.Matt-Pocock
+完整程式碼位置: https://github.com/yaochangyu/sample.dotblog/tree/master/AI.SDD/Lab.Matt-Pocock
