@@ -82,7 +82,11 @@ Section C (Domain docs): 建議採用「單一上下文（single-context）」�
 - `docs/agents/issue-tracker.md`：定義工單的讀寫路徑與格式
 - `docs/agents/domain.md`：定義領域辭典與架構決策紀錄（ADR）的維護規則
 
-NOTE：這個步驟在每個專案只需執行一次，之後所有的工程技能都會自動依循這些設定檔運作。
+NOTE：這個步驟在每個專案只需執行一次，之後所有的工程技能都會自動依循這些設定檔運作。至於團隊若有整合專案看板（例如 GitHub Projects、GitLab Issue Board、Jira，或是本地以 Markdown 維護的進度看板），非常建議直接在 `docs/agents/issue-tracker.md` 裡明確約定狀態推進的生命週期：
+- **開始實作時**：在動手前先將該張工單的狀態由「待處理 (Todo)」更新為「進行中 (In Progress)」（在 Markdown 看板中標記為 `🟦 進行中`）。
+- **測試通過後**：實作完成並經測試套件驗證全綠後，才將狀態推進為「完成 (Done)」（在 Markdown 看板中標記為 `✅ 完成`）。
+
+這樣做能讓看板即時反映實作現況，避免工單永遠停在待辦、或是尚未通過測試就偷跑標記為完成的混亂狀況。
 
 ---
 
