@@ -164,17 +164,9 @@ public sealed class SpikeRuntime : IAsyncDisposable
 
         var registry = new TrustRegistry();
         var cacheLifetime = verificationCacheLifetime ?? DefaultVerificationCacheLifetime;
-        var authServer = await AuthServerHost.StartAsync(
-            authServerPort,
-            trust,
-            serverCertificate,
-            registeredClients,
-            accessTokenLifetime ?? DefaultAccessTokenLifetime,
-            registry);
-        // 管理員角色只在組合根登錄，授權伺服器與業務 API 皆讀取同一份信任狀態。
-        registry.RegisterAdministratorCertificate(administratorCertificate.Thumbprint);
 
         // 業務 API 只持有公開部分，並以 Client 與 KeyId 查找已驗證 Client 自己登錄的金鑰。
+        // 初始金鑰為環境啟動時的基準配置；之後的新金鑰須經管理員核准才登錄（13 單）。
         var verificationKeys = new VerificationKeyStore();
         foreach (var (clientId, keys) in signatureKeys)
         {
@@ -183,6 +175,17 @@ public sealed class SpikeRuntime : IAsyncDisposable
                 verificationKeys.Register(clientId, PublicPart(key));
             }
         }
+
+        var authServer = await AuthServerHost.StartAsync(
+            authServerPort,
+            trust,
+            serverCertificate,
+            registeredClients,
+            accessTokenLifetime ?? DefaultAccessTokenLifetime,
+            registry,
+            verificationKeys);
+        // 管理員角色只在組合根登錄，授權伺服器與業務 API 皆讀取同一份信任狀態。
+        registry.RegisterAdministratorCertificate(administratorCertificate.Thumbprint);
 
         var replayStore = new NonceReplayStore();
         var orders = new OrderStore();

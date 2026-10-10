@@ -5,6 +5,7 @@ using AuthSpike.Certificates;
 using AuthSpike.Data;
 using AuthSpike.Hosting;
 using AuthSpike.Registration;
+using AuthSpike.Signing;
 using AuthSpike.Trust;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -46,7 +47,7 @@ public sealed class AuthServerHost : IAsyncDisposable
     /// <summary>目前信任的公開憑證（含已核准加入者）；退役過濾由呼叫端決定。</summary>
     public IReadOnlyList<X509Certificate2> TrustedCertificates(string clientId) => _trustedCertificates[clientId];
 
-    public static async Task<AuthServerHost> StartAsync(int port, SpikeTrust trust, X509Certificate2 serverCertificate, IReadOnlyList<AuthServerClient> clients, TimeSpan accessTokenLifetime, TrustRegistry registry)
+    public static async Task<AuthServerHost> StartAsync(int port, SpikeTrust trust, X509Certificate2 serverCertificate, IReadOnlyList<AuthServerClient> clients, TimeSpan accessTokenLifetime, TrustRegistry registry, VerificationKeyStore verificationKeys)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.ConfigureKestrel(kestrel => kestrel.ListenLocalhost(port, listen => listen.UseHttps(https =>
@@ -101,6 +102,7 @@ public sealed class AuthServerHost : IAsyncDisposable
             clients.Select(client => new KeyValuePair<string, IReadOnlyList<X509Certificate2>>(client.ClientId, [client.PublicCertificate])));
         var clientsById = clients.ToDictionary(client => client.ClientId);
         var requests = new CertificateRegistrationRequests();
+        var signingKeyRequests = new SigningKeyRegistrationRequests();
         // 核准與拒絕序列化：避免同一申請被併發核准兩次，或核准與拒絕同時生效。
         var decisionGate = new SemaphoreSlim(1, 1);
 
@@ -250,6 +252,112 @@ public sealed class AuthServerHost : IAsyncDisposable
             }
         });
 
+        // 簽章金鑰登錄申請（13 單）：與憑證申請分開管理；申請只含 Client 身分、keyid 與公開金鑰。待核准前不登錄驗簽金鑰，因此無法通過簽章驗證。
+        // 此端點與欄位為 lab 暫定值，待使用者確認。
+        app.MapPost("/signing-key-requests", (SigningKeySubmission submission) =>
+        {
+            if (submission.ClientId is null || !trustedCertificates.ContainsKey(submission.ClientId))
+            {
+                return Results.Json(new Dictionary<string, string> { ["error"] = "client_not_found" }, statusCode: StatusCodes.Status404NotFound);
+            }
+
+            if (!SigningKeyRegistrationRequests.TryParsePublicKey(submission.KeyId, submission.PublicKeyPem, out var key, out var error))
+            {
+                return Results.Json(new Dictionary<string, string> { ["error"] = error }, statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            var request = signingKeyRequests.Submit(submission.ClientId, key!);
+            return Results.Json(
+                new { requestId = request.RequestId, clientId = request.ClientId, status = CertificateRegistrationRequests.ToWire(request.Status) },
+                statusCode: StatusCodes.Status202Accepted);
+        });
+
+        app.MapGet("/admin/signing-key-requests/{requestId}", (string requestId, HttpContext httpContext) =>
+        {
+            if (!IsAdministrator(httpContext, registry))
+            {
+                return AdministratorRejected();
+            }
+
+            var request = Guid.TryParse(requestId, out var id) ? signingKeyRequests.Find(id) : null;
+            if (request is null)
+            {
+                return Results.Json(new Dictionary<string, string> { ["error"] = "request_not_found" }, statusCode: StatusCodes.Status404NotFound);
+            }
+
+            return Results.Json(new
+            {
+                requestId = request.RequestId,
+                clientId = request.ClientId,
+                keyId = request.PublicKey.KeyId,
+                status = CertificateRegistrationRequests.ToWire(request.Status),
+            });
+        });
+
+        app.MapPost("/admin/signing-key-requests/{requestId}/approve", async (string requestId, HttpContext httpContext) =>
+        {
+            if (!IsAdministrator(httpContext, registry))
+            {
+                return AdministratorRejected();
+            }
+
+            await decisionGate.WaitAsync();
+            try
+            {
+                var request = Guid.TryParse(requestId, out var id) ? signingKeyRequests.Find(id) : null;
+                if (request is null)
+                {
+                    return Results.Json(new Dictionary<string, string> { ["error"] = "request_not_found" }, statusCode: StatusCodes.Status404NotFound);
+                }
+
+                if (request.Status != CertificateRequestStatus.Pending)
+                {
+                    return RequestNotPending();
+                }
+
+                // 只登錄到申請它的 Client 名下，且先登錄驗簽金鑰、成功後才標示已核准。
+                verificationKeys.Register(request.ClientId, request.PublicKey);
+                signingKeyRequests.Decide(request.RequestId, CertificateRequestStatus.Approved);
+
+                return Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "approved" });
+            }
+            finally
+            {
+                decisionGate.Release();
+            }
+        });
+
+        app.MapPost("/admin/signing-key-requests/{requestId}/reject", async (string requestId, HttpContext httpContext) =>
+        {
+            if (!IsAdministrator(httpContext, registry))
+            {
+                return AdministratorRejected();
+            }
+
+            await decisionGate.WaitAsync();
+            try
+            {
+                var request = Guid.TryParse(requestId, out var id) ? signingKeyRequests.Find(id) : null;
+                if (request is null)
+                {
+                    return Results.Json(new Dictionary<string, string> { ["error"] = "request_not_found" }, statusCode: StatusCodes.Status404NotFound);
+                }
+
+                if (request.Status != CertificateRequestStatus.Pending)
+                {
+                    return RequestNotPending();
+                }
+
+                // 拒絕只改變申請狀態，不登錄驗簽金鑰。
+                signingKeyRequests.Decide(request.RequestId, CertificateRequestStatus.Rejected);
+                return Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "rejected" });
+            }
+            finally
+            {
+                decisionGate.Release();
+            }
+        });
+
         app.MapPost("/connect/token", async (HttpContext httpContext, IOpenIddictApplicationManager applications) =>
         {
             var request = httpContext.GetOpenIddictServerRequest()
@@ -314,6 +422,9 @@ public sealed class AuthServerHost : IAsyncDisposable
 
     /// <summary>管理員核准或拒絕申請時使用的登錄內容；欄位為 lab 暫定值，待使用者確認。</summary>
     private sealed record CertificateRegistrationSubmission(string? ClientId, string? PublicCertificatePem);
+
+    /// <summary>簽章金鑰登錄申請的內容；欄位為 lab 暫定值，待使用者確認。</summary>
+    private sealed record SigningKeySubmission(string? ClientId, string? KeyId, string? PublicKeyPem);
 
     private static CertificateRegistrationRequest? FindRequest(CertificateRegistrationRequests requests, string requestId)
         => Guid.TryParse(requestId, out var id) ? requests.Find(id) : null;
