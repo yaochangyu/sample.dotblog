@@ -1,3 +1,15 @@
+---
+title: '[AI.SDD] 拆解 Matt Pocock 的 Engineering Skills：從環境配置到高階 TDD 與架構演進的完整工作流程'
+abstract: <p>在開發過程中，直接叫 AI 寫程式碼往往很爽快，但如果不給予任何工程約束，多半只會換來滿地幻覺與難以維護的技術債。Matt Pocock 開源的 <a href="https://github.com/mattpocock/skills">skills</a>，指的是一套將軟體工程規範（需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸程式碼審查與架構深化）封裝起來的 AI 技能庫。這裡我以電商系統的「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。</p>
+keywords: 
+categories: 
+weblogName: 余小章 @ 大內殿堂
+postId: a7d16385-3160-40bb-9c62-5724d620ac28
+postDate: 2026-10-10T22:53:57.0000000
+postStatus: 
+dontInferFeaturedImage: false
+stripH1Header: true
+---
 # [AI.SDD] 拆解 Matt Pocock 的 Engineering Skills：從環境配置到高階 TDD 與架構演進的完整工作流程
 
 在開發過程中，直接叫 AI 寫程式碼往往很爽快，但如果不給予任何工程約束，多半只會換來滿地幻覺與難以維護的技術債。Matt Pocock 開源的 [skills](https://github.com/mattpocock/skills)，指的是一套將軟體工程規範（需求盤問、領域建模、規格提煉、垂直切片、多代理編排、TDD 紅綠循環、雙軸程式碼審查與架構深化）封裝起來的 AI 技能庫。這裡我以電商系統的「購物車折價券計算模組」為例，一步步把整套工作流程與 Prompt 拆解出來，看看這套規範如何實際落地。
