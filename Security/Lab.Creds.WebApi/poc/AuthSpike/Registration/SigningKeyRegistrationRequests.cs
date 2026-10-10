@@ -4,7 +4,7 @@ using AuthSpike.Signing;
 namespace AuthSpike.Registration;
 
 /// <summary>簽章金鑰登錄申請：只含 Client 身分、keyid 與公開金鑰，不含私鑰；與 mTLS 憑證申請分開管理與核准（13 單）。</summary>
-public sealed record SigningKeyRegistrationRequest(Guid RequestId, string ClientId, SignatureKey PublicKey, CertificateRequestStatus Status);
+public sealed record SigningKeyRegistrationRequest(Guid RequestId, string ClientId, SignatureKey PublicKey, RegistrationRequestStatus Status);
 
 /// <summary>
 /// 簽章金鑰登錄申請的程序內儲存（lab：Dictionary 加 lock）。申請不會改變驗簽金鑰登錄；只有管理員核准才會由 AuthServerHost 把金鑰登錄到該申請的 Client 名下。
@@ -19,7 +19,7 @@ public sealed class SigningKeyRegistrationRequests
     {
         lock (_gate)
         {
-            var request = new SigningKeyRegistrationRequest(Guid.NewGuid(), clientId, publicKey, CertificateRequestStatus.Pending);
+            var request = new SigningKeyRegistrationRequest(Guid.NewGuid(), clientId, publicKey, RegistrationRequestStatus.Pending);
             _requests[request.RequestId] = request;
             return request;
         }
@@ -34,7 +34,7 @@ public sealed class SigningKeyRegistrationRequests
     }
 
     /// <summary>更新申請狀態；呼叫端須先確認申請為待核准（AuthServerHost 以決策閘門序列化核准與拒絕）。</summary>
-    public void Decide(Guid requestId, CertificateRequestStatus decision)
+    public void Decide(Guid requestId, RegistrationRequestStatus decision)
     {
         lock (_gate)
         {

@@ -194,7 +194,7 @@ public sealed class AuthServerHost : IAsyncDisposable
                 requestId = request.RequestId,
                 clientId = request.ClientId,
                 thumbprint = request.PublicCertificate.Thumbprint,
-                status = CertificateRegistrationRequests.ToWire(request.Status),
+                status = request.Status.ToWire(),
             });
         });
 
@@ -208,9 +208,15 @@ public sealed class AuthServerHost : IAsyncDisposable
                 }
 
                 var target = new AdministrativeTarget(request.ClientId, Subject: "certificate", Fingerprint: request.PublicCertificate.Thumbprint);
-                if (request.Status != CertificateRequestStatus.Pending)
+                if (request.Status != RegistrationRequestStatus.Pending)
                 {
                     return Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
+                }
+
+                // 同一指紋若已在任一 Client 的信任名單（含已退役或已撤銷者），核准不會生效也無法區分，因此拒絕（AC-23）。
+                if (trustedCertificates.Values.Any(certificates => certificates.Any(candidate => string.Equals(candidate.Thumbprint, request.PublicCertificate.Thumbprint, StringComparison.OrdinalIgnoreCase))))
+                {
+                    return Rejected(target, StatusCodes.Status409Conflict, "certificate_already_registered");
                 }
 
                 return Accepted(target, StatusCodes.Status200OK, async () =>
@@ -222,7 +228,7 @@ public sealed class AuthServerHost : IAsyncDisposable
                         trustedCertificates,
                         request.ClientId,
                         [.. trustedCertificates[request.ClientId], request.PublicCertificate]);
-                    requests.Decide(request.RequestId, CertificateRequestStatus.Approved);
+                    requests.Decide(request.RequestId, RegistrationRequestStatus.Approved);
 
                     return Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "approved" });
                 });
@@ -238,7 +244,7 @@ public sealed class AuthServerHost : IAsyncDisposable
                 }
 
                 var target = new AdministrativeTarget(request.ClientId, Subject: "certificate", Fingerprint: request.PublicCertificate.Thumbprint);
-                if (request.Status != CertificateRequestStatus.Pending)
+                if (request.Status != RegistrationRequestStatus.Pending)
                 {
                     return Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
                 }
@@ -246,7 +252,7 @@ public sealed class AuthServerHost : IAsyncDisposable
                 // 拒絕只改變申請狀態，不改變信任名單。
                 return Accepted(target, StatusCodes.Status200OK, () =>
                 {
-                    requests.Decide(request.RequestId, CertificateRequestStatus.Rejected);
+                    requests.Decide(request.RequestId, RegistrationRequestStatus.Rejected);
                     return Task.FromResult(Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "rejected" }));
                 });
             }));
@@ -275,7 +281,7 @@ public sealed class AuthServerHost : IAsyncDisposable
                 requestId = request.RequestId,
                 clientId = request.ClientId,
                 keyId = request.PublicKey.KeyId,
-                status = CertificateRegistrationRequests.ToWire(request.Status),
+                status = request.Status.ToWire(),
             });
         });
 
@@ -289,16 +295,22 @@ public sealed class AuthServerHost : IAsyncDisposable
                 }
 
                 var target = new AdministrativeTarget(request.ClientId, Subject: "signing_key", KeyId: request.PublicKey.KeyId, Fingerprint: KeyFingerprint(request.PublicKey.Key));
-                if (request.Status != CertificateRequestStatus.Pending)
+                if (request.Status != RegistrationRequestStatus.Pending)
                 {
                     return Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
+                }
+
+                // keyId 若已登錄於任一 Client（含已退役或已撤銷者），登錄後狀態與撤銷共用同一鍵而無法區分，因此拒絕（AC-23）。
+                if (verificationKeys.IsKeyIdRegistered(request.PublicKey.KeyId))
+                {
+                    return Rejected(target, StatusCodes.Status409Conflict, "signing_key_id_in_use");
                 }
 
                 return Accepted(target, StatusCodes.Status200OK, () =>
                 {
                     // 只登錄到申請它的 Client 名下，且先登錄驗簽金鑰、成功後才標示已核准。
                     verificationKeys.Register(request.ClientId, request.PublicKey);
-                    signingKeyRequests.Decide(request.RequestId, CertificateRequestStatus.Approved);
+                    signingKeyRequests.Decide(request.RequestId, RegistrationRequestStatus.Approved);
 
                     return Task.FromResult(Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "approved" }));
                 });
@@ -314,7 +326,7 @@ public sealed class AuthServerHost : IAsyncDisposable
                 }
 
                 var target = new AdministrativeTarget(request.ClientId, Subject: "signing_key", KeyId: request.PublicKey.KeyId, Fingerprint: KeyFingerprint(request.PublicKey.Key));
-                if (request.Status != CertificateRequestStatus.Pending)
+                if (request.Status != RegistrationRequestStatus.Pending)
                 {
                     return Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
                 }
@@ -322,7 +334,7 @@ public sealed class AuthServerHost : IAsyncDisposable
                 // 拒絕只改變申請狀態，不登錄驗簽金鑰。
                 return Accepted(target, StatusCodes.Status200OK, () =>
                 {
-                    signingKeyRequests.Decide(request.RequestId, CertificateRequestStatus.Rejected);
+                    signingKeyRequests.Decide(request.RequestId, RegistrationRequestStatus.Rejected);
                     return Task.FromResult(Results.Json(new { requestId = request.RequestId, clientId = request.ClientId, status = "rejected" }));
                 });
             }));
@@ -518,7 +530,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         {
             var request = requests.Submit(clientId, certificate!);
             return Task.FromResult(Results.Json(
-                new { requestId = request.RequestId, clientId = request.ClientId, status = CertificateRegistrationRequests.ToWire(request.Status) },
+                new { requestId = request.RequestId, clientId = request.ClientId, status = request.Status.ToWire() },
                 statusCode: StatusCodes.Status202Accepted));
         });
     }
@@ -545,7 +557,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         {
             var request = signingKeyRequests.Submit(clientId, key!);
             return Task.FromResult(Results.Json(
-                new { requestId = request.RequestId, clientId = request.ClientId, status = CertificateRegistrationRequests.ToWire(request.Status) },
+                new { requestId = request.RequestId, clientId = request.ClientId, status = request.Status.ToWire() },
                 statusCode: StatusCodes.Status202Accepted));
         });
     }

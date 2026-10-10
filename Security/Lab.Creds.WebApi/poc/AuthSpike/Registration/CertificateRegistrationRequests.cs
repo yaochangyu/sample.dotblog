@@ -3,16 +3,8 @@ using AuthSpike.Certificates;
 
 namespace AuthSpike.Registration;
 
-/// <summary>憑證登錄申請的狀態（12 單）：只有待核准的申請可被核准或拒絕，已核准或已拒絕的申請不可再改變。</summary>
-public enum CertificateRequestStatus
-{
-    Pending,
-    Approved,
-    Rejected,
-}
-
 /// <summary>登錄申請：只含 Client 身分與公開憑證，不含私鑰。</summary>
-public sealed record CertificateRegistrationRequest(Guid RequestId, string ClientId, X509Certificate2 PublicCertificate, CertificateRequestStatus Status);
+public sealed record CertificateRegistrationRequest(Guid RequestId, string ClientId, X509Certificate2 PublicCertificate, RegistrationRequestStatus Status);
 
 /// <summary>
 /// 憑證登錄申請的程序內儲存（lab：Dictionary 加 lock）。申請以 requestId 識別，各申請彼此獨立，互不影響其他 Client 的信任狀態。
@@ -27,7 +19,7 @@ public sealed class CertificateRegistrationRequests
     {
         lock (_gate)
         {
-            var request = new CertificateRegistrationRequest(Guid.NewGuid(), clientId, publicCertificate, CertificateRequestStatus.Pending);
+            var request = new CertificateRegistrationRequest(Guid.NewGuid(), clientId, publicCertificate, RegistrationRequestStatus.Pending);
             _requests[request.RequestId] = request;
             return request;
         }
@@ -42,7 +34,7 @@ public sealed class CertificateRegistrationRequests
     }
 
     /// <summary>更新申請狀態；呼叫端須先確認申請為待核准（AuthServerHost 以決策閘門序列化核准與拒絕）。</summary>
-    public void Decide(Guid requestId, CertificateRequestStatus decision)
+    public void Decide(Guid requestId, RegistrationRequestStatus decision)
     {
         lock (_gate)
         {
@@ -86,12 +78,4 @@ public sealed class CertificateRegistrationRequests
             return false;
         }
     }
-
-    public static string ToWire(CertificateRequestStatus status) => status switch
-    {
-        CertificateRequestStatus.Pending => "pending",
-        CertificateRequestStatus.Approved => "approved",
-        CertificateRequestStatus.Rejected => "rejected",
-        _ => throw new ArgumentOutOfRangeException(nameof(status), status, "未知的申請狀態"),
-    };
 }

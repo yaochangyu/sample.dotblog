@@ -67,6 +67,20 @@ Feature: 簽章金鑰登錄申請與核准
     Then 簽章金鑰建立訂單回應為 401
     And 13 單第 5 項驗收已勾選
 
+  Scenario: 核准與其他 Client 已登錄 keyId 相同的申請被拒絕，既有金鑰不受影響
+    Given 為 "orders-partner-client" 提交與 "orders-client" 既有簽章金鑰 keyId 相同的簽章金鑰申請
+    When 以 "管理員憑證" 身分核准簽章金鑰申請
+    Then 簽章金鑰管理員操作回應為 409
+    And 管理員查詢簽章金鑰申請狀態為 "待核准"
+    When 以已登錄的簽章金鑰送出建立訂單請求
+    Then 簽章金鑰建立訂單回應為 201
+
+  Scenario: 核准與同一 Client 已登錄 keyId 相同的申請被拒絕
+    Given 為 "orders-client" 提交與其既有簽章金鑰 keyId 相同的簽章金鑰申請
+    When 以 "管理員憑證" 身分核准簽章金鑰申請
+    Then 簽章金鑰管理員操作回應為 409
+    And 管理員查詢簽章金鑰申請狀態為 "待核准"
+
   Scenario: 申請內容含私鑰時被拒絕
     When 為 "orders-client" 提交含私鑰的簽章金鑰申請
     Then 簽章金鑰申請回應為 400

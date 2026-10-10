@@ -177,6 +177,22 @@ public sealed class CertificateRegistrationApprovalSteps
         _token.Should().NotBeNullOrEmpty();
     }
 
+    [Given("為 {string} 提交與 {string} 已登錄憑證相同的登錄申請")]
+    public Task GivenSubmitsRegisteredCertificateOfOtherClient(string clientId, string certificateOwnerClientId)
+        => SubmitRegisteredCertificateAsync(clientId, Runtime.ClientCertificate(certificateOwnerClientId));
+
+    [Given("為 {string} 提交與其已登錄憑證相同的登錄申請")]
+    public Task GivenSubmitsOwnRegisteredCertificate(string clientId)
+        => SubmitRegisteredCertificateAsync(clientId, Runtime.ClientCertificate(clientId));
+
+    private async Task SubmitRegisteredCertificateAsync(string clientId, X509Certificate2 registered)
+    {
+        _submission = await SubmitAsync(clientId, registered.ExportCertificatePem());
+        _submission.Status.Should().Be(HttpStatusCode.Accepted, _submission.Body);
+        using var document = JsonDocument.Parse(_submission.Body);
+        _requestId = document.RootElement.GetProperty("requestId").GetString();
+    }
+
     [Then("{string} 的 Client 憑證仍可取得 Token")]
     public async Task ThenClientCertificateStillIssuesToken(string clientId)
     {

@@ -74,6 +74,23 @@ Feature: 憑證登錄申請與核准／拒絕
       | Client 憑證 |
       | 待核准憑證 |
 
+  Scenario: 核准與其他 Client 已登錄相同指紋的申請被拒絕，信任名單與既有 Token 不變
+    Given 為 "orders-partner-client" 提交與 "orders-client" 已登錄憑證相同的登錄申請
+    And 記錄信任名單基準
+    When 以 "管理員憑證" 身分核准該申請
+    Then 管理員操作回應為 409
+    And 管理員查詢申請狀態為 "待核准"
+    And 信任名單與核准前基準相同
+    And "orders-client" 的 Client 憑證仍可取得 Token
+    And "orders-partner-client" 的 Client 憑證仍可取得 Token
+
+  Scenario: 核准與同一 Client 已登錄相同指紋的申請被拒絕
+    Given 為 "orders-client" 提交與其已登錄憑證相同的登錄申請
+    And 記錄信任名單基準
+    When 以 "管理員憑證" 身分核准該申請
+    Then 管理員操作回應為 409
+    And 信任名單與核准前基準相同
+
   @record
   Scenario: 12 單的實作紀錄已標註申請欄位與端點為 lab 暫定值
     Then 12 單的實作紀錄包含 "lab 暫定、待使用者確認"

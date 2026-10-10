@@ -46,6 +46,15 @@ public sealed class VerificationKeyStore
         }
     }
 
+    /// <summary>keyId 是否已登錄於任一 Client（含重疊期、已退役與已撤銷者）；核准新金鑰時據此拒絕重複 keyId（AC-23）。</summary>
+    public bool IsKeyIdRegistered(string keyId)
+    {
+        lock (_gate)
+        {
+            return _keysByClient.Values.Any(keys => keys.Any(candidate => candidate.KeyId == keyId));
+        }
+    }
+
     /// <summary>keyId 是否也登錄於其他 Client；簽章金鑰的撤銷與退役以 keyId 為鍵，共用時會波及其他 Client（14 單）。</summary>
     public bool IsKeyIdSharedWithOtherClient(string clientId, string keyId)
     {

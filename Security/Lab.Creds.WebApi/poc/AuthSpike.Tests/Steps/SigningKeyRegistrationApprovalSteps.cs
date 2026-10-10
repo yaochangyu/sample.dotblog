@@ -146,6 +146,21 @@ public sealed class SigningKeyRegistrationApprovalSteps
         ((int)_business!.Status).Should().Be(expected, _business.Body);
     }
 
+    [Given("為 {string} 提交與 {string} 既有簽章金鑰 keyId 相同的簽章金鑰申請")]
+    public Task GivenSubmitsSigningKeyWithOtherClientKeyId(string clientId, string keyOwnerClientId)
+        => SubmitWithKeyIdAsync(clientId, Runtime.SigningKey(keyOwnerClientId).KeyId);
+
+    [Given("為 {string} 提交與其既有簽章金鑰 keyId 相同的簽章金鑰申請")]
+    public Task GivenSubmitsSigningKeyWithOwnKeyId(string clientId)
+        => SubmitWithKeyIdAsync(clientId, Runtime.SigningKey(clientId).KeyId);
+
+    [When("以已登錄的簽章金鑰送出建立訂單請求")]
+    public async Task WhenSendsOrderWithRegisteredSigningKey()
+    {
+        _token.Should().NotBeNullOrEmpty("情境應先取得 Token");
+        _business = await SendOrderAsync(ClientId, _token!, Runtime.SigningKey(ClientId));
+    }
+
     [Then("13 單的實作紀錄包含 {string}")]
     public void ThenIssueRecordContains(string expected)
     {
@@ -158,6 +173,16 @@ public sealed class SigningKeyRegistrationApprovalSteps
         var boxes = Regex.Matches(IssueText, @"^- \[( |x)\] ", RegexOptions.Multiline);
         boxes.Count.Should().BeGreaterThanOrEqualTo(index);
         boxes[index - 1].Groups[1].Value.Should().Be("x");
+    }
+
+    /// <summary>以指定 keyId 提交新的公開金鑰（用於模擬與既有金鑰 keyId 重複的申請）。</summary>
+    private async Task SubmitWithKeyIdAsync(string clientId, string keyId)
+    {
+        _pendingKey = Runtime.CreateSigningKey(clientId);
+        _submission = await SubmitAsync(clientId, keyId, _pendingKey.Key.ExportSubjectPublicKeyInfoPem());
+        _submission.Status.Should().Be(HttpStatusCode.Accepted, _submission.Body);
+        using var document = JsonDocument.Parse(_submission.Body);
+        _requestId = document.RootElement.GetProperty("requestId").GetString();
     }
 
     private async Task SubmitPublicSigningKeyAsync(string clientId)
