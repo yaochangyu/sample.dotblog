@@ -153,6 +153,8 @@ paths:
           description: "未驗證申請者（無憑證、未登錄、已撤銷或已退役憑證、Client 已停用）；統一回應 error: applicant_authentication_required，不區分 Client 是否存在"
         '403':
           description: "已驗證申請者替其他 Client 申請（error: applicant_mismatch）"
+        '429':
+          description: "該 Client 的待核准申請（憑證與簽章金鑰合計）已達上限（error: pending_request_limit_reached）；既有待核准申請不受影響，核准或拒絕後額度釋放（lab 暫定值，待使用者確認）"
         '503':
           description: "稽核紀錄無法寫入（error: audit_unavailable）；申請不被受理"
   /signing-key-requests:
@@ -178,6 +180,8 @@ paths:
           description: "未驗證申請者（error: applicant_authentication_required）；不區分 Client 是否存在"
         '403':
           description: "已驗證申請者替其他 Client 申請（error: applicant_mismatch）"
+        '429':
+          description: "該 Client 的待核准申請（憑證與簽章金鑰合計）已達上限（error: pending_request_limit_reached）；既有待核准申請不受影響，核准或拒絕後額度釋放（lab 暫定值，待使用者確認）"
         '503':
           description: "稽核紀錄無法寫入（error: audit_unavailable）；申請不被受理"
   /admin/trust-list:

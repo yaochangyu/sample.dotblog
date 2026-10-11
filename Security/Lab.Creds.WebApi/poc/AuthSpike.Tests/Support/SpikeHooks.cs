@@ -25,6 +25,10 @@ public static class SpikeHooks
     [AfterScenario("@short-cache")]
     public static Task RestoreAfterShortCache() => SpikeEnvironment.RestoreDefaultTokensAsync();
 
+    /// <summary>每個情境結束時拒絕殘留的待核准申請，避免共用執行環境的待核准額度影響後續情境（19 單）。</summary>
+    [AfterScenario]
+    public static Task RejectLeftoverPendingRequests() => PendingRequestCleanup.RejectLeftoversAsync();
+
     [BeforeScenario("@isolated")]
     public static Task UseIsolatedRuntime() => SpikeEnvironment.UseIsolatedRuntimeAsync();
 

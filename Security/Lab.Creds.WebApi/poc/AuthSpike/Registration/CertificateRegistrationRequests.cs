@@ -33,6 +33,15 @@ public sealed class CertificateRegistrationRequests
         }
     }
 
+    /// <summary>指定 Client 目前待核准的憑證申請數（19 單，用於每個 Client 的待核准上限）。</summary>
+    public int CountPending(string clientId)
+    {
+        lock (_gate)
+        {
+            return _requests.Values.Count(request => request.Status == RegistrationRequestStatus.Pending && request.ClientId == clientId);
+        }
+    }
+
     /// <summary>更新申請狀態；呼叫端須先確認申請為待核准（AuthServerHost 以決策閘門序列化核准與拒絕）。</summary>
     public void Decide(Guid requestId, RegistrationRequestStatus decision)
     {

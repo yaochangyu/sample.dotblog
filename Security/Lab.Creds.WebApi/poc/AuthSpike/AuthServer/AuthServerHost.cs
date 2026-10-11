@@ -175,7 +175,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         // 申請者驗證（17 單）：只接受已登錄且有效的 Client 以現有已核准憑證經 mTLS 提出，且只能替自己申請；未驗證者一律 401。
         app.MapPost("/client-certificate-requests", (CertificateRegistrationSubmission submission, HttpContext httpContext) =>
             RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "certificate.submit", requireAdministrator: false, () =>
-                DecideCertificateSubmission(trustedCertificates, registry, requests, httpContext.Connection.ClientCertificate, submission)));
+                DecideCertificateSubmission(trustedCertificates, registry, requests, signingKeyRequests, httpContext.Connection.ClientCertificate, submission)));
 
         app.MapGet("/admin/client-certificate-requests/{requestId}", (string requestId, HttpContext httpContext) =>
         {
@@ -264,7 +264,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         // 此端點與欄位為 lab 暫定值，待使用者確認。
         app.MapPost("/signing-key-requests", (SigningKeySubmission submission, HttpContext httpContext) =>
             RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "signing_key.submit", requireAdministrator: false, () =>
-                DecideSigningKeySubmission(trustedCertificates, registry, signingKeyRequests, httpContext.Connection.ClientCertificate, submission)));
+                DecideSigningKeySubmission(trustedCertificates, registry, requests, signingKeyRequests, httpContext.Connection.ClientCertificate, submission)));
 
         app.MapGet("/admin/signing-key-requests/{requestId}", (string requestId, HttpContext httpContext) =>
         {
@@ -425,6 +425,10 @@ public sealed class AuthServerHost : IAsyncDisposable
     private const string ApplicantAuthenticationRequired = "applicant_authentication_required";
     private const string PossessionProofInvalid = "possession_proof_invalid";
 
+    /// <summary>每個 Client 的待核准申請數上限（19 單，lab 暫定值，待使用者確認）；憑證與簽章金鑰申請合計計算。</summary>
+    private const int PendingRequestLimitPerClient = 5;
+    private const string PendingRequestLimitReached = "pending_request_limit_reached";
+
     private static AdministrativeDecision Accepted(AdministrativeTarget target, int status, Func<Task<IResult>> apply)
         => new(target, status, "ok", apply);
 
@@ -524,6 +528,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates,
         TrustRegistry registry,
         CertificateRegistrationRequests requests,
+        SigningKeyRegistrationRequests signingKeyRequests,
         X509Certificate2? presented,
         CertificateRegistrationSubmission submission)
     {
@@ -551,6 +556,11 @@ public sealed class AuthServerHost : IAsyncDisposable
             return Rejected(target, StatusCodes.Status400BadRequest, PossessionProofInvalid);
         }
 
+        if (PendingRequestLimitIsReached(requests, signingKeyRequests, clientId!))
+        {
+            return Rejected(target, StatusCodes.Status429TooManyRequests, PendingRequestLimitReached);
+        }
+
         return Accepted(target, StatusCodes.Status202Accepted, () =>
         {
             var request = requests.Submit(clientId!, certificate!, applicant);
@@ -567,6 +577,7 @@ public sealed class AuthServerHost : IAsyncDisposable
     private static AdministrativeDecision DecideSigningKeySubmission(
         ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates,
         TrustRegistry registry,
+        CertificateRegistrationRequests requests,
         SigningKeyRegistrationRequests signingKeyRequests,
         X509Certificate2? presented,
         SigningKeySubmission submission)
@@ -595,6 +606,11 @@ public sealed class AuthServerHost : IAsyncDisposable
             return Rejected(target, StatusCodes.Status400BadRequest, PossessionProofInvalid);
         }
 
+        if (PendingRequestLimitIsReached(requests, signingKeyRequests, clientId!))
+        {
+            return Rejected(target, StatusCodes.Status429TooManyRequests, PendingRequestLimitReached);
+        }
+
         return Accepted(target, StatusCodes.Status202Accepted, () =>
         {
             var request = signingKeyRequests.Submit(clientId!, key!, applicant);
@@ -603,6 +619,16 @@ public sealed class AuthServerHost : IAsyncDisposable
                 statusCode: StatusCodes.Status202Accepted));
         });
     }
+
+    /// <summary>
+    /// 每個 Client 的待核准申請數是否已達上限（19 單）：憑證與簽章金鑰的待核准申請合計計算，不因分開提出而繞過。
+    /// 只計算待核准的申請；核准或拒絕後額度即釋放。呼叫端須在決策閘門內呼叫，計數與受理序列化。
+    /// </summary>
+    private static bool PendingRequestLimitIsReached(
+        CertificateRegistrationRequests requests,
+        SigningKeyRegistrationRequests signingKeyRequests,
+        string clientId)
+        => requests.CountPending(clientId) + signingKeyRequests.CountPending(clientId) >= PendingRequestLimitPerClient;
 
     /// <summary>
     /// 申請者身分（17 單）：出示的 mTLS 憑證必須是某 Client 目前登錄的憑證，且未撤銷、未退役，該 Client 未停用。

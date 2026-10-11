@@ -1,3 +1,4 @@
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -52,6 +53,12 @@ public static class ApplicantProofs
         {
             Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(body), Encoding.UTF8, "application/json"),
         };
-        return await SignedHttp.SendAsync(client, request);
+        var response = await SignedHttp.SendAsync(client, request);
+        if (response.Status == HttpStatusCode.Accepted)
+        {
+            PendingRequestCleanup.Track(runtime, relativePath, response.Body);
+        }
+
+        return response;
     }
 }
