@@ -129,7 +129,7 @@ paths:
         '503':
           description: "查證服務暫時無法驗證（error: verification_unavailable）、防重放狀態暫時無法可靠讀寫或稽核紀錄無法寫入（error: audit_unavailable）；訂單不會被取消"
   # 以下為授權伺服器的登錄與管理介面（11、12、13、14、15 單）。路徑、欄位與回應格式為 lab 暫定值，待使用者確認。
-  # 驗證方式：申請端點不需驗證（申請管道待確認，見 ADR 0001）；管理端點只接受已登錄為管理角色的 mTLS 用戶端憑證（非 Bearer Token），其他呼叫一律 401。
+  # 驗證方式：申請端點須經已登錄申請者的 mTLS 驗證（未驗證 401、替他人申請 403，見 ADR 0001；申請管道待確認）；管理端點只接受已登錄為管理角色的 mTLS 用戶端憑證（非 Bearer Token），其他呼叫一律 401。
   /client-certificate-requests:
     post:
       operationId: submitClientCertificateRequest

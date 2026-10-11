@@ -23,16 +23,9 @@ public static class ApplicantProof
 
     /// <summary>驗證憑證申請的持有證明；以申請中的新憑證公開金鑰驗證。</summary>
     public static bool VerifyCertificate(X509Certificate2 certificate, string content, string? proof)
-    {
-        var signature = DecodeProof(proof);
-        if (signature is null)
+        => VerifyProof(proof, signature =>
         {
-            return false;
-        }
-
-        var data = Encoding.UTF8.GetBytes(content);
-        try
-        {
+            var data = Encoding.UTF8.GetBytes(content);
             using var rsa = certificate.GetRSAPublicKey();
             if (rsa is not null)
             {
@@ -41,15 +34,14 @@ public static class ApplicantProof
 
             using var ecdsa = certificate.GetECDsaPublicKey();
             return ecdsa?.VerifyData(data, signature, HashAlgorithmName.SHA256) ?? false;
-        }
-        catch (CryptographicException)
-        {
-            return false;
-        }
-    }
+        });
 
     /// <summary>驗證簽章金鑰申請的持有證明；以申請中的公開金鑰驗證。</summary>
     public static bool VerifySigningKey(ECDsa key, string content, string? proof)
+        => VerifyProof(proof, signature => key.VerifyData(Encoding.UTF8.GetBytes(content), signature, HashAlgorithmName.SHA256));
+
+    /// <summary>解碼並驗證持有證明；格式錯誤或密碼學例外一律視為驗證失敗。</summary>
+    private static bool VerifyProof(string? proof, Func<byte[], bool> verify)
     {
         var signature = DecodeProof(proof);
         if (signature is null)
@@ -59,7 +51,7 @@ public static class ApplicantProof
 
         try
         {
-            return key.VerifyData(Encoding.UTF8.GetBytes(content), signature, HashAlgorithmName.SHA256);
+            return verify(signature);
         }
         catch (CryptographicException)
         {

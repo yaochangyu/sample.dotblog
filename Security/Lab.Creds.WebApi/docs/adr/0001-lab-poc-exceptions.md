@@ -18,3 +18,15 @@
 - **`SpikeRuntime` 維持單一組合根**：它同時負責啟動與憑證／簽章金鑰輪替，但輪替操作與啟動共用同一組私有字典與登錄狀態，拆開需引入額外共享物件並改動大量測試呼叫點，風險大於效益；`SignedRequestVerifier` 則已把 Signature-Input 解析抽出為 `SignatureInputParser`。
 - **`SpikeTrust`、`SpikeDbContext` 保留**：前者是所有 HTTPS 端點與測試共用的信任根驗證，後者是 OpenIddict EF Core 儲存區所需的具名 DbContext，皆非無用的間接層。
 - **`AuthServerHost` 維持單一檔案（管理路由與 Token 端點不拆）**：管理路由與 `/connect/token` 共用同一個 `WebApplication`、同一個 OpenIddict 登錄、同一組信任名單字典與決策閘門（`decisionGate`），拆成獨立類別需把這些共享狀態全部以參數傳入，風險大於效益。已知代價：核准與拒絕的骨架（查找、404、非待核准回 409）在憑證與簽章金鑰之間重複，`RunAdministrativeOperationAsync` 有 7 個參數，對象 `Subject` 與 `Reason` 為字串（它們就是稽核紀錄的對外值，改為 enum 不改變行為）。這些在 lab 範圍內接受，正式採用前再重構。
+
+## 申請者驗證的審查判斷（審查意見後記錄）
+
+以下為審查後判定為 lab 刻意保留、不在本次改動的項目。正式採用前須逐項決定是否修正。
+
+- **申請稽核的操作者標示**：稽核的 actorStatus 只區分「已驗證管理員」與「未驗證」。申請端點上經 mTLS 驗證的申請者，在替他人申請被拒（403 `applicant_mismatch`）與成功受理（202）時也標為「未驗證」。這是 20 單的保守設計：被拒絕的嘗試不記為已驗證。稽核者以 `clientId`（宣稱的對象）與 `actorThumbprint`（出示的憑證）判讀，無法單從 `actorStatus` 分辨「憑證通過但替他人申請」與「完全匿名」。是否新增「已驗證申請者」值或獨立欄位，待使用者確認。
+- **持有證明的重送**：持有證明不含 nonce 或時間戳，也不綁定申請者的 mTLS 憑證。同一份有效證明可重送，並佔用待核准額度（上限 5）。抓到證明仍需有效的 mTLS 憑證才能重送。是否補 nonce 或有效期，待使用者確認。
+- **逾期**：目前不逾期自動失效。被拒絕或證明失敗的嘗試不佔額度，只有待核准申請佔額度。同一憑證可重複提交直到達到上限，逾期處理待使用者確認。
+- **待核准計數的重複**：`CertificateRegistrationRequests.CountPending` 與 `SigningKeyRegistrationRequests.CountPending` 各自實作（兩者為不同型別，本體各僅數行），lab 接受此重複。
+- **`AuthenticateApplicant` 留在 `AuthServerHost`**：它需要讀取 host 擁有的信任名單字典，移到 `TrustRegistry` 需對外露出該字典，lab 接受此 feature envy。
+- **步驟前綴 「19 單」「20 單」「21 單」**：Reqnroll 步驟綁定為全域，以單號前綴避免跨 feature 的步驟文字衝突；可讀性代價 lab 接受。
+- **`PendingRequestCleanup` 的 `AfterScenario`**：為全域清理，以 `ReferenceEquals` 排除已失效的執行環境。測試支援層的刻意設計，lab 接受。

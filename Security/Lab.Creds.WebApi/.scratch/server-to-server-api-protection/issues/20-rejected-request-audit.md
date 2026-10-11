@@ -10,7 +10,7 @@
 - [x] 紀錄不含私鑰與原始 Token，宣稱的 Client 身分不被記成已驗證。
 - [x] 失敗回應不洩漏其他 Client 的申請內容（AC-30）。
 - [x] 稽核寫入失敗時，申請不建立並明確回報服務錯誤，與既有管理操作稽核行為一致。
-- [x] 每個驗收項目至少對應一個 BDD Scenario，先看到失敗再實作。
+- [x] 每個驗收項目至少對應一個 BDD Scenario（行為 Scenario 未先見紅燈，見下方實作紀錄的更正）。
 
 ## 實作紀錄（20）
 
@@ -26,7 +26,7 @@
 
 **測試**：
 - 新增 `AuthSpike.Tests/Features/RejectedRequestAudit.feature` 與 `Steps/RejectedRequestAuditSteps.cs`，所有申請與稽核讀取皆經真實 mTLS 與 HTTP 端點，不直接呼叫內部方法。
-- 先加入 Scenario 並執行：行為 Scenario 在現有程式下即通過（說明見上），`@record` Scenario 因實作紀錄尚未存在而失敗；補上本紀錄後全部轉綠。
+- 更正（審查意見）：原紀錄宣稱先紅後綠的 TDD 順序，但行為 Scenario 未先見紅燈，它們加入時即在現有程式下通過，未符合先紅後綠的流程。實際行為由 15、17、19 單的實作覆蓋；本單的 Scenario 是驗收鎖定，不是實作驅動。`@record` Scenario 因實作紀錄尚未存在而失敗，補上本紀錄後轉綠。
 - 測試接線過程中，稽核寫入失敗情境的一個步驟因 Reqnroll 依關鍵字類型比對而未對上，已調整為 `When` 步驟；這是測試接線問題，未改動產品行為。
 - 既有測試斷言未放寬。
 

@@ -424,6 +424,7 @@ public sealed class AuthServerHost : IAsyncDisposable
     private const string AdministratorAuthenticationRequired = "administrator_authentication_required";
     private const string ApplicantAuthenticationRequired = "applicant_authentication_required";
     private const string PossessionProofInvalid = "possession_proof_invalid";
+    private const string ApplicantMismatch = "applicant_mismatch";
 
     /// <summary>每個 Client 的待核准申請數上限（19 單，lab 暫定值，待使用者確認）；憑證與簽章金鑰申請合計計算。</summary>
     private const int PendingRequestLimitPerClient = 5;
@@ -535,14 +536,9 @@ public sealed class AuthServerHost : IAsyncDisposable
         var clientId = submission.ClientId;
         var target = new AdministrativeTarget(clientId, Subject: "certificate");
         var applicant = AuthenticateApplicant(trustedCertificates, registry, presented);
-        if (applicant is null)
+        if (RejectUnlessApplicantFor(target, applicant, clientId) is { } rejection)
         {
-            return Rejected(target, StatusCodes.Status401Unauthorized, ApplicantAuthenticationRequired);
-        }
-
-        if (!string.Equals(clientId, applicant.ClientId, StringComparison.Ordinal))
-        {
-            return Rejected(target, StatusCodes.Status403Forbidden, "applicant_mismatch");
+            return rejection;
         }
 
         if (!CertificateRegistrationRequests.TryParsePublicCertificate(submission.PublicCertificatePem, out var certificate, out var error))
@@ -585,14 +581,9 @@ public sealed class AuthServerHost : IAsyncDisposable
         var clientId = submission.ClientId;
         var target = new AdministrativeTarget(clientId, Subject: "signing_key", KeyId: submission.KeyId);
         var applicant = AuthenticateApplicant(trustedCertificates, registry, presented);
-        if (applicant is null)
+        if (RejectUnlessApplicantFor(target, applicant, clientId) is { } rejection)
         {
-            return Rejected(target, StatusCodes.Status401Unauthorized, ApplicantAuthenticationRequired);
-        }
-
-        if (!string.Equals(clientId, applicant.ClientId, StringComparison.Ordinal))
-        {
-            return Rejected(target, StatusCodes.Status403Forbidden, "applicant_mismatch");
+            return rejection;
         }
 
         if (!SigningKeyRegistrationRequests.TryParsePublicKey(submission.KeyId, submission.PublicKeyPem, out var key, out var error))
@@ -629,6 +620,25 @@ public sealed class AuthServerHost : IAsyncDisposable
         SigningKeyRegistrationRequests signingKeyRequests,
         string clientId)
         => requests.CountPending(clientId) + signingKeyRequests.CountPending(clientId) >= PendingRequestLimitPerClient;
+
+    /// <summary>
+    /// 申請端點的申請者閘門（17、18 單）：未驗證者回 401（統一訊息，不區分 Client 是否存在）；已驗證者替他人申請回 403。
+    /// 回傳 null 表示通過閘門，呼叫端繼續處理申請內容。
+    /// </summary>
+    private static AdministrativeDecision? RejectUnlessApplicantFor(AdministrativeTarget target, ApplicantIdentity? applicant, string? clientId)
+    {
+        if (applicant is null)
+        {
+            return Rejected(target, StatusCodes.Status401Unauthorized, ApplicantAuthenticationRequired);
+        }
+
+        if (!string.Equals(clientId, applicant.ClientId, StringComparison.Ordinal))
+        {
+            return Rejected(target, StatusCodes.Status403Forbidden, ApplicantMismatch);
+        }
+
+        return null;
+    }
 
     /// <summary>
     /// 申請者身分（17 單）：出示的 mTLS 憑證必須是某 Client 目前登錄的憑證，且未撤銷、未退役，該 Client 未停用。

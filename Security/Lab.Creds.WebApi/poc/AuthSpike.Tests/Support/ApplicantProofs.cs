@@ -17,16 +17,16 @@ public static class ApplicantProofs
 {
     /// <summary>以新憑證的私鑰對申請內容簽章（RSA PKCS#1 SHA-256），回傳 Base64。</summary>
     public static string CertificateProof(string clientId, X509Certificate2 newCertificate)
-    {
-        using var rsa = newCertificate.GetRSAPrivateKey() ?? throw new InvalidOperationException("新憑證必須含私鑰才能產生持有證明。");
-        var content = Encoding.UTF8.GetBytes(ApplicantProof.CertificateContent(clientId, newCertificate.Thumbprint));
-        return Convert.ToBase64String(rsa.SignData(content, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
-    }
+        => CertificateProofSignedBy(clientId, newCertificate, newCertificate);
 
     /// <summary>以他人（非新憑證）的私鑰對新憑證的申請內容簽章，模擬證明失敗（17 單）。</summary>
     public static string ForeignCertificateProof(string clientId, X509Certificate2 newCertificate, X509Certificate2 foreignCertificate)
+        => CertificateProofSignedBy(clientId, newCertificate, foreignCertificate);
+
+    /// <summary>以 signer 的私鑰對新憑證的申請內容簽章；正常證明時 signer 即新憑證本身。</summary>
+    private static string CertificateProofSignedBy(string clientId, X509Certificate2 newCertificate, X509Certificate2 signer)
     {
-        using var rsa = foreignCertificate.GetRSAPrivateKey() ?? throw new InvalidOperationException("他人憑證必須含私鑰。");
+        using var rsa = signer.GetRSAPrivateKey() ?? throw new InvalidOperationException("簽署持有證明的憑證必須含私鑰。");
         var content = Encoding.UTF8.GetBytes(ApplicantProof.CertificateContent(clientId, newCertificate.Thumbprint));
         return Convert.ToBase64String(rsa.SignData(content, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
     }
