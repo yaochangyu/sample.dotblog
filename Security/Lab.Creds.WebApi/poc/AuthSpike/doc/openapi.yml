@@ -154,7 +154,7 @@ paths:
         '403':
           description: "已驗證申請者替其他 Client 申請（error: applicant_mismatch）"
         '429':
-          description: "該 Client 的待核准申請（憑證與簽章金鑰合計）已達上限（error: pending_request_limit_reached）；既有待核准申請不受影響，核准或拒絕後額度釋放（lab 暫定值，待使用者確認）"
+          description: "該 Client 的待核准申請（憑證與簽章金鑰合計）已達上限（error: pending_request_limit_reached）；既有待核准申請不受影響，核准、拒絕或逾期後額度釋放（待核准逾期為 24 小時；逾期申請不佔額度；lab 暫定值，待使用者確認）"
         '503':
           description: "稽核紀錄無法寫入（error: audit_unavailable）；申請不被受理"
   /signing-key-requests:
@@ -181,7 +181,7 @@ paths:
         '403':
           description: "已驗證申請者替其他 Client 申請（error: applicant_mismatch）"
         '429':
-          description: "該 Client 的待核准申請（憑證與簽章金鑰合計）已達上限（error: pending_request_limit_reached）；既有待核准申請不受影響，核准或拒絕後額度釋放（lab 暫定值，待使用者確認）"
+          description: "該 Client 的待核准申請（憑證與簽章金鑰合計）已達上限（error: pending_request_limit_reached）；既有待核准申請不受影響，核准、拒絕或逾期後額度釋放（待核准逾期為 24 小時；逾期申請不佔額度；lab 暫定值，待使用者確認）"
         '503':
           description: "稽核紀錄無法寫入（error: audit_unavailable）；申請不被受理"
   /admin/trust-list:
@@ -354,7 +354,7 @@ paths:
         '404':
           description: "找不到申請（error: request_not_found）"
         '409':
-          description: "申請非待核准（request_not_pending）或同一指紋已在任一 Client 的信任名單（certificate_already_registered）；信任名單不變"
+          description: "申請已逾期（request_expired）或非待核准（request_not_pending）或同一指紋已在任一 Client 的信任名單（certificate_already_registered）；信任名單不變"
         '503':
           description: "稽核紀錄無法寫入（error: audit_unavailable）；申請維持待核准"
   /admin/client-certificate-requests/{requestId}/reject:
@@ -375,7 +375,7 @@ paths:
         '404':
           description: "找不到申請（error: request_not_found）"
         '409':
-          description: "申請非待核准（error: request_not_pending）"
+          description: "申請已逾期（error: request_expired）或非待核准（error: request_not_pending）"
         '503':
           description: "稽核紀錄無法寫入（error: audit_unavailable）；申請維持待核准"
   /admin/signing-key-requests/{requestId}:
@@ -413,7 +413,7 @@ paths:
         '404':
           description: "找不到申請（error: request_not_found）"
         '409':
-          description: "申請非待核准（request_not_pending）或 keyId 已登錄於任一 Client（signing_key_id_in_use）；驗簽登錄不變"
+          description: "申請已逾期（request_expired）或非待核准（request_not_pending）或 keyId 已登錄於任一 Client（signing_key_id_in_use）；驗簽登錄不變"
         '503':
           description: "稽核紀錄無法寫入（error: audit_unavailable）；申請維持待核准"
   /admin/signing-key-requests/{requestId}/reject:
@@ -434,7 +434,7 @@ paths:
         '404':
           description: "找不到申請（error: request_not_found）"
         '409':
-          description: "申請非待核准（error: request_not_pending）"
+          description: "申請已逾期（error: request_expired）或非待核准（error: request_not_pending）"
         '503':
           description: "稽核紀錄無法寫入（error: audit_unavailable）；申請維持待核准"
 components:
@@ -558,7 +558,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, approved, rejected]
+          enum: [pending, approved, rejected, expired]
     SigningKeyRequestStatusResponse:
       type: object
       required: [requestId, clientId, keyId, status]
@@ -571,7 +571,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, approved, rejected]
+          enum: [pending, approved, rejected, expired]
     TrustListResponse:
       type: object
       required: [clients]

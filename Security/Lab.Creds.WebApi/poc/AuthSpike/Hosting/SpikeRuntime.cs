@@ -64,9 +64,11 @@ public sealed class SpikeRuntime : IAsyncDisposable
         OrderStore orders,
         SecurityAuditLog auditLog,
         AdministrativeAuditLog administrativeAuditLog,
-        string environmentName)
+        string environmentName,
+        TimeProvider clock)
     {
         Trust = trust;
+        Clock = clock;
         _clientCertificates = clientCertificates;
         _signatureKeys = signatureKeys;
         _serverCertificate = serverCertificate;
@@ -86,6 +88,9 @@ public sealed class SpikeRuntime : IAsyncDisposable
     }
 
     public SpikeTrust Trust { get; }
+
+    /// <summary>授權伺服器判定待核准逾期所用的時鐘（預設系統時鐘；@isolated 情境注入可推進的時鐘）。</summary>
+    public TimeProvider Clock { get; }
 
     /// <summary>執行環境名稱；mTLS 憑證與簽章金鑰的識別皆含此名稱，不同環境不共用私鑰。</summary>
     public string EnvironmentName { get; }
@@ -135,7 +140,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
         int ordersApiPort,
         TimeSpan? accessTokenLifetime = null,
         TimeSpan? verificationCacheLifetime = null,
-        string environmentName = DefaultEnvironmentName)
+        string environmentName = DefaultEnvironmentName,
+        TimeProvider? clock = null)
     {
         var root = SpikeCertificates.CreateRootCertificateAuthority("AuthSpike Root CA");
         var trust = new SpikeTrust(root);
@@ -190,7 +196,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
             accessTokenLifetime ?? DefaultAccessTokenLifetime,
             registry,
             verificationKeys,
-            administrativeAuditLog);
+            administrativeAuditLog,
+            clock ?? TimeProvider.System);
         // 管理員角色只在組合根登錄，授權伺服器與業務 API 皆讀取同一份信任狀態。
         registry.RegisterAdministratorCertificate(administratorCertificate.Thumbprint);
 
@@ -228,7 +235,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
             orders,
             auditLog,
             administrativeAuditLog,
-            environmentName);
+            environmentName,
+            clock ?? TimeProvider.System);
     }
 
     /// <summary>啟動第二個建立訂單 API 執行個體，與主要執行個體共用防重放儲存、驗簽金鑰登錄、撤銷狀態與訂單資料。</summary>

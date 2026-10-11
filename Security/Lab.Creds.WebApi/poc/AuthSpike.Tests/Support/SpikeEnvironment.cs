@@ -33,10 +33,10 @@ public static class SpikeEnvironment
         Runtime = await SpikeRuntime.StartAsync(FreeTcpPort(), FreeTcpPort(), TimeSpan.FromSeconds(2));
     }
 
-    /// <summary>標示 @isolated 的 Scenario 使用獨立執行環境（防重放儲存、執行個體與故障模擬不影響其他 Scenario）。</summary>
+    /// <summary>標示 @isolated 的 Scenario 使用獨立執行環境（防重放儲存、執行個體與故障模擬不影響其他 Scenario）；時鐘可手動推進（待核准逾期）。</summary>
     public static async Task UseIsolatedRuntimeAsync(TimeSpan? verificationCacheLifetime = null)
     {
-        Runtime = await SpikeRuntime.StartAsync(FreeTcpPort(), FreeTcpPort(), verificationCacheLifetime: verificationCacheLifetime);
+        Runtime = await SpikeRuntime.StartAsync(FreeTcpPort(), FreeTcpPort(), verificationCacheLifetime: verificationCacheLifetime, clock: new ManualTimeProvider());
     }
 
     public static async Task RestoreDefaultTokensAsync()

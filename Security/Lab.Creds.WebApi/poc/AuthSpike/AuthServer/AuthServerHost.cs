@@ -49,7 +49,7 @@ public sealed class AuthServerHost : IAsyncDisposable
     /// <summary>目前信任的公開憑證（含已核准加入者）；退役過濾由呼叫端決定。</summary>
     public IReadOnlyList<X509Certificate2> TrustedCertificates(string clientId) => _trustedCertificates[clientId];
 
-    public static async Task<AuthServerHost> StartAsync(int port, SpikeTrust trust, X509Certificate2 serverCertificate, IReadOnlyList<AuthServerClient> clients, TimeSpan accessTokenLifetime, TrustRegistry registry, VerificationKeyStore verificationKeys, AdministrativeAuditLog administrativeAudit)
+    public static async Task<AuthServerHost> StartAsync(int port, SpikeTrust trust, X509Certificate2 serverCertificate, IReadOnlyList<AuthServerClient> clients, TimeSpan accessTokenLifetime, TrustRegistry registry, VerificationKeyStore verificationKeys, AdministrativeAuditLog administrativeAudit, TimeProvider clock)
     {
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.ConfigureKestrel(kestrel => kestrel.ListenLocalhost(port, listen => listen.UseHttps(https =>
@@ -177,7 +177,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         // 申請者驗證（17 單）：只接受已登錄且有效的 Client 以現有已核准憑證經 mTLS 提出，且只能替自己申請；未驗證者一律 401。
         app.MapPost("/client-certificate-requests", (CertificateRegistrationSubmission submission, HttpContext httpContext) =>
             RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "certificate.submit", requireAdministrator: false, () =>
-                DecideCertificateSubmission(trustedCertificates, registry, requests, signingKeyRequests, proofNonces, httpContext.Connection.ClientCertificate, submission)));
+                DecideCertificateSubmission(trustedCertificates, registry, requests, signingKeyRequests, proofNonces, clock, httpContext.Connection.ClientCertificate, submission)));
 
         app.MapGet("/admin/client-certificate-requests/{requestId}", (string requestId, HttpContext httpContext) =>
         {
@@ -197,7 +197,7 @@ public sealed class AuthServerHost : IAsyncDisposable
                 requestId = request.RequestId,
                 clientId = request.ClientId,
                 thumbprint = request.PublicCertificate.Thumbprint,
-                status = request.Status.ToWire(),
+                status = request.Status.Effective(request.ExpiresAt, clock.GetUtcNow()).ToWire(),
                 applicantClientId = request.Applicant.ClientId,
                 applicantThumbprint = request.Applicant.CertificateThumbprint,
             });
@@ -213,9 +213,9 @@ public sealed class AuthServerHost : IAsyncDisposable
                 }
 
                 var target = new AdministrativeTarget(request.ClientId, Subject: "certificate", Fingerprint: request.PublicCertificate.Thumbprint);
-                if (request.Status != RegistrationRequestStatus.Pending)
+                if (RejectUnlessPending(target, request.Status, request.ExpiresAt, clock.GetUtcNow()) is { } notPending)
                 {
-                    return Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
+                    return notPending;
                 }
 
                 // 同一指紋若已在任一 Client 的信任名單（含已退役或已撤銷者），核准不會生效也無法區分，因此拒絕（AC-23）。
@@ -249,9 +249,9 @@ public sealed class AuthServerHost : IAsyncDisposable
                 }
 
                 var target = new AdministrativeTarget(request.ClientId, Subject: "certificate", Fingerprint: request.PublicCertificate.Thumbprint);
-                if (request.Status != RegistrationRequestStatus.Pending)
+                if (RejectUnlessPending(target, request.Status, request.ExpiresAt, clock.GetUtcNow()) is { } notPending)
                 {
-                    return Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
+                    return notPending;
                 }
 
                 // 拒絕只改變申請狀態，不改變信任名單。
@@ -266,7 +266,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         // 此端點與欄位為 lab 暫定值，待使用者確認。
         app.MapPost("/signing-key-requests", (SigningKeySubmission submission, HttpContext httpContext) =>
             RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "signing_key.submit", requireAdministrator: false, () =>
-                DecideSigningKeySubmission(trustedCertificates, registry, requests, signingKeyRequests, proofNonces, httpContext.Connection.ClientCertificate, submission)));
+                DecideSigningKeySubmission(trustedCertificates, registry, requests, signingKeyRequests, proofNonces, clock, httpContext.Connection.ClientCertificate, submission)));
 
         app.MapGet("/admin/signing-key-requests/{requestId}", (string requestId, HttpContext httpContext) =>
         {
@@ -286,7 +286,7 @@ public sealed class AuthServerHost : IAsyncDisposable
                 requestId = request.RequestId,
                 clientId = request.ClientId,
                 keyId = request.PublicKey.KeyId,
-                status = request.Status.ToWire(),
+                status = request.Status.Effective(request.ExpiresAt, clock.GetUtcNow()).ToWire(),
                 applicantClientId = request.Applicant.ClientId,
                 applicantThumbprint = request.Applicant.CertificateThumbprint,
             });
@@ -302,9 +302,9 @@ public sealed class AuthServerHost : IAsyncDisposable
                 }
 
                 var target = new AdministrativeTarget(request.ClientId, Subject: "signing_key", KeyId: request.PublicKey.KeyId, Fingerprint: KeyFingerprint(request.PublicKey.Key));
-                if (request.Status != RegistrationRequestStatus.Pending)
+                if (RejectUnlessPending(target, request.Status, request.ExpiresAt, clock.GetUtcNow()) is { } notPending)
                 {
-                    return Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
+                    return notPending;
                 }
 
                 // keyId 若已登錄於任一 Client（含已退役或已撤銷者），登錄後狀態與撤銷共用同一鍵而無法區分，因此拒絕（AC-23）。
@@ -333,9 +333,9 @@ public sealed class AuthServerHost : IAsyncDisposable
                 }
 
                 var target = new AdministrativeTarget(request.ClientId, Subject: "signing_key", KeyId: request.PublicKey.KeyId, Fingerprint: KeyFingerprint(request.PublicKey.Key));
-                if (request.Status != RegistrationRequestStatus.Pending)
+                if (RejectUnlessPending(target, request.Status, request.ExpiresAt, clock.GetUtcNow()) is { } notPending)
                 {
-                    return Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
+                    return notPending;
                 }
 
                 // 拒絕只改變申請狀態，不登錄驗簽金鑰。
@@ -431,6 +431,10 @@ public sealed class AuthServerHost : IAsyncDisposable
     /// <summary>每個 Client 的待核准申請數上限（19 單，lab 暫定值，待使用者確認）；憑證與簽章金鑰申請合計計算。</summary>
     private const int PendingRequestLimitPerClient = 5;
     private const string PendingRequestLimitReached = "pending_request_limit_reached";
+
+    /// <summary>待核准申請的逾期時間（19 單的延伸，lab 暫定 24 小時，待使用者確認）：自提出起算，到達即視為已過期，不能再被核准或拒絕，也不再佔用上限。</summary>
+    private static readonly TimeSpan PendingRequestExpiry = TimeSpan.FromHours(24);
+    private const string RequestExpired = "request_expired";
 
     private static AdministrativeDecision Accepted(AdministrativeTarget target, int status, Func<Task<IResult>> apply)
         => new(target, status, "ok", apply);
@@ -533,6 +537,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         CertificateRegistrationRequests requests,
         SigningKeyRegistrationRequests signingKeyRequests,
         ProofNonceStore proofNonces,
+        TimeProvider clock,
         X509Certificate2? presented,
         CertificateRegistrationSubmission submission)
     {
@@ -559,7 +564,8 @@ public sealed class AuthServerHost : IAsyncDisposable
             return Rejected(target, StatusCodes.Status400BadRequest, PossessionProofInvalid);
         }
 
-        if (PendingRequestLimitIsReached(requests, signingKeyRequests, clientId!))
+        var receivedAt = clock.GetUtcNow();
+        if (PendingRequestLimitIsReached(requests, signingKeyRequests, clientId!, receivedAt))
         {
             return Rejected(target, StatusCodes.Status429TooManyRequests, PendingRequestLimitReached);
         }
@@ -567,7 +573,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         return Accepted(target, StatusCodes.Status202Accepted, () =>
         {
             proofNonces.Consume(nonce!, timing!.Value);
-            var request = requests.Submit(clientId!, certificate!, applicant);
+            var request = requests.Submit(clientId!, certificate!, applicant, receivedAt + PendingRequestExpiry);
             return Task.FromResult(Results.Json(
                 new { requestId = request.RequestId, clientId = request.ClientId, status = request.Status.ToWire() },
                 statusCode: StatusCodes.Status202Accepted));
@@ -584,6 +590,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         CertificateRegistrationRequests requests,
         SigningKeyRegistrationRequests signingKeyRequests,
         ProofNonceStore proofNonces,
+        TimeProvider clock,
         X509Certificate2? presented,
         SigningKeySubmission submission)
     {
@@ -610,7 +617,8 @@ public sealed class AuthServerHost : IAsyncDisposable
             return Rejected(target, StatusCodes.Status400BadRequest, PossessionProofInvalid);
         }
 
-        if (PendingRequestLimitIsReached(requests, signingKeyRequests, clientId!))
+        var receivedAt = clock.GetUtcNow();
+        if (PendingRequestLimitIsReached(requests, signingKeyRequests, clientId!, receivedAt))
         {
             return Rejected(target, StatusCodes.Status429TooManyRequests, PendingRequestLimitReached);
         }
@@ -618,7 +626,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         return Accepted(target, StatusCodes.Status202Accepted, () =>
         {
             proofNonces.Consume(nonce!, timing!.Value);
-            var request = signingKeyRequests.Submit(clientId!, key!, applicant);
+            var request = signingKeyRequests.Submit(clientId!, key!, applicant, receivedAt + PendingRequestExpiry);
             return Task.FromResult(Results.Json(
                 new { requestId = request.RequestId, clientId = request.ClientId, status = request.Status.ToWire() },
                 statusCode: StatusCodes.Status202Accepted));
@@ -637,13 +645,31 @@ public sealed class AuthServerHost : IAsyncDisposable
 
     /// <summary>
     /// 每個 Client 的待核准申請數是否已達上限（19 單）：憑證與簽章金鑰的待核准申請合計計算，不因分開提出而繞過。
-    /// 只計算待核准的申請；核准或拒絕後額度即釋放。呼叫端須在決策閘門內呼叫，計數與受理序列化。
+    /// 只計算未逾期的待核准申請；核准、拒絕或逾期後額度即釋放。呼叫端須在決策閘門內呼叫，計數與受理序列化。
     /// </summary>
     private static bool PendingRequestLimitIsReached(
         CertificateRegistrationRequests requests,
         SigningKeyRegistrationRequests signingKeyRequests,
-        string clientId)
-        => requests.CountPending(clientId) + signingKeyRequests.CountPending(clientId) >= PendingRequestLimitPerClient;
+        string clientId,
+        DateTimeOffset now)
+        => requests.CountPending(clientId, now) + signingKeyRequests.CountPending(clientId, now) >= PendingRequestLimitPerClient;
+
+    /// <summary>
+    /// 待核准申請的核准或拒絕前檢查：只有未逾期的待核准申請可被處理；已逾期回 409 request_expired，
+    /// 其他非待核准回 409 request_not_pending。回傳 null 表示可以處理。
+    /// </summary>
+    private static AdministrativeDecision? RejectUnlessPending(AdministrativeTarget target, RegistrationRequestStatus stored, DateTimeOffset expiresAt, DateTimeOffset now)
+    {
+        var effective = stored.Effective(expiresAt, now);
+        if (effective == RegistrationRequestStatus.Expired)
+        {
+            return Rejected(target, StatusCodes.Status409Conflict, RequestExpired);
+        }
+
+        return effective == RegistrationRequestStatus.Pending
+            ? null
+            : Rejected(target, StatusCodes.Status409Conflict, "request_not_pending");
+    }
 
     /// <summary>
     /// 申請端點的申請者閘門（17、18 單）：未驗證者回 401（統一訊息，不區分 Client 是否存在）；已驗證者替他人申請回 403。

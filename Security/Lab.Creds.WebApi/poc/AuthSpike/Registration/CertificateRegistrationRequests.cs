@@ -4,7 +4,7 @@ using AuthSpike.Certificates;
 namespace AuthSpike.Registration;
 
 /// <summary>登錄申請：只含 Client 身分與公開憑證，不含私鑰；Applicant 為提出申請時已驗證的申請者身分（17 單）。</summary>
-public sealed record CertificateRegistrationRequest(Guid RequestId, string ClientId, X509Certificate2 PublicCertificate, RegistrationRequestStatus Status, ApplicantIdentity Applicant);
+public sealed record CertificateRegistrationRequest(Guid RequestId, string ClientId, X509Certificate2 PublicCertificate, RegistrationRequestStatus Status, ApplicantIdentity Applicant, DateTimeOffset ExpiresAt);
 
 /// <summary>
 /// 憑證登錄申請的程序內儲存（lab：Dictionary 加 lock）。申請以 requestId 識別，各申請彼此獨立，互不影響其他 Client 的信任狀態。
@@ -15,11 +15,11 @@ public sealed class CertificateRegistrationRequests
     private readonly object _gate = new();
     private readonly Dictionary<Guid, CertificateRegistrationRequest> _requests = new();
 
-    public CertificateRegistrationRequest Submit(string clientId, X509Certificate2 publicCertificate, ApplicantIdentity applicant)
+    public CertificateRegistrationRequest Submit(string clientId, X509Certificate2 publicCertificate, ApplicantIdentity applicant, DateTimeOffset expiresAt)
     {
         lock (_gate)
         {
-            var request = new CertificateRegistrationRequest(Guid.NewGuid(), clientId, publicCertificate, RegistrationRequestStatus.Pending, applicant);
+            var request = new CertificateRegistrationRequest(Guid.NewGuid(), clientId, publicCertificate, RegistrationRequestStatus.Pending, applicant, expiresAt);
             _requests[request.RequestId] = request;
             return request;
         }
@@ -33,12 +33,14 @@ public sealed class CertificateRegistrationRequests
         }
     }
 
-    /// <summary>指定 Client 目前待核准的憑證申請數（19 單，用於每個 Client 的待核准上限）。</summary>
-    public int CountPending(string clientId)
+    /// <summary>指定 Client 目前待核准（未逾期）的憑證申請數（19 單，用於每個 Client 的待核准上限）；逾期的申請不佔額度。</summary>
+    public int CountPending(string clientId, DateTimeOffset now)
     {
         lock (_gate)
         {
-            return _requests.Values.Count(request => request.Status == RegistrationRequestStatus.Pending && request.ClientId == clientId);
+            return _requests.Values.Count(request =>
+                request.ClientId == clientId
+                && request.Status.Effective(request.ExpiresAt, now) == RegistrationRequestStatus.Pending);
         }
     }
 

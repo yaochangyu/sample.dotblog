@@ -17,14 +17,15 @@
 
 **範圍與數值（lab 暫定、待使用者確認）**：
 - 每個 Client 的待核准申請上限為 5 筆（`AuthServerHost.PendingRequestLimitPerClient`），憑證申請與簽章金鑰申請合計計算。
-- 逾期處理（lab 暫定、待使用者確認）：本 lab 不設自動逾期，待核准申請只在管理員核准或拒絕後離開待核准狀態，因此額度只因此釋放；正式採用前須決定有效期與逾期規則。
+- 逾期處理（lab 暫定 24 小時，待使用者確認）：待核准申請自提出起 24 小時逾期（`AuthServerHost.PendingRequestExpiry`，到達即逾期）。逾期後視為已過期：不能再被核准或拒絕（409，`request_expired`）、不再佔用上限，Client 可再提出申請；管理員查詢回 `expired`。逾期以注入的時鐘判定，測試不真的等待。正式採用前須確認有效期數值與逾期規則。
 - 超過上限的回應：`429 Too Many Requests`，錯誤為 `pending_request_limit_reached`（lab 暫定、待使用者確認）；OpenAPI 契約 `poc/AuthSpike/doc/openapi.yml` 兩個申請端點已補上 429。
 
 **行為**：
 - 上限判斷在申請者驗證與持有證明之後、受理之前，並在決策閘門內執行，因此併發申請不會突破上限（AC-28）。
-- 計數只計 `Pending` 狀態：`CertificateRegistrationRequests.CountPending` 與 `SigningKeyRegistrationRequests.CountPending` 依 Client 計數，兩者相加判斷。
+- 計數只計未逾期的 `Pending` 狀態：`CertificateRegistrationRequests.CountPending` 與 `SigningKeyRegistrationRequests.CountPending` 依 Client 與判定時間計數，兩者相加判斷。
 - 超過上限的嘗試不建立待核准紀錄，既有待核准申請狀態不變；其他 Client 的計數互不影響。
 - 核准或拒絕後該申請不再計為待核准，額度釋放，同一 Client 可再提出新申請。
+- 逾期後同樣釋放額度（見上方逾期處理）；逾期的申請不能再被核准或拒絕，判定順序為先檢查逾期（409 `request_expired`），再檢查是否待核准（409 `request_not_pending`）。
 - 超過上限的嘗試仍寫入管理操作稽核（`outcome` 為 `rejected`，`reason` 為 `pending_request_limit_reached`）；被拒絕嘗試標為未驗證的完整紀錄屬 20 單。
 
 **測試**：
@@ -32,6 +33,7 @@
 - 先加入 Scenario 並執行：行為 Scenario 失敗於「預期 429、實際 202」，符合紅燈；實作後行為 Scenario 轉綠，之後才勾選本單驗收項目與紀錄 Scenario。
 - 預設執行環境在所有情境間共用，先前情境未核准的申請會佔用額度。因此新增 `Support/PendingRequestCleanup.cs` 與 `SpikeHooks` 的 `AfterScenario`：情境結束時把本情境於目前執行環境受理的申請以管理員拒絕（只改狀態，不改信任名單），讓後續情境從零待核准開始。上限情境標示 `@isolated`，使用獨立執行環境。
 - 既有測試的斷言未放寬。
+- 逾期延伸（待核准逾期）：新增 `AuthSpike.Tests/Features/PendingRequestExpiry.feature` 與 `Steps/PendingRequestExpirySteps.cs`，先加入 Scenario 並看到紅燈（逾期後核准仍回 200、逾期後仍佔額度而回 429），再實作。時鐘以 `Support/ManualTimeProvider.cs` 注入 `@isolated` 執行環境，只影響逾期判定；持有證明的時間窗仍以系統時間判定，維持既有行為。
 
 **驗證方式（可重現）**：
 ```
@@ -41,4 +43,4 @@ dotnet test AuthSpike.Tests/AuthSpike.Tests.csproj
 ```
 （Feature 名稱為 `PendingRequestCap`，Scenario 列於 `AuthSpike.Tests/Features/PendingRequestCap.feature`。）
 
-**範圍限制**：全新 Client 首次登錄不在本單；被拒絕嘗試的標示紀錄（AC-30）屬 20 單；申請仍為程序內儲存，只在單程序內驗證；Gateway 相關項目略過（非完成）。
+**範圍限制**：全新 Client 首次登錄不在本單；被拒絕嘗試的標示紀錄（AC-30）屬 20 單；申請仍為程序內儲存，只在單程序內驗證；逾期時鐘為程序內判定，多執行個體間的時鐘一致性未驗證；Gateway 相關項目略過（非完成）。
