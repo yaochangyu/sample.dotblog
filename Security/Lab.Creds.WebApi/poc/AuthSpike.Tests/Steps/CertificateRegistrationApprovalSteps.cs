@@ -16,7 +16,6 @@ namespace AuthSpike.Tests.Steps;
 public sealed class CertificateRegistrationApprovalSteps
 {
     private const string ClientId = "orders-client";
-    private const string SubmitRelativePath = "client-certificate-requests";
     private const string AdminRequestsRelativePath = "admin/client-certificate-requests";
     private const string IssueRelativePath = ".scratch/server-to-server-api-protection/issues/12-certificate-registration-approval.md";
 
@@ -75,7 +74,7 @@ public sealed class CertificateRegistrationApprovalSteps
     public async Task WhenSubmitsCertificateWithPrivateKey(string clientId)
     {
         using var key = Candidate.GetRSAPrivateKey() ?? throw new InvalidOperationException("候選憑證必須含私鑰以模擬違規申請。");
-        _submission = await SubmitAsync(clientId, Candidate.ExportCertificatePem() + key.ExportPkcs8PrivateKeyPem());
+        _submission = await SubmitAsync(Runtime.ClientCertificate(clientId), clientId, Candidate.ExportCertificatePem() + key.ExportPkcs8PrivateKeyPem(), null);
     }
 
     [Then("登錄申請回應為 {int}")]
@@ -185,9 +184,10 @@ public sealed class CertificateRegistrationApprovalSteps
     public Task GivenSubmitsOwnRegisteredCertificate(string clientId)
         => SubmitRegisteredCertificateAsync(clientId, Runtime.ClientCertificate(clientId));
 
+    /// <summary>以 clientId 自己的 mTLS 身分提出申請；持有證明以 registered 的私鑰產生，只驗證核准時的重複指紋檢查（AC-23）。</summary>
     private async Task SubmitRegisteredCertificateAsync(string clientId, X509Certificate2 registered)
     {
-        _submission = await SubmitAsync(clientId, registered.ExportCertificatePem());
+        _submission = await SubmitAsync(Runtime.ClientCertificate(clientId), clientId, registered.ExportCertificatePem(), ApplicantProofs.CertificateProof(clientId, registered));
         _submission.Status.Should().Be(HttpStatusCode.Accepted, _submission.Body);
         using var document = JsonDocument.Parse(_submission.Body);
         _requestId = document.RootElement.GetProperty("requestId").GetString();
@@ -239,7 +239,7 @@ public sealed class CertificateRegistrationApprovalSteps
 
     private async Task SubmitPublicCertificateAsync(string clientId)
     {
-        _submission = await SubmitAsync(clientId, Candidate.ExportCertificatePem());
+        _submission = await SubmitAsync(Runtime.ClientCertificate(clientId), clientId, Candidate.ExportCertificatePem(), ApplicantProofs.CertificateProof(clientId, Candidate));
         if (_submission.Status == HttpStatusCode.Accepted)
         {
             using var document = JsonDocument.Parse(_submission.Body);
@@ -247,16 +247,9 @@ public sealed class CertificateRegistrationApprovalSteps
         }
     }
 
-    private static async Task<ApiResponse> SubmitAsync(string clientId, string publicCertificatePem)
-    {
-        var body = JsonSerializer.Serialize(new { clientId, publicCertificatePem });
-        using var client = SignedHttp.CreateClient(Runtime, null);
-        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(Runtime.AuthServer.Issuer, SubmitRelativePath))
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
-        };
-        return await SignedHttp.SendAsync(client, request);
-    }
+    /// <summary>以 identity 的 mTLS 身分送出憑證登錄申請（17 單：申請者必須經 mTLS 驗證，且需附持有證明）。</summary>
+    private static Task<ApiResponse> SubmitAsync(X509Certificate2? identity, string clientId, string publicCertificatePem, string? proof)
+        => ApplicantProofs.SubmitCertificateAsync(Runtime, identity, clientId, publicCertificatePem, proof);
 
     private static List<string> OtherClientEntries(string body, string clientId)
     {

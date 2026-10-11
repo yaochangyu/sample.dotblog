@@ -16,7 +16,6 @@ namespace AuthSpike.Tests.Steps;
 public sealed class SigningKeyRegistrationApprovalSteps
 {
     private const string ClientId = "orders-client";
-    private const string SubmitRelativePath = "signing-key-requests";
     private const string AdminRequestsRelativePath = "admin/signing-key-requests";
     private const string IssueRelativePath = ".scratch/server-to-server-api-protection/issues/13-signing-key-registration-approval.md";
 
@@ -78,7 +77,7 @@ public sealed class SigningKeyRegistrationApprovalSteps
     {
         _pendingKey = Runtime.CreateSigningKey(clientId);
         var privatePem = _pendingKey.Key.ExportPkcs8PrivateKeyPem();
-        _submission = await SubmitAsync(clientId, _pendingKey.KeyId, privatePem);
+        _submission = await SubmitAsync(Runtime.ClientCertificate(clientId), clientId, _pendingKey.KeyId, privatePem, null);
     }
 
     [Then("簽章金鑰申請回應為 {int}")]
@@ -179,7 +178,7 @@ public sealed class SigningKeyRegistrationApprovalSteps
     private async Task SubmitWithKeyIdAsync(string clientId, string keyId)
     {
         _pendingKey = Runtime.CreateSigningKey(clientId);
-        _submission = await SubmitAsync(clientId, keyId, _pendingKey.Key.ExportSubjectPublicKeyInfoPem());
+        _submission = await SubmitAsync(Runtime.ClientCertificate(clientId), clientId, keyId, _pendingKey.Key.ExportSubjectPublicKeyInfoPem(), ApplicantProofs.SigningKeyProof(clientId, keyId, _pendingKey.Key));
         _submission.Status.Should().Be(HttpStatusCode.Accepted, _submission.Body);
         using var document = JsonDocument.Parse(_submission.Body);
         _requestId = document.RootElement.GetProperty("requestId").GetString();
@@ -188,7 +187,7 @@ public sealed class SigningKeyRegistrationApprovalSteps
     private async Task SubmitPublicSigningKeyAsync(string clientId)
     {
         _pendingKey = Runtime.CreateSigningKey(clientId);
-        _submission = await SubmitAsync(clientId, _pendingKey.KeyId, _pendingKey.Key.ExportSubjectPublicKeyInfoPem());
+        _submission = await SubmitAsync(Runtime.ClientCertificate(clientId), clientId, _pendingKey.KeyId, _pendingKey.Key.ExportSubjectPublicKeyInfoPem(), ApplicantProofs.SigningKeyProof(clientId, _pendingKey.KeyId, _pendingKey.Key));
         if (_submission.Status == HttpStatusCode.Accepted)
         {
             using var document = JsonDocument.Parse(_submission.Body);
@@ -196,16 +195,9 @@ public sealed class SigningKeyRegistrationApprovalSteps
         }
     }
 
-    private static async Task<ApiResponse> SubmitAsync(string clientId, string keyId, string publicKeyPem)
-    {
-        var body = JsonSerializer.Serialize(new { clientId, keyId, publicKeyPem });
-        using var client = SignedHttp.CreateClient(Runtime, null);
-        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(Runtime.AuthServer.Issuer, SubmitRelativePath))
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
-        };
-        return await SignedHttp.SendAsync(client, request);
-    }
+    /// <summary>以 identity 的 mTLS 身分送出簽章金鑰登錄申請（17 單：申請者必須經 mTLS 驗證，且需附持有證明）。</summary>
+    private static Task<ApiResponse> SubmitAsync(X509Certificate2? identity, string clientId, string keyId, string publicKeyPem, string? proof)
+        => ApplicantProofs.SubmitSigningKeyAsync(Runtime, identity, clientId, keyId, publicKeyPem, proof);
 
     /// <summary>以指定 Client 的 mTLS 憑證與 Token 送出已簽章的建立訂單請求。</summary>
     private static async Task<ApiResponse> SendOrderAsync(string clientId, string token, SignatureKey key)

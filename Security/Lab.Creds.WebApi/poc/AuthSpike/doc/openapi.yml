@@ -133,7 +133,7 @@ paths:
   /client-certificate-requests:
     post:
       operationId: submitClientCertificateRequest
-      summary: 提交憑證登錄申請（只含公開憑證；申請本身不改變信任名單，也不能用於取得 Token）
+      summary: 提交憑證登錄申請（只含公開憑證；申請者必須以現有已核准憑證經 mTLS 驗證且只能替自己申請；需持有證明；申請本身不改變信任名單，也不能用於取得 Token）
       requestBody:
         required: true
         content:
@@ -148,15 +148,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegistrationRequestAccepted'
         '400':
-          description: "申請內容不合法（error: invalid_certificate）或含私鑰（error: private_key_not_allowed）"
-        '404':
-          description: "找不到 Client（error: client_not_found）"
+          description: "申請內容不合法（error: invalid_certificate）、含私鑰（error: private_key_not_allowed）或持有證明無效（error: possession_proof_invalid）"
+        '401':
+          description: "未驗證申請者（無憑證、未登錄、已撤銷或已退役憑證、Client 已停用）；統一回應 error: applicant_authentication_required，不區分 Client 是否存在"
+        '403':
+          description: "已驗證申請者替其他 Client 申請（error: applicant_mismatch）"
         '503':
           description: "稽核紀錄無法寫入（error: audit_unavailable）；申請不被受理"
   /signing-key-requests:
     post:
       operationId: submitSigningKeyRequest
-      summary: 提交簽章金鑰登錄申請（只含 keyId 與公開金鑰；待核准前不通過簽章驗證）
+      summary: 提交簽章金鑰登錄申請（只含 keyId 與公開金鑰；申請者驗證同憑證申請，並需以該金鑰對申請內容簽章作為持有證明；待核准前不通過簽章驗證）
       requestBody:
         required: true
         content:
@@ -171,9 +173,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegistrationRequestAccepted'
         '400':
-          description: "申請內容不合法（error: invalid_public_key）或含私鑰（error: private_key_not_allowed）"
-        '404':
-          description: "找不到 Client（error: client_not_found）"
+          description: "申請內容不合法（error: invalid_public_key）、含私鑰（error: private_key_not_allowed）或持有證明無效（error: possession_proof_invalid）"
+        '401':
+          description: "未驗證申請者（error: applicant_authentication_required）；不區分 Client 是否存在"
+        '403':
+          description: "已驗證申請者替其他 Client 申請（error: applicant_mismatch）"
         '503':
           description: "稽核紀錄無法寫入（error: audit_unavailable）；申請不被受理"
   /admin/trust-list:
@@ -476,17 +480,20 @@ components:
           enum: [active, cancelled]
     CertificateRegistrationSubmission:
       type: object
-      required: [clientId, publicCertificatePem]
-      description: 只含 Client 身分與公開憑證（PEM）；含私鑰的內容一律拒絕（private_key_not_allowed）。
+      required: [clientId, publicCertificatePem, possessionProof]
+      description: 只含 Client 身分與公開憑證（PEM）；含私鑰的內容一律拒絕（private_key_not_allowed）。possessionProof 為新憑證私鑰（RSA PKCS#1 v1.5 SHA-256）對申請內容 client-certificate-request\n{clientId}\n{thumbprint} 的簽章（Base64）；lab 暫定值，待使用者確認。
       properties:
         clientId:
           type: string
         publicCertificatePem:
           type: string
+        possessionProof:
+          type: string
+          description: Base64 簽章（持有證明）；lab 暫定值，待使用者確認。
     SigningKeySubmission:
       type: object
-      required: [clientId, keyId, publicKeyPem]
-      description: 只含 Client 身分、keyId 與 ECDSA P-256 公開金鑰（SubjectPublicKeyInfo PEM）；含私鑰的內容一律拒絕。
+      required: [clientId, keyId, publicKeyPem, possessionProof]
+      description: 只含 Client 身分、keyId 與 ECDSA P-256 公開金鑰（SubjectPublicKeyInfo PEM）；含私鑰的內容一律拒絕。possessionProof 為該金鑰私鑰（ECDSA SHA-256，IEEE P1363）對申請內容 signing-key-request\n{clientId}\n{keyId}\n{公開金鑰 SPKI SHA-256 十六進位} 的簽章（Base64）；lab 暫定值，待使用者確認。
       properties:
         clientId:
           type: string
@@ -494,6 +501,9 @@ components:
           type: string
         publicKeyPem:
           type: string
+        possessionProof:
+          type: string
+          description: Base64 簽章（持有證明）；lab 暫定值，待使用者確認。
     RegistrationRequestAccepted:
       type: object
       required: [requestId, clientId, status]

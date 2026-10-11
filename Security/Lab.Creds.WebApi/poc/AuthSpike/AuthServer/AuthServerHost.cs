@@ -172,9 +172,10 @@ public sealed class AuthServerHost : IAsyncDisposable
 
         // 憑證登錄申請（12 單）：申請只含 Client 身分與公開憑證；申請本身不改變信任名單，也不能用於取得 Token。
         // 申請管道（工單、人工轉交或自助入口）不在本單範圍；此端點與欄位為 lab 暫定值，待使用者確認。
+        // 申請者驗證（17 單）：只接受已登錄且有效的 Client 以現有已核准憑證經 mTLS 提出，且只能替自己申請；未驗證者一律 401。
         app.MapPost("/client-certificate-requests", (CertificateRegistrationSubmission submission, HttpContext httpContext) =>
             RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "certificate.submit", requireAdministrator: false, () =>
-                DecideCertificateSubmission(trustedCertificates, requests, submission)));
+                DecideCertificateSubmission(trustedCertificates, registry, requests, httpContext.Connection.ClientCertificate, submission)));
 
         app.MapGet("/admin/client-certificate-requests/{requestId}", (string requestId, HttpContext httpContext) =>
         {
@@ -195,6 +196,8 @@ public sealed class AuthServerHost : IAsyncDisposable
                 clientId = request.ClientId,
                 thumbprint = request.PublicCertificate.Thumbprint,
                 status = request.Status.ToWire(),
+                applicantClientId = request.Applicant.ClientId,
+                applicantThumbprint = request.Applicant.CertificateThumbprint,
             });
         });
 
@@ -261,7 +264,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         // 此端點與欄位為 lab 暫定值，待使用者確認。
         app.MapPost("/signing-key-requests", (SigningKeySubmission submission, HttpContext httpContext) =>
             RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "signing_key.submit", requireAdministrator: false, () =>
-                DecideSigningKeySubmission(trustedCertificates, signingKeyRequests, submission)));
+                DecideSigningKeySubmission(trustedCertificates, registry, signingKeyRequests, httpContext.Connection.ClientCertificate, submission)));
 
         app.MapGet("/admin/signing-key-requests/{requestId}", (string requestId, HttpContext httpContext) =>
         {
@@ -282,6 +285,8 @@ public sealed class AuthServerHost : IAsyncDisposable
                 clientId = request.ClientId,
                 keyId = request.PublicKey.KeyId,
                 status = request.Status.ToWire(),
+                applicantClientId = request.Applicant.ClientId,
+                applicantThumbprint = request.Applicant.CertificateThumbprint,
             });
         });
 
@@ -403,10 +408,10 @@ public sealed class AuthServerHost : IAsyncDisposable
     }
 
     /// <summary>管理員核准或拒絕申請時使用的登錄內容；欄位為 lab 暫定值，待使用者確認。</summary>
-    private sealed record CertificateRegistrationSubmission(string? ClientId, string? PublicCertificatePem);
+    private sealed record CertificateRegistrationSubmission(string? ClientId, string? PublicCertificatePem, string? PossessionProof);
 
     /// <summary>簽章金鑰登錄申請的內容；欄位為 lab 暫定值，待使用者確認。</summary>
-    private sealed record SigningKeySubmission(string? ClientId, string? KeyId, string? PublicKeyPem);
+    private sealed record SigningKeySubmission(string? ClientId, string? KeyId, string? PublicKeyPem, string? PossessionProof);
 
     /// <summary>管理操作稽核的對象（15 單）；未知的對象欄位為 null。Subject 為 certificate 或 signing_key。</summary>
     private sealed record AdministrativeTarget(string? ClientId, string? Subject = null, string? KeyId = null, string? Fingerprint = null);
@@ -417,6 +422,8 @@ public sealed class AuthServerHost : IAsyncDisposable
     private sealed record AdministrativeDecision(AdministrativeTarget Target, int Status, string Reason, Func<Task<IResult>> Apply);
 
     private const string AdministratorAuthenticationRequired = "administrator_authentication_required";
+    private const string ApplicantAuthenticationRequired = "applicant_authentication_required";
+    private const string PossessionProofInvalid = "possession_proof_invalid";
 
     private static AdministrativeDecision Accepted(AdministrativeTarget target, int status, Func<Task<IResult>> apply)
         => new(target, status, "ok", apply);
@@ -508,17 +515,29 @@ public sealed class AuthServerHost : IAsyncDisposable
     /// <summary>簽章金鑰指紋（15 單）：公開金鑰 SubjectPublicKeyInfo 的 SHA-256 十六進位值，不含私鑰。</summary>
     private static string KeyFingerprint(ECDsa key) => Convert.ToHexString(SHA256.HashData(key.ExportSubjectPublicKeyInfo()));
 
-    /// <summary>憑證登錄申請的決策（12 單）：只接受不含私鑰的公開憑證；申請本身不改變信任名單。</summary>
+    /// <summary>
+    /// 憑證登錄申請的決策（12、17 單）：申請者必須是已登錄且有效的 Client（以現有已核准憑證經 mTLS 驗證），且只能替自己申請；
+    /// 只接受不含私鑰的公開憑證，並需證明持有該新憑證的私鑰。申請本身不改變信任名單。
+    /// 未驗證者回應統一為 401，不區分 Client 是否存在；已驗證者替他人申請回 403，不回傳對方的申請內容。
+    /// </summary>
     private static AdministrativeDecision DecideCertificateSubmission(
         ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates,
+        TrustRegistry registry,
         CertificateRegistrationRequests requests,
+        X509Certificate2? presented,
         CertificateRegistrationSubmission submission)
     {
         var clientId = submission.ClientId;
         var target = new AdministrativeTarget(clientId, Subject: "certificate");
-        if (clientId is null || !trustedCertificates.ContainsKey(clientId))
+        var applicant = AuthenticateApplicant(trustedCertificates, registry, presented);
+        if (applicant is null)
         {
-            return Rejected(target, StatusCodes.Status404NotFound, "client_not_found");
+            return Rejected(target, StatusCodes.Status401Unauthorized, ApplicantAuthenticationRequired);
+        }
+
+        if (!string.Equals(clientId, applicant.ClientId, StringComparison.Ordinal))
+        {
+            return Rejected(target, StatusCodes.Status403Forbidden, "applicant_mismatch");
         }
 
         if (!CertificateRegistrationRequests.TryParsePublicCertificate(submission.PublicCertificatePem, out var certificate, out var error))
@@ -526,26 +545,43 @@ public sealed class AuthServerHost : IAsyncDisposable
             return Rejected(target, StatusCodes.Status400BadRequest, error);
         }
 
-        return Accepted(target with { Fingerprint = certificate!.Thumbprint }, StatusCodes.Status202Accepted, () =>
+        target = target with { Fingerprint = certificate!.Thumbprint };
+        if (!ApplicantProof.VerifyCertificate(certificate!, ApplicantProof.CertificateContent(clientId!, certificate!.Thumbprint), submission.PossessionProof))
         {
-            var request = requests.Submit(clientId, certificate!);
+            return Rejected(target, StatusCodes.Status400BadRequest, PossessionProofInvalid);
+        }
+
+        return Accepted(target, StatusCodes.Status202Accepted, () =>
+        {
+            var request = requests.Submit(clientId!, certificate!, applicant);
             return Task.FromResult(Results.Json(
                 new { requestId = request.RequestId, clientId = request.ClientId, status = request.Status.ToWire() },
                 statusCode: StatusCodes.Status202Accepted));
         });
     }
 
-    /// <summary>簽章金鑰登錄申請的決策（13 單）：只含 Client 身分、keyid 與公開金鑰；待核准前不登錄驗簽金鑰。</summary>
+    /// <summary>
+    /// 簽章金鑰登錄申請的決策（13、17 單）：申請者驗證同憑證申請；需證明持有新金鑰的私鑰（以金鑰對申請內容簽章）。
+    /// 只含 Client 身分、keyid 與公開金鑰；待核准前不登錄驗簽金鑰。
+    /// </summary>
     private static AdministrativeDecision DecideSigningKeySubmission(
         ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates,
+        TrustRegistry registry,
         SigningKeyRegistrationRequests signingKeyRequests,
+        X509Certificate2? presented,
         SigningKeySubmission submission)
     {
         var clientId = submission.ClientId;
         var target = new AdministrativeTarget(clientId, Subject: "signing_key", KeyId: submission.KeyId);
-        if (clientId is null || !trustedCertificates.ContainsKey(clientId))
+        var applicant = AuthenticateApplicant(trustedCertificates, registry, presented);
+        if (applicant is null)
         {
-            return Rejected(target, StatusCodes.Status404NotFound, "client_not_found");
+            return Rejected(target, StatusCodes.Status401Unauthorized, ApplicantAuthenticationRequired);
+        }
+
+        if (!string.Equals(clientId, applicant.ClientId, StringComparison.Ordinal))
+        {
+            return Rejected(target, StatusCodes.Status403Forbidden, "applicant_mismatch");
         }
 
         if (!SigningKeyRegistrationRequests.TryParsePublicKey(submission.KeyId, submission.PublicKeyPem, out var key, out var error))
@@ -553,13 +589,44 @@ public sealed class AuthServerHost : IAsyncDisposable
             return Rejected(target, StatusCodes.Status400BadRequest, error);
         }
 
-        return Accepted(target with { Fingerprint = KeyFingerprint(key!.Key) }, StatusCodes.Status202Accepted, () =>
+        target = target with { Fingerprint = KeyFingerprint(key!.Key) };
+        if (!ApplicantProof.VerifySigningKey(key!.Key, ApplicantProof.SigningKeyContent(clientId!, key.KeyId, key.Key), submission.PossessionProof))
         {
-            var request = signingKeyRequests.Submit(clientId, key!);
+            return Rejected(target, StatusCodes.Status400BadRequest, PossessionProofInvalid);
+        }
+
+        return Accepted(target, StatusCodes.Status202Accepted, () =>
+        {
+            var request = signingKeyRequests.Submit(clientId!, key!, applicant);
             return Task.FromResult(Results.Json(
                 new { requestId = request.RequestId, clientId = request.ClientId, status = request.Status.ToWire() },
                 statusCode: StatusCodes.Status202Accepted));
         });
+    }
+
+    /// <summary>
+    /// 申請者身分（17 單）：出示的 mTLS 憑證必須是某 Client 目前登錄的憑證，且未撤銷、未退役，該 Client 未停用。
+    /// 管理員憑證、未登錄憑證與待核准憑證都不是申請者身分；回傳 null 時呼叫端一律回 401。
+    /// </summary>
+    private static ApplicantIdentity? AuthenticateApplicant(
+        ConcurrentDictionary<string, IReadOnlyList<X509Certificate2>> trustedCertificates,
+        TrustRegistry registry,
+        X509Certificate2? presented)
+    {
+        if (presented is null || registry.IsAdministratorCertificate(presented.Thumbprint) || registry.IsCertificateBlocked(presented.Thumbprint))
+        {
+            return null;
+        }
+
+        foreach (var pair in trustedCertificates)
+        {
+            if (pair.Value.Any(certificate => string.Equals(certificate.Thumbprint, presented.Thumbprint, StringComparison.OrdinalIgnoreCase)))
+            {
+                return registry.IsClientEnabled(pair.Key) ? new ApplicantIdentity(pair.Key, presented.Thumbprint) : null;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>

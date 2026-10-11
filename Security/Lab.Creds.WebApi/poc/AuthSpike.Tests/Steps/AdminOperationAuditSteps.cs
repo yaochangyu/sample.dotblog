@@ -81,8 +81,12 @@ public sealed class AdminOperationAuditSteps
     public async Task GivenPendingCertificateSubmitted(string clientId)
     {
         _pendingCertificate = SpikeCertificates.CreateSelfSignedClientCertificate($"{clientId}-pending-{Runtime.EnvironmentName}-{Guid.NewGuid():N}");
-        var body = JsonSerializer.Serialize(new { clientId, publicCertificatePem = _pendingCertificate.ExportCertificatePem() });
-        var response = await PostJsonAsync("client-certificate-requests", body);
+        var response = await ApplicantProofs.SubmitCertificateAsync(
+            Runtime,
+            Runtime.ClientCertificate(clientId),
+            clientId,
+            _pendingCertificate.ExportCertificatePem(),
+            ApplicantProofs.CertificateProof(clientId, _pendingCertificate));
         response.Status.Should().Be(HttpStatusCode.Accepted, response.Body);
         _pendingCertificateRequestPath = $"admin/client-certificate-requests/{RequestIdOf(response.Body)}";
     }
@@ -91,13 +95,13 @@ public sealed class AdminOperationAuditSteps
     public async Task GivenPendingSigningKeySubmitted(string clientId)
     {
         _pendingKey = Runtime.CreateSigningKey(clientId);
-        var body = JsonSerializer.Serialize(new
-        {
+        var response = await ApplicantProofs.SubmitSigningKeyAsync(
+            Runtime,
+            Runtime.ClientCertificate(clientId),
             clientId,
-            keyId = _pendingKey.KeyId,
-            publicKeyPem = _pendingKey.Key.ExportSubjectPublicKeyInfoPem(),
-        });
-        var response = await PostJsonAsync("signing-key-requests", body);
+            _pendingKey.KeyId,
+            _pendingKey.Key.ExportSubjectPublicKeyInfoPem(),
+            ApplicantProofs.SigningKeyProof(clientId, _pendingKey.KeyId, _pendingKey.Key));
         response.Status.Should().Be(HttpStatusCode.Accepted, response.Body);
         _pendingKeyRequestPath = $"admin/signing-key-requests/{RequestIdOf(response.Body)}";
     }

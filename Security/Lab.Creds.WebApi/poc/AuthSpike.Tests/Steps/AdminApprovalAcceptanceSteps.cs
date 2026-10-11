@@ -16,7 +16,6 @@ namespace AuthSpike.Tests.Steps;
 public sealed class AdminApprovalAcceptanceSteps
 {
     private const string ClientId = "orders-client";
-    private const string SubmitRelativePath = "client-certificate-requests";
     private const string AdminRequestsRelativePath = "admin/client-certificate-requests";
     private const string IssueRelativePath = ".scratch/server-to-server-api-protection/issues/16-admin-approval-acceptance.md";
     private const string GlossaryRelativePath = "GLOSSARY.md";
@@ -60,13 +59,12 @@ public sealed class AdminApprovalAcceptanceSteps
     [Given("為 {string} 以新憑證提交待核准的登錄申請")]
     public async Task GivenSubmitsNewCertificate(string clientId)
     {
-        var body = JsonSerializer.Serialize(new { clientId, publicCertificatePem = NewCertificate.ExportCertificatePem() });
-        using var client = SignedHttp.CreateClient(Runtime, null);
-        using var request = new HttpRequestMessage(HttpMethod.Post, new Uri(Runtime.AuthServer.Issuer, SubmitRelativePath))
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json"),
-        };
-        _submission = await SignedHttp.SendAsync(client, request);
+        _submission = await ApplicantProofs.SubmitCertificateAsync(
+            Runtime,
+            Runtime.ClientCertificate(clientId),
+            clientId,
+            NewCertificate.ExportCertificatePem(),
+            ApplicantProofs.CertificateProof(clientId, NewCertificate));
         _submission.Status.Should().Be(HttpStatusCode.Accepted, _submission.Body);
         using var document = JsonDocument.Parse(_submission.Body);
         _requestId = document.RootElement.GetProperty("requestId").GetString();

@@ -81,8 +81,12 @@ public sealed class AdminRetireAndRevokeSteps : IDisposable
     public async Task GivenApprovedReplacementCertificate(string clientId)
     {
         _replacementCertificate = SpikeCertificates.CreateSelfSignedClientCertificate($"{clientId}-replacement-{Runtime.EnvironmentName}-{Guid.NewGuid():N}");
-        var body = JsonSerializer.Serialize(new { clientId, publicCertificatePem = _replacementCertificate.ExportCertificatePem() });
-        var submitted = await PostJsonAsync("client-certificate-requests", body, null);
+        var submitted = await ApplicantProofs.SubmitCertificateAsync(
+            Runtime,
+            Runtime.ClientCertificate(clientId),
+            clientId,
+            _replacementCertificate.ExportCertificatePem(),
+            ApplicantProofs.CertificateProof(clientId, _replacementCertificate));
         submitted.Status.Should().Be(HttpStatusCode.Accepted, submitted.Body);
 
         var approved = await AdministratorInterfaceSteps.SendAdminAsync(
@@ -96,13 +100,13 @@ public sealed class AdminRetireAndRevokeSteps : IDisposable
     public async Task GivenApprovedReplacementSigningKey(string clientId)
     {
         _replacementKey = Runtime.CreateSigningKey(clientId);
-        var body = JsonSerializer.Serialize(new
-        {
+        var submitted = await ApplicantProofs.SubmitSigningKeyAsync(
+            Runtime,
+            Runtime.ClientCertificate(clientId),
             clientId,
-            keyId = _replacementKey.KeyId,
-            publicKeyPem = _replacementKey.Key.ExportSubjectPublicKeyInfoPem(),
-        });
-        var submitted = await PostJsonAsync("signing-key-requests", body, null);
+            _replacementKey.KeyId,
+            _replacementKey.Key.ExportSubjectPublicKeyInfoPem(),
+            ApplicantProofs.SigningKeyProof(clientId, _replacementKey.KeyId, _replacementKey.Key));
         submitted.Status.Should().Be(HttpStatusCode.Accepted, submitted.Body);
 
         var approved = await AdministratorInterfaceSteps.SendAdminAsync(
