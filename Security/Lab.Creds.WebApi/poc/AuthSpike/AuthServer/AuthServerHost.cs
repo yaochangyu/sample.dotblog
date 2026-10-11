@@ -421,7 +421,16 @@ public sealed class AuthServerHost : IAsyncDisposable
     /// <summary>
     /// 管理操作的決策（15 單）：計算結果時不改變任何狀態；管理操作稽核寫入成功後才執行 Apply。
     /// </summary>
-    private sealed record AdministrativeDecision(AdministrativeTarget Target, int Status, string Reason, Func<Task<IResult>> Apply);
+    /// <remarks>
+    /// 申請者驗證結果（20 單後續）只由申請端點設定；其他管理操作保持 null（不適用）。
+    /// 與操作者狀態分開：被拒絕的嘗試即使申請者已通過驗證，操作者仍標為未驗證。
+    /// </remarks>
+    private sealed record AdministrativeDecision(AdministrativeTarget Target, int Status, string Reason, Func<Task<IResult>> Apply)
+    {
+        public bool? ApplicantAuthenticated { get; init; }
+
+        public string? ApplicantClientId { get; init; }
+    }
 
     private const string AdministratorAuthenticationRequired = "administrator_authentication_required";
     private const string ApplicantAuthenticationRequired = "applicant_authentication_required";
@@ -469,11 +478,12 @@ public sealed class AuthServerHost : IAsyncDisposable
             var decision = decide();
             if (requireAdministrator && !administrator)
             {
-                decision = new AdministrativeDecision(
-                    decision.Target,
-                    StatusCodes.Status401Unauthorized,
-                    AdministratorAuthenticationRequired,
-                    () => Task.FromResult(AdministratorRejected()));
+                decision = decision with
+                {
+                    Status = StatusCodes.Status401Unauthorized,
+                    Reason = AdministratorAuthenticationRequired,
+                    Apply = () => Task.FromResult(AdministratorRejected()),
+                };
             }
 
             var record = new AdministrativeAuditRecord(
@@ -488,7 +498,9 @@ public sealed class AuthServerHost : IAsyncDisposable
                 Fingerprint: decision.Target.Fingerprint,
                 Outcome: decision.Status < StatusCodes.Status400BadRequest ? "accepted" : "rejected",
                 Reason: decision.Reason,
-                ResultStatus: decision.Status);
+                ResultStatus: decision.Status,
+                ApplicantAuthenticated: decision.ApplicantAuthenticated,
+                ApplicantClientId: decision.ApplicantClientId);
 
             try
             {
@@ -521,6 +533,8 @@ public sealed class AuthServerHost : IAsyncDisposable
         outcome = record.Outcome,
         reason = record.Reason,
         resultStatus = record.ResultStatus,
+        applicantAuthenticated = record.ApplicantAuthenticated,
+        applicantClientId = record.ApplicantClientId,
     };
 
     /// <summary>簽章金鑰指紋（15 單）：公開金鑰 SubjectPublicKeyInfo 的 SHA-256 十六進位值，不含私鑰。</summary>
@@ -541,9 +555,22 @@ public sealed class AuthServerHost : IAsyncDisposable
         X509Certificate2? presented,
         CertificateRegistrationSubmission submission)
     {
+        var applicant = AuthenticateApplicant(trustedCertificates, registry, presented);
+        return DecideCertificateSubmissionFor(applicant, requests, signingKeyRequests, proofNonces, clock, submission)
+            with { ApplicantAuthenticated = applicant is not null, ApplicantClientId = applicant?.ClientId };
+    }
+
+    /// <summary>憑證登錄申請在申請者身分已確定後的決策；申請者驗證結果由 <see cref="DecideCertificateSubmission"/> 附加到每一種決策。</summary>
+    private static AdministrativeDecision DecideCertificateSubmissionFor(
+        ApplicantIdentity? applicant,
+        CertificateRegistrationRequests requests,
+        SigningKeyRegistrationRequests signingKeyRequests,
+        ProofNonceStore proofNonces,
+        TimeProvider clock,
+        CertificateRegistrationSubmission submission)
+    {
         var clientId = submission.ClientId;
         var target = new AdministrativeTarget(clientId, Subject: "certificate");
-        var applicant = AuthenticateApplicant(trustedCertificates, registry, presented);
         if (RejectUnlessApplicantFor(target, applicant, clientId) is { } rejection)
         {
             return rejection;
@@ -594,9 +621,22 @@ public sealed class AuthServerHost : IAsyncDisposable
         X509Certificate2? presented,
         SigningKeySubmission submission)
     {
+        var applicant = AuthenticateApplicant(trustedCertificates, registry, presented);
+        return DecideSigningKeySubmissionFor(applicant, requests, signingKeyRequests, proofNonces, clock, submission)
+            with { ApplicantAuthenticated = applicant is not null, ApplicantClientId = applicant?.ClientId };
+    }
+
+    /// <summary>簽章金鑰登錄申請在申請者身分已確定後的決策；申請者驗證結果由 <see cref="DecideSigningKeySubmission"/> 附加到每一種決策。</summary>
+    private static AdministrativeDecision DecideSigningKeySubmissionFor(
+        ApplicantIdentity? applicant,
+        CertificateRegistrationRequests requests,
+        SigningKeyRegistrationRequests signingKeyRequests,
+        ProofNonceStore proofNonces,
+        TimeProvider clock,
+        SigningKeySubmission submission)
+    {
         var clientId = submission.ClientId;
         var target = new AdministrativeTarget(clientId, Subject: "signing_key", KeyId: submission.KeyId);
-        var applicant = AuthenticateApplicant(trustedCertificates, registry, presented);
         if (RejectUnlessApplicantFor(target, applicant, clientId) is { } rejection)
         {
             return rejection;

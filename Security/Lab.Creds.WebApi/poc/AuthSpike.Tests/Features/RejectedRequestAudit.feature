@@ -3,6 +3,8 @@ Feature: 被拒絕申請嘗試的稽核
   都留下標為「未驗證」的管理操作稽核紀錄；紀錄不含私鑰與原始 Token，不把宣稱的 Client 身分記成已驗證；
   失敗回應不洩漏他人申請內容；稽核寫入失敗時申請不建立並明確回報服務錯誤。
   紀錄欄位與保存規則沿用 15 單的管理操作稽核；被拒絕嘗試的規則與數值為 lab 暫定值，待使用者確認。
+  另以獨立欄位記錄 mTLS 申請者身分是否通過驗證及通過時的申請者 Client：操作者仍標為「未驗證」，
+  匿名者該欄位為「未通過」且申請者 Client 為「無」，不含任何宣稱的身分。
 
   Background:
     Given 授權伺服器與建立訂單 API 已啟動
@@ -12,6 +14,7 @@ Feature: 被拒絕申請嘗試的稽核
     When 20 單情境中以 "<身分>" 身分為 "orders-client" 提出持有證明為 "有效" 的新憑證登錄申請
     Then 20 單情境的申請回應為 401
     And 20 單情境最新的申請稽核對象 Client 為 "orders-client"，操作者為 "未驗證"，結果為 "rejected"，結果代碼為 401，原因為 "applicant_authentication_required"
+    And 20 單情境最新的申請稽核的申請者驗證為 "未通過"，申請者 Client 為 "無"
 
     Examples:
       | 身分       |
@@ -22,6 +25,7 @@ Feature: 被拒絕申請嘗試的稽核
     When 20 單情境中以 "orders-client" 身分為 "orders-client" 提出持有證明為 "<證明>" 的新憑證登錄申請
     Then 20 單情境的申請回應為 400
     And 20 單情境最新的申請稽核對象 Client 為 "orders-client"，操作者為 "未驗證"，結果為 "rejected"，結果代碼為 400，原因為 "possession_proof_invalid"
+    And 20 單情境最新的申請稽核的申請者驗證為 "通過"，申請者 Client 為 "orders-client"
 
     Examples:
       | 證明     |
@@ -34,6 +38,7 @@ Feature: 被拒絕申請嘗試的稽核
     When 20 單情境中以 "orders-client" 身分為 "orders-client" 提出持有證明為 "有效" 的新憑證登錄申請
     Then 20 單情境的申請回應為 429
     And 20 單情境最新的申請稽核對象 Client 為 "orders-client"，操作者為 "未驗證"，結果為 "rejected"，結果代碼為 429，原因為 "pending_request_limit_reached"
+    And 20 單情境最新的申請稽核的申請者驗證為 "通過"，申請者 Client 為 "orders-client"
 
   @isolated
   Scenario: 已撤銷憑證的 Client 提出的申請被拒絕並留下標為未驗證的紀錄
@@ -41,6 +46,7 @@ Feature: 被拒絕申請嘗試的稽核
     When 20 單情境中以 "orders-client" 身分為 "orders-client" 提出持有證明為 "有效" 的新憑證登錄申請
     Then 20 單情境的申請回應為 401
     And 20 單情境最新的申請稽核對象 Client 為 "orders-client"，操作者為 "未驗證"，結果為 "rejected"，結果代碼為 401，原因為 "applicant_authentication_required"
+    And 20 單情境最新的申請稽核的申請者驗證為 "未通過"，申請者 Client 為 "無"
 
   @isolated
   Scenario: 已停用 Client 提出的申請被拒絕並留下標為未驗證的紀錄
@@ -48,12 +54,14 @@ Feature: 被拒絕申請嘗試的稽核
     When 20 單情境中以 "orders-client" 身分為 "orders-client" 提出持有證明為 "有效" 的新憑證登錄申請
     Then 20 單情境的申請回應為 401
     And 20 單情境最新的申請稽核對象 Client 為 "orders-client"，操作者為 "未驗證"，結果為 "rejected"，結果代碼為 401，原因為 "applicant_authentication_required"
+    And 20 單情境最新的申請稽核的申請者驗證為 "未通過"，申請者 Client 為 "無"
 
   Scenario: 未驗證的申請即使宣稱他人 Client 身分，紀錄仍標為未驗證且不記為已驗證
     When 20 單情境中以 "未登錄憑證" 身分為 "orders-client" 提出持有證明為 "有效" 的新憑證登錄申請
     Then 20 單情境的申請回應為 401
     And 20 單情境最新的申請稽核對象 Client 為 "orders-client"，操作者為 "未驗證"，結果為 "rejected"，結果代碼為 401，原因為 "applicant_authentication_required"
     And 20 單情境最新的申請稽核的操作者指紋為未登錄憑證
+    And 20 單情境最新的申請稽核的申請者驗證為 "未通過"，申請者 Client 為 "無"
 
   Scenario: 替他人提出的申請被拒絕，失敗回應與稽核不洩漏對方的申請內容
     Given 20 單情境中為 "orders-client" 已有待核准的憑證登錄申請
@@ -61,6 +69,7 @@ Feature: 被拒絕申請嘗試的稽核
     Then 20 單情境的申請回應為 403
     And 20 單情境的回應不含既有待核准申請的識別或指紋
     And 20 單情境最新的申請稽核對象 Client 為 "orders-client"，操作者為 "未驗證"，結果為 "rejected"，結果代碼為 403，原因為 "applicant_mismatch"
+    And 20 單情境最新的申請稽核的申請者驗證為 "通過"，申請者 Client 為 "orders-partner-client"
 
   @isolated
   Scenario: 稽核寫入失敗時被拒絕的申請不留下待核准紀錄並回報服務錯誤

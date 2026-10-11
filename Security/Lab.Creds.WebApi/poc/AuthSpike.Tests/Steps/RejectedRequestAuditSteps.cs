@@ -146,6 +146,26 @@ public sealed class RejectedRequestAuditSteps
         record!.ActorThumbprint.Should().Be(Runtime.UnregisteredSelfSignedCertificate.Thumbprint, "紀錄應只標示出示的憑證指紋，不視為身分");
     }
 
+    /// <summary>
+    /// 申請者驗證（獨立於操作者狀態）：「通過」表示出示的 mTLS 憑證經驗證為某已登錄且有效 Client 的申請者身分，
+    /// 申請者 Client 為該 Client；「未通過」時申請者 Client 必須為「無」，不含任何宣稱的身分。
+    /// </summary>
+    [Then("20 單情境最新的申請稽核的申請者驗證為 {string}，申請者 Client 為 {string}")]
+    public async Task ThenLatestApplicantVerificationIs(string verification, string applicantClientId)
+    {
+        var expectedAuthenticated = verification switch
+        {
+            "通過" => true,
+            "未通過" => false,
+            _ => throw new ArgumentOutOfRangeException(nameof(verification), verification, "未知的申請者驗證結果"),
+        };
+        var record = (await AuditRecordsAsync()).LastOrDefault(candidate => candidate.Operation == CertificateSubmit);
+        record.Should().NotBeNull("應有 certificate.submit 紀錄");
+        record!.ApplicantAuthenticated.Should().Be(expectedAuthenticated);
+        record.ApplicantClientId.Should().Be(applicantClientId == "無" ? null : applicantClientId);
+        record.ActorStatus.Should().Be("未驗證", "被拒絕的嘗試不論申請者驗證結果如何，操作者一律為未驗證");
+    }
+
     [Then("20 單情境的管理操作稽核不含私鑰、原始 Token 或憑證私有內容")]
     public async Task ThenAuditHasNoSecrets()
     {
@@ -207,7 +227,9 @@ public sealed class RejectedRequestAuditSteps
         string? ClientId,
         string Outcome,
         string Reason,
-        int ResultStatus)
+        int ResultStatus,
+        bool? ApplicantAuthenticated,
+        string? ApplicantClientId)
     {
         public static AuditView From(JsonElement element) => new(
             Text(element, "operation") ?? string.Empty,
@@ -216,7 +238,12 @@ public sealed class RejectedRequestAuditSteps
             Text(element, "clientId"),
             Text(element, "outcome") ?? string.Empty,
             Text(element, "reason") ?? string.Empty,
-            element.GetProperty("resultStatus").GetInt32());
+            element.GetProperty("resultStatus").GetInt32(),
+            // 缺少欄位時為 null（非 false）：紀錄未提供申請者驗證結果時，斷言必須失敗，不得因預設值假通過。
+            element.TryGetProperty("applicantAuthenticated", out var authenticated) && authenticated.ValueKind is JsonValueKind.True or JsonValueKind.False
+                ? authenticated.ValueKind == JsonValueKind.True
+                : null,
+            Text(element, "applicantClientId"));
 
         private static string? Text(JsonElement element, string name)
             => element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;

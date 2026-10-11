@@ -629,6 +629,20 @@ components:
           type: string
         resultStatus:
           type: integer
+        applicantAuthenticated:
+          type: boolean
+          nullable: true
+          description: >-
+            申請者驗證結果（20 單後續，lab 暫定、待使用者確認）。獨立於 actorStatus：只有申請端點有值，
+            true 表示出示的 mTLS 憑證經驗證為某已登錄且有效 Client 的申請者；false 表示未通過（含無憑證、
+            未登錄、已撤銷、已退役或已停用，不含任何宣稱的身分）；其他管理操作為 null（不適用）。
+            被拒絕的嘗試即使為 true，actorStatus 仍為未驗證。
+        applicantClientId:
+          type: string
+          nullable: true
+          description: >-
+            申請者驗證通過時，經 mTLS 驗證的申請者 Client（可能與宣稱的 clientId 不同，例如替他人申請被拒絕的情境）；
+            未通過或不適用時為 null。不由請求宣稱的 Client 推導。
     ClientDisabledResponse:
       type: object
       required: [clientId, enabled]

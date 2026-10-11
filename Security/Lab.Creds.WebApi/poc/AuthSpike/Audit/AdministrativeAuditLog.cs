@@ -21,7 +21,11 @@ public sealed record AdministrativeAuditRecord(
     string? Fingerprint,
     string Outcome,
     string Reason,
-    int ResultStatus);
+    int ResultStatus,
+    // 申請者驗證（20 單後續，lab 暫定）：獨立於 ActorStatus。只有申請端點有值（true／false）；其他管理操作為 null（不適用）。
+    // 通過時 ApplicantClientId 為經 mTLS 驗證的申請者 Client；未通過時為 null，不含任何宣稱的身分。
+    bool? ApplicantAuthenticated = null,
+    string? ApplicantClientId = null);
 
 /// <summary>
 /// 管理操作稽核（與呼叫者安全稽核 <see cref="SecurityAuditLog"/> 分開管理；lab 以記憶體保存）。
