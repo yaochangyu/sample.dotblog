@@ -198,7 +198,7 @@ public sealed class ApplicantVerificationSteps
     }
 
     /// <summary>計算指定 Client 已受理（accepted）的憑證或簽章金鑰登錄申請稽核數；受理前會寫入稽核，因此數量等於已建立的待核准紀錄數。</summary>
-    private static async Task<int> AcceptedSubmissionCountAsync(string clientId)
+    internal static async Task<int> AcceptedSubmissionCountAsync(string clientId)
     {
         var response = await AdministratorInterfaceSteps.SendAdminAsync(Runtime.AdministratorCertificate, HttpMethod.Get, AuditRecordsPath);
         response.Status.Should().Be(HttpStatusCode.OK, response.Body);
