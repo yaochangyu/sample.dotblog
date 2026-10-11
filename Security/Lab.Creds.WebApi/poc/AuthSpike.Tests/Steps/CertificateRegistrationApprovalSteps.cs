@@ -248,7 +248,7 @@ public sealed class CertificateRegistrationApprovalSteps
     }
 
     /// <summary>以 identity 的 mTLS 身分送出憑證登錄申請（17 單：申請者必須經 mTLS 驗證，且需附持有證明）。</summary>
-    private static Task<ApiResponse> SubmitAsync(X509Certificate2? identity, string clientId, string publicCertificatePem, string? proof)
+    private static Task<ApiResponse> SubmitAsync(X509Certificate2? identity, string clientId, string publicCertificatePem, PossessionProof? proof)
         => ApplicantProofs.SubmitCertificateAsync(Runtime, identity, clientId, publicCertificatePem, proof);
 
     private static List<string> OtherClientEntries(string body, string clientId)

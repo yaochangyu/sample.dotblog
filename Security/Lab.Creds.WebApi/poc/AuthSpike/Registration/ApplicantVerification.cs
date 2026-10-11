@@ -14,12 +14,24 @@ public sealed record ApplicantIdentity(string ClientId, string CertificateThumbp
 /// </summary>
 public static class ApplicantProof
 {
-    /// <summary>憑證申請的簽章內容：綁定申請者的 Client 與新憑證指紋。</summary>
-    public static string CertificateContent(string clientId, string thumbprint) => $"client-certificate-request\n{clientId}\n{thumbprint}";
+    /// <summary>持有證明的時間窗（秒）：伺服器時間與證明時間戳相差超過此值即拒絕（lab 暫定 60 秒，待使用者確認）。</summary>
+    public const int FreshnessWindowSeconds = 60;
 
-    /// <summary>簽章金鑰申請的簽章內容：綁定 Client、keyid 與公開金鑰指紋。</summary>
-    public static string SigningKeyContent(string clientId, string keyId, ECDsa key)
-        => $"signing-key-request\n{clientId}\n{keyId}\n{Convert.ToHexString(SHA256.HashData(key.ExportSubjectPublicKeyInfo()))}";
+    /// <summary>憑證申請的簽章內容：綁定已驗證的申請者 Client、申請者目前憑證指紋、新憑證指紋、時間戳與一次性 nonce。</summary>
+    public static string CertificateContent(string clientId, string applicantThumbprint, string thumbprint, long timestamp, string nonce)
+        => $"client-certificate-request\n{clientId}\n{applicantThumbprint}\n{thumbprint}\n{timestamp}\n{nonce}";
+
+    /// <summary>簽章金鑰申請的簽章內容：綁定已驗證的申請者 Client、申請者目前憑證指紋、keyid、公開金鑰指紋、時間戳與一次性 nonce。</summary>
+    public static string SigningKeyContent(string clientId, string applicantThumbprint, string keyId, ECDsa key, long timestamp, string nonce)
+        => $"signing-key-request\n{clientId}\n{applicantThumbprint}\n{keyId}\n{Convert.ToHexString(SHA256.HashData(key.ExportSubjectPublicKeyInfo()))}\n{timestamp}\n{nonce}";
+
+    /// <summary>時間戳是否落在伺服器時間的時間窗內（含時鐘差距的雙向判斷）。</summary>
+    public static bool IsWithinWindow(long timestamp, DateTimeOffset now)
+        => Math.Abs(now.ToUnixTimeSeconds() - timestamp) <= FreshnessWindowSeconds;
+
+    /// <summary>nonce 必須非空、不超過 128 字元，且不含換行（換行會破壞簽章內容的欄位界線）。</summary>
+    public static bool IsValidNonce(string? nonce)
+        => !string.IsNullOrWhiteSpace(nonce) && nonce.Length <= 128 && !nonce.Contains('\n');
 
     /// <summary>驗證憑證申請的持有證明；以申請中的新憑證公開金鑰驗證。</summary>
     public static bool VerifyCertificate(X509Certificate2 certificate, string content, string? proof)

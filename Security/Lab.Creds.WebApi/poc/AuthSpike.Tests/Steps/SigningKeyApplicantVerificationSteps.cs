@@ -177,22 +177,23 @@ public sealed class SigningKeyApplicantVerificationSteps
     private Task<ApiResponse> SubmitAsync(string identity, string claimedClientId, string proofMode)
     {
         var key = CandidateKey;
+        // 持有證明綁定出示的申請者身分；無憑證時無申請者指紋，伺服器於證明檢查前即回 401。
+        var applicantThumbprint = Identity(identity)?.Thumbprint ?? string.Empty;
         var proof = proofMode switch
         {
-            "有效" => ApplicantProofs.SigningKeyProof(claimedClientId, key.KeyId, key.Key),
+            "有效" => (PossessionProof?)ApplicantProofs.SigningKeyProofAt(claimedClientId, applicantThumbprint, key.KeyId, key.Key, key.Key, ApplicantProofs.NowUnix(), ApplicantProofs.NewNonce()),
             "缺漏" => null,
-            "他人私鑰" => ForeignProof(claimedClientId, key),
+            "他人私鑰" => ForeignProof(claimedClientId, applicantThumbprint, key),
             _ => throw new ArgumentOutOfRangeException(nameof(proofMode), proofMode, "未知的持有證明模式"),
         };
         return ApplicantProofs.SubmitSigningKeyAsync(Runtime, Identity(identity), claimedClientId, key.KeyId, key.Key.ExportSubjectPublicKeyInfoPem(), proof);
     }
 
     /// <summary>以他人（非申請中金鑰）的私鑰對申請內容簽章，模擬無法證明持有該金鑰（18 單 AC-26）。</summary>
-    private static string ForeignProof(string clientId, SignatureKey key)
+    private static PossessionProof ForeignProof(string clientId, string applicantThumbprint, SignatureKey key)
     {
         using var foreign = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var content = Encoding.UTF8.GetBytes(ApplicantProof.SigningKeyContent(clientId, key.KeyId, key.Key));
-        return Convert.ToBase64String(foreign.SignData(content, HashAlgorithmName.SHA256));
+        return ApplicantProofs.SigningKeyProofAt(clientId, applicantThumbprint, key.KeyId, key.Key, foreign, ApplicantProofs.NowUnix(), ApplicantProofs.NewNonce());
     }
 
     private static string RequestIdOf(string body)

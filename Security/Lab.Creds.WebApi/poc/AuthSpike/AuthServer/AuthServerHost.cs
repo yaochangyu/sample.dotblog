@@ -105,6 +105,8 @@ public sealed class AuthServerHost : IAsyncDisposable
         var clientsById = clients.ToDictionary(client => client.ClientId);
         var requests = new CertificateRegistrationRequests();
         var signingKeyRequests = new SigningKeyRegistrationRequests();
+        // 持有證明 nonce 的一次性登錄（lab 暫定，待使用者確認）；與申請共用決策閘門序列化。
+        var proofNonces = new ProofNonceStore();
         // 核准與拒絕序列化：避免同一申請被併發核准兩次，或核准與拒絕同時生效。
         var decisionGate = new SemaphoreSlim(1, 1);
 
@@ -175,7 +177,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         // 申請者驗證（17 單）：只接受已登錄且有效的 Client 以現有已核准憑證經 mTLS 提出，且只能替自己申請；未驗證者一律 401。
         app.MapPost("/client-certificate-requests", (CertificateRegistrationSubmission submission, HttpContext httpContext) =>
             RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "certificate.submit", requireAdministrator: false, () =>
-                DecideCertificateSubmission(trustedCertificates, registry, requests, signingKeyRequests, httpContext.Connection.ClientCertificate, submission)));
+                DecideCertificateSubmission(trustedCertificates, registry, requests, signingKeyRequests, proofNonces, httpContext.Connection.ClientCertificate, submission)));
 
         app.MapGet("/admin/client-certificate-requests/{requestId}", (string requestId, HttpContext httpContext) =>
         {
@@ -264,7 +266,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         // 此端點與欄位為 lab 暫定值，待使用者確認。
         app.MapPost("/signing-key-requests", (SigningKeySubmission submission, HttpContext httpContext) =>
             RunAdministrativeOperationAsync(httpContext, registry, administrativeAudit, decisionGate, "signing_key.submit", requireAdministrator: false, () =>
-                DecideSigningKeySubmission(trustedCertificates, registry, requests, signingKeyRequests, httpContext.Connection.ClientCertificate, submission)));
+                DecideSigningKeySubmission(trustedCertificates, registry, requests, signingKeyRequests, proofNonces, httpContext.Connection.ClientCertificate, submission)));
 
         app.MapGet("/admin/signing-key-requests/{requestId}", (string requestId, HttpContext httpContext) =>
         {
@@ -408,10 +410,10 @@ public sealed class AuthServerHost : IAsyncDisposable
     }
 
     /// <summary>管理員核准或拒絕申請時使用的登錄內容；欄位為 lab 暫定值，待使用者確認。</summary>
-    private sealed record CertificateRegistrationSubmission(string? ClientId, string? PublicCertificatePem, string? PossessionProof);
+    private sealed record CertificateRegistrationSubmission(string? ClientId, string? PublicCertificatePem, string? PossessionProof, long? ProofTimestamp, string? ProofNonce);
 
     /// <summary>簽章金鑰登錄申請的內容；欄位為 lab 暫定值，待使用者確認。</summary>
-    private sealed record SigningKeySubmission(string? ClientId, string? KeyId, string? PublicKeyPem, string? PossessionProof);
+    private sealed record SigningKeySubmission(string? ClientId, string? KeyId, string? PublicKeyPem, string? PossessionProof, long? ProofTimestamp, string? ProofNonce);
 
     /// <summary>管理操作稽核的對象（15 單）；未知的對象欄位為 null。Subject 為 certificate 或 signing_key。</summary>
     private sealed record AdministrativeTarget(string? ClientId, string? Subject = null, string? KeyId = null, string? Fingerprint = null);
@@ -530,6 +532,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         TrustRegistry registry,
         CertificateRegistrationRequests requests,
         SigningKeyRegistrationRequests signingKeyRequests,
+        ProofNonceStore proofNonces,
         X509Certificate2? presented,
         CertificateRegistrationSubmission submission)
     {
@@ -547,7 +550,11 @@ public sealed class AuthServerHost : IAsyncDisposable
         }
 
         target = target with { Fingerprint = certificate!.Thumbprint };
-        if (!ApplicantProof.VerifyCertificate(certificate!, ApplicantProof.CertificateContent(clientId!, certificate!.Thumbprint), submission.PossessionProof))
+        var now = DateTimeOffset.UtcNow;
+        var timing = submission.ProofTimestamp;
+        var nonce = submission.ProofNonce;
+        if (!ProofTimingAccepted(proofNonces, timing, nonce, now)
+            || !ApplicantProof.VerifyCertificate(certificate!, ApplicantProof.CertificateContent(clientId!, applicant!.CertificateThumbprint, certificate!.Thumbprint, timing!.Value, nonce!), submission.PossessionProof))
         {
             return Rejected(target, StatusCodes.Status400BadRequest, PossessionProofInvalid);
         }
@@ -559,6 +566,7 @@ public sealed class AuthServerHost : IAsyncDisposable
 
         return Accepted(target, StatusCodes.Status202Accepted, () =>
         {
+            proofNonces.Consume(nonce!, timing!.Value);
             var request = requests.Submit(clientId!, certificate!, applicant);
             return Task.FromResult(Results.Json(
                 new { requestId = request.RequestId, clientId = request.ClientId, status = request.Status.ToWire() },
@@ -575,6 +583,7 @@ public sealed class AuthServerHost : IAsyncDisposable
         TrustRegistry registry,
         CertificateRegistrationRequests requests,
         SigningKeyRegistrationRequests signingKeyRequests,
+        ProofNonceStore proofNonces,
         X509Certificate2? presented,
         SigningKeySubmission submission)
     {
@@ -592,7 +601,11 @@ public sealed class AuthServerHost : IAsyncDisposable
         }
 
         target = target with { Fingerprint = KeyFingerprint(key!.Key) };
-        if (!ApplicantProof.VerifySigningKey(key!.Key, ApplicantProof.SigningKeyContent(clientId!, key.KeyId, key.Key), submission.PossessionProof))
+        var now = DateTimeOffset.UtcNow;
+        var timing = submission.ProofTimestamp;
+        var nonce = submission.ProofNonce;
+        if (!ProofTimingAccepted(proofNonces, timing, nonce, now)
+            || !ApplicantProof.VerifySigningKey(key!.Key, ApplicantProof.SigningKeyContent(clientId!, applicant!.CertificateThumbprint, key.KeyId, key.Key, timing!.Value, nonce!), submission.PossessionProof))
         {
             return Rejected(target, StatusCodes.Status400BadRequest, PossessionProofInvalid);
         }
@@ -604,12 +617,23 @@ public sealed class AuthServerHost : IAsyncDisposable
 
         return Accepted(target, StatusCodes.Status202Accepted, () =>
         {
+            proofNonces.Consume(nonce!, timing!.Value);
             var request = signingKeyRequests.Submit(clientId!, key!, applicant);
             return Task.FromResult(Results.Json(
                 new { requestId = request.RequestId, clientId = request.ClientId, status = request.Status.ToWire() },
                 statusCode: StatusCodes.Status202Accepted));
         });
     }
+
+    /// <summary>
+    /// 持有證明的時間與 nonce 檢查（18 單後續，lab 暫定、待使用者確認）：時間戳須在時間窗內、nonce 須格式合法且尚未使用。
+    /// 任一不成立都視為持有證明無效（possession_proof_invalid），且不登錄 nonce，因此被拒絕的嘗試不影響之後以新 nonce 重提。
+    /// </summary>
+    private static bool ProofTimingAccepted(ProofNonceStore proofNonces, long? timestamp, string? nonce, DateTimeOffset now)
+        => timestamp is { } value
+            && ApplicantProof.IsWithinWindow(value, now)
+            && ApplicantProof.IsValidNonce(nonce)
+            && !proofNonces.IsConsumed(nonce!, now);
 
     /// <summary>
     /// 每個 Client 的待核准申請數是否已達上限（19 單）：憑證與簽章金鑰的待核准申請合計計算，不因分開提出而繞過。

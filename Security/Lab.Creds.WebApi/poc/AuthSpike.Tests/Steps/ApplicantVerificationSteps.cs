@@ -173,11 +173,13 @@ public sealed class ApplicantVerificationSteps
     /// </summary>
     private Task<ApiResponse> SubmitAsync(string identity, string claimedClientId, string proofMode)
     {
+        // 持有證明綁定出示的申請者身分；無憑證時無申請者指紋，伺服器於證明檢查前即回 401。
+        var applicantThumbprint = Identity(identity)?.Thumbprint ?? string.Empty;
         var proof = proofMode switch
         {
-            "有效" => ApplicantProofs.CertificateProof(claimedClientId, Candidate),
+            "有效" => (PossessionProof?)ApplicantProofs.CertificateProofAt(claimedClientId, applicantThumbprint, Candidate, Candidate, ApplicantProofs.NowUnix(), ApplicantProofs.NewNonce()),
             "缺漏" => null,
-            "他人私鑰" => ApplicantProofs.ForeignCertificateProof(claimedClientId, Candidate, Runtime.UnregisteredSelfSignedCertificate),
+            "他人私鑰" => ApplicantProofs.CertificateProofAt(claimedClientId, applicantThumbprint, Candidate, Runtime.UnregisteredSelfSignedCertificate, ApplicantProofs.NowUnix(), ApplicantProofs.NewNonce()),
             _ => throw new ArgumentOutOfRangeException(nameof(proofMode), proofMode, "未知的持有證明模式"),
         };
         return ApplicantProofs.SubmitCertificateAsync(Runtime, Identity(identity), claimedClientId, Candidate.ExportCertificatePem(), proof);

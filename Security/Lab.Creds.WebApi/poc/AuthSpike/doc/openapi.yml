@@ -148,7 +148,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegistrationRequestAccepted'
         '400':
-          description: "申請內容不合法（error: invalid_certificate）、含私鑰（error: private_key_not_allowed）或持有證明無效（error: possession_proof_invalid）"
+          description: "申請內容不合法（error: invalid_certificate）、含私鑰（error: private_key_not_allowed）或持有證明無效（error: possession_proof_invalid；包含缺漏時間戳或 nonce、時間窗外、nonce 已使用、簽署內容與申請者身分不符）"
         '401':
           description: "未驗證申請者（無憑證、未登錄、已撤銷或已退役憑證、Client 已停用）；統一回應 error: applicant_authentication_required，不區分 Client 是否存在"
         '403':
@@ -175,7 +175,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RegistrationRequestAccepted'
         '400':
-          description: "申請內容不合法（error: invalid_public_key）、含私鑰（error: private_key_not_allowed）或持有證明無效（error: possession_proof_invalid）"
+          description: "申請內容不合法（error: invalid_public_key）、含私鑰（error: private_key_not_allowed）或持有證明無效（error: possession_proof_invalid；包含缺漏時間戳或 nonce、時間窗外、nonce 已使用、簽署內容與申請者身分不符）"
         '401':
           description: "未驗證申請者（error: applicant_authentication_required）；不區分 Client 是否存在"
         '403':
@@ -484,8 +484,8 @@ components:
           enum: [active, cancelled]
     CertificateRegistrationSubmission:
       type: object
-      required: [clientId, publicCertificatePem, possessionProof]
-      description: 只含 Client 身分與公開憑證（PEM）；含私鑰的內容一律拒絕（private_key_not_allowed）。possessionProof 為新憑證私鑰（RSA PKCS#1 v1.5 SHA-256）對申請內容 client-certificate-request\n{clientId}\n{thumbprint} 的簽章（Base64）；lab 暫定值，待使用者確認。
+      required: [clientId, publicCertificatePem, possessionProof, proofTimestamp, proofNonce]
+      description: 只含 Client 身分與公開憑證（PEM）；含私鑰的內容一律拒絕（private_key_not_allowed）。持有證明為新憑證私鑰（RSA PKCS#1 v1.5 SHA-256）對申請內容的簽章（Base64），申請內容為 client-certificate-request\n{clientId}\n{申請者目前憑證指紋}\n{新憑證指紋}\n{proofTimestamp}\n{proofNonce}，其中申請者目前憑證指紋取自已驗證的 mTLS 身分，不取自請求內容。lab 暫定值，待使用者確認。
       properties:
         clientId:
           type: string
@@ -494,10 +494,18 @@ components:
         possessionProof:
           type: string
           description: Base64 簽章（持有證明）；lab 暫定值，待使用者確認。
+        proofTimestamp:
+          type: integer
+          format: int64
+          description: 簽署時的 Unix 秒。伺服器時間與此值相差超過 60 秒即拒絕（possession_proof_invalid）；lab 暫定值（時間窗 60 秒），待使用者確認。
+        proofNonce:
+          type: string
+          maxLength: 128
+          description: 一次性 nonce（不得含換行）。已受理的證明其 nonce 不可再用；重送同一份證明被拒絕且不新增待核准紀錄、不佔額度。lab 暫定值，待使用者確認。
     SigningKeySubmission:
       type: object
-      required: [clientId, keyId, publicKeyPem, possessionProof]
-      description: 只含 Client 身分、keyId 與 ECDSA P-256 公開金鑰（SubjectPublicKeyInfo PEM）；含私鑰的內容一律拒絕。possessionProof 為該金鑰私鑰（ECDSA SHA-256，IEEE P1363）對申請內容 signing-key-request\n{clientId}\n{keyId}\n{公開金鑰 SPKI SHA-256 十六進位} 的簽章（Base64）；lab 暫定值，待使用者確認。
+      required: [clientId, keyId, publicKeyPem, possessionProof, proofTimestamp, proofNonce]
+      description: 只含 Client 身分、keyId 與 ECDSA P-256 公開金鑰（SubjectPublicKeyInfo PEM）；含私鑰的內容一律拒絕。持有證明為該金鑰私鑰（ECDSA SHA-256，IEEE P1363）對申請內容的簽章（Base64），申請內容為 signing-key-request\n{clientId}\n{申請者目前憑證指紋}\n{keyId}\n{公開金鑰 SPKI SHA-256 十六進位}\n{proofTimestamp}\n{proofNonce}；申請者目前憑證指紋取自已驗證的 mTLS 身分。時間窗與 nonce 規則同憑證申請。lab 暫定值，待使用者確認。
       properties:
         clientId:
           type: string
@@ -508,6 +516,14 @@ components:
         possessionProof:
           type: string
           description: Base64 簽章（持有證明）；lab 暫定值，待使用者確認。
+        proofTimestamp:
+          type: integer
+          format: int64
+          description: 簽署時的 Unix 秒；與伺服器時間相差超過 60 秒即拒絕。lab 暫定值，待使用者確認。
+        proofNonce:
+          type: string
+          maxLength: 128
+          description: 一次性 nonce（不得含換行），已受理後不可重用。lab 暫定值，待使用者確認。
     RegistrationRequestAccepted:
       type: object
       required: [requestId, clientId, status]

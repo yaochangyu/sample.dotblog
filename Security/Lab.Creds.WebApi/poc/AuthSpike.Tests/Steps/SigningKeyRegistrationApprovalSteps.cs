@@ -196,7 +196,7 @@ public sealed class SigningKeyRegistrationApprovalSteps
     }
 
     /// <summary>以 identity 的 mTLS 身分送出簽章金鑰登錄申請（17 單：申請者必須經 mTLS 驗證，且需附持有證明）。</summary>
-    private static Task<ApiResponse> SubmitAsync(X509Certificate2? identity, string clientId, string keyId, string publicKeyPem, string? proof)
+    private static Task<ApiResponse> SubmitAsync(X509Certificate2? identity, string clientId, string keyId, string publicKeyPem, PossessionProof? proof)
         => ApplicantProofs.SubmitSigningKeyAsync(Runtime, identity, clientId, keyId, publicKeyPem, proof);
 
     /// <summary>以指定 Client 的 mTLS 憑證與 Token 送出已簽章的建立訂單請求。</summary>
