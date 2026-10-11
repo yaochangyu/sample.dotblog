@@ -65,6 +65,10 @@ flowchart TD
 - **架構重構迴圈（技術債消除）**：系統上線一段時間後，利用 `improve-codebase-architecture` 掃描程式碼摩擦力與淺模組，產出視覺化 HTML 報告，驅動下一輪重構。  
 - **故障排查迴圈（異常修復）**：線上噴錯、偶發失敗或效能衰退時，嚴格遵守六階段科學診斷紀律，在建立可一鍵重現的紅燈迴圈前，絕對不看 code 盲猜。
 
+用 diagram-design skill 的圖還是比 mermaid 漂亮多了
+
+![](https://dotblogsfile.blob.core.windows.net/user/余小章/a7d16385-3160-40bb-9c62-5724d620ac28/1791720136.png.png)
+
 接下來我們以「購物車折價券計算模組」為例，把每一步驟的操作走過一遍。
 
 ---
@@ -84,9 +88,9 @@ Matt Pocock 提供了基於 [skills.sh](https://skills.sh) 的安裝工具，只
 npx skills add mattpocock/skills
 ```
 
-執行後會進入互動式選單：
-1. **選擇 Agent 類型**：CLI 會列出支援的 Agent（如 Claude Code、Cursor、Windsurf、Codex、Gemini CLI 等）。若在指令中加上 `-a <agent>`（例如 `-a claude-code` 或 `-a cursor`），則可直接指定。
-2. **勾選欲安裝的技能**：在清單中勾選所需模組，請務必包含 `setup-matt-pocock-skills`、`grill-with-docs`、`to-spec`、`to-tickets`、`tdd` 與 `code-review` 等核心技能。
+執行後會進入互動式選單：  
+1. **選擇 Agent 類型**：CLI 會列出支援的 Agent（如 Claude Code、Cursor、Windsurf、Codex、Gemini CLI 等）。若在指令中加上 `-a <agent>`（例如 `-a claude-code` 或 `-a cursor`），則可直接指定。  
+2. **勾選欲安裝的技能**：在清單中勾選所需模組，請務必包含 `setup-matt-pocock-skills`、`grill-with-docs`、`to-spec`、`to-tickets`、`tdd` 與 `code-review` 等核心技能。  
 3. **專案或全域安裝**：預設會將技能設定寫入專案目錄；若希望所有專案共用，可加上 `-g` 進行全域安裝。
 
 完成安裝後，即可在 AI 工具中直接調用對應的 Slash Commands！
