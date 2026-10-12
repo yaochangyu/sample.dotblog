@@ -4,6 +4,7 @@ using Lab.Signature.WebApi.Repositories;
 using Lab.Signature.WebApi.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -81,7 +82,16 @@ builder.Services.AddScoped<IApiKeyClientRepository, ApiKeyClientRepository>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<ISignatureValidationHandler, SignatureValidationHandler>();
 builder.Services.AddMemoryCache();
-builder.Services.AddSingleton<INonceStore, MemoryCacheNonceStore>();
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
+if (!string.IsNullOrWhiteSpace(redisConnectionString))
+{
+    builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+    builder.Services.AddSingleton<INonceStore, RedisNonceStore>();
+}
+else
+{
+    builder.Services.AddSingleton<INonceStore, MemoryCacheNonceStore>();
+}
 builder.Services.AddSingleton<IApiKeyGenerator, ApiKeyGenerator>();
 
 var app = builder.Build();

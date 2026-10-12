@@ -250,17 +250,17 @@ public sealed class ApiSignatureMiddleware
         var credential = await keyStore.FindActiveAsync(apiKey, context.RequestAborted) 
                          ?? ClientCredential.Dummy;
 
-        // 4. 重放攻擊檢查：嘗試取得 Nonce
-        var acquired = await nonceStore.TryAcquireAsync(apiKey, nonce, TimeSpan.FromSeconds(420));
-        if (!acquired)
+        // 4. 驗證 HMAC 簽章（含雙金鑰支援與 Dummy 防探測判定）
+        var isValid = _03_常數時間比對簽章(context.Request, credential, signature);
+        if (!isValid || credential.IsDummy)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return;
         }
 
-        // 5. 驗證 HMAC 簽章
-        var isValid = _03_常數時間比對簽章(context.Request, credential, signature);
-        if (!isValid)
+        // 5. 重放攻擊檢查：驗簽通過且為合法金鑰後，才消耗 Nonce（先正規化為小寫避免繞過）
+        var acquired = await nonceStore.TryAcquireAsync(apiKey, nonce.ToLowerInvariant(), TimeSpan.FromSeconds(420));
+        if (!acquired)
         {
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             return;
@@ -269,14 +269,24 @@ public sealed class ApiSignatureMiddleware
         await _next(context);
     }
 
-    // 採用固定時間比較，防止時序攻擊
+    // 採用固定時間與位元運算子比對雙金鑰，防止時序攻擊與短路
     private static bool _03_常數時間比對簽章(HttpRequest request, ClientCredential cred, string clientSig)
     {
-        var expectedSig = CalculateExpectedSignature(request, cred.PrimarySecretBytes);
         var clientBytes = Encoding.UTF8.GetBytes(clientSig);
-        var expectedBytes = Encoding.UTF8.GetBytes(expectedSig);
 
-        return CryptographicOperations.FixedTimeEquals(clientBytes, expectedBytes);
+        // 比對 Primary 金鑰簽章
+        var expectedPrimary = CalculateExpectedSignature(request, cred.PrimarySecretBytes);
+        var isPrimaryValid = CryptographicOperations.FixedTimeEquals(clientBytes, Encoding.UTF8.GetBytes(expectedPrimary));
+
+        // 若有輪替過渡期的 Secondary 金鑰，一併計算並以非短路位元 OR (|) 判定
+        var isSecondaryValid = false;
+        if (cred.SecondarySecretBytes is { Length: > 0 } secondary)
+        {
+            var expectedSecondary = CalculateExpectedSignature(request, secondary);
+            isSecondaryValid = CryptographicOperations.FixedTimeEquals(clientBytes, Encoding.UTF8.GetBytes(expectedSecondary));
+        }
+
+        return isPrimaryValid | isSecondaryValid;
     }
 }
 ```
@@ -301,14 +311,15 @@ public sealed class RedisNonceStore : INonceStore
         _redis = redis;
     }
 
-    public async Task<bool> _04_嘗試鎖定隨機數(
+    public async Task<bool> TryAcquireAsync(
         string apiKey,
         string nonce,
         TimeSpan ttl,
         CancellationToken cancellationToken = default)
     {
         var db = _redis.GetDatabase();
-        var key = $"api_nonce:{apiKey}:{nonce}";
+        // 確保 Nonce 為小寫格式，避免大小寫變體繞過去重
+        var key = $"api_nonce:{apiKey}:{nonce.ToLowerInvariant()}";
 
         // 使用 Redis NX (Not Exists) 原子操作寫入，過期時間設定 420 秒
         var acquired = await db.StringSetAsync(
@@ -356,7 +367,7 @@ app.MapGet("/sample/echo", () => Results.Ok(new { message = "pong" }));
 app.Run();
 ```
 
-若有內部監控需要的 `/healthz`，可以在設定檔中透過 `ExemptPaths` 將其排除，這樣就不必每次打健康檢查還要算一次簽章，不然監控程式可就噴掉了啦!!!
+若有內部負載平衡或存活探針（Liveness Probe）需要的 `/healthz` 端點，建議在設定檔中透過 `ExemptPaths` 予以排除，避免例行健康檢查因未帶簽章而遭攔截。
 
 ---
 

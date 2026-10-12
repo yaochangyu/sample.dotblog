@@ -21,19 +21,22 @@ OrdersController
     ▼
 Handler / Service
     ├─ SignatureValidationHandler：組裝 Canonical String、計算並比對 HMAC-SHA256
-    └─ MemoryCacheNonceStore：以 IMemoryCache 防止同一 ApiKey+Nonce 重複使用
+    └─ INonceStore：
+       ├─ MemoryCacheNonceStore（預設：以 IMemoryCache 防止同一 ApiKey+Nonce 重複使用）
+       └─ RedisNonceStore（當設定 ConnectionStrings:Redis 時自動啟用，透過 Redis SET NX EX 原子去重）
     │
     ▼
 Repository
     └─ ApiKeyClientRepository：從 SignatureDbContext 查詢 ApiKey 與 Secret
     │
     ▼
-PostgreSQL
-    └─ ApiKeyClients：保存教學用 ApiKey、Secret、ClientName 與 CreatedAt
+PostgreSQL / Redis
+    ├─ PostgreSQL (ApiKeyClients)：保存教學用 ApiKey、Secret、ClientName 與 CreatedAt
+    └─ Redis：提供分散式多實例環境下的 Nonce 去重快取（可選）
 ```
 
 - **Controller**：`OrdersController` 提供兩個受保護的示範端點，回傳假訂單資料，不保存訂單資料。
-- **Handler**：`SignatureValidationHandler` 負責簽章驗證規則；`MemoryCacheNonceStore` 負責 Nonce 的原子消費。
+- **Handler**：`SignatureValidationHandler` 負責簽章驗證規則；`INonceStore`（`MemoryCacheNonceStore` 或 `RedisNonceStore`）負責 Nonce 的原子消費。
 - **Repository**：`ApiKeyClientRepository` 使用 EF Core 查詢 ApiKey 對應的合作夥伴 Secret。
 - **Middleware**：只對 `/api/protected/*` 啟用驗證；`/swagger` 等非 protected 路徑直接放行。驗證失敗時教學模式會回傳 HTTP 401 與具體原因；正式環境應改回泛化錯誤。
 

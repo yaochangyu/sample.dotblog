@@ -10,7 +10,11 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
     <PackageReference Include="Reqnroll.xUnit" Version="3.3.4" />
+    <PackageReference Include="StackExchange.Redis" Version="3.4.0" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageReference Include="Testcontainers.Redis" Version="4.16.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
     <PackageReference Include="AwesomeAssertions" Version="9.1.0" />

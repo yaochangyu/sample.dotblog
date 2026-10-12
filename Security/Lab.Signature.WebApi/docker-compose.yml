@@ -12,5 +12,12 @@ services:
     volumes:
       - lab-api-signature-pgdata:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: lab-api-signature-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
 volumes:
   lab-api-signature-pgdata:

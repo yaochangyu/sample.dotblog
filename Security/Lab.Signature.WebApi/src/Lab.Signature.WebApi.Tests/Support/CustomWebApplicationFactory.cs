@@ -22,7 +22,8 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:SignatureDb"] = _connectionString
+                ["ConnectionStrings:SignatureDb"] = _connectionString,
+                ["ConnectionStrings:Redis"] = ""
             });
         });
     }

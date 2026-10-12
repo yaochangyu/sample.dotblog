@@ -10,7 +10,11 @@ public static class SpikeHooks
     public static Task StartEnvironment() => SpikeEnvironment.StartAsync();
 
     [AfterTestRun]
-    public static Task StopEnvironment() => SpikeEnvironment.StopAsync();
+    public static async Task StopEnvironment()
+    {
+        await SpikeEnvironment.StopAsync();
+        await RealStorageTestHarness.ShutdownAsync();
+    }
 
     [BeforeScenario("@short-lifetime")]
     public static Task UseShortLivedTokens() => SpikeEnvironment.UseShortLivedTokensAsync();
