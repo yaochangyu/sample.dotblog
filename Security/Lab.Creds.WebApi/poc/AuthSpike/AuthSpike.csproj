@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Npgsql" Version="10.0.3" />
     <PackageReference Include="OpenIddict.AspNetCore" Version="7.7.1" />
     <PackageReference Include="OpenIddict.EntityFrameworkCore" Version="7.7.1" />
     <PackageReference Include="OpenIddict.Validation.SystemNetHttp" Version="7.7.1" />
