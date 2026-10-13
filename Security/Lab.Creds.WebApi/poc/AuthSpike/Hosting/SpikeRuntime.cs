@@ -141,7 +141,9 @@ public sealed class SpikeRuntime : IAsyncDisposable
         TimeSpan? accessTokenLifetime = null,
         TimeSpan? verificationCacheLifetime = null,
         string environmentName = DefaultEnvironmentName,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null,
+        string? ordersDbConnectionString = null,
+        bool applyMigrations = false)
     {
         var root = SpikeCertificates.CreateRootCertificateAuthority("AuthSpike Root CA");
         var trust = new SpikeTrust(root);
@@ -202,7 +204,19 @@ public sealed class SpikeRuntime : IAsyncDisposable
         registry.RegisterAdministratorCertificate(administratorCertificate.Thumbprint);
 
         var replayStore = new NonceReplayStore();
-        var orders = new OrderStore();
+        OrderStore orders;
+        if (!string.IsNullOrEmpty(ordersDbConnectionString))
+        {
+            if (applyMigrations)
+            {
+                await PostgresOrderStore.ApplyMigrationsAsync(ordersDbConnectionString);
+            }
+            orders = new PostgresOrderStore(ordersDbConnectionString);
+        }
+        else
+        {
+            orders = new OrderStore();
+        }
         var auditLog = new SecurityAuditLog();
         var ordersApi = await OrdersApiHost.StartAsync(
             ordersApiPort,
@@ -327,5 +341,10 @@ public sealed class SpikeRuntime : IAsyncDisposable
 
         await OrdersApi.DisposeAsync();
         await AuthServer.DisposeAsync();
+
+        if (Orders is IAsyncDisposable disposableOrders)
+        {
+            await disposableOrders.DisposeAsync();
+        }
     }
 }

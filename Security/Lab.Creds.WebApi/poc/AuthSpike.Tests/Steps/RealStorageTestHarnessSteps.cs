@@ -41,13 +41,25 @@ public sealed class RealStorageTestHarnessSteps
     }
 
     [When("停止 {string}")]
-    public Task WhenStop(string service) => _harness.StopAsync(ParseService(service));
+    public async Task WhenStop(string service)
+    {
+        _harness ??= await RealStorageTestHarness.GetAsync();
+        await _harness.StopAsync(ParseService(service));
+    }
 
     [When("重新啟動 {string}")]
-    public Task WhenRestart(string service) => _harness.StartAsync(ParseService(service));
+    public async Task WhenRestart(string service)
+    {
+        _harness ??= await RealStorageTestHarness.GetAsync();
+        await _harness.StartAsync(ParseService(service));
+    }
 
     [When("清空 Redis")]
-    public Task WhenFlushRedis() => _harness.FlushRedisAsync();
+    public async Task WhenFlushRedis()
+    {
+        _harness ??= await RealStorageTestHarness.GetAsync();
+        await _harness.FlushRedisAsync();
+    }
 
     [Then("執行個體 A 的操作得到明確失敗")]
     public async Task ThenAFails()

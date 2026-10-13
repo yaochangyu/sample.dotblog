@@ -39,9 +39,21 @@ public static class SpikeEnvironment
         Runtime = await SpikeRuntime.StartAsync(FreeTcpPort(), FreeTcpPort(), verificationCacheLifetime: verificationCacheLifetime, clock: new ManualTimeProvider());
     }
 
+    public static async Task UsePostgresOrdersAsync(string ordersDbConnectionString, bool applyMigrations = true)
+    {
+        Runtime = await SpikeRuntime.StartAsync(
+            FreeTcpPort(),
+            FreeTcpPort(),
+            ordersDbConnectionString: ordersDbConnectionString,
+            applyMigrations: applyMigrations);
+    }
+
     public static async Task RestoreDefaultTokensAsync()
     {
-        await Runtime.DisposeAsync();
+        if (Runtime is not null && !ReferenceEquals(Runtime, _defaultRuntime))
+        {
+            await Runtime.DisposeAsync();
+        }
         Runtime = _defaultRuntime!;
     }
 

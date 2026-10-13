@@ -72,7 +72,7 @@ internal sealed class SimulatedCommitFailureException : Exception { }
 /// - 去重狀態與訂單寫入於同一把鎖內同時完成，因此不會出現「已寫訂單但去重狀態未完成」的中間狀態。
 /// 保證範圍：本業務服務的本地提交只發生一次；不宣稱下游或跨系統 exactly-once（見 06 單）。
 /// </summary>
-public sealed class OrderStore
+public class OrderStore
 {
     /// <summary>lab 暫定：處理中租約（待使用者確認）。</summary>
     public static readonly TimeSpan ProcessingLease = TimeSpan.FromSeconds(30);
@@ -80,15 +80,15 @@ public sealed class OrderStore
     /// <summary>lab 暫定：Idempotency-Key 紀錄保存期（待使用者確認），涵蓋最長重試期。</summary>
     public static readonly TimeSpan IdempotencyKeyRetention = TimeSpan.FromHours(24);
 
-    private readonly object _gate = new();
+    protected readonly object _gate = new();
     private readonly Dictionary<Guid, StoredOrder> _orders = new();
     private readonly Dictionary<(string ClientId, string OrderReference), OperationRecord> _operations = new();
     private readonly Dictionary<(string ClientId, string Key), KeyRecord> _keys = new();
-    private CommitHold? _hold;
-    private CommitFault _armedFault = CommitFault.None;
+    protected CommitHold? _hold;
+    protected CommitFault _armedFault = CommitFault.None;
 
     /// <summary>本執行個體群組已建立的訂單數（測試用）。</summary>
-    public int Count
+    public virtual int Count
     {
         get
         {
@@ -100,7 +100,7 @@ public sealed class OrderStore
     }
 
     /// <summary>目前保存的 Idempotency-Key 紀錄數（測試用，驗證查詢不寫入去重紀錄）。</summary>
-    public int IdempotencyRecordCount
+    public virtual int IdempotencyRecordCount
     {
         get
         {
@@ -112,7 +112,7 @@ public sealed class OrderStore
     }
 
     /// <summary>只回傳由同一已驗證 Client 建立的訂單（業務資料範圍檢查）。</summary>
-    public bool TryGet(Guid orderId, string verifiedClientId, out StoredOrder? order)
+    public virtual bool TryGet(Guid orderId, string verifiedClientId, out StoredOrder? order)
     {
         lock (_gate)
         {
@@ -128,7 +128,7 @@ public sealed class OrderStore
     }
 
     /// <summary>只能取消由同一已驗證 Client 建立的訂單；他人訂單不存在、不會被修改。</summary>
-    public bool TryCancel(Guid orderId, string verifiedClientId, out StoredOrder? order)
+    public virtual bool TryCancel(Guid orderId, string verifiedClientId, out StoredOrder? order)
     {
         lock (_gate)
         {
@@ -145,7 +145,7 @@ public sealed class OrderStore
     }
 
     /// <summary>以業務識別取得訂單（測試用：持久業務結果的觀察點）。</summary>
-    public bool TryGetByOrderReference(string clientId, string orderReference, out StoredOrder? order)
+    public virtual bool TryGetByOrderReference(string clientId, string orderReference, out StoredOrder? order)
     {
         lock (_gate)
         {
@@ -155,7 +155,7 @@ public sealed class OrderStore
     }
 
     /// <summary>同一業務識別的訂單數（測試用：應永遠為 0 或 1）。</summary>
-    public int CountByOrderReference(string clientId, string orderReference)
+    public virtual int CountByOrderReference(string clientId, string orderReference)
     {
         lock (_gate)
         {
@@ -164,7 +164,7 @@ public sealed class OrderStore
     }
 
     /// <summary>Idempotency-Key 紀錄的保存至時間（測試用）；紀錄不存在時回傳 null。</summary>
-    public DateTimeOffset? KeyRetainUntil(string clientId, string idempotencyKey)
+    public virtual DateTimeOffset? KeyRetainUntil(string clientId, string idempotencyKey)
     {
         lock (_gate)
         {
@@ -175,7 +175,7 @@ public sealed class OrderStore
     /// <summary>
     /// 建立訂單（已授權、已簽章驗證）。依業務識別與 Idempotency-Key 判斷：首次提交、回傳既有結果、處理中、或衝突拒絕。
     /// </summary>
-    public async Task<CreateResult> CreateOnceAsync(string clientId, string idempotencyKey, CreateOrderRequest request, DateTimeOffset now)
+    public virtual async Task<CreateResult> CreateOnceAsync(string clientId, string idempotencyKey, CreateOrderRequest request, DateTimeOffset now)
     {
         var attempt = Guid.NewGuid();
         var fingerprint = ContentFingerprint(request);
@@ -257,7 +257,7 @@ public sealed class OrderStore
     }
 
     /// <summary>測試用：下一次業務提交於寫入前暫停。</summary>
-    public CommitHold HoldNextCommit()
+    public virtual CommitHold HoldNextCommit()
     {
         lock (_gate)
         {
@@ -267,7 +267,7 @@ public sealed class OrderStore
     }
 
     /// <summary>測試用：下一次業務提交套用指定故障（只生效一次）。</summary>
-    public void ArmFault(CommitFault fault)
+    public virtual void ArmFault(CommitFault fault)
     {
         lock (_gate)
         {
@@ -276,7 +276,7 @@ public sealed class OrderStore
     }
 
     /// <summary>測試用：將所有處理中租約設為已到期（模擬提交前當機後租約到期）。</summary>
-    public void ExpireLeasesForTest()
+    public virtual void ExpireLeasesForTest()
     {
         lock (_gate)
         {
@@ -293,7 +293,7 @@ public sealed class OrderStore
     }
 
     /// <summary>測試用：將所有 Idempotency-Key 紀錄設為已過期（業務識別仍保留）。</summary>
-    public void ExpireKeyRecordsForTest()
+    public virtual void ExpireKeyRecordsForTest()
     {
         lock (_gate)
         {
@@ -306,7 +306,7 @@ public sealed class OrderStore
     }
 
     /// <summary>業務內容比對：只取決定業務意義的欄位，排除 nonce、簽章與 Token。</summary>
-    private static string ContentFingerprint(CreateOrderRequest request)
+    protected static string ContentFingerprint(CreateOrderRequest request)
         => JsonSerializer.Serialize(new { request.Item, request.Quantity });
 
     private void PruneExpiredKeys(DateTimeOffset now)
@@ -317,7 +317,7 @@ public sealed class OrderStore
         }
     }
 
-    private CommitHold? TakeHold()
+    protected CommitHold? TakeHold()
     {
         lock (_gate)
         {
@@ -328,7 +328,7 @@ public sealed class OrderStore
     }
 
     /// <summary>必須在持有 _gate 時呼叫。</summary>
-    private bool TakeFault(CommitFault fault)
+    protected bool TakeFault(CommitFault fault)
     {
         if (_armedFault != fault)
         {
