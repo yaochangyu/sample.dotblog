@@ -6,6 +6,7 @@ using AuthSpike.Replay;
 using AuthSpike.Signing;
 using AuthSpike.Trust;
 using AuthSpike.Verification;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
@@ -100,8 +101,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
 
         // scope 白名單：Token 有效但缺少該操作所需的 scope 時回應 403（業務資料範圍另於 handler 檢查）。
         builder.Services.AddAuthorizationBuilder()
-            .AddPolicy(ReadScope, policy => policy.RequireAssertion(context => context.User.HasScope(ReadScope)))
-            .AddPolicy(WriteScope, policy => policy.RequireAssertion(context => context.User.HasScope(WriteScope)));
+            .AddPolicy(ReadScope, policy => policy.RequireAssertion(context => HasPermission(context, ReadScope)))
+            .AddPolicy(WriteScope, policy => policy.RequireAssertion(context => HasPermission(context, WriteScope)));
 
         var app = builder.Build();
         var instance = new OrdersApiHost(app, port);
@@ -148,6 +149,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
             if (outcome == CallerOutcome.Verified)
             {
                 context.User = principal!;
+                VerifiedCaller.Attach(context, VerifiedCaller.FromServicePrincipal(principal!));
                 await next();
                 return;
             }
@@ -182,15 +184,22 @@ public sealed class OrdersApiHost : IAsyncDisposable
         var verifier = new SignedRequestVerifier(signatureKeys, replayStore, registry);
         app.Use(async (context, next) =>
         {
-            if (context.User.Identity?.IsAuthenticated != true || !context.Request.Path.StartsWithSegments("/orders"))
+            var caller = VerifiedCaller.TryGet(context);
+            if (caller is null || !context.Request.Path.StartsWithSegments("/orders"))
             {
                 await next();
                 return;
             }
 
-            var clientId = context.User.GetClaim(Claims.ClientId) ?? string.Empty;
+            var clientId = caller.Identity;
             var signature = await verifier.VerifyAsync(context, clientId);
             var outcome = signature.Outcome;
+            if (outcome != SignatureOutcome.Accepted)
+            {
+                // 簽章或防重放未通過：撤銷已附加的已驗證呼叫者，業務處理不會看到它；後續紀錄只把宣稱的身分標為未驗證。
+                VerifiedCaller.Detach(context);
+            }
+
             if (outcome == SignatureOutcome.Accepted)
             {
                 // 紀錄先於業務處理寫入；寫入失敗則不進入業務副作用。最終業務結果於回應送出時補記（見上方稽核信封）。
@@ -238,8 +247,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
         app.MapPost("/orders", async (CreateOrderRequest request, OrderStore store, HttpContext httpContext) =>
             {
                 // 已驗證呼叫者取自 introspection 結果；Body 與外部標頭宣稱的身分一律忽略。
-                var clientId = httpContext.User.GetClaim(Claims.ClientId)
-                    ?? throw new InvalidOperationException("Verified client_id is missing.");
+                var clientId = VerifiedCaller.Get(httpContext).Identity;
                 if (string.IsNullOrWhiteSpace(request.OrderReference) || request.OrderReference.Length > 64)
                 {
                     return Results.BadRequest(new { error = "order_reference_invalid" });
@@ -275,8 +283,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
         // 無 Body 的查詢：只回傳已驗證 Client 自己建立的訂單，其他 Client 的訂單以 404 處理（不洩漏存在與否）。
         app.MapGet("/orders/{orderId:guid}", (Guid orderId, OrderStore store, HttpContext httpContext) =>
             {
-                var clientId = httpContext.User.GetClaim(Claims.ClientId)
-                    ?? throw new InvalidOperationException("Verified client_id is missing.");
+                var clientId = VerifiedCaller.Get(httpContext).Identity;
                 return store.TryGet(orderId, clientId, out var order)
                     ? Results.Ok(ToResponse(orderId, clientId, order!))
                     : Results.NotFound();
@@ -286,8 +293,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
         // 修改：取消訂單；同樣只能取消已驗證 Client 自己建立的訂單，他人訂單不會被修改。
         app.MapPost("/orders/{orderId:guid}/cancel", (Guid orderId, OrderStore store, HttpContext httpContext) =>
             {
-                var clientId = httpContext.User.GetClaim(Claims.ClientId)
-                    ?? throw new InvalidOperationException("Verified client_id is missing.");
+                var clientId = VerifiedCaller.Get(httpContext).Identity;
                 return store.TryCancel(orderId, clientId, out var order)
                     ? Results.Ok(ToResponse(orderId, clientId, order!))
                     : Results.NotFound();
@@ -297,6 +303,10 @@ public sealed class OrdersApiHost : IAsyncDisposable
         await app.StartAsync();
         return instance;
     }
+
+    /// <summary>授權規則只依已驗證呼叫者的權限判斷（不直接讀取 Token 的 scope claim）。</summary>
+    private static bool HasPermission(AuthorizationHandlerContext context, string permission)
+        => context.Resource is HttpContext httpContext && VerifiedCaller.TryGet(httpContext)?.HasPermission(permission) == true;
 
     /// <summary>稽核紀錄無法寫入：以 503 明確回報，不得放行、不得假報成功。</summary>
     private static Task WriteAuditUnavailableAsync(HttpContext context)
