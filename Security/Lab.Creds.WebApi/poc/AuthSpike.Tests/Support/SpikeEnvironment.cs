@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using AuthSpike.Hosting;
 using Xunit;
 
@@ -54,6 +55,26 @@ public static class SpikeEnvironment
             FreeTcpPort(),
             FreeTcpPort(),
             redisConnection: redisConnection);
+    }
+
+    public static async Task UsePostgresAuthAsync(
+        string authDbConnectionString,
+        bool applyAuthMigrations = true,
+        Dictionary<string, List<X509Certificate2>>? initialClientCertificates = null,
+        X509Certificate2? initialServerCertificate = null,
+        SpikeTrust? initialTrust = null,
+        int? authPort = null,
+        X509Certificate2? initialAdministratorCertificate = null)
+    {
+        Runtime = await SpikeRuntime.StartAsync(
+            authPort ?? FreeTcpPort(),
+            FreeTcpPort(),
+            authDbConnectionString: authDbConnectionString,
+            applyAuthMigrations: applyAuthMigrations,
+            initialClientCertificates: initialClientCertificates,
+            initialServerCertificate: initialServerCertificate,
+            initialTrust: initialTrust,
+            initialAdministratorCertificate: initialAdministratorCertificate);
     }
 
     public static async Task RestoreDefaultTokensAsync()

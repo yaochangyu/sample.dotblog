@@ -235,7 +235,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
         });
 
         // 建立訂單（06 單）：穩定業務識別 orderReference 決定業務操作是否相同；Idempotency-Key 只定位請求嘗試。
-        app.MapPost("/orders", async (CreateOrderRequest request, OrderStore store, HttpContext httpContext) =>
+        app.MapPost("/orders", async (CreateOrderRequest request, OrderStore store, HttpContext httpContext, CancellationToken cancellationToken) =>
             {
                 // 已驗證呼叫者取自 introspection 結果；Body 與外部標頭宣稱的身分一律忽略。
                 var clientId = httpContext.User.GetClaim(Claims.ClientId)
@@ -251,7 +251,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
                     return Results.BadRequest(new { error = "idempotency_key_required" });
                 }
 
-                var result = await store.CreateOnceAsync(clientId, idempotencyKey, request, DateTimeOffset.UtcNow);
+                var result = await store.CreateOnceAsync(clientId, idempotencyKey, request, DateTimeOffset.UtcNow, cancellationToken);
                 switch (result.Outcome)
                 {
                     case CreateOutcome.Created:
@@ -273,22 +273,24 @@ public sealed class OrdersApiHost : IAsyncDisposable
             .RequireAuthorization(WriteScope);
 
         // 無 Body 的查詢：只回傳已驗證 Client 自己建立的訂單，其他 Client 的訂單以 404 處理（不洩漏存在與否）。
-        app.MapGet("/orders/{orderId:guid}", (Guid orderId, OrderStore store, HttpContext httpContext) =>
+        app.MapGet("/orders/{orderId:guid}", async (Guid orderId, OrderStore store, HttpContext httpContext, CancellationToken cancellationToken) =>
             {
                 var clientId = httpContext.User.GetClaim(Claims.ClientId)
                     ?? throw new InvalidOperationException("Verified client_id is missing.");
-                return store.TryGet(orderId, clientId, out var order)
+                var (found, order) = await store.TryGetAsync(orderId, clientId, cancellationToken);
+                return found
                     ? Results.Ok(ToResponse(orderId, clientId, order!))
                     : Results.NotFound();
             })
             .RequireAuthorization(ReadScope);
 
         // 修改：取消訂單；同樣只能取消已驗證 Client 自己建立的訂單，他人訂單不會被修改。
-        app.MapPost("/orders/{orderId:guid}/cancel", (Guid orderId, OrderStore store, HttpContext httpContext) =>
+        app.MapPost("/orders/{orderId:guid}/cancel", async (Guid orderId, OrderStore store, HttpContext httpContext, CancellationToken cancellationToken) =>
             {
                 var clientId = httpContext.User.GetClaim(Claims.ClientId)
                     ?? throw new InvalidOperationException("Verified client_id is missing.");
-                return store.TryCancel(orderId, clientId, out var order)
+                var (success, order) = await store.TryCancelAsync(orderId, clientId, cancellationToken);
+                return success
                     ? Results.Ok(ToResponse(orderId, clientId, order!))
                     : Results.NotFound();
             })

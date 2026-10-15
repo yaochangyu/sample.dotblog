@@ -54,10 +54,10 @@ public sealed class CommitHold
 
     public void Release() => _released.TrySetResult();
 
-    internal async Task WaitAsync()
+    internal async Task WaitAsync(CancellationToken cancellationToken = default)
     {
         _entered.TrySetResult();
-        await _released.Task;
+        await _released.Task.WaitAsync(cancellationToken);
     }
 }
 
@@ -172,10 +172,91 @@ public class OrderStore
         }
     }
 
+    public virtual Task<int> GetCountAsync(CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            return Task.FromResult(_orders.Count);
+        }
+    }
+
+    public virtual Task<int> GetIdempotencyRecordCountAsync(CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            return Task.FromResult(_keys.Count);
+        }
+    }
+
+    public virtual Task<(bool Found, StoredOrder? Order)> TryGetAsync(Guid orderId, string verifiedClientId, CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            if (_orders.TryGetValue(orderId, out var stored) && stored.ClientId == verifiedClientId)
+            {
+                return Task.FromResult((true, (StoredOrder?)stored));
+            }
+
+            return Task.FromResult((false, (StoredOrder?)null));
+        }
+    }
+
+    public virtual Task<(bool Success, StoredOrder? Order)> TryCancelAsync(Guid orderId, string verifiedClientId, CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            if (!TryGet(orderId, verifiedClientId, out var current))
+            {
+                return Task.FromResult((false, (StoredOrder?)null));
+            }
+
+            var order = current! with { Status = "cancelled" };
+            _orders[orderId] = order;
+            return Task.FromResult((true, (StoredOrder?)order));
+        }
+    }
+
+    public virtual Task<(bool Found, StoredOrder? Order)> TryGetByOrderReferenceAsync(string clientId, string orderReference, CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            var order = _orders.Values.FirstOrDefault(item => item.ClientId == clientId && item.Request.OrderReference == orderReference);
+            return Task.FromResult((order is not null, order));
+        }
+    }
+
+    public virtual Task<int> CountByOrderReferenceAsync(string clientId, string orderReference, CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            return Task.FromResult(_orders.Values.Count(item => item.ClientId == clientId && item.Request.OrderReference == orderReference));
+        }
+    }
+
+    public virtual Task<DateTimeOffset?> KeyRetainUntilAsync(string clientId, string idempotencyKey, CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            return Task.FromResult(_keys.TryGetValue((clientId, idempotencyKey), out var record) ? record.RetainUntil : (DateTimeOffset?)null);
+        }
+    }
+
+    public virtual Task ExpireLeasesForTestAsync(CancellationToken cancellationToken = default)
+    {
+        ExpireLeasesForTest();
+        return Task.CompletedTask;
+    }
+
+    public virtual Task ExpireKeyRecordsForTestAsync(CancellationToken cancellationToken = default)
+    {
+        ExpireKeyRecordsForTest();
+        return Task.CompletedTask;
+    }
+
     /// <summary>
     /// 建立訂單（已授權、已簽章驗證）。依業務識別與 Idempotency-Key 判斷：首次提交、回傳既有結果、處理中、或衝突拒絕。
     /// </summary>
-    public virtual async Task<CreateResult> CreateOnceAsync(string clientId, string idempotencyKey, CreateOrderRequest request, DateTimeOffset now)
+    public virtual async Task<CreateResult> CreateOnceAsync(string clientId, string idempotencyKey, CreateOrderRequest request, DateTimeOffset now, CancellationToken cancellationToken = default)
     {
         var attempt = Guid.NewGuid();
         var fingerprint = ContentFingerprint(request);

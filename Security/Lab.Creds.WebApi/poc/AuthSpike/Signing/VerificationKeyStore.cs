@@ -23,6 +23,18 @@ public sealed class VerificationKeyStore
         }
     }
 
+    /// <summary>取消登錄簽章金鑰（用於交易回滾補償復原）。</summary>
+    public void Unregister(string clientId, string keyId)
+    {
+        lock (_gate)
+        {
+            if (_keysByClient.TryGetValue(clientId, out var keys))
+            {
+                keys.RemoveAll(k => k.KeyId == keyId);
+            }
+        }
+    }
+
     /// <summary>只在指定 Client 登錄的金鑰中查找；keyId 屬於其他 Client 時找不到。</summary>
     public bool TryGet(string clientId, string keyId, out SignatureKey? key)
     {
@@ -61,6 +73,15 @@ public sealed class VerificationKeyStore
         lock (_gate)
         {
             return _keysByClient.Any(pair => pair.Key != clientId && pair.Value.Any(candidate => candidate.KeyId == keyId));
+        }
+    }
+
+    /// <summary>取得目前登錄之所有 Client 簽章金鑰快照（用於資料庫初始化）。</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<SignatureKey>> Snapshot()
+    {
+        lock (_gate)
+        {
+            return _keysByClient.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<SignatureKey>)[.. pair.Value]);
         }
     }
 }

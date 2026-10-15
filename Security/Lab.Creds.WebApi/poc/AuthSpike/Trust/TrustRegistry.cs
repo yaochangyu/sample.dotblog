@@ -24,14 +24,20 @@ public sealed class TrustRegistry
 
     public void DisableClient(string clientId) => _disabledClients[clientId] = 0;
 
+    public void EnableClient(string clientId) => _disabledClients.TryRemove(clientId, out _);
+
     public bool IsClientEnabled(string clientId) => !_disabledClients.ContainsKey(clientId);
 
     public void RevokeCertificate(string thumbprint) => _revokedCertificates[thumbprint] = 0;
+
+    public void UnrevokeCertificate(string thumbprint) => _revokedCertificates.TryRemove(thumbprint, out _);
 
     public bool IsCertificateRevoked(string thumbprint) => _revokedCertificates.ContainsKey(thumbprint);
 
     /// <summary>正常輪替結束後退役舊憑證（08 單）；退役後的憑證不得再要求 Token 或呼叫業務 API。</summary>
     public void RetireCertificate(string thumbprint) => _retiredCertificates[thumbprint] = 0;
+
+    public void UnretireCertificate(string thumbprint) => _retiredCertificates.TryRemove(thumbprint, out _);
 
     public bool IsCertificateRetired(string thumbprint) => _retiredCertificates.ContainsKey(thumbprint);
 
@@ -40,10 +46,14 @@ public sealed class TrustRegistry
 
     public void RevokeSigningKey(string keyId) => _revokedSigningKeys[keyId] = 0;
 
+    public void UnrevokeSigningKey(string keyId) => _revokedSigningKeys.TryRemove(keyId, out _);
+
     public bool IsSigningKeyRevoked(string keyId) => _revokedSigningKeys.ContainsKey(keyId);
 
     /// <summary>正常輪替結束後退役舊簽章金鑰（08 單）。</summary>
     public void RetireSigningKey(string keyId) => _retiredSigningKeys[keyId] = 0;
+
+    public void UnretireSigningKey(string keyId) => _retiredSigningKeys.TryRemove(keyId, out _);
 
     public bool IsSigningKeyRetired(string keyId) => _retiredSigningKeys.ContainsKey(keyId);
 

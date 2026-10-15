@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using AuthSpike.Data;
 using DotNet.Testcontainers.Containers;
 using Npgsql;
 using StackExchange.Redis;
@@ -47,15 +48,15 @@ public sealed class RealStorageTestHarness : IAsyncDisposable
         _ordersDbConnection = PostgresConnection(_ordersDbPort, "orders_db", "orders_svc", "ORDERS_DB_PASSWORD");
     }
 
-    public static async Task<RealStorageTestHarness> GetAsync()
+    public static async Task<RealStorageTestHarness> GetAsync(CancellationToken cancellationToken = default)
     {
-        await Gate.WaitAsync();
+        await Gate.WaitAsync(cancellationToken);
         try
         {
             if (_shared is null)
             {
                 var harness = new RealStorageTestHarness();
-                await harness.StartAsync();
+                await harness.StartAsync(cancellationToken);
                 _shared = harness;
             }
 
@@ -67,14 +68,14 @@ public sealed class RealStorageTestHarness : IAsyncDisposable
         }
     }
 
-    public static async Task ShutdownAsync()
+    public static async Task ShutdownAsync(CancellationToken cancellationToken = default)
     {
-        await Gate.WaitAsync();
+        await Gate.WaitAsync(cancellationToken);
         try
         {
             if (_shared is not null)
             {
-                await _shared.DisposeAsync();
+                await _shared.DisposeAsync(cancellationToken);
                 _shared = null;
             }
         }
@@ -98,22 +99,31 @@ public sealed class RealStorageTestHarness : IAsyncDisposable
 
     public string RedisConnection => $"localhost:{_redisPort},abortConnect=false,connectTimeout=2000,syncTimeout=2000,connectRetry=1";
 
-    public async Task StopAsync(StorageService service) => await Container(service).StopAsync();
+    public async Task StopAsync(StorageService service, CancellationToken cancellationToken = default) =>
+        await Container(service).StopAsync(cancellationToken);
 
     /// <summary>重新啟動已停止的服務，並等到可接受連線為止。</summary>
-    public async Task StartAsync(StorageService service)
+    public async Task StartAsync(StorageService service, CancellationToken cancellationToken = default)
     {
-        await Container(service).StartAsync();
-        await WaitUntilReadyAsync(service);
+        await Container(service).StartAsync(cancellationToken);
+        await WaitUntilReadyAsync(service, cancellationToken);
     }
 
-    public async Task FlushRedisAsync()
+    public async Task FlushRedisAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         await using var connection = await ConnectionMultiplexer.ConnectAsync(RedisConnection + ",allowAdmin=true");
         await connection.GetServer(connection.GetEndPoints()[0]).FlushAllDatabasesAsync();
     }
 
-    public async Task<NpgsqlDataSource> OpenDataSourceAsync(StorageService service)
+    public async Task ResetAuthDbAsync(CancellationToken cancellationToken = default)
+    {
+        await AuthDbMigrations.ApplyMigrationsAsync(_authDbConnection, cancellationToken);
+        var store = new PostgresAuthStore(_authDbConnection);
+        await store.ResetForTestingAsync(cancellationToken);
+    }
+
+    public async Task<NpgsqlDataSource> OpenDataSourceAsync(StorageService service, CancellationToken cancellationToken = default)
     {
         var connectionString = service switch
         {
@@ -122,21 +132,27 @@ public sealed class RealStorageTestHarness : IAsyncDisposable
             _ => throw new ArgumentOutOfRangeException(nameof(service), service, "不是 PostgreSQL 服務"),
         };
         var source = NpgsqlDataSource.Create(connectionString);
-        await using var connection = await source.OpenConnectionAsync();
+        await using var connection = await source.OpenConnectionAsync(cancellationToken);
         return source;
     }
 
-    public async ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync() => await DisposeAsync(CancellationToken.None);
+
+    public async Task DisposeAsync(CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         await Task.WhenAll(
-            _authDb.DisposeAsync().AsTask(),
-            _ordersDb.DisposeAsync().AsTask(),
-            _redis.DisposeAsync().AsTask());
+            _authDb.DisposeAsync().AsTask().WaitAsync(cancellationToken),
+            _ordersDb.DisposeAsync().AsTask().WaitAsync(cancellationToken),
+            _redis.DisposeAsync().AsTask().WaitAsync(cancellationToken));
     }
 
-    private async Task StartAsync()
+    private async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        await Task.WhenAll(_authDb.StartAsync(), _ordersDb.StartAsync(), _redis.StartAsync());
+        await Task.WhenAll(
+            _authDb.StartAsync(cancellationToken),
+            _ordersDb.StartAsync(cancellationToken),
+            _redis.StartAsync(cancellationToken));
     }
 
     private IContainer Container(StorageService service) => service switch
@@ -147,11 +163,12 @@ public sealed class RealStorageTestHarness : IAsyncDisposable
         _ => throw new ArgumentOutOfRangeException(nameof(service), service, null),
     };
 
-    private async Task WaitUntilReadyAsync(StorageService service)
+    private async Task WaitUntilReadyAsync(StorageService service, CancellationToken cancellationToken = default)
     {
         var deadline = DateTime.UtcNow.AddSeconds(30);
-        while (true)
+        while (DateTime.UtcNow < deadline)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 if (service == StorageService.Redis)
@@ -161,16 +178,18 @@ public sealed class RealStorageTestHarness : IAsyncDisposable
                 }
                 else
                 {
-                    using var source = await OpenDataSourceAsync(service);
+                    using var source = await OpenDataSourceAsync(service, cancellationToken);
                 }
 
                 return;
             }
-            catch when (DateTime.UtcNow < deadline)
+            catch (Exception ex) when (ex is not OperationCanceledException && DateTime.UtcNow < deadline)
             {
-                await Task.Delay(250);
+                await Task.Delay(250, cancellationToken);
             }
         }
+
+        throw new TimeoutException($"等待儲存服務 {service} 恢復就緒逾時（超過 30 秒）");
     }
 
     private static PostgreSqlContainer BuildPostgres(string database, string username, string passwordVariable, int port) =>
