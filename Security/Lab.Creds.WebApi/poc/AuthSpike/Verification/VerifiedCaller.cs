@@ -5,10 +5,11 @@ using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace AuthSpike.Verification;
 
-/// <summary>呼叫者類型：由通過的驗證路徑決定，不由請求內容宣稱。目前只有服務（使用者呼叫者於後續票加入）。</summary>
+/// <summary>呼叫者類型：由通過的驗證路徑決定，不由請求內容宣稱。</summary>
 public enum CallerType
 {
     Service,
+    User,
 }
 
 /// <summary>
@@ -23,6 +24,10 @@ public sealed record VerifiedCaller(CallerType Type, string Identity, IReadOnlyL
     /// <summary>由服務 Token 的 principal 建立已驗證的服務呼叫者；呼叫端需已確認 client_id 與 Token 有效。</summary>
     public static VerifiedCaller FromServicePrincipal(ClaimsPrincipal principal)
         => new(CallerType.Service, principal.GetClaim(Claims.ClientId) ?? throw new InvalidOperationException("Verified client_id is missing."), principal.GetScopes());
+
+    /// <summary>由使用者 Token 的 principal 建立已驗證的使用者呼叫者；身分為使用者（sub）。</summary>
+    public static VerifiedCaller FromUserPrincipal(ClaimsPrincipal principal)
+        => new(CallerType.User, principal.GetClaim(Claims.Subject) ?? throw new InvalidOperationException("Verified subject is missing."), principal.GetScopes());
 
     public bool HasPermission(string permission) => Permissions.Contains(permission);
 

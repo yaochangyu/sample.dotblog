@@ -20,12 +20,13 @@ public enum CallerOutcome
 }
 
 /// <summary>
-/// 業務 API 的呼叫者查證閘門。
-/// Token 由授權伺服器 introspection 查證（OpenIddict validation，含 mTLS 憑證綁定）；成功結果快取至多 lifetime（lab 暫定）。
-/// 快取到期即重新查證；查證失敗不更新快取，因此失敗不會延長快取有效期限。
-/// Client 啟用狀態與 mTLS 憑證撤銷狀態每次請求都直接讀取 TrustRegistry，不經快取。
+/// 業務 API 的呼叫者查證閘門，依驗證路徑決定呼叫者類型（02 單）。
+/// 服務路徑：出示 mTLS 用戶端憑證時，服務 Token 由 OpenIddict validation 內省（audience 為本服務，含 mTLS cnf 綁定）。
+/// 使用者路徑：未出示用戶端憑證時，使用者 Token 由 <see cref="UserTokenIntrospector"/> 內省，並要求使用者 audience、呼叫者類型與使用者有效狀態；不要求 mTLS。
+/// 兩條路徑共用查證快取（至多 lifetime，lab 暫定）；快取到期即重新查證，查證失敗不更新快取。
+/// Client 與使用者的有效狀態每次請求都直接讀取 TrustRegistry，不經快取。
 /// </summary>
-public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime)
+public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime, UserTokenIntrospector userIntrospector)
 {
     private readonly ConcurrentDictionary<string, CacheEntry> _cache = new();
 
@@ -37,12 +38,19 @@ public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime)
         LastRemotePort = context.Connection.RemotePort;
 
         var token = BearerToken(context.Request.Headers.Authorization.ToString());
-        var certificate = context.Connection.ClientCertificate;
-        if (token is null || certificate is null)
+        if (token is null)
         {
             return (CallerOutcome.Rejected, null);
         }
 
+        var certificate = context.Connection.ClientCertificate;
+        return certificate is null
+            ? await VerifyUserAsync(token)
+            : await VerifyServiceAsync(context, token, certificate);
+    }
+
+    private async Task<(CallerOutcome Outcome, ClaimsPrincipal? Principal)> VerifyServiceAsync(HttpContext context, string token, System.Security.Cryptography.X509Certificates.X509Certificate2 certificate)
+    {
         var thumbprint = certificate.Thumbprint;
         if (registry.IsAdministratorCertificate(thumbprint))
         {
@@ -80,13 +88,7 @@ public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime)
             }
 
             principal = result.Principal!;
-            var expiresAt = now + lifetime;
-            if (result.Properties?.ExpiresUtc is { } tokenExpiresAt && tokenExpiresAt < expiresAt)
-            {
-                expiresAt = tokenExpiresAt;
-            }
-
-            _cache[key] = new CacheEntry(principal, expiresAt);
+            Remember(key, principal, now, result.Properties?.ExpiresUtc);
         }
 
         var clientId = principal.GetClaim(Claims.ClientId);
@@ -97,6 +99,50 @@ public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime)
         }
 
         return (CallerOutcome.Verified, principal);
+    }
+
+    private async Task<(CallerOutcome Outcome, ClaimsPrincipal? Principal)> VerifyUserAsync(string token)
+    {
+        var key = CacheKey(token, string.Empty);
+        var now = DateTimeOffset.UtcNow;
+
+        ClaimsPrincipal principal;
+        if (_cache.TryGetValue(key, out var entry) && now < entry.ExpiresAt)
+        {
+            principal = entry.Principal;
+        }
+        else
+        {
+            _cache.TryRemove(key, out _);
+
+            var (outcome, introspected, expiresAt) = await userIntrospector.IntrospectAsync(token);
+            if (outcome != CallerOutcome.Verified)
+            {
+                return (outcome, null);
+            }
+
+            principal = introspected!;
+            Remember(key, principal, now, expiresAt);
+        }
+
+        // 使用者路徑：必須是使用者類型、audience 為使用者 audience，且使用者有效狀態為啟用（每次請求直接讀取）。
+        var userId = principal.GetClaim(Claims.Subject);
+        var accepted = UserCallers.IsUserPrincipal(principal)
+            && principal.FindAll(Claims.Audience).Any(claim => claim.Value == UserCallers.Audience)
+            && userId is not null
+            && registry.IsUserEnabled(userId);
+        return (accepted ? CallerOutcome.Verified : CallerOutcome.Rejected, principal);
+    }
+
+    private void Remember(string key, ClaimsPrincipal principal, DateTimeOffset now, DateTimeOffset? tokenExpiresAt)
+    {
+        var expiresAt = now + lifetime;
+        if (tokenExpiresAt is { } tokenExpiry && tokenExpiry < expiresAt)
+        {
+            expiresAt = tokenExpiry;
+        }
+
+        _cache[key] = new CacheEntry(principal, expiresAt);
     }
 
     private sealed record CacheEntry(ClaimsPrincipal Principal, DateTimeOffset ExpiresAt);

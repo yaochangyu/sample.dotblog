@@ -45,6 +45,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
     public int OrderCount => Volatile.Read(ref _created);
 
     private CallerVerifier? _callers;
+    private UserTokenIntrospector? _userIntrospector;
 
     public static async Task<OrdersApiHost> StartAsync(
         int port,
@@ -106,7 +107,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
 
         var app = builder.Build();
         var instance = new OrdersApiHost(app, port);
-        instance._callers = new CallerVerifier(registry, verificationCacheLifetime);
+        instance._userIntrospector = new UserTokenIntrospector(authorizationServer, resourceClientCertificate, trust);
+        instance._callers = new CallerVerifier(registry, verificationCacheLifetime, instance._userIntrospector);
         var callers = instance._callers;
 
         // 稽核信封：回應帶 X-Correlation-Id；若請求未經任何決策點（例如 scope 不足被授權中介軟體拒絕），回應後補記 denied。
@@ -149,7 +151,10 @@ public sealed class OrdersApiHost : IAsyncDisposable
             if (outcome == CallerOutcome.Verified)
             {
                 context.User = principal!;
-                VerifiedCaller.Attach(context, VerifiedCaller.FromServicePrincipal(principal!));
+                var caller = UserCallers.IsUserPrincipal(principal!)
+                    ? VerifiedCaller.FromUserPrincipal(principal!)
+                    : VerifiedCaller.FromServicePrincipal(principal!);
+                VerifiedCaller.Attach(context, caller);
                 await next();
                 return;
             }
@@ -187,6 +192,19 @@ public sealed class OrdersApiHost : IAsyncDisposable
             var caller = VerifiedCaller.TryGet(context);
             if (caller is null || !context.Request.Path.StartsWithSegments("/orders"))
             {
+                await next();
+                return;
+            }
+
+            if (caller.Type == CallerType.User)
+            {
+                // 使用者路徑（02 單）：使用者寫入不附請求簽章，因此不做簽章與 nonce 驗證；仍需先寫入稽核，寫入失敗不進入業務處理。
+                if (!CallerAudit.TryRecord(context, audit, "accepted", "user_token_verified"))
+                {
+                    await WriteAuditUnavailableAsync(context);
+                    return;
+                }
+
                 await next();
                 return;
             }
@@ -325,5 +343,6 @@ public sealed class OrdersApiHost : IAsyncDisposable
     {
         await _app.StopAsync();
         await _app.DisposeAsync();
+        _userIntrospector?.Dispose();
     }
 }

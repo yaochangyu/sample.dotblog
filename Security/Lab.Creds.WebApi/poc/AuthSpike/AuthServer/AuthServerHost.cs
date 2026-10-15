@@ -9,6 +9,7 @@ using AuthSpike.Hosting;
 using AuthSpike.Registration;
 using AuthSpike.Signing;
 using AuthSpike.Trust;
+using AuthSpike.Verification;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
@@ -77,6 +78,9 @@ public sealed class AuthServerHost : IAsyncDisposable
                        .SetIntrospectionEndpointUris("connect/introspect");
 
                 options.AllowClientCredentialsFlow();
+                // 使用者 Token 以 password grant 取得（02 單）；實際處理於 /connect/token 的應用程式端點。
+                options.AllowPasswordFlow();
+
                 options.RegisterScopes(registeredScopes);
 
                 // 短效 Token；效期數值為 lab 暫定值，待使用者確認（見 02 單）。
@@ -352,6 +356,34 @@ public sealed class AuthServerHost : IAsyncDisposable
             var request = httpContext.GetOpenIddictServerRequest()
                 ?? throw new InvalidOperationException("The OpenIddict server request cannot be retrieved.");
 
+            if (request.IsPasswordGrantType())
+            {
+                // 使用者 Token（02 單）：測試使用者以 password grant 取得，lab 代替真實登入流程；不要求用戶端憑證。
+                // 使用者 Token 的 audience 與呼叫者類型不同於服務 Token；帳號停用或密碼錯誤一律 invalid_grant。
+                if (request.ClientId != UserCallers.ClientId
+                    || !UserCallers.VerifyCredentials(request.Username, request.Password)
+                    || !registry.IsUserEnabled(UserCallers.TestUserId))
+                {
+                    return Results.Json(new Dictionary<string, string> { ["error"] = Errors.InvalidGrant }, statusCode: StatusCodes.Status400BadRequest);
+                }
+
+                var requestedUserScopes = request.GetScopes();
+                if (requestedUserScopes.Any(scope => !UserCallers.Scopes.Contains(scope)))
+                {
+                    return Results.Json(new Dictionary<string, string> { ["error"] = Errors.InvalidScope }, statusCode: StatusCodes.Status400BadRequest);
+                }
+
+                var userIdentity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType, Claims.Name, Claims.Role);
+                userIdentity.SetClaim(Claims.Subject, UserCallers.TestUserId);
+                userIdentity.SetClaim(Claims.ClientId, UserCallers.ClientId);
+                userIdentity.SetClaim(UserCallers.CallerTypeClaim, UserCallers.CallerTypeValue);
+                userIdentity.SetAudiences(UserCallers.Audience);
+                userIdentity.SetScopes(requestedUserScopes.Length == 0 ? UserCallers.Scopes : requestedUserScopes);
+                userIdentity.SetDestinations(static _ => [Destinations.AccessToken]);
+
+                return Results.SignIn(new ClaimsPrincipal(userIdentity), authenticationScheme: AuthenticationScheme);
+            }
+
             if (!request.IsClientCredentialsGrantType())
             {
                 throw new InvalidOperationException("The specified grant type is not supported.");
@@ -402,6 +434,32 @@ public sealed class AuthServerHost : IAsyncDisposable
                 }
 
                 await manager.CreateAsync(BuildDescriptor(client, [client.PublicCertificate]));
+            }
+
+            // 業務 API 的使用者路徑內省身分（02 單 lab 暫定）：與資源端相同的 mTLS 憑證，但 audience 為使用者 audience，
+            // 且只授權內省，不授權任何 Token 核發。
+            if (await manager.FindByClientIdAsync(UserCallers.IntrospectionClientId) is null)
+            {
+                var resourceCertificate = clients.Single(client => client.ClientId == SpikeRuntime.ResourceClientId).PublicCertificate;
+                var introspectionDescriptor = BuildDescriptor(new AuthServerClient(UserCallers.IntrospectionClientId, resourceCertificate, UserCallers.Audience, []), [resourceCertificate]);
+                introspectionDescriptor.Permissions.Remove(Permissions.Endpoints.Token);
+                introspectionDescriptor.Permissions.Remove(Permissions.GrantTypes.ClientCredentials);
+                await manager.CreateAsync(introspectionDescriptor);
+            }
+
+            // 取得使用者 Token 的公開 Client（password grant，不持有 Client Secret 或用戶端憑證；02 單 lab 暫定）。
+            if (await manager.FindByClientIdAsync(UserCallers.ClientId) is null)
+            {
+                var userPermissions = new HashSet<string> { Permissions.Endpoints.Token, Permissions.GrantTypes.Password };
+                userPermissions.UnionWith(UserCallers.Scopes.Select(scope => Permissions.Prefixes.Scope + scope));
+                var userClient = new OpenIddictApplicationDescriptor
+                {
+                    ClientId = UserCallers.ClientId,
+                    ClientType = ClientTypes.Public,
+                    DisplayName = UserCallers.ClientId,
+                };
+                userClient.Permissions.UnionWith(userPermissions);
+                await manager.CreateAsync(userClient);
             }
         }
 
