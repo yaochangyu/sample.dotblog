@@ -58,14 +58,15 @@ public sealed class SpikeRuntime : IAsyncDisposable
         OrdersApiHost ordersApi,
         X509Certificate2 serverCertificate,
         VerificationKeyStore verificationKeys,
-        NonceReplayStore replayStore,
+        INonceReplayStore replayStore,
         TrustRegistry registry,
         TimeSpan verificationCacheLifetime,
         OrderStore orders,
         SecurityAuditLog auditLog,
         AdministrativeAuditLog administrativeAuditLog,
         string environmentName,
-        TimeProvider clock)
+        TimeProvider clock,
+        string? redisConnection = null)
     {
         Trust = trust;
         Clock = clock;
@@ -85,7 +86,11 @@ public sealed class SpikeRuntime : IAsyncDisposable
         AuthServer = authServer;
         OrdersApi = ordersApi;
         EnvironmentName = environmentName;
+        _redisConnection = redisConnection;
     }
+
+    private readonly string? _redisConnection;
+    private readonly List<IAsyncDisposable> _extraStores = [];
 
     public SpikeTrust Trust { get; }
 
@@ -112,7 +117,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
     public OrdersApiHost OrdersApi { get; }
 
     /// <summary>與主要建立訂單 API 共用的防重放儲存（模擬多執行個體共用同一份狀態）。</summary>
-    public NonceReplayStore ReplayStore { get; }
+    public INonceReplayStore ReplayStore { get; }
 
     /// <summary>撤銷與退役狀態的權威來源（授權伺服器與所有業務 API 執行個體共用）。</summary>
     public TrustRegistry Registry { get; }
@@ -143,7 +148,9 @@ public sealed class SpikeRuntime : IAsyncDisposable
         string environmentName = DefaultEnvironmentName,
         TimeProvider? clock = null,
         string? ordersDbConnectionString = null,
-        bool applyMigrations = false)
+        bool applyMigrations = false,
+        string? redisConnection = null,
+        INonceReplayStore? customReplayStore = null)
     {
         var root = SpikeCertificates.CreateRootCertificateAuthority("AuthSpike Root CA");
         var trust = new SpikeTrust(root);
@@ -203,7 +210,20 @@ public sealed class SpikeRuntime : IAsyncDisposable
         // 管理員角色只在組合根登錄，授權伺服器與業務 API 皆讀取同一份信任狀態。
         registry.RegisterAdministratorCertificate(administratorCertificate.Thumbprint);
 
-        var replayStore = new NonceReplayStore();
+        INonceReplayStore replayStore;
+        if (customReplayStore is not null)
+        {
+            replayStore = customReplayStore;
+        }
+        else if (!string.IsNullOrEmpty(redisConnection))
+        {
+            replayStore = await RedisNonceReplayStore.ConnectAsync(redisConnection, environmentName);
+        }
+        else
+        {
+            replayStore = new NonceReplayStore();
+        }
+
         OrderStore orders;
         if (!string.IsNullOrEmpty(ordersDbConnectionString))
         {
@@ -250,12 +270,25 @@ public sealed class SpikeRuntime : IAsyncDisposable
             auditLog,
             administrativeAuditLog,
             environmentName,
-            clock ?? TimeProvider.System);
+            clock ?? TimeProvider.System,
+            redisConnection);
     }
 
     /// <summary>啟動第二個建立訂單 API 執行個體，與主要執行個體共用防重放儲存、驗簽金鑰登錄、撤銷狀態與訂單資料。</summary>
     public async Task<OrdersApiHost> StartSecondaryOrdersApiAsync(int port)
     {
+        INonceReplayStore secondaryReplayStore;
+        if (!string.IsNullOrEmpty(_redisConnection))
+        {
+            var redisStore = await RedisNonceReplayStore.ConnectAsync(_redisConnection, EnvironmentName);
+            _extraStores.Add(redisStore);
+            secondaryReplayStore = redisStore;
+        }
+        else
+        {
+            secondaryReplayStore = ReplayStore;
+        }
+
         SecondaryOrdersApi = await OrdersApiHost.StartAsync(
             port,
             Trust,
@@ -264,7 +297,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
             ResourceClientId,
             _clientCertificates[ResourceClientId][^1],
             _verificationKeys,
-            ReplayStore,
+            secondaryReplayStore,
             Registry,
             _verificationCacheLifetime,
             Orders,
@@ -345,6 +378,16 @@ public sealed class SpikeRuntime : IAsyncDisposable
         if (Orders is IAsyncDisposable disposableOrders)
         {
             await disposableOrders.DisposeAsync();
+        }
+
+        if (ReplayStore is IAsyncDisposable disposableReplay)
+        {
+            await disposableReplay.DisposeAsync();
+        }
+
+        foreach (var extra in _extraStores)
+        {
+            await extra.DisposeAsync();
         }
     }
 }

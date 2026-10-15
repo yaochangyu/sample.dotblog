@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using AuthSpike.Hosting;
+using AuthSpike.Replay;
 using AuthSpike.Signing;
 using AuthSpike.Tests.Support;
 using AwesomeAssertions;
@@ -40,7 +41,14 @@ public sealed class ReplayProtectionAndRetrySteps
     [Given("防重放儲存暫時無法讀寫")]
     public void GivenReplayStoreIsDown()
     {
-        Runtime.ReplayStore.SimulateOutage = true;
+        if (Runtime.ReplayStore is NonceReplayStore memoryStore)
+        {
+            memoryStore.SimulateOutage = true;
+        }
+        else
+        {
+            throw new NotSupportedException("目前防重放儲存不支援 SimulateOutage。");
+        }
     }
 
     [When("簽章呼叫端以 {string} 送出時間參數為 {string} 的建立訂單請求")]
@@ -76,6 +84,7 @@ public sealed class ReplayProtectionAndRetrySteps
         await SendTemplateAsync(clientId, template, Runtime.OrdersApi.Port);
     }
 
+    [Given("簽章呼叫端以 {string} 送出已簽章的建立訂單請求，Idempotency-Key 為 {string}")]
     [When("簽章呼叫端以 {string} 送出已簽章的建立訂單請求，Idempotency-Key 為 {string}")]
     public async Task WhenSignedOrderSent(string clientId, string idempotencyKey)
     {
@@ -141,6 +150,7 @@ public sealed class ReplayProtectionAndRetrySteps
         document.RootElement.GetProperty("error").GetString().Should().Be(code);
     }
 
+    [Given("第一次送出的回應為 {int}")]
     [Then("第一次送出的回應為 {int}")]
     public void ThenFirstRequestReturns(int statusCode)
     {
@@ -148,11 +158,11 @@ public sealed class ReplayProtectionAndRetrySteps
     }
 
     [Then("防重放紀錄保存至該請求有效期加 {int} 秒")]
-    public void ThenReplayRecordRetainedUntilExpiryPlusTolerance(int seconds)
+    public async Task ThenReplayRecordRetainedUntilExpiryPlusTolerance(int seconds)
     {
         var nonce = ParameterOf(_latestTemplate!, "nonce");
         var expires = long.Parse(ParameterOf(_latestTemplate!, "expires"));
-        var retainUntil = Runtime.ReplayStore.RetainUntilOf(_latestClientId, nonce);
+        var retainUntil = await Runtime.ReplayStore.RetainUntilOfAsync(_latestClientId, nonce);
 
         retainUntil.Should().Be(DateTimeOffset.FromUnixTimeSeconds(expires).AddSeconds(seconds));
     }

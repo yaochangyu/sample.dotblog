@@ -19,6 +19,9 @@ public enum SignatureOutcome
     /// <summary>簽章有效，但同一 (client_id, nonce) 已被接受過（重放）。</summary>
     Replayed,
 
+    /// <summary>簽章有效，但建立時間早於防重放紀元（Redis 重啟或清空重建），一律拒絕。</summary>
+    BeforeReplayEpoch,
+
     /// <summary>防重放狀態無法可靠讀寫；必須明確回報服務錯誤，不得放行。</summary>
     ReplayStateUnavailable,
 }
@@ -32,7 +35,7 @@ public sealed record SignatureResult(SignatureOutcome Outcome, string? KeyId);
 /// 時間窗與保存期（lab 暫定，待使用者確認）：created 不超前超過 30 秒、有效期（expires - created）不超過 60 秒、
 /// 未達 expires 才接受；nonce 保存至 expires 加 30 秒。
 /// </summary>
-public sealed class SignedRequestVerifier(VerificationKeyStore keys, NonceReplayStore replayStore, TrustRegistry registry)
+public sealed class SignedRequestVerifier(VerificationKeyStore keys, INonceReplayStore replayStore, TrustRegistry registry)
 {
     private static readonly TimeSpan ClockSkew = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan MaxValidity = TimeSpan.FromSeconds(60);
@@ -48,8 +51,15 @@ public sealed class SignedRequestVerifier(VerificationKeyStore keys, NonceReplay
         try
         {
             // 防重放在簽章與時間窗通過之後、業務副作用之前登錄，確保重放不會進入業務處理。
-            var registered = replayStore.TryRegister(verifiedClientId, accepted.Nonce, accepted.Expires + ClockSkew);
-            return new SignatureResult(registered ? SignatureOutcome.Accepted : SignatureOutcome.Replayed, accepted.KeyId);
+            var registered = await replayStore.TryRegisterAsync(verifiedClientId, accepted.Nonce, accepted.Created, accepted.Expires + ClockSkew);
+            var outcome = registered switch
+            {
+                ReplayRegistration.Registered => SignatureOutcome.Accepted,
+                ReplayRegistration.Replayed => SignatureOutcome.Replayed,
+                ReplayRegistration.BeforeReplayEpoch => SignatureOutcome.BeforeReplayEpoch,
+                _ => SignatureOutcome.Rejected,
+            };
+            return new SignatureResult(outcome, accepted.KeyId);
         }
         catch (ReplayStateUnavailableException)
         {
@@ -57,7 +67,7 @@ public sealed class SignedRequestVerifier(VerificationKeyStore keys, NonceReplay
         }
     }
 
-    private sealed record AcceptedSignature(string Nonce, DateTimeOffset Expires, string KeyId);
+    private sealed record AcceptedSignature(string Nonce, DateTimeOffset Created, DateTimeOffset Expires, string KeyId);
 
     private async Task<AcceptedSignature?> ValidateSignatureAsync(HttpContext context, string verifiedClientId)
     {
@@ -147,7 +157,7 @@ public sealed class SignedRequestVerifier(VerificationKeyStore keys, NonceReplay
         }
 
         return VerifySignature(signatureKey, signatureHeader, components, values, parameters)
-            ? new AcceptedSignature(nonce, expires, keyId)
+            ? new AcceptedSignature(nonce, created, expires, keyId)
             : null;
     }
 

@@ -53,7 +53,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
         string resourceClientId,
         X509Certificate2 resourceClientCertificate,
         VerificationKeyStore signatureKeys,
-        NonceReplayStore replayStore,
+        INonceReplayStore replayStore,
         TrustRegistry registry,
         TimeSpan verificationCacheLifetime,
         OrderStore orders,
@@ -218,8 +218,13 @@ public sealed class OrdersApiHost : IAsyncDisposable
                 return;
             }
 
-            // 驗簽失敗或重放：請求宣稱的 Client 標為未驗證。
-            var reason = outcome == SignatureOutcome.Replayed ? "signature_replayed" : "signature_rejected";
+            // 驗簽失敗、重放或早於防重放紀元：請求宣稱的 Client 標為未驗證。
+            var reason = outcome switch
+            {
+                SignatureOutcome.Replayed => "signature_replayed",
+                SignatureOutcome.BeforeReplayEpoch => "signature_before_replay_epoch",
+                _ => "signature_rejected",
+            };
             if (!CallerAudit.TryRecord(context, audit, "rejected", reason, unverifiedTokenClientId: clientId))
             {
                 await WriteAuditUnavailableAsync(context);

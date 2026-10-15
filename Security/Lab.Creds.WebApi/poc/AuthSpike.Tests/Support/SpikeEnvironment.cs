@@ -48,6 +48,14 @@ public static class SpikeEnvironment
             applyMigrations: applyMigrations);
     }
 
+    public static async Task UseRedisReplayAsync(string redisConnection)
+    {
+        Runtime = await SpikeRuntime.StartAsync(
+            FreeTcpPort(),
+            FreeTcpPort(),
+            redisConnection: redisConnection);
+    }
+
     public static async Task RestoreDefaultTokensAsync()
     {
         if (Runtime is not null && !ReferenceEquals(Runtime, _defaultRuntime))
