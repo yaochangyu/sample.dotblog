@@ -24,4 +24,8 @@ public sealed class DualCallerReviewDocumentSteps
     [Then("雙呼叫者文件 {string} 不包含 {string}")]
     public void ThenDualCallerDocumentDoesNotContain(string relativePath, string unexpected)
         => File.ReadAllText(Path.Combine(RepoRoot, relativePath)).Should().NotContain(unexpected);
+
+    [Then("雙呼叫者文件 {string} 包含 {string}")]
+    public void ThenDualCallerDocumentContains(string relativePath, string expected)
+        => File.ReadAllText(Path.Combine(RepoRoot, relativePath)).Should().Contain(expected);
 }

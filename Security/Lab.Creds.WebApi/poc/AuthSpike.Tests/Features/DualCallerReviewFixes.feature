@@ -12,11 +12,13 @@ Feature: 雙呼叫者審查意見修正（Standards／Spec 審查）
     And 雙呼叫者文件 ".scratch/dual-caller-authentication/spec.md" 不包含 "Status: ready-for-agent"
 
   @dual-caller-review @doc
-  Scenario: 審查修正 06 與 07 單的狀態與勾選一致，第 6 項未照字面達成者不得勾選
-    Then 雙呼叫者文件 ".scratch/dual-caller-authentication/issues/06-user-token-revocation-and-fail-closed.md" 不包含 "**Status:** resolved"
-    And 雙呼叫者文件 ".scratch/dual-caller-authentication/issues/06-user-token-revocation-and-fail-closed.md" 不包含 "- [x] 每個驗收項目至少對應一個 BDD Scenario"
-    And 雙呼叫者文件 ".scratch/dual-caller-authentication/issues/07-caller-type-audit.md" 不包含 "**Status:** resolved"
-    And 雙呼叫者文件 ".scratch/dual-caller-authentication/issues/07-caller-type-audit.md" 不包含 "- [x] 每個驗收項目至少對應一個 BDD Scenario"
+  Scenario: 06 與 07 單以突變檢查作為先紅後綠的替代證據並已由使用者接受
+    Then 雙呼叫者文件 ".scratch/dual-caller-authentication/issues/06-user-token-revocation-and-fail-closed.md" 包含 "**Status:** resolved"
+    And 雙呼叫者文件 ".scratch/dual-caller-authentication/issues/06-user-token-revocation-and-fail-closed.md" 包含 "突變檢查"
+    And 雙呼叫者文件 ".scratch/dual-caller-authentication/issues/06-user-token-revocation-and-fail-closed.md" 包含 "已由使用者接受"
+    And 雙呼叫者文件 ".scratch/dual-caller-authentication/issues/07-caller-type-audit.md" 包含 "**Status:** resolved"
+    And 雙呼叫者文件 ".scratch/dual-caller-authentication/issues/07-caller-type-audit.md" 包含 "突變檢查"
+    And 雙呼叫者文件 ".scratch/dual-caller-authentication/issues/07-caller-type-audit.md" 包含 "已由使用者接受"
 
   @dual-caller-review @doc
   Scenario: 審查判斷的 lab 刻意保留項目已記錄於 ADR 0001
