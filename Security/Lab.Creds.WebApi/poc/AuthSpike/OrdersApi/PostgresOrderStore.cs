@@ -25,14 +25,14 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
         _dataSource = NpgsqlDataSource.Create(builder.ConnectionString);
     }
 
-    public static async Task ApplyMigrationsAsync(string connectionString)
+    public static async Task ApplyMigrationsAsync(string connectionString, CancellationToken cancellationToken = default)
     {
         await using var connection = new NpgsqlConnection(connectionString);
-        await connection.OpenAsync();
+        await connection.OpenAsync(cancellationToken);
 
         // 使用 advisory lock 確保多 instance 同時啟動時只有一個執行 migration
         await using var lockCmd = new NpgsqlCommand("SELECT pg_advisory_lock(98234123)", connection);
-        await lockCmd.ExecuteNonQueryAsync();
+        await lockCmd.ExecuteNonQueryAsync(cancellationToken);
 
         try
         {
@@ -79,196 +79,144 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
                     END IF;
                 END $$;
                 """;
-            await cmd.ExecuteNonQueryAsync();
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
         finally
         {
             await using var unlockCmd = new NpgsqlCommand("SELECT pg_advisory_unlock(98234123)", connection);
-            await unlockCmd.ExecuteNonQueryAsync();
+            await unlockCmd.ExecuteNonQueryAsync(cancellationToken);
         }
     }
 
-    public override int Count
+    public override async Task<int> GetCountAsync(CancellationToken cancellationToken = default)
     {
-        get
-        {
-            try
-            {
-                using var cmd = _dataSource.CreateCommand("SELECT COUNT(*) FROM orders");
-                return Convert.ToInt32(cmd.ExecuteScalar());
-            }
-            catch
-            {
-                return 0;
-            }
-        }
+        await using var cmd = _dataSource.CreateCommand("SELECT COUNT(*) FROM orders");
+        var result = await cmd.ExecuteScalarAsync(cancellationToken);
+        return Convert.ToInt32(result);
     }
 
-    public override int IdempotencyRecordCount
+    public override async Task<int> GetIdempotencyRecordCountAsync(CancellationToken cancellationToken = default)
     {
-        get
-        {
-            try
-            {
-                using var cmd = _dataSource.CreateCommand("SELECT COUNT(*) FROM idempotency_keys");
-                return Convert.ToInt32(cmd.ExecuteScalar());
-            }
-            catch
-            {
-                return 0;
-            }
-        }
+        await using var cmd = _dataSource.CreateCommand("SELECT COUNT(*) FROM idempotency_keys");
+        var result = await cmd.ExecuteScalarAsync(cancellationToken);
+        return Convert.ToInt32(result);
     }
 
-    public override bool TryGet(Guid orderId, string verifiedClientId, out StoredOrder? order)
+    public override async Task<(bool Found, StoredOrder? Order)> TryGetAsync(Guid orderId, string verifiedClientId, CancellationToken cancellationToken = default)
     {
-        order = null;
-        try
+        await using var cmd = _dataSource.CreateCommand("""
+            SELECT client_id, order_reference, item, quantity, status
+            FROM orders
+            WHERE order_id = @id AND client_id = @client_id
+            """);
+        cmd.Parameters.AddWithValue("id", orderId);
+        cmd.Parameters.AddWithValue("client_id", verifiedClientId);
+
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
         {
-            using var cmd = _dataSource.CreateCommand("""
-                SELECT client_id, order_reference, item, quantity, status
-                FROM orders
-                WHERE order_id = @id AND client_id = @client_id
-                """);
-            cmd.Parameters.AddWithValue("id", orderId);
-            cmd.Parameters.AddWithValue("client_id", verifiedClientId);
-
-            using var reader = cmd.ExecuteReader();
-            if (reader.Read())
-            {
-                var clientId = reader.GetString(0);
-                var orderRef = reader.GetString(1);
-                var item = reader.GetString(2);
-                var quantity = reader.GetInt32(3);
-                var status = reader.GetString(4);
-                order = new StoredOrder(clientId, new CreateOrderRequest(orderRef, item, quantity), status);
-                return true;
-            }
-            return false;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    public override bool TryCancel(Guid orderId, string verifiedClientId, out StoredOrder? order)
-    {
-        order = null;
-        try
-        {
-            using var connection = _dataSource.OpenConnection();
-            using var tx = connection.BeginTransaction(IsolationLevel.ReadCommitted);
-
-            using var selectCmd = new NpgsqlCommand("""
-                SELECT client_id, order_reference, item, quantity, status
-                FROM orders
-                WHERE order_id = @id AND client_id = @client_id
-                FOR UPDATE
-                """, connection, tx);
-            selectCmd.Parameters.AddWithValue("id", orderId);
-            selectCmd.Parameters.AddWithValue("client_id", verifiedClientId);
-
-            using var reader = selectCmd.ExecuteReader();
-            if (!reader.Read())
-            {
-                return false;
-            }
-
             var clientId = reader.GetString(0);
             var orderRef = reader.GetString(1);
             var item = reader.GetString(2);
             var quantity = reader.GetInt32(3);
-            reader.Close();
-
-            using var updateCmd = new NpgsqlCommand("""
-                UPDATE orders SET status = 'cancelled'
-                WHERE order_id = @id
-                """, connection, tx);
-            updateCmd.Parameters.AddWithValue("id", orderId);
-            updateCmd.ExecuteNonQueryAsync().GetAwaiter().GetResult();
-
-            tx.Commit();
-            order = new StoredOrder(clientId, new CreateOrderRequest(orderRef, item, quantity), "cancelled");
-            return true;
+            var status = reader.GetString(4);
+            return (true, new StoredOrder(clientId, new CreateOrderRequest(orderRef, item, quantity), status));
         }
-        catch
-        {
-            return false;
-        }
+        return (false, null);
     }
 
-    public override bool TryGetByOrderReference(string clientId, string orderReference, out StoredOrder? order)
+    public override async Task<(bool Success, StoredOrder? Order)> TryCancelAsync(Guid orderId, string verifiedClientId, CancellationToken cancellationToken = default)
     {
-        order = null;
-        try
-        {
-            using var cmd = _dataSource.CreateCommand("""
-                SELECT client_id, order_reference, item, quantity, status
-                FROM orders
-                WHERE client_id = @client_id AND order_reference = @order_ref
-                LIMIT 1
-                """);
-            cmd.Parameters.AddWithValue("client_id", clientId);
-            cmd.Parameters.AddWithValue("order_ref", orderReference);
+        await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+        await using var tx = await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
 
-            using var reader = cmd.ExecuteReader();
-            if (reader.Read())
+        await using var selectCmd = new NpgsqlCommand("""
+            SELECT client_id, order_reference, item, quantity, status
+            FROM orders
+            WHERE order_id = @id AND client_id = @client_id
+            FOR UPDATE
+            """, connection, tx);
+        selectCmd.Parameters.AddWithValue("id", orderId);
+        selectCmd.Parameters.AddWithValue("client_id", verifiedClientId);
+
+        string clientId;
+        string orderRef;
+        string item;
+        int quantity;
+
+        await using (var reader = await selectCmd.ExecuteReaderAsync(cancellationToken))
+        {
+            if (!await reader.ReadAsync(cancellationToken))
             {
-                var cId = reader.GetString(0);
-                var orderRef = reader.GetString(1);
-                var item = reader.GetString(2);
-                var quantity = reader.GetInt32(3);
-                var status = reader.GetString(4);
-                order = new StoredOrder(cId, new CreateOrderRequest(orderRef, item, quantity), status);
-                return true;
+                return (false, null);
             }
-            return false;
+
+            clientId = reader.GetString(0);
+            orderRef = reader.GetString(1);
+            item = reader.GetString(2);
+            quantity = reader.GetInt32(3);
         }
-        catch
-        {
-            return false;
-        }
+
+        await using var updateCmd = new NpgsqlCommand("""
+            UPDATE orders SET status = 'cancelled'
+            WHERE order_id = @id
+            """, connection, tx);
+        updateCmd.Parameters.AddWithValue("id", orderId);
+        await updateCmd.ExecuteNonQueryAsync(cancellationToken);
+
+        await tx.CommitAsync(cancellationToken);
+        return (true, new StoredOrder(clientId, new CreateOrderRequest(orderRef, item, quantity), "cancelled"));
     }
 
-    public override int CountByOrderReference(string clientId, string orderReference)
+    public override async Task<(bool Found, StoredOrder? Order)> TryGetByOrderReferenceAsync(string clientId, string orderReference, CancellationToken cancellationToken = default)
     {
-        try
+        await using var cmd = _dataSource.CreateCommand("""
+            SELECT client_id, order_reference, item, quantity, status
+            FROM orders
+            WHERE client_id = @client_id AND order_reference = @order_ref
+            LIMIT 1
+            """);
+        cmd.Parameters.AddWithValue("client_id", clientId);
+        cmd.Parameters.AddWithValue("order_ref", orderReference);
+
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
         {
-            using var cmd = _dataSource.CreateCommand("""
-                SELECT COUNT(*) FROM orders
-                WHERE client_id = @client_id AND order_reference = @order_ref
-                """);
-            cmd.Parameters.AddWithValue("client_id", clientId);
-            cmd.Parameters.AddWithValue("order_ref", orderReference);
-            return Convert.ToInt32(cmd.ExecuteScalar());
+            var cId = reader.GetString(0);
+            var orderRef = reader.GetString(1);
+            var item = reader.GetString(2);
+            var quantity = reader.GetInt32(3);
+            var status = reader.GetString(4);
+            return (true, new StoredOrder(cId, new CreateOrderRequest(orderRef, item, quantity), status));
         }
-        catch
-        {
-            return 0;
-        }
+        return (false, null);
     }
 
-    public override DateTimeOffset? KeyRetainUntil(string clientId, string idempotencyKey)
+    public override async Task<int> CountByOrderReferenceAsync(string clientId, string orderReference, CancellationToken cancellationToken = default)
     {
-        try
-        {
-            using var cmd = _dataSource.CreateCommand("""
-                SELECT retain_until FROM idempotency_keys
-                WHERE client_id = @client_id AND key = @key
-                """);
-            cmd.Parameters.AddWithValue("client_id", clientId);
-            cmd.Parameters.AddWithValue("key", idempotencyKey);
-            var result = cmd.ExecuteScalar();
-            return result is DateTime dt ? new DateTimeOffset(dt, TimeSpan.Zero) : (DateTimeOffset?)result;
-        }
-        catch
-        {
-            return null;
-        }
+        await using var cmd = _dataSource.CreateCommand("""
+            SELECT COUNT(*) FROM orders
+            WHERE client_id = @client_id AND order_reference = @order_ref
+            """);
+        cmd.Parameters.AddWithValue("client_id", clientId);
+        cmd.Parameters.AddWithValue("order_ref", orderReference);
+        var result = await cmd.ExecuteScalarAsync(cancellationToken);
+        return Convert.ToInt32(result);
     }
 
-    public override async Task<CreateResult> CreateOnceAsync(string clientId, string idempotencyKey, CreateOrderRequest request, DateTimeOffset now)
+    public override async Task<DateTimeOffset?> KeyRetainUntilAsync(string clientId, string idempotencyKey, CancellationToken cancellationToken = default)
+    {
+        await using var cmd = _dataSource.CreateCommand("""
+            SELECT retain_until FROM idempotency_keys
+            WHERE client_id = @client_id AND key = @key
+            """);
+        cmd.Parameters.AddWithValue("client_id", clientId);
+        cmd.Parameters.AddWithValue("key", idempotencyKey);
+        var result = await cmd.ExecuteScalarAsync(cancellationToken);
+        return result is DateTime dt ? new DateTimeOffset(dt, TimeSpan.Zero) : (DateTimeOffset?)result;
+    }
+
+    public override async Task<CreateResult> CreateOnceAsync(string clientId, string idempotencyKey, CreateOrderRequest request, DateTimeOffset now, CancellationToken cancellationToken = default)
     {
         var attempt = Guid.NewGuid();
         var fingerprint = ContentFingerprint(request);
@@ -276,19 +224,19 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
         var hold = TakeHold();
         if (hold is not null)
         {
-            await hold.WaitAsync();
+            await hold.WaitAsync(cancellationToken);
         }
 
         try
         {
-            await using var connection = await _dataSource.OpenConnectionAsync();
-            await using var tx = await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted);
+            await using var connection = await _dataSource.OpenConnectionAsync(cancellationToken);
+            await using var tx = await connection.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
 
             // 清理過期 key
             await using (var pruneCmd = new NpgsqlCommand("DELETE FROM idempotency_keys WHERE retain_until < @now", connection, tx))
             {
                 pruneCmd.Parameters.AddWithValue("now", now);
-                await pruneCmd.ExecuteNonQueryAsync();
+                await pruneCmd.ExecuteNonQueryAsync(cancellationToken);
             }
 
             // 檢查 key conflict
@@ -298,10 +246,10 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
             {
                 keyCmd.Parameters.AddWithValue("client_id", clientId);
                 keyCmd.Parameters.AddWithValue("key", idempotencyKey);
-                var existingRef = (string?)await keyCmd.ExecuteScalarAsync();
+                var existingRef = (string?)await keyCmd.ExecuteScalarAsync(cancellationToken);
                 if (existingRef is not null && existingRef != request.OrderReference)
                 {
-                    await tx.RollbackAsync();
+                    await tx.RollbackAsync(cancellationToken);
                     return new CreateResult(CreateOutcome.KeyConflict);
                 }
             }
@@ -314,8 +262,8 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
                 opCmd.Parameters.AddWithValue("client_id", clientId);
                 opCmd.Parameters.AddWithValue("order_ref", request.OrderReference);
 
-                using var reader = await opCmd.ExecuteReaderAsync();
-                if (await reader.ReadAsync())
+                using var reader = await opCmd.ExecuteReaderAsync(cancellationToken);
+                if (await reader.ReadAsync(cancellationToken))
                 {
                     var existingFingerprint = reader.GetString(0);
                     var existingAttempt = reader.GetGuid(1);
@@ -325,29 +273,29 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
 
                     if (existingFingerprint != fingerprint)
                     {
-                        await tx.RollbackAsync();
+                        await tx.RollbackAsync(cancellationToken);
                         return new CreateResult(CreateOutcome.IdentityConflict);
                     }
 
                     if (existingOrderId.HasValue)
                     {
-                        if (!await RecordOrValidateKeyAsync(connection, tx, clientId, idempotencyKey, request.OrderReference, now + IdempotencyKeyRetention))
+                        if (!await RecordOrValidateKeyAsync(connection, tx, clientId, idempotencyKey, request.OrderReference, now + IdempotencyKeyRetention, cancellationToken))
                         {
-                            await tx.RollbackAsync();
+                            await tx.RollbackAsync(cancellationToken);
                             return new CreateResult(CreateOutcome.KeyConflict);
                         }
-                        await tx.CommitAsync();
+                        await tx.CommitAsync(cancellationToken);
                         return new CreateResult(CreateOutcome.Replayed, existingOrderId.Value);
                     }
 
                     if (existingLease > now)
                     {
-                        if (!await RecordOrValidateKeyAsync(connection, tx, clientId, idempotencyKey, request.OrderReference, now + IdempotencyKeyRetention))
+                        if (!await RecordOrValidateKeyAsync(connection, tx, clientId, idempotencyKey, request.OrderReference, now + IdempotencyKeyRetention, cancellationToken))
                         {
-                            await tx.RollbackAsync();
+                            await tx.RollbackAsync(cancellationToken);
                             return new CreateResult(CreateOutcome.KeyConflict);
                         }
-                        await tx.CommitAsync();
+                        await tx.CommitAsync(cancellationToken);
                         return new CreateResult(CreateOutcome.InProgress);
                     }
 
@@ -362,7 +310,7 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
                     updateOp.Parameters.AddWithValue("fingerprint", fingerprint);
                     updateOp.Parameters.AddWithValue("client_id", clientId);
                     updateOp.Parameters.AddWithValue("order_ref", request.OrderReference);
-                    await updateOp.ExecuteNonQueryAsync();
+                    await updateOp.ExecuteNonQueryAsync(cancellationToken);
                 }
                 else
                 {
@@ -378,30 +326,32 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
                     insertOp.Parameters.AddWithValue("fingerprint", fingerprint);
                     insertOp.Parameters.AddWithValue("attempt", attempt);
                     insertOp.Parameters.AddWithValue("lease", now + ProcessingLease);
-                    var inserted = await insertOp.ExecuteNonQueryAsync();
+                    var inserted = await insertOp.ExecuteNonQueryAsync(cancellationToken);
                     if (inserted == 0)
                     {
                         // 併發下已被他人先插入，重新讀取由他人處理中
-                        await tx.RollbackAsync();
+                        await tx.RollbackAsync(cancellationToken);
                         return new CreateResult(CreateOutcome.InProgress);
                     }
                 }
             }
 
-            if (!await RecordOrValidateKeyAsync(connection, tx, clientId, idempotencyKey, request.OrderReference, now + IdempotencyKeyRetention))
+            if (!await RecordOrValidateKeyAsync(connection, tx, clientId, idempotencyKey, request.OrderReference, now + IdempotencyKeyRetention, cancellationToken))
             {
-                await tx.RollbackAsync();
+                await tx.RollbackAsync(cancellationToken);
                 return new CreateResult(CreateOutcome.KeyConflict);
             }
 
             // 測試故障注入檢查
+            bool shouldCrash;
             lock (_gate)
             {
-                if (TakeFault(CommitFault.CrashBeforeCommit))
-                {
-                    tx.Commit();
-                    throw new SimulatedCommitFailureException();
-                }
+                shouldCrash = TakeFault(CommitFault.CrashBeforeCommit);
+            }
+            if (shouldCrash)
+            {
+                await tx.CommitAsync(cancellationToken);
+                throw new SimulatedCommitFailureException();
             }
 
             var orderId = Guid.NewGuid();
@@ -416,7 +366,7 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
                 insertOrder.Parameters.AddWithValue("item", request.Item);
                 insertOrder.Parameters.AddWithValue("quantity", request.Quantity);
                 insertOrder.Parameters.AddWithValue("now", now);
-                await insertOrder.ExecuteNonQueryAsync();
+                await insertOrder.ExecuteNonQueryAsync(cancellationToken);
             }
 
             await using (var completeOp = new NpgsqlCommand("""
@@ -429,16 +379,16 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
                 completeOp.Parameters.AddWithValue("client_id", clientId);
                 completeOp.Parameters.AddWithValue("order_ref", request.OrderReference);
                 completeOp.Parameters.AddWithValue("attempt", attempt);
-                var affected = await completeOp.ExecuteNonQueryAsync();
+                var affected = await completeOp.ExecuteNonQueryAsync(cancellationToken);
                 if (affected == 0)
                 {
                     // 租約已被他人接手，本嘗試放棄
-                    await tx.RollbackAsync();
+                    await tx.RollbackAsync(cancellationToken);
                     return new CreateResult(CreateOutcome.InProgress);
                 }
             }
 
-            await tx.CommitAsync();
+            await tx.CommitAsync(cancellationToken);
 
             lock (_gate)
             {
@@ -461,13 +411,13 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
         }
     }
 
-    public override void ExpireLeasesForTest()
+    public override async Task ExpireLeasesForTestAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            using var cmd = _dataSource.CreateCommand("UPDATE operations SET lease_until = @expired WHERE order_id IS NULL");
+            await using var cmd = _dataSource.CreateCommand("UPDATE operations SET lease_until = @expired WHERE order_id IS NULL");
             cmd.Parameters.AddWithValue("expired", DateTimeOffset.UtcNow.AddSeconds(-1));
-            cmd.ExecuteNonQuery();
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
         catch
         {
@@ -475,13 +425,13 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
         }
     }
 
-    public override void ExpireKeyRecordsForTest()
+    public override async Task ExpireKeyRecordsForTestAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            using var cmd = _dataSource.CreateCommand("UPDATE idempotency_keys SET retain_until = @expired");
+            await using var cmd = _dataSource.CreateCommand("UPDATE idempotency_keys SET retain_until = @expired");
             cmd.Parameters.AddWithValue("expired", DateTimeOffset.UtcNow.AddSeconds(-1));
-            cmd.ExecuteNonQuery();
+            await cmd.ExecuteNonQueryAsync(cancellationToken);
         }
         catch
         {
@@ -489,7 +439,7 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
         }
     }
 
-    private static async Task<bool> RecordOrValidateKeyAsync(NpgsqlConnection conn, NpgsqlTransaction tx, string clientId, string key, string orderRef, DateTimeOffset retainUntil)
+    private static async Task<bool> RecordOrValidateKeyAsync(NpgsqlConnection conn, NpgsqlTransaction tx, string clientId, string key, string orderRef, DateTimeOffset retainUntil, CancellationToken cancellationToken = default)
     {
         await using var cmd = new NpgsqlCommand("""
             INSERT INTO idempotency_keys (client_id, key, order_reference, retain_until)
@@ -502,7 +452,7 @@ public sealed class PostgresOrderStore : OrderStore, IAsyncDisposable
         cmd.Parameters.AddWithValue("key", key);
         cmd.Parameters.AddWithValue("order_ref", orderRef);
         cmd.Parameters.AddWithValue("retain_until", retainUntil);
-        var affected = await cmd.ExecuteNonQueryAsync();
+        var affected = await cmd.ExecuteNonQueryAsync(cancellationToken);
         return affected > 0;
     }
 

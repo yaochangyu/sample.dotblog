@@ -33,7 +33,6 @@ public sealed class AdminRetireAndRevokeSteps : IDisposable
     private string? _token;
     private string? _baseline;
     private ApiResponse? _adminResponse;
-    private ApiResponse? _orderResponse;
     private Stopwatch? _revocationClock;
 
     private static SpikeRuntime Runtime => SpikeEnvironment.Runtime;

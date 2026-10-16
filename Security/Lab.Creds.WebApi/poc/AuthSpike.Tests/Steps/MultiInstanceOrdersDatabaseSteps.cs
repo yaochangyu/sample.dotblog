@@ -64,9 +64,10 @@ public sealed class MultiInstanceOrdersDatabaseSteps
     }
 
     [Then("訂單 {string} 於資料庫中的業務訂單數為 {int}")]
-    public void ThenOrderReferenceCountInDatabase(string reference, int count)
+    public async Task ThenOrderReferenceCountInDatabase(string reference, int count)
     {
-        Runtime.Orders.CountByOrderReference(ClientId, reference).Should().Be(count);
+        var actual = await Runtime.Orders.CountByOrderReferenceAsync(ClientId, reference);
+        actual.Should().Be(count);
     }
 
     [Given("簽章呼叫端送出訂單 {string}，品項 {string}，數量 {int}")]
@@ -93,9 +94,10 @@ public sealed class MultiInstanceOrdersDatabaseSteps
     }
 
     [Then("查詢訂單 {string} 仍然存在且狀態為有效")]
-    public void ThenQueryOrderStillExistsAndActive(string reference)
+    public async Task ThenQueryOrderStillExistsAndActive(string reference)
     {
-        Runtime.Orders.TryGetByOrderReference(ClientId, reference, out var order).Should().BeTrue();
+        var (found, order) = await Runtime.Orders.TryGetByOrderReferenceAsync(ClientId, reference);
+        found.Should().BeTrue();
         order!.Status.Should().Be("active");
         order.Request.Item.Should().Be(_lastItem);
         order.Request.Quantity.Should().Be(_lastQuantity);
@@ -135,9 +137,9 @@ public sealed class MultiInstanceOrdersDatabaseSteps
     }
 
     [When("業務操作在資料庫中的租約已手動逾期")]
-    public void WhenLeaseManuallyExpired()
+    public async Task WhenLeaseManuallyExpired()
     {
-        Runtime.Orders.ExpireLeasesForTest();
+        await Runtime.Orders.ExpireLeasesForTestAsync();
     }
 
     [When("簽章呼叫端以新嘗試送出訂單 {string}，品項 {string}，數量 {int} 至第二個執行個體")]

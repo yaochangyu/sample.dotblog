@@ -3,6 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using AuthSpike.AuthServer;
 using AuthSpike.Audit;
 using AuthSpike.Certificates;
+using AuthSpike.Data;
 using AuthSpike.OrdersApi;
 using AuthSpike.Replay;
 using AuthSpike.Signing;
@@ -66,7 +67,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
         AdministrativeAuditLog administrativeAuditLog,
         string environmentName,
         TimeProvider clock,
-        string? redisConnection = null)
+        string? redisConnection = null,
+        string? authDbConnection = null)
     {
         Trust = trust;
         Clock = clock;
@@ -87,10 +89,17 @@ public sealed class SpikeRuntime : IAsyncDisposable
         OrdersApi = ordersApi;
         EnvironmentName = environmentName;
         _redisConnection = redisConnection;
+        _authDbConnection = authDbConnection;
     }
 
     private readonly string? _redisConnection;
+    private readonly string? _authDbConnection;
     private readonly List<IAsyncDisposable> _extraStores = [];
+
+    public AuthServerHost? SecondaryAuthServer { get; private set; }
+    public PostgresAuthStore? AuthStore => AuthServer.AuthStore;
+    public IReadOnlyDictionary<string, List<X509Certificate2>> ClientCertificatesMap => _clientCertificates;
+    public X509Certificate2 ServerCertificate => _serverCertificate;
 
     public SpikeTrust Trust { get; }
 
@@ -150,14 +159,20 @@ public sealed class SpikeRuntime : IAsyncDisposable
         string? ordersDbConnectionString = null,
         bool applyMigrations = false,
         string? redisConnection = null,
-        INonceReplayStore? customReplayStore = null)
+        INonceReplayStore? customReplayStore = null,
+        string? authDbConnectionString = null,
+        bool applyAuthMigrations = false,
+        Dictionary<string, List<X509Certificate2>>? initialClientCertificates = null,
+        X509Certificate2? initialServerCertificate = null,
+        SpikeTrust? initialTrust = null,
+        X509Certificate2? initialAdministratorCertificate = null,
+        CancellationToken cancellationToken = default)
     {
-        var root = SpikeCertificates.CreateRootCertificateAuthority("AuthSpike Root CA");
-        var trust = new SpikeTrust(root);
-        var serverCertificate = SpikeCertificates.IssueServerCertificate(root, "localhost");
+        var trust = initialTrust ?? new SpikeTrust(SpikeCertificates.CreateRootCertificateAuthority("AuthSpike Root CA"));
+        var serverCertificate = initialServerCertificate ?? SpikeCertificates.IssueServerCertificate(trust.CaCertificate, "localhost");
 
         var clientIds = new[] { OrdersClientId, OrdersPartnerClientId, BillingClientId, ResourceClientId };
-        var clientCertificates = clientIds.ToDictionary(
+        var clientCertificates = initialClientCertificates ?? clientIds.ToDictionary(
             clientId => clientId,
             clientId => new List<X509Certificate2> { SpikeCertificates.CreateSelfSignedClientCertificate($"{clientId}-{environmentName}") });
 
@@ -170,7 +185,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
         var otherRoot = SpikeCertificates.CreateRootCertificateAuthority("Other Root CA");
         var otherCa = SpikeCertificates.IssueCaSignedClientCertificate(otherRoot, OrdersClientId);
         // 管理員專屬憑證：每個環境獨立，與任何 Client 憑證分開（11 單）。
-        var administratorCertificate = SpikeCertificates.CreateSelfSignedClientCertificate($"administrator-{environmentName}");
+        var administratorCertificate = initialAdministratorCertificate ?? SpikeCertificates.CreateSelfSignedClientCertificate($"administrator-{environmentName}");
 
         // 授權伺服器只登錄示範 Client 與資源端 orders-api；每個 Client 只核准自己的 scope 白名單。
         // orders-partner-client 與 orders-client 持有相同 scope，用來驗證相同 scope 仍不能越權。
@@ -206,9 +221,16 @@ public sealed class SpikeRuntime : IAsyncDisposable
             registry,
             verificationKeys,
             administrativeAuditLog,
-            clock ?? TimeProvider.System);
-        // 管理員角色只在組合根登錄，授權伺服器與業務 API 皆讀取同一份信任狀態。
-        registry.RegisterAdministratorCertificate(administratorCertificate.Thumbprint);
+            clock ?? TimeProvider.System,
+            authDbConnectionString,
+            applyMigrations: applyAuthMigrations,
+            initialAdministratorThumbprint: administratorCertificate.Thumbprint,
+            cancellationToken: cancellationToken);
+        // 若非 PostgreSQL 模式（InMemory 測試模式），在組合根登錄管理員；若為 PostgreSQL 模式，則完全由 PostgresAuthStore 自資料庫載入
+        if (string.IsNullOrEmpty(authDbConnectionString))
+        {
+            registry.RegisterAdministratorCertificate(administratorCertificate.Thumbprint);
+        }
 
         INonceReplayStore replayStore;
         if (customReplayStore is not null)
@@ -229,7 +251,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
         {
             if (applyMigrations)
             {
-                await PostgresOrderStore.ApplyMigrationsAsync(ordersDbConnectionString);
+                await PostgresOrderStore.ApplyMigrationsAsync(ordersDbConnectionString, cancellationToken);
             }
             orders = new PostgresOrderStore(ordersDbConnectionString);
         }
@@ -238,6 +260,7 @@ public sealed class SpikeRuntime : IAsyncDisposable
             orders = new OrderStore();
         }
         var auditLog = new SecurityAuditLog();
+
         var ordersApi = await OrdersApiHost.StartAsync(
             ordersApiPort,
             trust,
@@ -271,7 +294,8 @@ public sealed class SpikeRuntime : IAsyncDisposable
             administrativeAuditLog,
             environmentName,
             clock ?? TimeProvider.System,
-            redisConnection);
+            redisConnection,
+            authDbConnectionString);
     }
 
     /// <summary>啟動第二個建立訂單 API 執行個體，與主要執行個體共用防重放儲存、驗簽金鑰登錄、撤銷狀態與訂單資料。</summary>
@@ -303,6 +327,39 @@ public sealed class SpikeRuntime : IAsyncDisposable
             Orders,
             AuditLog);
         return SecondaryOrdersApi;
+    }
+
+    /// <summary>啟動第二個授權伺服器執行個體，與主要執行個體共用 PostgreSQL 資料庫（AC-37, AC-40）。具備獨立的記憶體 TrustRegistry、VerificationKeyStore 與 AdministrativeAuditLog，完全由資料庫載入權威狀態。</summary>
+    public async Task<AuthServerHost> StartSecondaryAuthServerAsync(int port, bool applyAuthMigrations = false, Uri? logicalIssuer = null, CancellationToken cancellationToken = default)
+    {
+        var registeredClients = new List<AuthServerClient>
+        {
+            new(OrdersClientId, _clientCertificates[OrdersClientId][^1], OrdersAudience, OrdersScopes),
+            new(OrdersPartnerClientId, _clientCertificates[OrdersPartnerClientId][^1], OrdersAudience, OrdersScopes),
+            new(BillingClientId, _clientCertificates[BillingClientId][^1], BillingAudience, ["billing.write"]),
+            new(ResourceClientId, _clientCertificates[ResourceClientId][^1], OrdersAudience, []),
+        };
+
+        var secondaryRegistry = new TrustRegistry();
+        // 管理員身分完全由 PostgresAuthStore.InitializeOrLoadClientsAsync 自資料庫載入權威狀態（AC-40）
+        var secondaryKeys = new VerificationKeyStore();
+        var secondaryAudit = new AdministrativeAuditLog();
+
+        SecondaryAuthServer = await AuthServerHost.StartAsync(
+            port,
+            Trust,
+            _serverCertificate,
+            registeredClients,
+            DefaultAccessTokenLifetime,
+            secondaryRegistry,
+            secondaryKeys,
+            secondaryAudit,
+            Clock,
+            _authDbConnection,
+            applyMigrations: applyAuthMigrations,
+            logicalIssuer: logicalIssuer ?? AuthServer.Issuer,
+            cancellationToken: cancellationToken);
+        return SecondaryAuthServer;
     }
 
     /// <summary>產生新的 mTLS 用戶端憑證（尚未登錄於授權伺服器）。</summary>
@@ -370,6 +427,11 @@ public sealed class SpikeRuntime : IAsyncDisposable
         if (SecondaryOrdersApi is not null)
         {
             await SecondaryOrdersApi.DisposeAsync();
+        }
+
+        if (SecondaryAuthServer is not null)
+        {
+            await SecondaryAuthServer.DisposeAsync();
         }
 
         await OrdersApi.DisposeAsync();
