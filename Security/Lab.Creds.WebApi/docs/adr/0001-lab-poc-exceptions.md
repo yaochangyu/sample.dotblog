@@ -49,3 +49,17 @@
 - 角色與使用者資料範圍（使用者只能讀寫自己的訂單，他人或服務建立的訂單回應 404）。
 - 撤銷傳播（使用者停用或 Token 撤銷於 60 秒撤銷上限內生效，沿用既有上限）。
 - 錯誤格式（Token 無效 401、查證服務故障 503 `verification_unavailable`、資料範圍拒絕 404、限定單一類型的操作由另一類型呼叫回應 403）。
+
+### 雙呼叫者審查後的修正與刻意保留（審查意見後記錄）
+
+本次修正：服務路徑拒絕宣稱 `caller_type=user` 與 `user:` 前綴 client_id 的 Token（避免與使用者業務範圍鍵碰撞）；使用者路徑內省回應格式不符改判為 401（非查證故障）；內省加上 10 秒逾時（lab 暫定、待使用者確認），逾時回應 503；建立訂單宣告 `X-Request-Nonce` 標頭；稽核失敗的分支改由單一輔助方法處理。
+
+以下為審查判斷後刻意保留、本次未改動的項目：
+
+- **服務專屬操作缺位**：目前寫入端點（`POST /orders`、`POST /orders/{orderId}/cancel`）對服務與使用者皆開放，只有 `/orders/me/{orderId}` 限定使用者。規格第 24 項為「可以」只開放一種呼叫者，並非必須；是否新增只允許服務呼叫的操作待使用者決定，決定前不新增。
+- **使用者角色模型缺位**：測試使用者帳號由 password grant 取得 `orders.read` 與 `orders.write`，沒有角色區分。角色與各操作允許的呼叫者清單屬規格「待具體 API 設計」項目，lab 暫定。
+- **撤銷延遲**：快取上限（`CallerVerifier` 的 lifetime，lab 暫定、不超過 Token 有效期）即為撤銷延遲的上限，於快取期間內的撤銷最多延遲一個快取週期；使用者停用則每次請求直接讀取，不受快取影響。
+- **稽核的已驗證身分並存**：`VerifiedClientId`（僅服務，沿用 09 單斷言）與 `VerifiedCallerIdentity`（服務與使用者）語意重疊，兩者並存為 lab 暫定值，待使用者確認後再合併。
+- **測試帳密與 Scopes 位置**：`UserCallers` 內的測試帳密與可核發 scope 與 `TestUsers` 尚未分離，屬 lab 測試資料；將來擴充前再拆分。
+- **組合根長度**：`OrdersApiHost.StartAsync` 同時負責 DI 組態、稽核信封、使用者防重放、服務簽章驗證與路由。拆分留待正式採用前重構，lab 接受。
+- **命名**：`ClaimedCaller.FromPrincipal` 與 `OrdersApiHost` 的 `ClaimedCallerOf` 命名風格不一致，只影響可讀性，lab 接受。

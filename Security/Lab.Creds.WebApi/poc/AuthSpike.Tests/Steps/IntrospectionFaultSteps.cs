@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography.X509Certificates;
@@ -7,7 +8,9 @@ using AuthSpike.OrdersApi;
 using AuthSpike.Replay;
 using AuthSpike.Signing;
 using AuthSpike.Tests.Support;
+using AuthSpike.Hosting;
 using AuthSpike.Trust;
+using AuthSpike.Verification;
 using AwesomeAssertions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -26,6 +29,8 @@ public sealed class IntrospectionFaultSteps : IAsyncDisposable
     private OrdersApiHost? _ordersApi;
     private HttpStatusCode? _status;
     private string _body = string.Empty;
+    private TimeSpan _elapsed;
+    private SecurityAuditLog? _audit;
 
     private static AuthSpike.Hosting.SpikeRuntime Runtime => SpikeEnvironment.Runtime;
 
@@ -59,14 +64,24 @@ public sealed class IntrospectionFaultSteps : IAsyncDisposable
         var rsa = serverCertificate.GetRSAPublicKey()!.ExportParameters(false);
         var jwk = new { kty = "RSA", use = "sig", alg = "RS256", kid = "fake", n = Base64UrlEncoder.Encode(rsa.Modulus!), e = Base64UrlEncoder.Encode(rsa.Exponent!) };
         app.MapGet("/.well-known/jwks", () => Results.Json(new { keys = new[] { jwk } }));
-        app.MapPost("/connect/introspect", () => behavior switch
+        app.MapPost("/connect/introspect", async (HttpContext httpContext) =>
         {
-            "status-502" => Results.StatusCode(StatusCodes.Status502BadGateway),
-            "status-500" => Results.StatusCode(StatusCodes.Status500InternalServerError),
-            "bad-json" => Results.Content("{not-json", "application/json"),
-            "empty" => Results.Content(string.Empty, "application/json"),
-            "inactive" => Results.Json(new { active = false }),
-            _ => throw new ArgumentOutOfRangeException(nameof(behavior), behavior, "未知的假授權伺服器行為"),
+            if (behavior == "hang")
+            {
+                // 查證服務無回應：等到呼叫端中止（或 60 秒上限）後才回應，驗證查證逾時是否生效。
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(60), httpContext.RequestAborted);
+                }
+                catch (OperationCanceledException)
+                {
+                    // 呼叫端已逾時中止，無需回應。
+                }
+
+                return Results.Json(new { active = false });
+            }
+
+            return IntrospectionResult(behavior, issuer);
         });
         await app.StartAsync();
         _fakeAuthServer = app;
@@ -83,7 +98,7 @@ public sealed class IntrospectionFaultSteps : IAsyncDisposable
             new TrustRegistry(),
             TimeSpan.FromSeconds(10),
             new OrderStore(),
-            new SecurityAuditLog());
+            _audit = new SecurityAuditLog());
     }
 
     [When("呼叫端持任意 Token 查詢訂單")]
@@ -97,6 +112,19 @@ public sealed class IntrospectionFaultSteps : IAsyncDisposable
         _body = await response.Content.ReadAsStringAsync();
     }
 
+    [When("使用者呼叫端不附憑證持任意 Token 查詢訂單")]
+    public async Task WhenUserCallerQueriesOrder()
+    {
+        using var client = SignedHttp.CreateClient(Runtime, certificate: null);
+        var request = new HttpRequestMessage(HttpMethod.Get, $"https://localhost:{_ordersApi!.Port}/orders/{Guid.NewGuid()}");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "any-token-value");
+        var stopwatch = Stopwatch.StartNew();
+        using var response = await client.SendAsync(request);
+        _elapsed = stopwatch.Elapsed;
+        _status = response.StatusCode;
+        _body = await response.Content.ReadAsStringAsync();
+    }
+
     [Then("查證故障情境的回應為 {int}")]
     public void ThenResponseIs(int statusCode)
     {
@@ -105,6 +133,69 @@ public sealed class IntrospectionFaultSteps : IAsyncDisposable
         {
             _body.Should().Contain("verification_unavailable");
         }
+    }
+
+    [Then("查證故障情境最近一次稽核原因為 {string}")]
+    public void ThenLastAuditReasonIs(string reason)
+    {
+        var records = _audit!.Snapshot();
+        records.Should().NotBeEmpty();
+        records[^1].Reason.Should().Be(reason);
+    }
+
+    [Then("查證故障情境於 {int} 秒內回應")]
+    public void ThenResponseWithin(int seconds)
+    {
+        _elapsed.Should().BeLessThan(TimeSpan.FromSeconds(seconds), "查證逾時應在上限內回應 503，而不是無限等待");
+    }
+
+    /// <summary>假的 introspection 結果：使用者與服務的查證異常情境（審查修正用）。</summary>
+    private static IResult IntrospectionResult(string behavior, string issuer)
+    {
+        var exp = DateTimeOffset.UtcNow.AddMinutes(5).ToUnixTimeSeconds();
+        return behavior switch
+        {
+            "status-502" => Results.StatusCode(StatusCodes.Status502BadGateway),
+            "status-500" => Results.StatusCode(StatusCodes.Status500InternalServerError),
+            "bad-json" => Results.Content("{not-json", "application/json"),
+            "empty" => Results.Content(string.Empty, "application/json"),
+            "inactive" => Results.Json(new { active = false }),
+            // 使用者 Token 的內省結果缺少 caller_type：授權伺服器明確回應的格式不符，應視為 Token 無效。
+            "active-without-caller-type" => Results.Json(new
+            {
+                active = true,
+                iss = issuer,
+                sub = UserCallers.TestUserId,
+                client_id = UserCallers.ClientId,
+                aud = UserCallers.Audience,
+                scope = "orders.read orders.write",
+                exp,
+            }),
+            // 服務路徑的內省結果宣稱 caller_type=user：服務路徑不得以使用者身分處理。
+            "active-service-with-user-caller-type" => Results.Json(new
+            {
+                active = true,
+                iss = issuer,
+                sub = UserCallers.TestUserId,
+                client_id = SpikeRuntime.OrdersClientId,
+                aud = SpikeRuntime.ResourceClientId,
+                scope = "orders.read orders.write",
+                caller_type = UserCallers.CallerTypeValue,
+                exp,
+            }),
+            // 服務路徑的內省結果 client_id 以 user: 開頭：與使用者業務範圍鍵碰撞，應拒絕。
+            "active-service-with-user-prefixed-client" => Results.Json(new
+            {
+                active = true,
+                iss = issuer,
+                sub = UserCallers.TestUserId,
+                client_id = "user:" + SpikeRuntime.OrdersClientId,
+                aud = SpikeRuntime.ResourceClientId,
+                scope = "orders.read orders.write",
+                exp,
+            }),
+            _ => throw new ArgumentOutOfRangeException(nameof(behavior), behavior, "未知的假授權伺服器行為"),
+        };
     }
 
     [AfterScenario]

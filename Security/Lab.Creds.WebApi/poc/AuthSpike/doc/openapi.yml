@@ -33,6 +33,14 @@ paths:
       summary: 建立訂單
       security:
         - bearerAuth: []
+      parameters:
+        - name: X-Request-Nonce
+          in: header
+          required: false
+          description: 使用者呼叫者必填的一次性 nonce（最長 128 字元，lab 暫定、待使用者確認）；服務呼叫者以請求簽章防重放，不需要此標頭。
+          schema:
+            type: string
+            maxLength: 128
       requestBody:
         required: true
         content:
@@ -55,7 +63,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/CreateOrderResponse'
         '401':
-          description: 未驗證；Token 無效、已到期、目標 API 不符，或 Token 與用戶端憑證不符（cnf 綁定不成立）；或簽章缺漏、過期、內容／目標／標頭被竄改、金鑰不屬於已驗證 Client
+          description: 未驗證；Token 無效、已到期、目標 API 不符，或 Token 與用戶端憑證不符（cnf 綁定不成立）；或簽章缺漏、過期、內容／目標／標頭被竄改、金鑰不屬於已驗證 Client；或使用者呼叫者缺少或重放 X-Request-Nonce 時回應 401（無業務副作用）
         '400':
           description: "缺少或不合法的 orderReference（error: order_reference_invalid）或缺少 Idempotency-Key（error: idempotency_key_required）"
         '403':

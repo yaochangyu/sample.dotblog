@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -61,15 +62,8 @@ public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime, Us
         var key = CacheKey(token, thumbprint);
         var now = DateTimeOffset.UtcNow;
 
-        ClaimsPrincipal principal;
-        if (_cache.TryGetValue(key, out var entry) && now < entry.ExpiresAt)
+        if (!TryGetCached(key, now, out var principal))
         {
-            principal = entry.Principal;
-        }
-        else
-        {
-            _cache.TryRemove(key, out _);
-
             AuthenticateResult result;
             try
             {
@@ -91,8 +85,14 @@ public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime, Us
             Remember(key, principal, now, result.Properties?.ExpiresUtc);
         }
 
+        // 服務路徑只接受服務 Token：宣稱 caller_type=user 或 user: 前綴 client_id 的 Token 一律拒絕，
+        // 呼叫者類型由驗證路徑決定，且服務與使用者的業務範圍鍵不會碰撞（08 審查）。
         var clientId = principal.GetClaim(Claims.ClientId);
-        if (clientId is null || !registry.IsClientEnabled(clientId) || registry.IsCertificateBlocked(thumbprint))
+        if (clientId is null
+            || UserCallers.IsUserPrincipal(principal)
+            || clientId.StartsWith(VerifiedCaller.UserScopePrefix, StringComparison.Ordinal)
+            || !registry.IsClientEnabled(clientId)
+            || registry.IsCertificateBlocked(thumbprint))
         {
             // 查證已通過但 Client 或憑證已停用：principal 僅供稽核標示為未驗證的宣稱身分，業務處理不採信。
             return (CallerOutcome.Rejected, principal);
@@ -106,15 +106,8 @@ public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime, Us
         var key = CacheKey(token, string.Empty);
         var now = DateTimeOffset.UtcNow;
 
-        ClaimsPrincipal principal;
-        if (_cache.TryGetValue(key, out var entry) && now < entry.ExpiresAt)
+        if (!TryGetCached(key, now, out var principal))
         {
-            principal = entry.Principal;
-        }
-        else
-        {
-            _cache.TryRemove(key, out _);
-
             var (outcome, introspected, expiresAt) = await userIntrospector.IntrospectAsync(token);
             if (outcome != CallerOutcome.Verified)
             {
@@ -143,6 +136,20 @@ public sealed class CallerVerifier(TrustRegistry registry, TimeSpan lifetime, Us
         }
 
         _cache[key] = new CacheEntry(principal, expiresAt);
+    }
+
+    /// <summary>快取命中且未到期才回傳；到期的項目一律移除，失效後重新查證。</summary>
+    private bool TryGetCached(string key, DateTimeOffset now, [NotNullWhen(true)] out ClaimsPrincipal? principal)
+    {
+        if (_cache.TryGetValue(key, out var entry) && now < entry.ExpiresAt)
+        {
+            principal = entry.Principal;
+            return true;
+        }
+
+        _cache.TryRemove(key, out _);
+        principal = null;
+        return false;
     }
 
     private sealed record CacheEntry(ClaimsPrincipal Principal, DateTimeOffset ExpiresAt);

@@ -1,9 +1,9 @@
 # 同一業務 API 同時接受服務呼叫與使用者呼叫規格
 
-Status: ready-for-agent
+Status: implemented（實作票 01–08 已完成；06、07 票第 6 項紅綠順序待主 session 接受替代證據）
 
 日期：2026-10-15  
-狀態：通用設計決策已確認（測試縫、使用者 Token 簽發來源、spec 位置由使用者確認）；尚未實作，實作參數待具體 API 設計。
+狀態：通用設計決策已確認（測試縫、使用者 Token 簽發來源、spec 位置由使用者確認）；已實作（見 issues/01–08）；仍待具體 API 設計的項目見下方「待具體 API 設計的項目」。
 
 ## Problem Statement
 

@@ -35,8 +35,11 @@ public sealed record VerifiedCaller(CallerType Type, string Identity, IReadOnlyL
     /// </summary>
     public string BusinessScope => BusinessScopeOf(Type, Identity);
 
+    /// <summary>使用者業務範圍鍵的前綴；服務 Client 的 client_id 不得以此開頭（查證時拒絕，避免範圍鍵碰撞，08 審查）。</summary>
+    public const string UserScopePrefix = "user:";
+
     public static string BusinessScopeOf(CallerType type, string identity)
-        => type == CallerType.User ? $"user:{identity}" : identity;
+        => type == CallerType.User ? UserScopePrefix + identity : identity;
 
     public bool HasPermission(string permission) => Permissions.Contains(permission);
 

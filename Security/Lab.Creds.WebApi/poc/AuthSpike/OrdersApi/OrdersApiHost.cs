@@ -174,9 +174,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
             if (outcome == CallerOutcome.Unavailable)
             {
                 // 查證服務暫時無法連線且無有效快取：明確回報服務錯誤，不放行、不進入業務副作用。
-                if (!CallerAudit.TryRecord(context, audit, "unavailable", "caller_verification_unavailable"))
+                if (!await RecordOrAuditUnavailableAsync(context, audit, "unavailable", "caller_verification_unavailable"))
                 {
-                    await WriteAuditUnavailableAsync(context);
                     return;
                 }
 
@@ -186,9 +185,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
             }
 
             // 認證失敗：principal（若有）僅為宣稱身分，標為未驗證。
-            if (!CallerAudit.TryRecord(context, audit, "rejected", "caller_rejected", claimedCaller: ClaimedCaller.FromPrincipal(principal)))
+            if (!await RecordOrAuditUnavailableAsync(context, audit, "rejected", "caller_rejected", claimedCaller: ClaimedCaller.FromPrincipal(principal)))
             {
-                await WriteAuditUnavailableAsync(context);
                 return;
             }
 
@@ -216,9 +214,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
                     var nonce = context.Request.Headers[UserRequestNonceHeader].ToString();
                     if (nonce.Length == 0 || nonce.Length > MaxUserRequestNonceLength)
                     {
-                        if (!CallerAudit.TryRecord(context, audit, "rejected", "user_request_nonce_missing", claimedCaller: ClaimedCaller.FromVerified(caller)))
+                        if (!await RecordOrAuditUnavailableAsync(context, audit, "rejected", "user_request_nonce_missing", claimedCaller: ClaimedCaller.FromVerified(caller)))
                         {
-                            await WriteAuditUnavailableAsync(context);
                             return;
                         }
 
@@ -235,9 +232,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
                     catch (ReplayStateUnavailableException)
                     {
                         // 防重放狀態無法可靠讀寫：明確回報服務錯誤，不放行、不進入業務副作用。
-                        if (!CallerAudit.TryRecord(context, audit, "unavailable", "replay_state_unavailable", claimedCaller: ClaimedCaller.FromVerified(caller)))
+                        if (!await RecordOrAuditUnavailableAsync(context, audit, "unavailable", "replay_state_unavailable", claimedCaller: ClaimedCaller.FromVerified(caller)))
                         {
-                            await WriteAuditUnavailableAsync(context);
                             return;
                         }
 
@@ -249,9 +245,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
                     if (registration != ReplayRegistration.Registered)
                     {
                         var userReason = registration == ReplayRegistration.Replayed ? "user_request_replayed" : "user_request_before_replay_epoch";
-                        if (!CallerAudit.TryRecord(context, audit, "rejected", userReason, claimedCaller: ClaimedCaller.FromVerified(caller)))
+                        if (!await RecordOrAuditUnavailableAsync(context, audit, "rejected", userReason, claimedCaller: ClaimedCaller.FromVerified(caller)))
                         {
-                            await WriteAuditUnavailableAsync(context);
                             return;
                         }
 
@@ -261,9 +256,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
                 }
 
                 // 紀錄先於業務處理寫入；寫入失敗不進入業務處理。
-                if (!CallerAudit.TryRecord(context, audit, "accepted", "user_token_verified", verifiedCaller: caller))
+                if (!await RecordOrAuditUnavailableAsync(context, audit, "accepted", "user_token_verified", verifiedCaller: caller))
                 {
-                    await WriteAuditUnavailableAsync(context);
                     return;
                 }
 
@@ -283,9 +277,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
             if (outcome == SignatureOutcome.Accepted)
             {
                 // 紀錄先於業務處理寫入；寫入失敗則不進入業務副作用。最終業務結果於回應送出時補記（見上方稽核信封）。
-                if (!CallerAudit.TryRecord(context, audit, "accepted", "signature_verified", verifiedCaller: caller, signatureKeyId: signature.KeyId))
+                if (!await RecordOrAuditUnavailableAsync(context, audit, "accepted", "signature_verified", verifiedCaller: caller, signatureKeyId: signature.KeyId))
                 {
-                    await WriteAuditUnavailableAsync(context);
                     return;
                 }
 
@@ -296,9 +289,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
             if (outcome == SignatureOutcome.ReplayStateUnavailable)
             {
                 // 防重放狀態無法可靠讀寫：明確回報服務錯誤，不放行、不進入業務副作用。
-                if (!CallerAudit.TryRecord(context, audit, "unavailable", "replay_state_unavailable", claimedCaller: ClaimedCaller.FromVerified(caller)))
+                if (!await RecordOrAuditUnavailableAsync(context, audit, "unavailable", "replay_state_unavailable", claimedCaller: ClaimedCaller.FromVerified(caller)))
                 {
-                    await WriteAuditUnavailableAsync(context);
                     return;
                 }
 
@@ -314,9 +306,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
                 SignatureOutcome.BeforeReplayEpoch => "signature_before_replay_epoch",
                 _ => "signature_rejected",
             };
-            if (!CallerAudit.TryRecord(context, audit, "rejected", reason, claimedCaller: ClaimedCaller.FromVerified(caller)))
+            if (!await RecordOrAuditUnavailableAsync(context, audit, "rejected", reason, claimedCaller: ClaimedCaller.FromVerified(caller)))
             {
-                await WriteAuditUnavailableAsync(context);
                 return;
             }
 
@@ -408,6 +399,25 @@ public sealed class OrdersApiHost : IAsyncDisposable
             && VerifiedCaller.TryGet(httpContext) is { } caller
             && caller.Type == type
             && caller.HasPermission(permission);
+
+    /// <summary>寫入稽核紀錄；寫入失敗時以 503 audit_unavailable 明確回報並回傳 false，呼叫端不得進入業務處理。</summary>
+    private static async Task<bool> RecordOrAuditUnavailableAsync(
+        HttpContext context,
+        SecurityAuditLog audit,
+        string outcome,
+        string reason,
+        VerifiedCaller? verifiedCaller = null,
+        string? signatureKeyId = null,
+        ClaimedCaller? claimedCaller = null)
+    {
+        if (CallerAudit.TryRecord(context, audit, outcome, reason, verifiedCaller, signatureKeyId, claimedCaller))
+        {
+            return true;
+        }
+
+        await WriteAuditUnavailableAsync(context);
+        return false;
+    }
 
     /// <summary>稽核紀錄無法寫入：以 503 明確回報，不得放行、不得假報成功。</summary>
     private static Task WriteAuditUnavailableAsync(HttpContext context)
