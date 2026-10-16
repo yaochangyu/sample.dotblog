@@ -30,6 +30,13 @@ public sealed class OrdersApiHost : IAsyncDisposable
     /// <summary>使用者專屬的讀取（04 單）：呼叫者類型必須為使用者且持有 orders.read；服務即使持有該 scope 也被拒絕。</summary>
     private const string UserOnlyReadPolicy = "user-only:orders.read";
 
+    /// <summary>使用者寫入的防重放標頭（05 單）：使用者寫入沒有請求簽章，改由此 nonce 防重放；lab 暫定，待使用者確認。</summary>
+    private const string UserRequestNonceHeader = "X-Request-Nonce";
+    private const int MaxUserRequestNonceLength = 128;
+
+    /// <summary>lab 暫定：使用者寫入 nonce 的保存期（待使用者確認）。</summary>
+    private static readonly TimeSpan UserRequestNonceRetention = TimeSpan.FromHours(24);
+
     private readonly WebApplication _app;
     private int _created;
 
@@ -203,7 +210,57 @@ public sealed class OrdersApiHost : IAsyncDisposable
 
             if (caller.Type == CallerType.User)
             {
-                // 使用者路徑（02 單）：使用者寫入不附請求簽章，因此不做簽章與 nonce 驗證；仍需先寫入稽核，寫入失敗不進入業務處理。
+                // 使用者寫入（05 單）：沒有請求簽章，改以 X-Request-Nonce 防重放；nonce 依使用者業務範圍分開保存，讀取不需要防重放。
+                if (!HttpMethods.IsGet(context.Request.Method))
+                {
+                    var nonce = context.Request.Headers[UserRequestNonceHeader].ToString();
+                    if (nonce.Length == 0 || nonce.Length > MaxUserRequestNonceLength)
+                    {
+                        if (!CallerAudit.TryRecord(context, audit, "rejected", "user_request_nonce_missing"))
+                        {
+                            await WriteAuditUnavailableAsync(context);
+                            return;
+                        }
+
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        return;
+                    }
+
+                    ReplayRegistration registration;
+                    try
+                    {
+                        var now = DateTimeOffset.UtcNow;
+                        registration = await replayStore.TryRegisterAsync(caller.BusinessScope, nonce, now, now + UserRequestNonceRetention);
+                    }
+                    catch (ReplayStateUnavailableException)
+                    {
+                        // 防重放狀態無法可靠讀寫：明確回報服務錯誤，不放行、不進入業務副作用。
+                        if (!CallerAudit.TryRecord(context, audit, "unavailable", "replay_state_unavailable"))
+                        {
+                            await WriteAuditUnavailableAsync(context);
+                            return;
+                        }
+
+                        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                        await context.Response.WriteAsJsonAsync(new { error = "replay_state_unavailable" });
+                        return;
+                    }
+
+                    if (registration != ReplayRegistration.Registered)
+                    {
+                        var userReason = registration == ReplayRegistration.Replayed ? "user_request_replayed" : "user_request_before_replay_epoch";
+                        if (!CallerAudit.TryRecord(context, audit, "rejected", userReason))
+                        {
+                            await WriteAuditUnavailableAsync(context);
+                            return;
+                        }
+
+                        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                        return;
+                    }
+                }
+
+                // 紀錄先於業務處理寫入；寫入失敗不進入業務處理。
                 if (!CallerAudit.TryRecord(context, audit, "accepted", "user_token_verified"))
                 {
                     await WriteAuditUnavailableAsync(context);
@@ -270,7 +327,8 @@ public sealed class OrdersApiHost : IAsyncDisposable
         app.MapPost("/orders", async (CreateOrderRequest request, OrderStore store, HttpContext httpContext) =>
             {
                 // 已驗證呼叫者取自 introspection 結果；Body 與外部標頭宣稱的身分一律忽略。
-                var clientId = VerifiedCaller.Get(httpContext).Identity;
+                var caller = VerifiedCaller.Get(httpContext);
+                var clientId = caller.Identity;
                 if (string.IsNullOrWhiteSpace(request.OrderReference) || request.OrderReference.Length > 64)
                 {
                     return Results.BadRequest(new { error = "order_reference_invalid" });
@@ -282,7 +340,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
                     return Results.BadRequest(new { error = "idempotency_key_required" });
                 }
 
-                var result = await store.CreateOnceAsync(clientId, idempotencyKey, request, DateTimeOffset.UtcNow);
+                var result = await store.CreateOnceAsync(caller.BusinessScope, idempotencyKey, request, DateTimeOffset.UtcNow);
                 switch (result.Outcome)
                 {
                     case CreateOutcome.Created:
@@ -306,8 +364,9 @@ public sealed class OrdersApiHost : IAsyncDisposable
         // 無 Body 的查詢：只回傳已驗證 Client 自己建立的訂單，其他 Client 的訂單以 404 處理（不洩漏存在與否）。
         app.MapGet("/orders/{orderId:guid}", (Guid orderId, OrderStore store, HttpContext httpContext) =>
             {
-                var clientId = VerifiedCaller.Get(httpContext).Identity;
-                return store.TryGet(orderId, clientId, out var order)
+                var caller = VerifiedCaller.Get(httpContext);
+                var clientId = caller.Identity;
+                return store.TryGet(orderId, caller.BusinessScope, out var order)
                     ? Results.Ok(ToResponse(orderId, clientId, order!))
                     : Results.NotFound();
             })
@@ -316,8 +375,9 @@ public sealed class OrdersApiHost : IAsyncDisposable
         // 使用者專屬查詢（04 單）：只回傳使用者呼叫者自己的訂單；服務呼叫者由呼叫者類型規則直接以 403 拒絕，不進入資料查詢。
         app.MapGet("/orders/me/{orderId:guid}", (Guid orderId, OrderStore store, HttpContext httpContext) =>
             {
-                var clientId = VerifiedCaller.Get(httpContext).Identity;
-                return store.TryGet(orderId, clientId, out var order)
+                var caller = VerifiedCaller.Get(httpContext);
+                var clientId = caller.Identity;
+                return store.TryGet(orderId, caller.BusinessScope, out var order)
                     ? Results.Ok(ToResponse(orderId, clientId, order!))
                     : Results.NotFound();
             })
@@ -326,8 +386,9 @@ public sealed class OrdersApiHost : IAsyncDisposable
         // 修改：取消訂單；同樣只能取消已驗證 Client 自己建立的訂單，他人訂單不會被修改。
         app.MapPost("/orders/{orderId:guid}/cancel", (Guid orderId, OrderStore store, HttpContext httpContext) =>
             {
-                var clientId = VerifiedCaller.Get(httpContext).Identity;
-                return store.TryCancel(orderId, clientId, out var order)
+                var caller = VerifiedCaller.Get(httpContext);
+                var clientId = caller.Identity;
+                return store.TryCancel(orderId, caller.BusinessScope, out var order)
                     ? Results.Ok(ToResponse(orderId, clientId, order!))
                     : Results.NotFound();
             })

@@ -177,6 +177,9 @@ public sealed class UserTokenVerificationPathSteps
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
         request.Headers.TryAddWithoutValidation("Idempotency-Key", Guid.NewGuid().ToString());
 
+        // 使用者寫入沒有請求簽章，改以每次不同的 X-Request-Nonce 防重放（05 單）。
+        request.Headers.TryAddWithoutValidation("X-Request-Nonce", SignedHttp.NewNonce());
+
         // 使用者路徑不附用戶端憑證：每次新連線，確保 TLS 不帶任何用戶端憑證。
         using var client = SignedHttp.CreateClient(Runtime, certificate: null);
         using var response = await client.SendAsync(request);

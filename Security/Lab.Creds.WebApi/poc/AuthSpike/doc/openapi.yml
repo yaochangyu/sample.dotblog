@@ -23,6 +23,7 @@ info:
     最長重試期 10 分鐘；Idempotency-Key 紀錄保存 24 小時（涵蓋重試期）；業務識別與訂單結果不因 Key 紀錄過期而失去唯一性。處理中租約 30 秒，到期後同一業務操作可由新嘗試接手（舊嘗試於提交時被辨識為已失效，不會再提交）。
     本地提交保證：本業務服務內，同一業務操作的本地訂單只提交一次；不宣稱下游或跨系統 exactly-once（下游冪等協定另訂）。提交前當機不產生訂單；提交後回應遺失時重試回傳既有結果。
     業務提交無法確認時回應 503（error: business_commit_unavailable），呼叫端須以同一業務識別重試。
+    呼叫者類型分開的冪等與防重放（見 05 單，lab 暫定待使用者確認）：業務識別與 Idempotency-Key 的範圍依已驗證呼叫者分開，服務為 client_id、使用者為 user:sub，同一識別由使用者與服務各自提交互不覆蓋。使用者寫入（POST）不附請求簽章，改以 X-Request-Nonce 標頭防重放：缺少或重放同一 nonce 回應 401，且無業務副作用；使用者重試須以新的 X-Request-Nonce 重送，並沿用同一 Idempotency-Key 與 orderReference。
 servers:
   - url: https://localhost:7444
 paths:

@@ -29,6 +29,15 @@ public sealed record VerifiedCaller(CallerType Type, string Identity, IReadOnlyL
     public static VerifiedCaller FromUserPrincipal(ClaimsPrincipal principal)
         => new(CallerType.User, principal.GetClaim(Claims.Subject) ?? throw new InvalidOperationException("Verified subject is missing."), principal.GetScopes());
 
+    /// <summary>
+    /// 業務範圍鍵（05 單）：業務識別（orderReference）、Idempotency-Key 與訂單歸屬都以此分開計算。
+    /// 服務沿用 client_id（既有行為不變）；使用者加上類型前綴，使同一識別由使用者與服務各自提交時互不覆蓋。
+    /// </summary>
+    public string BusinessScope => BusinessScopeOf(Type, Identity);
+
+    public static string BusinessScopeOf(CallerType type, string identity)
+        => type == CallerType.User ? $"user:{identity}" : identity;
+
     public bool HasPermission(string permission) => Permissions.Contains(permission);
 
     public static void Attach(HttpContext context, VerifiedCaller caller) => context.Items[HttpContextItemKey] = caller;

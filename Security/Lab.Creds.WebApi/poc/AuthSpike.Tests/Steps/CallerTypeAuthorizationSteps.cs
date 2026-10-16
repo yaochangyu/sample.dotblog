@@ -123,7 +123,7 @@ public sealed class CallerTypeAuthorizationSteps
     [Then("04 單訂單 {string} 由 {string} 持有的狀態為 {string}（04 單）")]
     public void ThenOrderStatusIs(string name, string owner, string status)
     {
-        Runtime.Orders.TryGet(_orderIds[name], owner, out var order).Should().BeTrue();
+        Runtime.Orders.TryGet(_orderIds[name], VerifiedCaller.BusinessScopeOf(CallerType.User, owner), out var order).Should().BeTrue();
         order!.Status.Should().Be(status);
     }
 
@@ -168,6 +168,13 @@ public sealed class CallerTypeAuthorizationSteps
         }
 
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+
+        // 使用者寫入需附防重放 nonce（05 單）；讀取不需要。
+        if (method == HttpMethod.Post)
+        {
+            request.Headers.TryAddWithoutValidation("X-Request-Nonce", SignedHttp.NewNonce());
+        }
+
         return request;
     }
 

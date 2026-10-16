@@ -217,6 +217,9 @@ public sealed class CallerTypeAndAudienceIsolationSteps
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
         request.Headers.TryAddWithoutValidation("Idempotency-Key", Guid.NewGuid().ToString());
+
+        // 使用者寫入需附防重放 nonce（05 單）；服務路徑不讀取此標頭，簽章也不涵蓋它。
+        request.Headers.TryAddWithoutValidation("X-Request-Nonce", SignedHttp.NewNonce());
         foreach (var (name, value) in headers)
         {
             request.Headers.TryAddWithoutValidation(name, value);
