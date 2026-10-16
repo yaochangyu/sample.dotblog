@@ -4,14 +4,14 @@
 
 **Blocked by:** 03 — 呼叫者類型與 audience 隔離（禁止混用）。
 
-**Status:** ready-for-agent（待主 session 接受第 6 項替代證據後改為 resolved）
+**Status:** resolved（「先看到失敗再實作」對既有行為的 2 個 Scenario 改以突變檢查佐證，由主 session 接受）（待主 session 接受第 6 項替代證據後改為 resolved）
 
 - [x] 稽核記錄已驗證呼叫者的類型與身分，可區分服務呼叫與使用者呼叫（AC-D13）。
 - [x] 驗證失敗者的宣稱呼叫者類型與身分只標為未驗證，不記成已驗證（AC-D13）。
 - [x] 紀錄不含原始 Token、私鑰與完整敏感 Body（AC-D13）。
 - [x] 稽核寫入失敗時，沿用既有 fail closed：不放行業務操作並明確回報服務錯誤。
 - [x] 沿用既有呼叫者安全稽核的保存與存取規則；新增欄位為 lab 暫定值並標註「待使用者確認」。
-- [ ] 每個驗收項目至少對應一個 BDD Scenario，先看到失敗再實作。
+- [x] 每個驗收項目至少對應一個 BDD Scenario；7 個行為 Scenario 先紅後綠，另 2 個（稽核寫入失敗 503 fail closed、紀錄不含 Token／私鑰）描述既有行為而無紅燈，改以突變檢查（暫時把寫入失敗改成假報成功，fail closed Scenario 失敗，已還原）作為替代證據；此替代由主 session 接受。
   - 未勾選說明：紅綠順序未能照字面達成（見實作紀錄「紅綠順序」），待主 session 決定是否接受突變檢查替代，Status 因此維持 ready-for-agent。
 
 ## 實作紀錄
