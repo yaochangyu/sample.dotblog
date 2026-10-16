@@ -27,6 +27,9 @@ public sealed class OrdersApiHost : IAsyncDisposable
     private const string ReadScope = "orders.read";
     private const string WriteScope = "orders.write";
 
+    /// <summary>使用者專屬的讀取（04 單）：呼叫者類型必須為使用者且持有 orders.read；服務即使持有該 scope 也被拒絕。</summary>
+    private const string UserOnlyReadPolicy = "user-only:orders.read";
+
     private readonly WebApplication _app;
     private int _created;
 
@@ -103,7 +106,9 @@ public sealed class OrdersApiHost : IAsyncDisposable
         // scope 白名單：Token 有效但缺少該操作所需的 scope 時回應 403（業務資料範圍另於 handler 檢查）。
         builder.Services.AddAuthorizationBuilder()
             .AddPolicy(ReadScope, policy => policy.RequireAssertion(context => HasPermission(context, ReadScope)))
-            .AddPolicy(WriteScope, policy => policy.RequireAssertion(context => HasPermission(context, WriteScope)));
+            .AddPolicy(WriteScope, policy => policy.RequireAssertion(context => HasPermission(context, WriteScope)))
+            // 呼叫者類型規則（04 單）：限定使用者的操作只接受使用者呼叫者，服務的 scope 不能代替使用者的限制。
+            .AddPolicy(UserOnlyReadPolicy, policy => policy.RequireAssertion(context => HasCallerPermission(context, CallerType.User, ReadScope)));
 
         var app = builder.Build();
         var instance = new OrdersApiHost(app, port);
@@ -308,6 +313,16 @@ public sealed class OrdersApiHost : IAsyncDisposable
             })
             .RequireAuthorization(ReadScope);
 
+        // 使用者專屬查詢（04 單）：只回傳使用者呼叫者自己的訂單；服務呼叫者由呼叫者類型規則直接以 403 拒絕，不進入資料查詢。
+        app.MapGet("/orders/me/{orderId:guid}", (Guid orderId, OrderStore store, HttpContext httpContext) =>
+            {
+                var clientId = VerifiedCaller.Get(httpContext).Identity;
+                return store.TryGet(orderId, clientId, out var order)
+                    ? Results.Ok(ToResponse(orderId, clientId, order!))
+                    : Results.NotFound();
+            })
+            .RequireAuthorization(UserOnlyReadPolicy);
+
         // 修改：取消訂單；同樣只能取消已驗證 Client 自己建立的訂單，他人訂單不會被修改。
         app.MapPost("/orders/{orderId:guid}/cancel", (Guid orderId, OrderStore store, HttpContext httpContext) =>
             {
@@ -325,6 +340,13 @@ public sealed class OrdersApiHost : IAsyncDisposable
     /// <summary>授權規則只依已驗證呼叫者的權限判斷（不直接讀取 Token 的 scope claim）。</summary>
     private static bool HasPermission(AuthorizationHandlerContext context, string permission)
         => context.Resource is HttpContext httpContext && VerifiedCaller.TryGet(httpContext)?.HasPermission(permission) == true;
+
+    /// <summary>呼叫者類型與權限同時成立才授權（04 單）；呼叫者類型由已驗證的 Token 決定，不採信請求宣稱。</summary>
+    private static bool HasCallerPermission(AuthorizationHandlerContext context, CallerType type, string permission)
+        => context.Resource is HttpContext httpContext
+            && VerifiedCaller.TryGet(httpContext) is { } caller
+            && caller.Type == type
+            && caller.HasPermission(permission);
 
     /// <summary>稽核紀錄無法寫入：以 503 明確回報，不得放行、不得假報成功。</summary>
     private static Task WriteAuditUnavailableAsync(HttpContext context)

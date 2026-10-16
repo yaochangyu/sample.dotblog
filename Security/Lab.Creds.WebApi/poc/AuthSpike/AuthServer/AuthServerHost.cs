@@ -362,7 +362,7 @@ public sealed class AuthServerHost : IAsyncDisposable
                 // 使用者 Token 的 audience 與呼叫者類型不同於服務 Token；帳號停用或密碼錯誤一律 invalid_grant。
                 if (request.ClientId != UserCallers.ClientId
                     || !UserCallers.VerifyCredentials(request.Username, request.Password)
-                    || !registry.IsUserEnabled(UserCallers.TestUserId))
+                    || !registry.IsUserEnabled(request.Username!))
                 {
                     return Results.Json(new Dictionary<string, string> { ["error"] = Errors.InvalidGrant }, statusCode: StatusCodes.Status400BadRequest);
                 }
@@ -374,7 +374,7 @@ public sealed class AuthServerHost : IAsyncDisposable
                 }
 
                 var userIdentity = new ClaimsIdentity(TokenValidationParameters.DefaultAuthenticationType, Claims.Name, Claims.Role);
-                userIdentity.SetClaim(Claims.Subject, UserCallers.TestUserId);
+                userIdentity.SetClaim(Claims.Subject, request.Username);
                 userIdentity.SetClaim(Claims.ClientId, UserCallers.ClientId);
                 userIdentity.SetClaim(UserCallers.CallerTypeClaim, UserCallers.CallerTypeValue);
                 userIdentity.SetAudiences(UserCallers.Audience);

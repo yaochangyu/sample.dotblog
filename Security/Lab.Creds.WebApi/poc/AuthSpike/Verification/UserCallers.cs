@@ -26,12 +26,23 @@ public static class UserCallers
     public const string TestUserId = "test-user-1";
     public const string TestUserPassword = "lab-only-password";
 
+    /// <summary>第二位測試使用者（04 單）：用於驗證使用者只能存取自己的資料範圍，lab 暫定、待使用者確認。</summary>
+    public const string TestUserTwoId = "test-user-2";
+    public const string TestUserTwoPassword = "lab-only-password-2";
+
+    /// <summary>測試使用者與其密碼（lab 暫定）。</summary>
+    public static readonly IReadOnlyDictionary<string, string> TestUsers = new Dictionary<string, string>
+    {
+        [TestUserId] = TestUserPassword,
+        [TestUserTwoId] = TestUserTwoPassword,
+    };
+
     /// <summary>使用者可被核發的 scope（與服務的 scope 白名單分開）。</summary>
     public static readonly string[] Scopes = ["orders.read", "orders.write"];
 
     /// <summary>測試使用者帳密比對（lab 暫定）；只接受測試使用者帳號與其密碼。</summary>
     public static bool VerifyCredentials(string? username, string? password)
-        => username == TestUserId && password == TestUserPassword;
+        => username is not null && TestUsers.TryGetValue(username, out var expected) && expected == password;
 
     public static bool IsUserPrincipal(ClaimsPrincipal principal) => principal.GetClaim(CallerTypeClaim) == CallerTypeValue;
 }

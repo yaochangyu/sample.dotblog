@@ -93,6 +93,32 @@ paths:
           description: 訂單不存在，或不屬於已驗證 Client（業務資料範圍檢查）
         '503':
           description: "查證服務暫時無法驗證（error: verification_unavailable）、防重放狀態暫時無法可靠讀寫或稽核紀錄無法寫入（error: audit_unavailable）；不回應業務資料"
+  /orders/me/{orderId}:
+    get:
+      operationId: getOwnOrder
+      summary: 使用者專屬查詢訂單（無 Body；限使用者呼叫者，04 單）
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 使用者呼叫者自己的訂單內容
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOrderResponse'
+        '401':
+          description: 未驗證（使用者路徑不要求請求簽章）
+        '403':
+          description: 呼叫者類型不是使用者（服務呼叫者即使持有 orders.read 也被拒絕），或缺少 orders.read scope；不回應業務資料
+        '404':
+          description: 訂單不存在，或不屬於已驗證的使用者（業務資料範圍檢查）
   /orders/{orderId}/cancel:
     post:
       operationId: cancelOrder
