@@ -143,7 +143,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
             await next();
 
             if (!CallerAudit.IsDecided(context)
-                && !CallerAudit.TryRecord(context, audit, "denied", $"status_{context.Response.StatusCode}", unverifiedTokenClientId: AuthenticatedClientId(context))
+                && !CallerAudit.TryRecord(context, audit, "denied", $"status_{context.Response.StatusCode}", claimedCaller: ClaimedCallerOf(context))
                 && !context.Response.HasStarted)
             {
                 await WriteAuditUnavailableAsync(context);
@@ -186,7 +186,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
             }
 
             // 認證失敗：principal（若有）僅為宣稱身分，標為未驗證。
-            if (!CallerAudit.TryRecord(context, audit, "rejected", "caller_rejected", unverifiedTokenClientId: principal?.GetClaim(Claims.ClientId)))
+            if (!CallerAudit.TryRecord(context, audit, "rejected", "caller_rejected", claimedCaller: ClaimedCaller.FromPrincipal(principal)))
             {
                 await WriteAuditUnavailableAsync(context);
                 return;
@@ -216,7 +216,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
                     var nonce = context.Request.Headers[UserRequestNonceHeader].ToString();
                     if (nonce.Length == 0 || nonce.Length > MaxUserRequestNonceLength)
                     {
-                        if (!CallerAudit.TryRecord(context, audit, "rejected", "user_request_nonce_missing"))
+                        if (!CallerAudit.TryRecord(context, audit, "rejected", "user_request_nonce_missing", claimedCaller: ClaimedCaller.FromVerified(caller)))
                         {
                             await WriteAuditUnavailableAsync(context);
                             return;
@@ -235,7 +235,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
                     catch (ReplayStateUnavailableException)
                     {
                         // 防重放狀態無法可靠讀寫：明確回報服務錯誤，不放行、不進入業務副作用。
-                        if (!CallerAudit.TryRecord(context, audit, "unavailable", "replay_state_unavailable"))
+                        if (!CallerAudit.TryRecord(context, audit, "unavailable", "replay_state_unavailable", claimedCaller: ClaimedCaller.FromVerified(caller)))
                         {
                             await WriteAuditUnavailableAsync(context);
                             return;
@@ -249,7 +249,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
                     if (registration != ReplayRegistration.Registered)
                     {
                         var userReason = registration == ReplayRegistration.Replayed ? "user_request_replayed" : "user_request_before_replay_epoch";
-                        if (!CallerAudit.TryRecord(context, audit, "rejected", userReason))
+                        if (!CallerAudit.TryRecord(context, audit, "rejected", userReason, claimedCaller: ClaimedCaller.FromVerified(caller)))
                         {
                             await WriteAuditUnavailableAsync(context);
                             return;
@@ -261,7 +261,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
                 }
 
                 // 紀錄先於業務處理寫入；寫入失敗不進入業務處理。
-                if (!CallerAudit.TryRecord(context, audit, "accepted", "user_token_verified"))
+                if (!CallerAudit.TryRecord(context, audit, "accepted", "user_token_verified", verifiedCaller: caller))
                 {
                     await WriteAuditUnavailableAsync(context);
                     return;
@@ -283,7 +283,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
             if (outcome == SignatureOutcome.Accepted)
             {
                 // 紀錄先於業務處理寫入；寫入失敗則不進入業務副作用。最終業務結果於回應送出時補記（見上方稽核信封）。
-                if (!CallerAudit.TryRecord(context, audit, "accepted", "signature_verified", verifiedClientId: clientId, signatureKeyId: signature.KeyId))
+                if (!CallerAudit.TryRecord(context, audit, "accepted", "signature_verified", verifiedCaller: caller, signatureKeyId: signature.KeyId))
                 {
                     await WriteAuditUnavailableAsync(context);
                     return;
@@ -296,7 +296,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
             if (outcome == SignatureOutcome.ReplayStateUnavailable)
             {
                 // 防重放狀態無法可靠讀寫：明確回報服務錯誤，不放行、不進入業務副作用。
-                if (!CallerAudit.TryRecord(context, audit, "unavailable", "replay_state_unavailable", unverifiedTokenClientId: clientId))
+                if (!CallerAudit.TryRecord(context, audit, "unavailable", "replay_state_unavailable", claimedCaller: ClaimedCaller.FromVerified(caller)))
                 {
                     await WriteAuditUnavailableAsync(context);
                     return;
@@ -314,7 +314,7 @@ public sealed class OrdersApiHost : IAsyncDisposable
                 SignatureOutcome.BeforeReplayEpoch => "signature_before_replay_epoch",
                 _ => "signature_rejected",
             };
-            if (!CallerAudit.TryRecord(context, audit, "rejected", reason, unverifiedTokenClientId: clientId))
+            if (!CallerAudit.TryRecord(context, audit, "rejected", reason, claimedCaller: ClaimedCaller.FromVerified(caller)))
             {
                 await WriteAuditUnavailableAsync(context);
                 return;
@@ -416,8 +416,9 @@ public sealed class OrdersApiHost : IAsyncDisposable
         return context.Response.WriteAsJsonAsync(new { error = "audit_unavailable" });
     }
 
-    private static string? AuthenticatedClientId(HttpContext context)
-        => context.User.Identity?.IsAuthenticated == true ? context.User.GetClaim(Claims.ClientId) : null;
+    /// <summary>授權階段（例如 scope 或呼叫者類型規則）拒絕的請求：context.User 只是宣稱的身分，標為未驗證。</summary>
+    private static ClaimedCaller? ClaimedCallerOf(HttpContext context)
+        => context.User.Identity?.IsAuthenticated == true ? ClaimedCaller.FromPrincipal(context.User) : null;
 
     private static GetOrderResponse ToResponse(Guid orderId, string clientId, StoredOrder order)
         => new(orderId, clientId, order.Request.Item, order.Request.Quantity, order.Status);

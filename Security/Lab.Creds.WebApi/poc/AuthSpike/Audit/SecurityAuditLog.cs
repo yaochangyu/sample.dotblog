@@ -7,7 +7,10 @@ public sealed class SecurityAuditWriteFailedException(string message, Exception?
 /// 單筆業務請求的安全稽核紀錄。
 /// 只含識別與結果欄位：不含 Token、Authorization／Signature／Signature-Input 標頭值、簽章基底、私鑰或 Body。
 /// ResultStatus 為請求的最終 HTTP 狀態碼（含 201／409／422／503 等業務結果）。
-/// VerifiedClientId 僅在簽章驗證通過時有值；其他情況宣稱的 Client 一律放在 Unverified／Presented 欄位並視為未驗證。
+/// VerifiedClientId 僅在服務呼叫的驗證通過時有值；其他情況宣稱的 Client 一律放在 Unverified／Presented 欄位並視為未驗證。
+/// VerifiedCallerType／VerifiedCallerIdentity 為已驗證呼叫者的類型（service／user）與身分（服務為 Client、使用者為 sub）。
+/// UnverifiedTokenCallerType／UnverifiedTokenIdentity 為宣稱的呼叫者類型與身分，只標示為未驗證。
+/// 新增的呼叫者類型與身分欄位為 lab 暫定值，待使用者確認。
 /// </summary>
 public sealed record SecurityAuditRecord(
     string CorrelationId,
@@ -20,7 +23,11 @@ public sealed record SecurityAuditRecord(
     string? UnverifiedTokenClientId,
     string? PresentedClientIdHeader,
     string? CertificateThumbprint,
-    int? ResultStatus = null);
+    int? ResultStatus = null,
+    string? VerifiedCallerType = null,
+    string? VerifiedCallerIdentity = null,
+    string? UnverifiedTokenCallerType = null,
+    string? UnverifiedTokenIdentity = null);
 
 /// <summary>
 /// 安全稽核紀錄（與防重放 nonce 及業務訂單儲存分開；lab 以記憶體保存）。
